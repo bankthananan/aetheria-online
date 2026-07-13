@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWO autotest</title>
+</head>
+<body>
+  <div id="err" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b00;color:#fff;font:13px monospace;white-space:pre-wrap;padding:6px;display:none"></div>
+  <div id="root"></div>
+  <canvas id="game-canvas" width="832" height="576" style="display:none"></canvas>
+  <div id="hud"></div>
+  <div id="overlays"></div>
+  <div id="fx-layer"></div>
+
+  <script>
+    // Surface any runtime error visibly so a screenshot reveals it.
+    const errEl = document.getElementById('err');
+    const showErr = (m) => { errEl.style.display='block'; errEl.textContent += m + '\n'; };
+    window.addEventListener('error', e => showErr('ERROR: ' + e.message + ' @ ' + (e.filename||'') + ':' + (e.lineno||'')));
+    window.addEventListener('unhandledrejection', e => showErr('REJECT: ' + (e.reason?.stack || e.reason)));
+    const origErr = console.error.bind(console);
+    console.error = (...a) => { showErr('console.error: ' + a.join(' ')); origErr(...a); };
+  </script>
+  <script type="module" src="./js/game.js"></script>
+  <script>
+    // Auto-driver: click through class-select -> start -> cutscene, set up the woods,
+    // exercise progression, then optionally open a panel (?panel=char|skills|world) for the screenshot.
+    const params = new URLSearchParams(location.search);
+    const wantPanel = params.get('panel');
+    const wantClass = params.get('class');   // e.g. codeweaver, far_shot — to screenshot each sprite
+    let started = false, setup = false, ticks = 0;
+    setInterval(() => {
+      try {
+        // Clean browser profiles begin at the local profile gate. Continue as a
+        // guest so visual smoke tests never depend on cached sign-in state.
+        const guest = document.querySelector('.signin-guest'); if (guest) { guest.click(); return; }
+        const cut = document.querySelector('.overlay-cut button'); if (cut) { cut.click(); return; }
+        // quest start/done dialogues: click through unless the shot wants one (?dlg=1)
+        const dq = document.querySelector('.dialogue button'); if (dq && !params.get('dlg')) { dq.click(); return; }
+        const start = document.getElementById('start-btn');
+        if (start && !started) {
+          const sel = wantClass ? document.querySelector(`.class-card[data-class="${wantClass}"]`) : document.querySelector('.class-card');
+          if (sel) sel.click();
+          const nameInput = document.getElementById('hero-name');
+          if (nameInput && params.get('admin')) nameInput.value = 'admin';   // unlock dev tools
+          start.disabled = false; start.click(); started = true; return;
+        }
+        const A = window.__AWO;
+        if (A && A.G.running) {
+          ticks++;
+          if (!setup) {
+            setup = true;
+            const warp = params.get('map');
+            if (warp) A.loadMap(warp, 2, 2);
+            else if (params.get('boss')) A.loadMap('sunken_ruins', 3, 3);
+            else A.loadMap('whispering_woods');
+            A.gainXp(params.get('adv') ? 400000 : 3000);   // level up → points, and (adv) trigger a class-advancement quest
+            if (params.get('storywait')) {        // stage the Phase II level gate for Quest Journal review
+              A.G.player.level = 15; A.G.player.xp = 0; A.recompute(A.G.player);
+              A.startQuest('q_scout');
+            }
+            if (params.get('death')) {            // stage a routed Hunt death; respawn must cancel every automation state
+              A.G.autoFarm = true; A.G.huntTargetId = 'slime';
+              A.G.taskGuide = { source: 'story', taskId: A.G.quest, mode: 'hunt', mapId: 'whispering_woods', monsterId: 'slime', label: 'Gel Slime', resumeAutoFarm: true };
+              A.G.target = A.G.monsters.find(monster => monster.alive) || null;
+              A.G.path = [{ x: A.G.player.x + 32, y: A.G.player.y }];
+              A.G.manualIntent = { type: 'move', x: A.G.player.x + 32, y: A.G.player.y };
+              A.G.keys = { w: true }; A.G.player.hp = 0;
+              A.playerDeath();
+            }
+            if (params.get('career')) {          // stage a real class tier for skill-progression review
+              const tier = Math.max(0, Math.min(2, +params.get('career') - 1));
+              while (A.G.player.tierIndex < tier) A.doPromote(A.G.player, A.G.player.tierIndex + 1);
+              A.G.player.jobLevel = tier === 0 ? 15 : tier === 1 ? 24 : A.PROGRESSION.jobLevelCap;
+              A.G.player.jobXp = 0; A.G.player.skillPoints = 20;
+              const starter = Object.keys(A.G.player.skillLevels)[0];
+              if (starter && A.PROGRESSION.skillTree[starter]?.tierCaps) A.G.player.skillLevels[starter] = 5;
+              A.recompute(A.G.player); A.updateHud();
+            }
+            if (params.get('farm')) A.toggleFarm();
+            if (warp === 'dragon_caldera') { const d = A.G.monsters.find(m => m.def.id === 'flame_dragon'); if (d) { A.G.player.x = d.x - 60; A.G.player.y = d.y; } }
+            if (warp === 'astral_rift') { const d = A.G.monsters.find(m => m.def.id === 'nullking'); if (d) { A.G.player.x = d.x - 64; A.G.player.y = d.y; } }
+            if (params.get('gear')) {                 // seed varied-rarity loot for the inventory shot
+              A.addItem('iron_sword', 1, 6); A.addItem('hero_blade', 1, 8);
+              A.addItem('guardian_plate', 1, 6); A.addItem('leather_vest', 1, 4);
+              A.addItem('greater_potion', 5); A.addItem('frost_shard', 3); A.addItem('guide_letter', 1);
+              // equip pieces across slots so the paper-doll is populated
+              ['iron_sword:epic', 'iron_helm:rare', 'guardian_plate:epic', 'iron_gauntlets:uncommon', 'warding_cloak:rare', 'iron_boots:common', 'power_ring:legendary'].forEach(spec => {
+                const [id, rar] = spec.split(':'); const inst = A.rollItem(id, 0, rar); A.G.player.inventory.push(inst); A.equip(inst.uid);
+              });
+            }
+            if (params.get('fx')) {                   // learn a fireball for the effects shot
+              A.learnSkill('arcane_bolt'); A.learnSkill('arcane_bolt'); A.learnSkill('flame_burst');
+            }
+            if (params.get('fxskill')) A.adminAction('learnall');   // unlock the whole tree for FX shots
+            if (params.get('loadout')) {             // showcase the complete skill loop + configurable action bar
+              A.adminAction('learnall');
+              const ids = Object.keys(A.G.player.skillLevels).filter(id => A.G.player.skillLevels[id] > 0).slice(0, 8);
+              A.G.player.hotbar = ids.map(id => ({ type: 'skill', id }));
+              while (A.G.player.hotbar.length < 8) A.G.player.hotbar.push(null);
+              A.G.player.hotbar.push({ type: 'item', itemId: 'minor_potion' });
+              A.G.player.momentum = 4; A.G.player.lastSkillAt = performance.now();
+              if (params.get('customkeys')) {
+                ['KeyR','KeyT','KeyY','KeyU','KeyO','KeyP','KeyG','KeyH','KeyJ'].forEach((code, i) => A.setHotkeyBinding(i, code));
+              }
+              A.renderHotbar(); A.updateHud();
+            }
+          }
+          // cluster a few monsters near the hero so sprites + cleave are visible
+          const near = A.G.monsters.filter(x => x.alive).slice(0, 4);
+          near.forEach((m, i) => { m.x = A.G.player.x + 40 + i * 26; m.y = A.G.player.y + (i % 2 ? -18 : 18); });
+          if (near[0]) A.G.target = near[0];
+          if (params.get('fx') && near[0]) { A.castSkill('2'); A.playerBasicAttack(); }  // spam fireball + swing
+          if (params.get('fxskill') && near[0]) {   // spam one named skill: reset cd/mp, immortal dummies, always-live effect
+            near.forEach(m => { m.alive = true; m.maxHp = 99999; m.hp = 99999; });
+            A.G.player.skillCd = {}; A.G.player.mp = A.G.player.maxMp;
+            A.castSkillById(params.get('fxskill'));
+          }
+          if (params.get('admin') && ticks > 4 && !document.getElementById('panel')) A.togglePanel('admin');
+          if (params.get('slam')) {                 // keep the boss slam telegraph live for the screenshot
+            const b = A.G.monsters.find(m => m.def.sizeTiles >= 2 && m.alive);
+            if (b) { A.G.player.x = b.x - 90; A.G.player.y = b.y; b.lastCombatAt = performance.now(); if (!b.slamAt) b.nextSlamAt = 0; }
+          }
+          if (params.get('picker') && ticks > 6 && !document.getElementById('slot-picker')) A.openSlotPicker(6);
+          if (wantPanel && ticks > 6) {
+            A.G.keys = {};
+            if (wantPanel === 'shop' && !A.G._shopItems) {   // stock the shop from the town trader
+              const n = A.G.npcs.find(x => x.role === 'shop');
+              if (n) A.G._shopItems = n.content.shopItems;
+              if (params.get('shoptab')) A.G._shopTab = params.get('shoptab');
+              if (params.get('rank')) A.G.guildRankIdx = +params.get('rank');
+              if (params.get('shoptab') === 'enhance') A.addItem('blessed_ore', 5);
+            }
+            if (params.get('deliver') && !A.G.activeGuilds.length) {  // force a delivery bounty, fully stocked
+              let q; do { q = A.genGuildQuest(); } while (q.kind !== 'deliver');
+              A.G.activeGuilds.push(q); A.addItem(q.target, q.count);
+            }
+            if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
+            if (!document.getElementById('panel')) A.togglePanel(wantPanel);
+            if (params.get('tip')) {                 // hover a skill node to reveal its tooltip
+              const nodes = document.querySelectorAll('#panel .sk-node[data-skill]');
+              const nd = nodes[+params.get('tip') || 0];
+              if (nd) nd.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+            } else {
+              const sel = wantPanel === 'char' ? '#panel [data-stat="str"]' : '#panel [data-learn]:not([disabled])';
+              const btn = document.querySelector(sel);
+              if (btn && (window.__clicks = (window.__clicks || 0) + 1) <= 6) btn.click();
+            }
+          }
+        }
+      } catch (e) { showErr('DRIVER: ' + (e.stack || e)); }
+    }, 100);
+  </script>
+</body>
+</html>

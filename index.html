@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Another World Online — Isekai Adventure</title>
+  <!-- THEME.css (from the UX/UI designer) is injected at runtime by game.js -->
+</head>
+<body>
+  <div id="err" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b00;color:#fff;font:12px monospace;white-space:pre-wrap;padding:4px 8px;display:none"></div>
+  <script>
+    // surface runtime crashes instead of silently freezing (click the banner to dismiss)
+    const errEl = document.getElementById('err');
+    errEl.onclick = () => errEl.style.display = 'none';
+    window.addEventListener('error', e => { errEl.style.display = 'block'; errEl.textContent += `Something broke: ${e.message} @ ${e.filename || ''}:${e.lineno || ''}\n`; });
+    window.addEventListener('unhandledrejection', e => { errEl.style.display = 'block'; errEl.textContent += `Something broke: ${e.reason?.message || e.reason}\n`; });
+  </script>
+  <div id="root"></div>
+  <canvas id="game-canvas" width="832" height="576" style="display:none"></canvas>
+  <div id="hud"></div>
+  <div id="overlays"></div>
+  <div id="fx-layer"></div>
+  <script type="module" src="./js/game.js"></script>
+</body>
+</html>

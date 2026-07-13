@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/javascript.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Isekai Guild Adventure - Ragnarok Online Style</title>
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#0b0f19] text-slate-100 font-sans antialiased overflow-x-hidden min-h-screen">
+    
+    <div id="app" class="w-full min-h-screen flex items-center justify-center p-4">
+      
+      <!-- 1. Character Creation Screen -->
+      <div id="char-create-screen" class="hidden w-full max-w-4xl bg-slate-900/80 border border-slate-700/60 rounded-2xl p-6 md:p-8 backdrop-blur-md shadow-2xl flex flex-col md:flex-row gap-8 items-center">
+        <!-- Preview Column -->
+        <div class="flex flex-col items-center gap-4 w-full md:w-1/2">
+          <h2 class="text-xl font-bold text-yellow-400 tracking-wide">AVATAR PREVIEW</h2>
+          <div id="char-preview-svg" class="w-40 h-40 flex items-center justify-center rounded-xl bg-slate-950/40 border border-slate-800 shadow-inner">
+            <!-- Simulated sprite inside -->
+          </div>
+          <p class="text-xs text-slate-400 text-center max-w-xs leading-relaxed">
+            Personalize your adventurer before arriving at the Prontera guild station.
+          </p>
+        </div>
+
+        <!-- Forms Column -->
+        <div class="w-full md:w-1/2 flex flex-col gap-5">
+          <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">ISEKAI GUILD HERO</h1>
+            <p class="text-xs text-slate-400 mt-1">Configure your starting avatar details.</p>
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label for="char-name" class="text-xs font-bold uppercase text-slate-300">Character Name</label>
+              <input type="text" id="char-name" value="Isekai Rookie" maxlength="16" class="w-full px-3.5 py-2 rounded-lg bg-slate-950/60 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm transition font-semibold" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label for="char-gender" class="text-xs font-bold uppercase text-slate-300">Gender</label>
+                <select id="char-gender" class="w-full px-3.5 py-2 rounded-lg bg-slate-950/60 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm transition font-semibold text-slate-200">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="char-hair" class="text-xs font-bold uppercase text-slate-300">Hair Style</label>
+                <select id="char-hair" class="w-full px-3.5 py-2 rounded-lg bg-slate-950/60 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm transition font-semibold text-slate-200">
+                  <option value="1">Style 1 (Spiky / Ponytail)</option>
+                  <option value="2">Style 2 (Fringe / Bob)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label for="char-hair-color" class="text-xs font-bold uppercase text-slate-300">Hair Color</label>
+                <div class="flex gap-2 items-center">
+                  <input type="color" id="char-hair-color" value="#eab308" class="w-8 h-8 rounded border-none cursor-pointer bg-transparent" />
+                  <span class="text-xs text-slate-400 font-mono">Hair Dye</span>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label for="char-cloth-color" class="text-xs font-bold uppercase text-slate-300">Outfit Color</label>
+                <div class="flex gap-2 items-center">
+                  <input type="color" id="char-cloth-color" value="#3b82f6" class="w-8 h-8 rounded border-none cursor-pointer bg-transparent" />
+                  <span class="text-xs text-slate-400 font-mono">Cloth dye</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-create-char" class="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-extrabold text-sm rounded-xl tracking-wider shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 duration-150">
+            ARRIVE IN PROUTERA
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Game HUD & Canvas Grid Screen -->
+      <div id="game-screen" class="hidden w-full max-w-7xl flex flex-col gap-4">
+        
+        <!-- Game HUD Banner -->
+        <header class="w-full bg-slate-900/80 border border-slate-700/60 rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-between backdrop-blur shadow-lg">
+          <div class="flex items-center gap-4">
+            <div class="flex flex-col">
+              <h2 id="hud-player-name" class="text-lg font-bold text-slate-100 leading-tight">Novice Hero</h2>
+              <span id="hud-class-title" class="text-xs font-semibold text-amber-400">Novice (F-Rank)</span>
+            </div>
+            
+            <!-- HP Bar -->
+            <div class="flex flex-col gap-1 w-32 md:w-44">
+              <div class="flex justify-between text-[10px] font-bold text-green-400 px-0.5">
+                <span>HP</span>
+                <span id="hud-hp-text">150/150</span>
+              </div>
+              <div class="w-full h-3 bg-slate-950 rounded overflow-hidden border border-slate-800">
+                <div id="hud-hp-fill" class="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-300" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- SP Bar -->
+            <div class="flex flex-col gap-1 w-24 md:w-36">
+              <div class="flex justify-between text-[10px] font-bold text-blue-400 px-0.5">
+                <span>SP</span>
+                <span id="hud-sp-text">20/20</span>
+              </div>
+              <div class="w-full h-3 bg-slate-950 rounded overflow-hidden border border-slate-800">
+                <div id="hud-sp-fill" class="h-full bg-gradient-to-r from-blue-500 to-sky-400 transition-all duration-300" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- EXP Bars -->
+            <div class="flex flex-col gap-1 w-28 md:w-40">
+              <div class="flex justify-between text-[10px] font-bold text-amber-400 px-0.5">
+                <span>Base EXP</span>
+                <span id="hud-exp-text">0.0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-950 rounded overflow-hidden border border-slate-800">
+                <div id="hud-exp-fill" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-bold text-violet-400 px-0.5 mt-0.5">
+                <span>Job EXP</span>
+                <span id="hud-jexp-text">0.0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-950 rounded overflow-hidden border border-slate-800">
+                <div id="hud-jexp-fill" class="h-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Central Level & Currency parameters -->
+          <div class="flex items-center gap-6 text-xs font-semibold text-slate-300">
+            <div class="flex gap-1.5">
+              <span>Base Lv.</span>
+              <strong id="hud-base-lvl" class="text-slate-100">1</strong>
+            </div>
+            <div class="flex gap-1.5">
+              <span>Job Lv.</span>
+              <strong id="hud-job-lvl" class="text-slate-100">1</strong>
+            </div>
+            <div class="flex gap-1.5 items-center">
+              <span class="text-yellow-500">🪙</span>
+              <strong id="hud-zenny" class="text-yellow-400">1,000</strong>
+            </div>
+            
+            <!-- Sound/Music toggles -->
+            <div class="flex gap-2 items-center border-l border-slate-800 pl-3 mr-1">
+              <label class="flex items-center gap-1 cursor-pointer select-none">
+                <input type="checkbox" id="hud-sound-toggle" checked class="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" />
+                <span class="text-[10px] uppercase font-bold text-slate-400">SFX</span>
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer select-none">
+                <input type="checkbox" id="hud-music-toggle" checked class="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" />
+                <span class="text-[10px] uppercase font-bold text-slate-400">BGM</span>
+              </label>
+            </div>
+            <button id="admin-toggle-btn" class="px-2.5 py-1 text-xs font-bold rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-rose-400 hover:text-rose-300 transition">
+              ADMIN TOOL
+            </button>
+          </div>
+        </header>
+
+        <!-- Main Display Column Wrappers -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          <!-- Left Columns (Game Window Canvas + chat) -->
+          <div class="lg:col-span-2 flex flex-col gap-4">
+            
+            <!-- Canvas window wrapper -->
+            <div class="relative w-full bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+              <!-- Map Tag HUD overlay -->
+              <div id="hud-active-buffs" class="absolute bottom-3 left-4 flex gap-2 z-10">
+                <!-- Buff Badges dynamic -->
+              </div>
+              <!-- Minimap overlay -->
+              <canvas id="minimap-canvas" width="108" height="108" style="position:absolute;top:8px;right:8px;border:2px solid rgba(250,204,21,0.55);border-radius:8px;background:rgba(15,23,42,0.82);z-index:10;image-rendering:pixelated;"></canvas>
+              <canvas id="game-canvas" class="block cursor-crosshair max-w-full"></canvas>
+            </div>
+
+            <!-- Hotkeys Grid bar -->
+            <div class="grid grid-cols-8 gap-2" id="hotkeys-grid">
+              <!-- Mapped F1-F8 grids dynamically rendered -->
+            </div>
+
+            <!-- Chat Window panel -->
+            <div class="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 flex flex-col h-44 shadow-lg backdrop-blur">
+              <div class="flex justify-between border-b border-slate-800 pb-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <span>Adventure Logs & Guild Feed</span>
+                <span>Active</span>
+              </div>
+              <div id="chat-log-feed" class="flex-1 overflow-y-auto space-y-1 font-mono pr-1 scrollbar-thin">
+                <!-- Log feed strings -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Sidebar navigation tab sheets -->
+          <div class="flex flex-col gap-4 bg-slate-900/80 border border-slate-700/60 rounded-2xl p-4 backdrop-blur shadow-lg min-h-[400px]">
+            
+            <!-- Tab switches header -->
+            <div class="grid grid-cols-5 gap-1 border-b border-slate-800 pb-3">
+              <button class="nav-tab-btn active text-xs font-bold py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition" data-panel="status">
+                STATS
+              </button>
+              <button class="nav-tab-btn text-xs font-bold py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition" data-panel="skills">
+                SKILLS
+              </button>
+              <button class="nav-tab-btn text-xs font-bold py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition" data-panel="inventory">
+                BAG
+              </button>
+              <button class="nav-tab-btn text-xs font-bold py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition" data-panel="quests">
+                BOARD
+              </button>
+              <button class="nav-tab-btn text-xs font-bold py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-slate-300 transition" data-panel="party">
+                PARTY
+              </button>
+            </div>
+
+            <!-- Panels container -->
+            <div class="flex-1 relative">
+              
+              <!-- Panel: Status -->
+              <div id="panel-status" class="panel-view space-y-4">
+                <!-- Content injected dynamically -->
+              </div>
+
+              <!-- Panel: Skills -->
+              <div id="panel-skills" class="panel-view hidden space-y-4">
+                <!-- Content injected dynamically -->
+              </div>
+
+              <!-- Panel: Inventory -->
+              <div id="panel-inventory" class="panel-view hidden space-y-4">
+                <!-- Content injected dynamically -->
+              </div>
+
+              <!-- Panel: Quests -->
+              <div id="panel-quests" class="panel-view hidden space-y-4">
+                <!-- Content injected dynamically -->
+              </div>
+
+              <!-- Panel: Party -->
+              <div id="panel-party" class="panel-view hidden space-y-4">
+                <!-- Content injected dynamically -->
+              </div>
+
+              <!-- Panel: Floating / Toggleable Admin panel details -->
+              <div id="panel-admin" class="panel-view hidden space-y-4 bg-slate-950/80 border border-rose-950/80 p-4 rounded-xl shadow-2xl">
+                <div class="flex justify-between items-center border-b border-rose-900 pb-1.5">
+                  <h3 class="text-xs font-black uppercase tracking-wider text-rose-400">ADMINISTRATIVE CHEATS SUITE</h3>
+                  <span class="text-[9px] font-mono text-slate-500">Developer Mode</span>
+                </div>
+
+                <div class="space-y-3.5">
+                  <!-- Level adjustments -->
+                  <div class="bg-slate-900/60 p-2 rounded border border-slate-800 flex gap-2 items-end">
+                    <div class="flex flex-col gap-1 w-1/2">
+                      <label class="text-[9px] font-bold text-slate-400 uppercase">Base Level</label>
+                      <input type="number" id="admin-input-base-lvl" value="1" min="1" max="99" class="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200" />
+                    </div>
+                    <div class="flex flex-col gap-1 w-1/2">
+                      <label class="text-[9px] font-bold text-slate-400 uppercase">Job Level</label>
+                      <input type="number" id="admin-input-job-lvl" value="1" min="1" max="50" class="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200" />
+                    </div>
+                    <button id="admin-btn-set-lvl" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 rounded text-xs font-bold text-white transition">SET</button>
+                  </div>
+
+                  <!-- Quick Max Zenny -->
+                  <button id="admin-btn-zenny" class="w-full py-1.5 bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-300 rounded text-xs font-bold transition">
+                    💰 GIVE 9,999,999 ZENNY
+                  </button>
+
+                  <!-- Teleport warping -->
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Map Warper</label>
+                    <select id="admin-warp-select" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200">
+                      <option value="prontera">Prontera Fields (Green plains)</option>
+                      <option value="payon">Payon Forest (Autumn bamboo)</option>
+                      <option value="sograt">Sograt Desert (Sandscapes)</option>
+                      <option value="mjolnir">Mjolnir Mountains (Icy snows)</option>
+                      <option value="geffen">Geffen Dungeon (Crypt cavern)</option>
+                      <optgroup label="─── Dragon Territories ───">
+                        <option value="volcanic_hatchery">🌋 Volcanic Hatchery (Lv 60+)</option>
+                        <option value="dragon_peak">🐉 Dragon Peak (Lv 70+)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <!-- Forced Class promoção -->
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase">Forced Class Promote</label>
+                    <select id="admin-class-select" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200">
+                      <!-- Dynamic options inject -->
+                    </select>
+                  </div>
+
+                  <!-- Items generator -->
+                  <div class="flex gap-2 items-end">
+                    <div class="flex-1 flex flex-col gap-1">
+                      <label class="text-[9px] font-bold text-slate-400 uppercase">Loot Items Spawner</label>
+                      <select id="admin-item-select" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200">
+                        <!-- Dynamic items inject -->
+                      </select>
+                    </div>
+                    <button id="admin-btn-spawn-item" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 rounded text-xs font-bold text-white transition">SPAWN</button>
+                  </div>
+
+                  <!-- Monsters spawning -->
+                  <div class="flex gap-2 items-end">
+                    <div class="flex-1 flex flex-col gap-1">
+                      <label class="text-[9px] font-bold text-slate-400 uppercase">Monster Spawner (Spawns Adjacent)</label>
+                      <select id="admin-mob-select" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-xs rounded text-slate-200">
+                        <!-- Dynamic monsters inject -->
+                      </select>
+                    </div>
+                    <button id="admin-btn-spawn-mob" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 rounded text-xs font-bold text-white transition">SPAWN</button>
+                  </div>
+
+                  <!-- Cheats checkbox switches -->
+                  <div class="grid grid-cols-2 gap-2 text-xs pt-1.5">
+                    <label class="flex items-center gap-2 cursor-pointer bg-slate-900/60 p-2 rounded border border-slate-800">
+                      <input type="checkbox" id="admin-cheat-god" class="rounded accent-rose-600" />
+                      <span class="text-[10px] font-bold text-slate-300">GOD MODE</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer bg-slate-900/60 p-2 rounded border border-slate-800">
+                      <input type="checkbox" id="admin-cheat-kill" class="rounded accent-rose-600" />
+                      <span class="text-[10px] font-bold text-slate-300">ONE PUNCH</span>
+                    </label>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Bottom Progress Level HUD markers -->
+            <div class="mt-4 border-t border-slate-800 pt-3 space-y-2">
+              <div class="w-full h-2.5 bg-slate-950 rounded overflow-hidden border border-slate-800 flex items-center">
+                <div id="hud-exp-fill" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400" style="width: 0%"></div>
+              </div>
+              <div id="hud-exp-text" class="text-[9px] font-bold text-slate-500 text-center uppercase tracking-wide">Base EXP: 0.0%</div>
+              
+              <div class="w-full h-2.5 bg-slate-950 rounded overflow-hidden border border-slate-800 flex items-center">
+                <div id="hud-jexp-fill" class="h-full bg-gradient-to-r from-blue-500 to-sky-400" style="width: 0%"></div>
+              </div>
+              <div id="hud-jexp-text" class="text-[9px] font-bold text-slate-500 text-center uppercase tracking-wide">Job EXP: 0.0%</div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

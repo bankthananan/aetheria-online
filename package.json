@@ -1,0 +1,17 @@
+{
+  "name": "game-rpg",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js",
+    "test:balance": "node js/balance.test.js",
+    "test:art": "node js/art.test.js"
+  },
+  "devDependencies": {
+    "vite": "^4.4.5"
+  }
+}

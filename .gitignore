@@ -1,0 +1,10 @@
+.DS_Store
+.agents/
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+.appdeploy
+*.log
+*.png

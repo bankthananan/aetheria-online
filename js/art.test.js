@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict';
+import { PAL, PX } from './pixelart.js';
+import { MAPS } from './maps.js';
+import { CONTENT } from './content.js';
+import { THEME } from './theme.js';
+import { connectedWalkableTiles, nextPortalToward } from './pathing.js';
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const spriteGroups = ['player', 'playerWalk', 'npc', 'monster', 'item'];
+
+for (const [key, color] of Object.entries(PAL)) {
+  assert.ok(color == null || HEX.test(color), `palette key ${key} has invalid color ${color}`);
+}
+
+for (const group of spriteGroups) {
+  assert.ok(PX[group] && Object.keys(PX[group]).length, `${group} sprite group is empty`);
+  for (const [name, rows] of Object.entries(PX[group])) {
+    assert.ok(Array.isArray(rows) && rows.length >= 8, `${group}.${name} needs a readable sprite matrix`);
+    const width = Math.max(...rows.map(row => row.length));
+    assert.ok(width >= 8 && width <= 32 && rows.length <= 32, `${group}.${name} exceeds the supported sprite scale`);
+    let painted = 0;
+    const colors = new Set();
+    for (const row of rows) {
+      assert.equal(typeof row, 'string', `${group}.${name} contains a non-string row`);
+      for (const pixel of row) {
+        assert.ok(pixel === ' ' || pixel === '.' || pixel in PAL, `${group}.${name} uses unknown palette key '${pixel}'`);
+        if (PAL[pixel]) { painted++; colors.add(pixel); }
+      }
+    }
+    assert.ok(painted >= 20, `${group}.${name} silhouette is too sparse`);
+    assert.ok(colors.size >= 3, `${group}.${name} needs at least three material/shading colors`);
+  }
+}
+
+for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist']) {
+  assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
+}
+for (const role of ['shop', 'guild', 'quest', 'story']) assert.ok(PX.npc[role], `NPC role ${role} needs art`);
+for (const monster of CONTENT.monsters) assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
+
+for (const map of Object.values(MAPS)) {
+  for (const field of ['province', 'epithet', 'landmark', 'lore']) {
+    assert.ok(typeof map.chronicle?.[field] === 'string' && map.chronicle[field].trim(), `${map.id} needs chronicle.${field}`);
+  }
+  assert.equal(map.tiles.length, map.height, `${map.id} height mismatch`);
+  map.tiles.forEach((row, index) => assert.equal(row.length, map.width, `${map.id} row ${index} width mismatch`));
+  assert.ok(map.portals?.length, `${map.id} needs at least one portal`);
+  for (const portal of map.portals) {
+    const tile = map.tiles[portal.y]?.[portal.x];
+    assert.ok(map.legend[tile]?.walkable, `${map.id} portal at ${portal.x},${portal.y} is blocked`);
+  }
+  for (const npc of map.npcs || []) {
+    const tile = map.tiles[npc.y]?.[npc.x];
+    assert.ok(map.legend[tile]?.walkable, `${map.id} NPC ${npc.id} is standing on a blocked tile`);
+  }
+  if (map.spawns.length) assert.ok(map.tiles.some(row => row.includes('B')), `${map.id} needs a guardian landmark`);
+  const entrance = map.playerStart || map.portals[0];
+  const connected = connectedWalkableTiles(map, entrance.x, entrance.y);
+  const reachable = new Set(connected.map(tile => `${tile.col},${tile.row}`));
+  assert.ok(connected.length, `${map.id} entrance has no connected walkable region`);
+  for (const portal of map.portals) assert.ok(reachable.has(`${portal.x},${portal.y}`), `${map.id} portal is isolated from the entrance`);
+  for (const npc of map.npcs || []) assert.ok(reachable.has(`${npc.x},${npc.y}`), `${map.id} NPC ${npc.id} is isolated from the entrance`);
+  if (map.spawns.length) {
+    const bossRow = map.tiles.findIndex(row => row.includes('B'));
+    const bossCol = map.tiles[bossRow].indexOf('B');
+    assert.ok(reachable.has(`${bossCol},${bossRow}`), `${map.id} guardian is isolated from the entrance`);
+  }
+}
+
+const mapIds = Object.keys(MAPS);
+for (const from of mapIds) for (const to of mapIds) {
+  if (from === to) continue;
+  const portal = nextPortalToward(MAPS, from, to);
+  assert.ok(portal && MAPS[from].portals.includes(portal), `no quest route from ${from} to ${to}`);
+}
+
+function luminance(hex) {
+  const channels = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(value => value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+for (const key of ['bg', 'panelBg', 'panelBorder', 'textPrimary', 'textMuted', 'accent', 'accentAlt', 'hpRed', 'mpBlue']) {
+  assert.ok(HEX.test(THEME.palette[key]), `theme palette is missing ${key}`);
+}
+assert.ok(contrast(THEME.palette.textPrimary, THEME.palette.panelBg) >= 4.5, 'panel text contrast is below WCAG AA');
+assert.ok(THEME.css.includes('.hud') && THEME.css.includes('.panel') && THEME.css.includes('.hotbar'), 'theme lost core HUD selectors');
+const trackerCss = THEME.css.match(/#hud \.quest-tracker\{([^}]*)\}/)?.[1] || '';
+assert.match(trackerCss, /overflow-y:\s*auto/, 'HUD quest tracker must scroll when quests exceed its max height');
+assert.match(trackerCss, /overscroll-behavior:\s*contain/, 'HUD quest tracker must not pass wheel scrolling to the game page');
+assert.match(trackerCss, /touch-action:\s*pan-y/, 'HUD quest tracker must support touch scrolling');
+assert.ok(!/letter-spacing:\s*-/.test(THEME.css), 'theme uses negative letter spacing');
+
+console.log('Art audit passed: sprites, maps, palette keys, HUD contracts, and contrast are valid.');
