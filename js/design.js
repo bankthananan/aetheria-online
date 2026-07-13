@@ -1,8 +1,8 @@
-// Game design data for "Another World Online" — isekai RPG demo.
+// Game design data for "Aetheria Online" — isekai RPG demo.
 // All formula strings are valid JS referencing only their named vars + Math.
 export const DESIGN = {
   concept: {
-    title: "Another World Online",
+    title: "Aetheria Online",
     tagline: "Died at your desk. Respawned with a sword.",
     premise:
       "A burned-out office worker collapses at midnight and wakes in Aetheria, a world that runs on the same MMO logic they used to grind after work. " +

@@ -1,4 +1,4 @@
-# Another World Online — Isekai Adventure
+# Aetheria Online — Isekai Adventure
 
 A browser RPG in the spirit of Ragnarok Online, reskinned as an isekai (a burned-out
 office worker respawns in the world of Aetheria). Zero build step, no dependencies —
@@ -8,7 +8,7 @@ just static files and the Web Audio API.
 ES modules can't load over `file://`, so serve the folder:
 
 ```bash
-cd game-rpg
+cd aetheria-online
 python3 -m http.server 8777
 # open http://localhost:8777/   (index.html is the game)
 ```

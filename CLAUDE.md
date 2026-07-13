@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Two codebases in one repo
 
-1. **Active game — "Another World Online" (isekai RPG)**: `index.html` + `js/*.js`. Zero build step, no dependencies, plain ES modules + Web Audio. This is where all current work happens. Docs: `ISEKAI_README.md`.
+1. **Active game — "Aetheria Online" (isekai RPG)**: `index.html` + `js/*.js`. Zero build step, no dependencies, plain ES modules + Web Audio. This is where all current work happens. Docs: `ISEKAI_README.md`.
 2. **Legacy — Vite "Ragnarok Draconic Expansion"**: `index.legacy.html` + `src/*.js`. Preserved, not actively developed. All `package.json` scripts (`npm run dev/build`, `npm test`) target this legacy project, **not** the active game.
 
 ## Running the active game

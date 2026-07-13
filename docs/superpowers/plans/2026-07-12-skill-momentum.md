@@ -64,8 +64,8 @@ globalThis.window = globalThis; globalThis.document = { createElement: () => ({ 
 globalThis.localStorage = { getItem: () => null, setItem(){}, removeItem(){} };
 globalThis.AudioContext = class { createOscillator(){return{connect(){},start(){},stop(){},frequency:{setValueAtTime(){}}};} createGain(){return{connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}};} get destination(){return{};} get currentTime(){return 0;} };
 function ctx2d(){ return new Proxy({}, { get: () => () => {} }); }
-const { DESIGN } = await import('../../../Desktop/personal/game-rpg/js/design.js'); // adjust relative path
-const { COMBAT } = await import('../../../Desktop/personal/game-rpg/js/combat.js');
+const { DESIGN } = await import('../../../Desktop/personal/aetheria-online/js/design.js'); // adjust relative path
+const { COMBAT } = await import('../../../Desktop/personal/aetheria-online/js/combat.js');
 assert.ok(DESIGN.tuning.momentum, 'momentum tuning present');
 for (const k of ['max','finisherMin','perHit','decayMs','powerPerPoint','detonateBonus'])
   assert.ok(Number.isFinite(DESIGN.tuning.momentum[k]), `momentum.${k}`);
