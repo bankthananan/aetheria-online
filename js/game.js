@@ -11,6 +11,7 @@ import { SPRITES } from './sprites.js';
 import { PAL, PX } from './pixelart.js';
 import { RARITY, RARITY_ORDER, AFFIXES } from './loot.js';
 import { connectedWalkableTiles, nextPortalToward } from './pathing.js';
+import { T, currentLang, setLanguage } from './locale.js';
 
 const TS = 32;                       // tile size in px
 const CANVAS_W = 832, CANVAS_H = 576;
@@ -2419,32 +2420,33 @@ function buildHud() {
   const p = G.player;
   $('#hud').innerHTML = `
     <div class="hud">
-      <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>LV</small><b id="hud-level">1</b></div>
+      <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
-        <div class="bar hp-bar" role="progressbar" aria-label="Health"><div class="fill" id="hp-fill"></div><div class="label" id="hp-label"></div></div>
-        <div class="bar mp-bar" role="progressbar" aria-label="Mana"><div class="fill" id="mp-fill"></div><div class="label" id="mp-label"></div></div>
+        <div class="bar hp-bar" role="progressbar" aria-label="${T('Health', 'ui')}"><div class="fill" id="hp-fill"></div><div class="label" id="hp-label"></div></div>
+        <div class="bar mp-bar" role="progressbar" aria-label="${T('Mana', 'ui')}"><div class="fill" id="mp-fill"></div><div class="label" id="mp-label"></div></div>
         <div class="hud-identity"><span id="hud-name"></span><span class="hud-sep">◆</span><span id="hud-job"></span><span class="hud-sep">◆</span><span class="hud-coin">G</span><span id="hud-zeny"></span></div>
       </div>
       <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div></div>
-      <div class="quest-tracker" id="quest-tracker" tabindex="0" role="region" aria-label="Active quests and bounties"></div>
+      <div class="quest-tracker" id="quest-tracker" tabindex="0" role="region" aria-label="${T('Active quests and bounties', 'ui')}"></div>
       <div class="msg-log" id="msg-log"></div>
       <div class="hotbar-shell">
-        <div id="momentum-pips" class="momentum-pips" title="Damage skills build Momentum. Finishers consume it.">
-          <span class="momentum-label">Momentum</span><span class="momentum-track"></span><span class="momentum-state"></span>
+        <div id="momentum-pips" class="momentum-pips" title="${T('Damage skills build Momentum. Finishers consume it.', 'ui')}">
+          <span class="momentum-label">${T('Momentum', 'ui')}</span><span class="momentum-track"></span><span class="momentum-state"></span>
         </div>
-        <div class="hotbar" aria-label="Action bar"></div>
-        <button class="hotbar-config" id="hotbar-config" title="Customize action keys" aria-label="Customize action keys">⌨</button>
+        <div class="hotbar" aria-label="${T('Action bar', 'ui')}"></div>
+        <button class="hotbar-config" id="hotbar-config" title="${T('Customize action keys', 'ui')}" aria-label="${T('Customize action keys', 'ui')}">⌨</button>
       </div>
       <div class="bar xp-bar"><div class="fill" id="xp-fill"></div></div>
-      <div class="bar job-bar" title="Job XP (1 skill point per level · cap ${PROGRESSION.jobLevelCap})"><div class="fill" id="job-fill"></div></div>
+      <div class="bar job-bar" title="${T('Job XP (1 skill point per level · cap {cap})', 'ui').replace('{cap}', PROGRESSION.jobLevelCap)}"><div class="fill" id="job-fill"></div></div>
       <div class="hud-menu">
-        <button class="btn btn--ghost" data-panel="char">Status (C)</button>
-        <button class="btn btn--ghost" data-panel="inv">Satchel (I)</button>
-        <button class="btn btn--ghost" data-panel="skills">Abilities (K)</button>
-        <button class="btn btn--ghost" data-panel="quest">Journal (Q)</button>
-        <button class="btn btn--ghost" data-panel="world">World (M)</button>
-        <button class="btn btn--ghost" id="farm-btn">⚔ Hunt (F)</button>
-        ${G.admin ? '<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ Admin</button>' : ''}
+        <button class="btn btn--ghost" data-panel="char">${T('Status (C)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="inv">${T('Satchel (I)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="skills">${T('Abilities (K)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="quest">${T('Journal (Q)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
+        <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
+        ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
+        <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
         <button class="btn btn--ghost" id="mute-btn">🔊</button>
       </div>
     </div>`;
@@ -2453,15 +2455,31 @@ function buildHud() {
   $('#mute-btn').onclick = e => { G.muted = !G.muted; AUDIO.setMuted(G.muted); e.target.textContent = G.muted ? '🔇' : '🔊'; };
   $('#farm-btn').onclick = () => toggleFarm();
   $('#hotbar-config').onclick = () => togglePanel('hotkeys');
-  $('#hud-name').textContent = p.name + ' the ' + p.className;
+  $('#lang-btn').onclick = () => {
+    setLanguage(currentLang === 'th' ? 'en' : 'th');
+    AUDIO.playSfx('menu');
+    buildHud();
+    const openPanel = $('#panel');
+    if (openPanel) {
+      const kind = openPanel.dataset.kind;
+      openPanel.querySelector('.panel__head').innerHTML = `${panelTitle(kind)}<button class="panel__close">✕</button>`;
+      openPanel.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); openPanel.remove(); };
+      refreshPanel(kind);
+    }
+  };
+  if (currentLang === 'th') {
+    $('#hud-name').textContent = `${T(p.className, 'classes')} ${p.name}`;
+  } else {
+    $('#hud-name').textContent = p.name + ' the ' + p.className;
+  }
   updateFarmButton();
 }
 function updateFarmButton() {
   const b = $('#farm-btn'); if (!b) return;
   const routing = G.taskGuide && G.mapId !== G.taskGuide.mapId;
   const worldRoute = routing && G.taskGuide.source === 'world';
-  b.textContent = routing ? `➤ ${worldRoute ? 'Travel' : 'Quest'} (F)` : G.huntTargetId ? '⚔ Quest Hunt ✓ (F)' : G.autoFarm ? '⚔ Hunting ✓ (F)' : '⚔ Hunt (F)';
-  b.title = routing ? `Heading to ${G.taskGuide.label}` : G.huntTargetId ? `Focused hunt: ${monById[G.huntTargetId]?.name || G.huntTargetId}` : 'Toggle automatic hunting';
+  b.textContent = routing ? `➤ ${worldRoute ? T('Travel', 'ui') : T('Quest', 'ui')} (F)` : G.huntTargetId ? T('⚔ Quest Hunt ✓ (F)', 'ui') : G.autoFarm ? T('⚔ Hunting ✓ (F)', 'ui') : T('⚔ Hunt (F)', 'ui');
+  b.title = routing ? T('Heading to {name}', 'ui').replace('{name}', T(G.taskGuide.label, 'monsters') || T(G.taskGuide.label, 'npcs')) : G.huntTargetId ? T('Focused hunt: {name}', 'ui').replace('{name}', T(monById[G.huntTargetId]?.name || G.huntTargetId, 'monsters')) : T('Toggle automatic hunting', 'ui');
   b.style.color = (G.autoFarm || routing) ? 'var(--success)' : '';
   b.style.borderColor = (G.autoFarm || routing) ? 'var(--success)' : '';
 }
@@ -2469,13 +2487,13 @@ function toggleFarm() {
   if (G.taskGuide) {
     const wasWorldRoute = G.taskGuide.source === 'world';
     finishTaskGuide(false);
-    toast(wasWorldRoute ? 'Travel route cleared.' : 'Quest guidance stopped.', 'sys');
+    toast(wasWorldRoute ? T('Travel route cleared.', 'ui') : T('Quest guidance stopped.', 'ui'), 'sys');
     return;
   }
   G.huntTargetId = null;
   G.autoFarm = !G.autoFarm;
   updateFarmButton();
-  toast(G.autoFarm ? 'Auto-farm ON — auto attacks, casts skills, buffs & heals (bosses excluded).' : 'Auto-farm off.', G.autoFarm ? 'good' : 'sys');
+  toast(G.autoFarm ? T('Auto-farm ON — auto attacks, casts skills, buffs & heals (bosses excluded).', 'ui') : T('Auto-farm off.', 'ui'), G.autoFarm ? 'good' : 'sys');
 }
 
 function hotbarSlotHtml(slot, i) {
@@ -2590,7 +2608,7 @@ function updateHud() {
   const p = G.player;
   $('#hud-level').textContent = p.level;
   $('#hud-zeny').textContent = p.zeny;
-  if ($('#hud-job')) $('#hud-job').textContent = `Job ${p.jobLevel}/${PROGRESSION.jobLevelCap}`;
+  if ($('#hud-job')) $('#hud-job').textContent = `${T('Job Lv', 'ui')} ${p.jobLevel}/${PROGRESSION.jobLevelCap}`;
   const safeRatio = (value, max) => Number.isFinite(value) && Number.isFinite(max) && max > 0 ? clamp(value / max, 0, 1) : 0;
   const hpRatio = safeRatio(p.hp, p.maxHp), mpRatio = safeRatio(p.mp, p.maxMp);
   $('#hp-fill').style.width = (100 * hpRatio) + '%';
@@ -2633,9 +2651,9 @@ function updateHud() {
   });
   // pending-point nudges on the menu buttons
   const cbtn = $('#hud').querySelector('[data-panel="char"]');
-  if (cbtn) cbtn.textContent = 'Char (C)' + (p.statPoints ? ` +${p.statPoints}` : '');
+  if (cbtn) cbtn.textContent = T('Status (C)', 'ui') + (p.statPoints ? ` +${p.statPoints}` : '');
   const kbtn = $('#hud').querySelector('[data-panel="skills"]');
-  if (kbtn) kbtn.textContent = 'Skills (K)' + (p.skillPoints ? ` +${p.skillPoints}` : '');
+  if (kbtn) kbtn.textContent = T('Abilities (K)', 'ui') + (p.skillPoints ? ` +${p.skillPoints}` : '');
   const mpips = $('#momentum-pips');
   if (mpips) {
     const MM = TUNING.momentum, ready = p.momentum >= MM.finisherMin;
@@ -2643,7 +2661,7 @@ function updateHud() {
     if (track) track.innerHTML = Array.from({ length: MM.max }, (_, i) =>
       `<span class="pip${i < p.momentum ? ' on' : ''}${ready ? ' ready' : ''}" data-momentum-pip="${i}"></span>`).join('');
     const state = mpips.querySelector('.momentum-state');
-    if (state) state.textContent = ready ? 'FINISHER READY' : `${p.momentum}/${MM.finisherMin} TO FINISH`;
+    if (state) state.textContent = ready ? T('FINISHER READY', 'ui') : T('{prog}/{min} TO FINISH', 'ui').replace('{prog}', p.momentum).replace('{min}', MM.finisherMin);
     mpips.classList.toggle('ready', ready);
   }
   const flowMomentum = document.querySelector('.skill-flow .flow-momentum');
@@ -2704,7 +2722,7 @@ function updateMinimap() {
       bctx.fillStyle = info ? info.color : '#000';
       bctx.fillRect(col * sx, row * sy, Math.ceil(sx), Math.ceil(sy));
     }
-  $('#minimap-name').textContent = G.map.name;
+  $('#minimap-name').textContent = T(G.map.name, 'maps');
 }
 
 function renderMinimap() {
@@ -3491,18 +3509,24 @@ function runCutscene(lines, done) {
 function showSignIn() {
   $('#root').innerHTML = `
     <div class="title-screen signin-screen">
+      <button class="btn btn--ghost" id="title-lang-btn" style="position:absolute;top:10px;right:10px;font-size:14px">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
       <form class="signin-panel" id="signin-form">
         <h1 class="title-h1">${DESIGN.concept.title}</h1>
-        <p class="signin-copy">${DESIGN.concept.tagline}</p>
-        <label class="signin-label" for="signin-name">Adventurer ID</label>
-        <input id="signin-name" class="signin-input" autocomplete="username" maxlength="24" placeholder="Enter your account name" autofocus />
-        <button class="btn signin-primary" id="signin-btn" type="submit">Sign In</button>
-        <button class="btn btn--ghost signin-guest" id="guest-btn" type="button">Continue as Guest</button>
-        <div class="signin-hint">Profiles are stored locally in this browser.</div>
+        <p class="signin-copy">${T(DESIGN.concept.tagline, 'dialogues')}</p>
+        <label class="signin-label" for="signin-name">${T('Adventurer ID', 'ui')}</label>
+        <input id="signin-name" class="signin-input" autocomplete="username" maxlength="24" placeholder="${T('Enter your account name', 'ui')}" autofocus />
+        <button class="btn signin-primary" id="signin-btn" type="submit">${T('Sign In', 'ui')}</button>
+        <button class="btn btn--ghost signin-guest" id="guest-btn" type="button">${T('Continue as Guest', 'ui')}</button>
+        <div class="signin-hint">${T('Profiles are stored locally in this browser.', 'ui')}</div>
       </form>
     </div>`;
   const name = $('#signin-name');
   const form = $('#signin-form');
+  $('#title-lang-btn').onclick = () => {
+    setLanguage(currentLang === 'th' ? 'en' : 'th');
+    AUDIO.playSfx('menu');
+    showSignIn();
+  };
   form.onsubmit = e => {
     e.preventDefault();
     if (!signIn(name.value)) {
@@ -3527,34 +3551,44 @@ function showTitle() {
     const tops = Object.entries(g).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(' · ');
     return `<button class="class-card btn--ghost" data-class="${c.id}">
       ${portrait}
-      <b class="cc-name">${c.name}</b>
-      <span class="cc-role">${c.role}</span>
-      <span class="cc-build">Build ${recommendedBuild(g)} · ${tops}</span>
+      <b class="cc-name">${T(c.name, 'classes')}</b>
+      <span class="cc-role">${T(c.role, 'classes')}</span>
+      <span class="cc-build">${T('Build', 'ui')} ${T(recommendedBuild(g), 'classes')} · ${tops}</span>
       <span class="cc-radar radar-wrap">${svgRadar(c.baseStats)}</span>
-      <span class="cc-flavor">${c.playstyle || c.flavor}</span>
+      <span class="cc-flavor">${T(c.playstyle || c.flavor, 'classes')}</span>
     </button>`;
   }).join('');
+  const sv = readSave();
+  const continueHtml = sv ? `<div style="margin:6px 0 18px">
+    <button class="btn" id="continue-btn" style="font-size:16px;padding:10px 30px">▶ ${T('Continue', 'ui')} — Lv ${sv.player.level} ${T(sv.player.className, 'classes')}</button>
+    <button class="btn btn--ghost" id="delete-save-btn" title="${T('Erase saved game', 'ui')}" style="margin-left:8px">🗑</button>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px">— ${T('or start a new life below', 'ui')} —</div></div>` : '';
   $('#root').innerHTML = `
     <div class="title-screen">
       <div class="title-inner">
         <div class="account-bar">
-          <span>${profile ? `Signed in as <b>${esc(profile.name)}</b>` : 'Playing as Guest'}</span>
-          <button class="btn btn--ghost" id="switch-profile-btn" type="button">${profile ? 'Sign Out' : 'Sign In'}</button>
+          <span>${profile ? `${T('Signed in as', 'ui')} <b>${esc(profile.name)}</b>` : T('Playing as Guest', 'ui')}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn--ghost" id="title-lang-btn" style="font-size:14px">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
+            <button class="btn btn--ghost" id="switch-profile-btn" type="button">${profile ? T('Sign Out', 'ui') : T('Sign In', 'ui')}</button>
+          </div>
         </div>
         <h1 class="title-h1">${DESIGN.concept.title}</h1>
-        <p style="font-style:italic;color:var(--text-muted);margin:0 0 14px">${DESIGN.concept.tagline}</p>
-        <p style="font-size:13px;line-height:1.6;max-width:600px;margin:0 auto 22px">${DESIGN.concept.premise}</p>
-        ${(() => { const sv = readSave(); return sv ? `<div style="margin:6px 0 18px">
-          <button class="btn" id="continue-btn" style="font-size:16px;padding:10px 30px">▶ Continue — Lv ${sv.player.level} ${sv.player.className}</button>
-          <button class="btn btn--ghost" id="delete-save-btn" title="Erase saved game" style="margin-left:8px">🗑</button>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:8px">— or start a new life below —</div></div>` : ''; })()}
-        <h2 style="font-family:var(--font-head);color:var(--text);font-size:20px">Choose your calling</h2>
+        <p style="font-style:italic;color:var(--text-muted);margin:0 0 14px">${T(DESIGN.concept.tagline, 'dialogues')}</p>
+        <p style="font-size:13px;line-height:1.6;max-width:600px;margin:0 auto 22px">${T(DESIGN.concept.premise, 'dialogues')}</p>
+        ${continueHtml}
+        <h2 style="font-family:var(--font-head);color:var(--text);font-size:20px">${T('Choose your calling', 'ui')}</h2>
         <div class="class-scroll"><div class="class-grid">${cards}</div></div>
-        <input id="hero-name" placeholder="Name your hero" style="padding:8px;border-radius:6px;border:1px solid var(--panel-border);background:#1c160e;color:var(--text);margin-bottom:14px" />
-        <br><button class="btn" id="start-btn" disabled style="font-size:16px;padding:10px 28px">Cross the Veil</button>
-        <p style="font-size:11px;color:var(--text-muted);margin-top:18px">Move WASD or click the ground (auto-paths around obstacles) · Click a monster to fight · Hotbar 1–9 (rebindable) · Talk E · Menus C/I/K/Q</p>
+        <input id="hero-name" placeholder="${T('Name your hero', 'ui')}" style="padding:8px;border-radius:6px;border:1px solid var(--panel-border);background:#1c160e;color:var(--text);margin-bottom:14px" />
+        <br><button class="btn" id="start-btn" disabled style="font-size:16px;padding:10px 28px">${T('Cross the Veil', 'ui')}</button>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:18px">${T("Move WASD or click the ground (auto-paths around obstacles) · Click a monster to fight · Hotbar 1–9 (rebindable) · Talk E · Menus C/I/K/Q", 'ui')}</p>
       </div></div>`;
   let chosen = null;
+  $('#title-lang-btn').onclick = () => {
+    setLanguage(currentLang === 'th' ? 'en' : 'th');
+    AUDIO.playSfx('menu');
+    showTitle();
+  };
   $('#root').querySelectorAll('.class-card').forEach(b => b.onclick = () => {
     chosen = b.dataset.class;
     $('#root').querySelectorAll('.class-card').forEach(x => x.style.outline = '');
@@ -3565,7 +3599,7 @@ function showTitle() {
   $('#start-btn').onclick = () => { if (chosen) begin(chosen, $('#hero-name').value.trim()); };
   // a corrupt/stale save must never white-screen the title — fall back to a fresh start
   const cont = $('#continue-btn'); if (cont) cont.onclick = () => {
-    try { resumeGame(); } catch (e) { console.error('resume failed', e); toast('Save could not be loaded — start a new game (🗑 clears it).', 'bad'); }
+    try { resumeGame(); } catch (e) { console.error('resume failed', e); toast(T('Save could not be loaded — start a new game (🗑 clears it).', 'ui'), 'bad'); }
   };
   const del = $('#delete-save-btn'); if (del) del.onclick = () => { deleteSave(); AUDIO.playSfx('menu'); showTitle(); };
   $('#switch-profile-btn').onclick = () => { signOut(); AUDIO.playSfx('menu'); showSignIn(); };

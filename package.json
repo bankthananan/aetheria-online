@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js",
+    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/locale.test.js",
     "test:balance": "node js/balance.test.js",
-    "test:art": "node js/art.test.js"
+    "test:art": "node js/art.test.js",
+    "test:locale": "node js/locale.test.js"
   },
   "devDependencies": {
     "vite": "^4.4.5"
