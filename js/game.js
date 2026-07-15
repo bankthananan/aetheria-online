@@ -30,7 +30,7 @@ const DIFFICULTY = {
   hard:   { name: 'Hard',   color: '#e8963c', mult: 1.4, band: [13, 18] },
   elite:  { name: 'Elite',  color: '#e0574b', mult: 2.0, band: [18, 99] },
 };
-const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:${c.color}22;color:${c.color};border:1px solid ${c.color}66">${c.name}</span>`; };
+const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:${c.color}22;color:${c.color};border:1px solid ${c.color}66">${T(c.name, 'ui')}</span>`; };
 // Adventurer's Guild rank ladder. Bounties award points by difficulty; ranking up
 // unlocks harder bounties (hard @ D-, elite @ B-), multiplies rewards, sweetens
 // loot rarity, and opens rank-gated shop stock (items with `rankReq`).
@@ -161,7 +161,7 @@ function rollItem(itemId, bias = 0, forceRarity) {
 const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15;
 const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * RARITY[inst.rarity].mult * (1 + 0.05 * (inst.plus || 0))) : 0;
 const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * RARITY[inst.rarity].mult * (1 + 0.05 * (inst.plus || 0))) : 0;
-const instName = inst => (inst.plus ? `+${inst.plus} ` : '') + itemById[inst.itemId].name;
+const instName = inst => (inst.plus ? `+${inst.plus} ` : '') + T(itemById[inst.itemId].name, 'items');
 function equippedAffixes(p) {
   const acc = { atkPct: 0, critPct: 0, hpFlat: 0, mpFlat: 0, defPct: 0, lifesteal: 0, hitFlat: 0, fleeFlat: 0 };
   for (const s of EQUIP_SLOTS) { const inst = p.equip[s]; if (inst?.affixes) for (const a of inst.affixes) acc[a.stat] = (acc[a.stat] || 0) + a.value; }
@@ -1342,14 +1342,17 @@ const storyPhaseById = Object.fromEntries((CONTENT.storyPhases || []).map(phase 
 const storyPhaseFor = quest => storyPhaseById[quest?.phase] || null;
 const storyPhaseLabel = quest => {
   const phase = storyPhaseFor(quest);
-  return phase ? `PHASE ${phase.numeral} · Lv ${phase.levelMin}–${phase.levelMax}` : 'MAIN STORY';
+  if (!phase) return T('MAIN STORY', 'ui');
+  const label = currentLang === 'th' ? 'ช่วงที่' : 'PHASE';
+  return `${label} ${phase.numeral} · Lv ${phase.levelMin}–${phase.levelMax}`;
 };
 const storyFocusQuest = () => questById[G.quest] || questById[G.pendingQuest] || null;
 
 function storyPhaseBadge(quest) {
   const phase = storyPhaseFor(quest);
   if (!phase) return '';
-  return `<span class="story-phase-badge" style="--phase-color:${phase.color}">Phase ${phase.numeral} · Lv ${phase.levelMin}–${phase.levelMax}</span>`;
+  const label = currentLang === 'th' ? 'ช่วงที่' : 'Phase';
+  return `<span class="story-phase-badge" style="--phase-color:${phase.color}">${label} ${phase.numeral} · Lv ${phase.levelMin}–${phase.levelMax}</span>`;
 }
 
 function storyRoadmapHtml() {
@@ -1359,12 +1362,21 @@ function storyRoadmapHtml() {
     const cleared = G.won || phase.id < focusPhase;
     const active = !cleared && phase.id === focusPhase;
     const waiting = active && G.pendingQuest === focus?.id;
-    const state = cleared ? 'CLEARED' : waiting ? `UNLOCK AT LV ${focus.minLevel}` : active ? 'IN PROGRESS' : 'LOCKED';
+    
+    let state = cleared ? 'CLEARED' : waiting ? `UNLOCK AT LV ${focus.minLevel}` : active ? 'IN PROGRESS' : 'LOCKED';
+    if (currentLang === 'th') {
+      state = cleared ? 'สำเร็จแล้ว' : waiting ? `ปลดล็อกที่ Lv ${focus.minLevel}` : active ? 'กำลังทำ' : 'ล็อกอยู่';
+    }
+    
     const symbol = cleared ? '✓' : active ? (waiting ? '◇' : '◆') : '·';
     const map = MAPS[phase.mapId];
+    const subLabel = currentLang === 'th'
+      ? `ช่วงที่ ${phase.numeral} · เลเวลหลัก ${phase.levelMin}–${phase.levelMax}`
+      : `PHASE ${phase.numeral} · BASE LV ${phase.levelMin}–${phase.levelMax}`;
+      
     return `<div class="story-phase ${cleared ? 'cleared' : active ? 'active' : 'locked'}" style="--phase-color:${phase.color}">
       <span class="story-phase__sigil">${symbol}</span>
-      <span class="story-phase__copy"><small>PHASE ${phase.numeral} · BASE LV ${phase.levelMin}–${phase.levelMax}</small><b>${phase.name}</b><em>${map?.name || phase.mapId}</em></span>
+      <span class="story-phase__copy"><small>${subLabel}</small><b>${T(phase.name, 'storyPhases')}</b><em>${T(map?.name || phase.mapId, 'maps')}</em></span>
       <span class="story-phase__state">${state}</span>
     </div>`;
   }).join('')}</div>`;
@@ -1384,8 +1396,8 @@ function startQuest(id, quiet) {
     G.quest = null;
     G.pendingQuest = q.id;
     const phase = storyPhaseFor(q);
-    toast(`Chapter locked — reach Base Lv ${q.minLevel} for ${q.name}.`, 'sys');
-    logMsg(`${phase ? `Phase ${phase.numeral}: ${phase.name}` : 'Next story quest'} unlocks at Base Lv ${q.minLevel}. Train through hunts or guild bounties.`, 'sys');
+    toast(currentLang === 'th' ? `บทเนื้อเรื่องล็อกอยู่ — เลเวลหลักต้องถึง ${q.minLevel} เพื่อเริ่ม ${T(q.name, 'quests')}` : `Chapter locked — reach Base Lv ${q.minLevel} for ${q.name}.`, 'sys');
+    logMsg(currentLang === 'th' ? `${phase ? `ช่วงที่ ${phase.numeral}: ${T(phase.name, 'storyPhases')}` : 'เควสต์เนื้อเรื่องถัดไป'} จะปลดล็อกที่เลเวลหลัก ${q.minLevel} ฝึกฝนเลเวลผ่านการล่ามอนสเตอร์หรือทำเควสต์ล่าค่าหัวกิลด์` : `${phase ? `Phase ${phase.numeral}: ${phase.name}` : 'Next story quest'} unlocks at Base Lv ${q.minLevel}. Train through hunts or guild bounties.`, 'sys');
     updateQuestTracker();
     return false;
   }
@@ -1394,8 +1406,8 @@ function startQuest(id, quiet) {
   // talk/explore quests demand a FRESH visit — forget any earlier one (else they'd insta-complete)
   if (q.objective.type === 'talk') G.talked.delete(q.objective.target);
   if (q.objective.type === 'explore') G.visited.delete(q.objective.target);
-  toast(`New quest: ${q.name}`, 'good');
-  logMsg(q.description, 'sys');
+  toast(currentLang === 'th' ? `เควสต์ใหม่: ${T(q.name, 'quests')}` : `New quest: ${q.name}`, 'good');
+  logMsg(T(q.description, 'quests'), 'sys');
   // chained quests pass quiet — their startLines already played in the completion dialogue
   if (q.startLines && !quiet) showDialogue(npcById[q.giverNpcId]?.name || 'Elowen', q.startLines);
   updateQuestTracker();
@@ -1412,10 +1424,10 @@ function questProgress(q) {
 
 function objectiveName(objective) {
   if (!objective) return '';
-  if (objective.type === 'kill') return monById[objective.target]?.name || objective.target;
-  if (objective.type === 'collect') return itemById[objective.target]?.name || objective.target;
-  if (objective.type === 'explore') return MAPS[objective.target]?.name || objective.target;
-  if (objective.type === 'talk') return npcById[objective.target]?.name || npcLocation(objective.target)?.npc.name || objective.target;
+  if (objective.type === 'kill') return T(monById[objective.target]?.name || objective.target, 'monsters');
+  if (objective.type === 'collect') return T(itemById[objective.target]?.name || objective.target, 'items');
+  if (objective.type === 'explore') return T(MAPS[objective.target]?.name || objective.target, 'maps');
+  if (objective.type === 'talk') return T(npcById[objective.target]?.name || npcLocation(objective.target)?.npc.name || objective.target, 'npcs');
   return objective.target;
 }
 
@@ -1465,7 +1477,7 @@ function taskAction(source, taskId) {
 
 function activateTaskGuide(source, taskId) {
   const action = taskAction(source, taskId);
-  if (!action?.mapId) { toast('No route is available for this task.', 'bad'); return; }
+  if (!action?.mapId) { toast(T('No route is available for this task.', 'ui'), 'bad'); return; }
   const resumeAutoFarm = G.taskGuide?.resumeAutoFarm ?? G.autoFarm;
   G.taskGuide = { ...action, resumeAutoFarm };
   G.huntTargetId = null;
@@ -1483,8 +1495,8 @@ function activateTaskGuide(source, taskId) {
 // reveals an uncharted region's route.
 function activateWorldRoute(mapId) {
   const map = MAPS[mapId];
-  if (!map || !G.visited.has(mapId)) { toast('That road is not recorded in your Chronicle yet.', 'bad'); return false; }
-  if (mapId === G.mapId) { toast(`You are already in ${map.name}.`, 'sys'); return false; }
+  if (!map || !G.visited.has(mapId)) { toast(T('That road is not recorded in your Chronicle yet.', 'ui'), 'bad'); return false; }
+  if (mapId === G.mapId) { toast(currentLang === 'th' ? `คุณอยู่ใน ${T(map.name, 'maps')} อยู่แล้ว` : `You are already in ${map.name}.`, 'sys'); return false; }
   const resumeAutoFarm = G.taskGuide?.resumeAutoFarm ?? G.autoFarm;
   G.taskGuide = { source: 'world', taskId: mapId, mode: 'explore', mapId, label: map.name, resumeAutoFarm };
   G.huntTargetId = null;
@@ -1495,7 +1507,7 @@ function activateWorldRoute(mapId) {
   continueTaskGuide();
   updateFarmButton();
   updateQuestTracker();
-  toast(`Route marked: ${map.name}. Follow the gold marker.`, 'good');
+  toast(currentLang === 'th' ? `กำหนดเส้นทางแล้ว: ${T(map.name, 'maps')} เดินตามเครื่องหมายสีทอง` : `Route marked: ${map.name}. Follow the gold marker.`, 'good');
   return true;
 }
 
@@ -1522,7 +1534,7 @@ function continueTaskGuide() {
   if (G.mapId !== guide.mapId) {
     const portal = nextPortalToward(MAPS, G.mapId, guide.mapId);
     if (!portal || !pathTo(portal.x * TS + TS / 2, portal.y * TS + TS / 2)) {
-      toast(`No path to ${guide.label}.`, 'bad');
+      toast(currentLang === 'th' ? `ไม่มีเส้นทางไปยัง ${T(guide.label, 'maps') || T(guide.label, 'npcs') || T(guide.label, 'monsters') || guide.label}` : `No path to ${guide.label}.`, 'bad');
       finishTaskGuide();
       return;
     }
@@ -1652,8 +1664,14 @@ function genGuildQuest() {
 function finishGuild(g) {
   gainXp(g.reward.exp); G.player.zeny += g.reward.zeny;
   const pts = g.pts ?? (GUILD_DIFF_PTS[g.difficulty] || 2);   // legacy bounties lack .pts
-  toast(`✔ Guild bounty done! +${g.reward.exp} xp, +${g.reward.zeny}z, +${pts} guild pts`, 'good');
-  logMsg(`Guild bounty complete: ${g.kind === 'deliver' ? `delivered ${g.count} ${g.targetName}` : `${g.count} ${g.targetName} felled`}.`, 'good');
+  const toastMsg = currentLang === 'th'
+    ? `✔ ส่งเควสกิลด์สำเร็จ! +${g.reward.exp} XP, +${g.reward.zeny} Zeny, +${pts} คะแนนกิลด์`
+    : `✔ Guild bounty done! +${g.reward.exp} xp, +${g.reward.zeny}z, +${pts} guild pts`;
+  toast(toastMsg, 'good');
+  const logMsgText = currentLang === 'th'
+    ? `เควสกิลด์สำเร็จ: ${g.kind === 'deliver' ? `ส่งมอบ ${T(g.targetName, 'items')} ${g.count} ชิ้น` : `กำจัด ${T(g.targetName, 'monsters')} ${g.count} ตัว`}.`
+    : `Guild bounty complete: ${g.kind === 'deliver' ? `delivered ${g.count} ${g.targetName}` : `${g.count} ${g.targetName} felled`}.`;
+  logMsg(logMsgText, 'good');
   G.activeGuilds = G.activeGuilds.filter(x => x !== g);
   addGuildPoints(pts);
   updateQuestTracker();
@@ -1664,9 +1682,21 @@ function claimGuild(id) {
     : G.activeGuilds.find(x => x.kind === 'deliver' ? itemQty(x.target) >= x.count : x.done);
   if (!g) return;
   if (g.kind === 'deliver') {
-    if (itemQty(g.target) < g.count) { toast(`Need ${g.count}× ${g.targetName} (have ${itemQty(g.target)}).`, 'sys'); return; }
+    if (itemQty(g.target) < g.count) {
+      const msg = currentLang === 'th'
+        ? `ต้องการ ${T(g.targetName, 'items')} จำนวน ${g.count} ชิ้น (ปัจจุบันมี ${itemQty(g.target)} ชิ้น)`
+        : `Need ${g.count}× ${g.targetName} (have ${itemQty(g.target)}).`;
+      toast(msg, 'sys');
+      return;
+    }
     removeItem(g.target, g.count);
-  } else if (!g.done) { toast(`Still hunting: ${g.progress}/${g.count} ${g.targetName}.`, 'sys'); return; }
+  } else if (!g.done) {
+    const msg = currentLang === 'th'
+      ? `ยังล่าไม่ครบ: ${g.progress}/${g.count} ${T(g.targetName, 'monsters')}`
+      : `Still hunting: ${g.progress}/${g.count} ${g.targetName}.`;
+    toast(msg, 'sys');
+    return;
+  }
   finishGuild(g);
 }
 const guildTurnIn = claimGuild;   // legacy alias (tests, old callers)
@@ -1676,19 +1706,28 @@ function refreshGuildBoard() { G.guildBoard = [genGuildQuest(), genGuildQuest(),
 function bountyWhere(g) {
   if (g.kind === 'deliver') {
     const from = g.dropFrom, map = g.mapName || itemDropSource(g.target)?.map;
-    if (!from && !map) { const s = itemDropSource(g.target); return s ? `📍 ${s.mon} · ${s.map}` : ''; }
-    return `📍 ${from ? from + ' · ' : ''}${map || '??'}`;
+    if (!from && !map) { const s = itemDropSource(g.target); return s ? `📍 ${T(s.mon, 'monsters')} · ${T(s.map, 'maps')}` : ''; }
+    return `📍 ${from ? T(from, 'monsters') + ' · ' : ''}${map ? T(map, 'maps') : '??'}`;
   }
   const map = g.mapName || monsterMapName[g.target];
-  return map ? `📍 ${map}` : '';
+  return map ? `📍 ${T(map, 'maps')}` : '';
 }
 function acceptGuild(id) {
-  if (G.activeGuilds.length >= GUILD_MAX_ACTIVE) { toast(`The guild allows ${GUILD_MAX_ACTIVE} open bounties at once.`, 'sys'); return; }
+  if (G.activeGuilds.length >= GUILD_MAX_ACTIVE) {
+    const msg = currentLang === 'th'
+      ? `กิลด์อนุญาตให้รับภารกิจพร้อมกันได้สูงสุด ${GUILD_MAX_ACTIVE} งานเท่านั้น`
+      : `The guild allows ${GUILD_MAX_ACTIVE} open bounties at once.`;
+    toast(msg, 'sys');
+    return;
+  }
   const idx = G.guildBoard.findIndex(q => q.id === id); if (idx < 0) return;
   const g = G.guildBoard[idx];
   G.activeGuilds.push(g);
   G.guildBoard[idx] = genGuildQuest();
-  toast(`Guild task accepted: ${g.kind === 'deliver' ? `deliver ${g.count} ${g.targetName}` : `cull ${g.count} ${g.targetName}`} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE}).`, 'good');
+  const msg = currentLang === 'th'
+    ? `รับภารกิจกิลด์แล้ว: ${g.kind === 'deliver' ? `ส่งของ ${T(g.targetName, 'items')} จำนวน ${g.count} ชิ้น` : `กำจัด ${T(g.targetName, 'monsters')} จำนวน ${g.count} ตัว`} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})`
+    : `Guild task accepted: ${g.kind === 'deliver' ? `deliver ${g.count} ${g.targetName}` : `cull ${g.count} ${g.targetName}`} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE}).`;
+  toast(msg, 'good');
   updateQuestTracker();
 }
 function guildKill(monId) {
@@ -1697,7 +1736,10 @@ function guildKill(monId) {
     if (g.kind === 'deliver' || g.target !== monId || g.done) continue;
     if (++g.progress >= g.count) {
       g.done = true;
-      toast(`✔ Bounty complete: ${g.targetName} — report to Elder Maro to claim.`, 'good');
+      const msg = currentLang === 'th'
+        ? `✔ ล่ามอนสเตอร์สำเร็จ: ${T(g.targetName, 'monsters')} — กลับไปรายงานผู้อาวุโสมาโรเพื่อรับรางวัล!`
+        : `✔ Bounty complete: ${g.targetName} — report to Elder Maro to claim.`;
+      toast(msg, 'good');
     }
   }
   const guided = G.taskGuide?.source === 'guild' && G.activeGuilds.find(g => g.id === G.taskGuide.taskId);
@@ -2588,19 +2630,29 @@ function captureHotkeyBinding(e) {
 function hotkeysPanelHtml(p) {
   p.hotkeys = normaliseHotkeys(p.hotkeys);
   const row = (slot, i) => {
-    let glyph = '·', name = 'Empty slot', meta = 'Click the empty action-bar slot to assign something';
+    let glyph = '·', name = T('Empty slot', 'ui'), meta = T('Click the empty action-bar slot to assign something', 'ui');
     if (slot?.type === 'skill') {
       const s = COMBAT.skills.find(x => x.id === slot.id);
-      glyph = SKILL_GLYPH[s.type] || '✦'; name = s.name;
-      meta = s.finisher ? 'Finisher · spends Momentum' : s.detonate ? `Detonates ${s.detonate}` : isDamageSkill(s) ? 'Builder · earns Momentum' : 'Utility';
+      glyph = SKILL_GLYPH[s.type] || '✦';
+      name = T(s.name, 'skills');
+      meta = s.finisher
+        ? T('Finisher · spends Momentum', 'ui')
+        : s.detonate
+          ? (currentLang === 'th' ? `จุดชนวนสถานะ ${s.detonate}` : `Detonates ${s.detonate}`)
+          : isDamageSkill(s)
+            ? T('Builder · earns Momentum', 'ui')
+            : T('Utility', 'ui');
     } else if (slot?.type === 'item') {
-      const it = itemById[slot.itemId]; glyph = '◈'; name = it.name; meta = 'Consumable';
+      const it = itemById[slot.itemId];
+      glyph = '◈';
+      name = T(it.name, 'items');
+      meta = T('Consumable', 'ui');
     }
-    return `<div class="hotkey-row"><span class="hotkey-slot-no">${i + 1}</span><span class="hotkey-row-glyph">${glyph}</span><span class="hotkey-action"><b>${esc(name)}</b><small>${esc(meta)}</small></span><button class="keycap" data-rebind="${i}" title="Click, then press a new key">${hotkeyLabel(p.hotkeys[i])}</button></div>`;
+    return `<div class="hotkey-row"><span class="hotkey-slot-no">${i + 1}</span><span class="hotkey-row-glyph">${glyph}</span><span class="hotkey-action"><b>${esc(name)}</b><small>${esc(meta)}</small></span><button class="keycap" data-rebind="${i}" title="${T('Click, then press a new key', 'ui')}">${hotkeyLabel(p.hotkeys[i])}</button></div>`;
   };
-  return `<div class="hotkey-intro"><b>Action keybindings</b><span>Click a keycap, then press a number or unused letter. If that key is already assigned, the two slots swap.</span></div>
+  return `<div class="hotkey-intro"><b>${T('Action keybindings', 'ui')}</b><span>${T('Click a keycap, then press a number or unused letter. If that key is already assigned, the two slots swap.', 'ui')}</span></div>
     <div class="hotkey-grid">${p.hotbar.map(row).join('')}</div>
-    <div class="hotkey-foot"><span>Reserved: WASD, E/F, C/I/K/Q</span><button class="btn btn--ghost" data-reset-hotkeys="1">Reset to 1–9</button></div>`;
+    <div class="hotkey-foot"><span>${T('Reserved: WASD, E/F, C/I/K/Q', 'ui')}</span><button class="btn btn--ghost" data-reset-hotkeys="1">${T('Reset to 1–9', 'ui')}</button></div>`;
 }
 
 const style = document.createElement('style');
@@ -2872,9 +2924,9 @@ function hotkeyForSkill(p, id) {
 function skillFlowChip(s, p) {
   const learned = skillLevel(p, s.id) > 0, key = learned ? hotkeyForSkill(p, s.id) : '';
   const tag = s.finisher ? 'FINISH' : s.detonate ? `DET ${s.detonate}` : s.effect && isDamageSkill(s) ? `SET ${s.effect}` : isDamageSkill(s) ? '+M' : 'UTIL';
-  const inner = `<span>${esc(s.name)}</span><small>${tag}</small>${key ? `<kbd>${key}</kbd>` : ''}`;
-  if (learned && !key) return `<button class="flow-skill learned unbound" data-assign-skill="${s.id}" title="Add ${esc(s.name)} to the first empty action slot">${inner}<i>+ BAR</i></button>`;
-  return `<span class="flow-skill ${learned ? 'learned' : 'locked'}" title="${learned ? 'Learned' : 'Not learned yet'}">${inner}</span>`;
+  const inner = `<span>${esc(T(s.name, 'skills'))}</span><small>${tag}</small>${key ? `<kbd>${key}</kbd>` : ''}`;
+  if (learned && !key) return `<button class="flow-skill learned unbound" data-assign-skill="${s.id}" title="${currentLang === 'th' ? `ใส่ ${esc(T(s.name, 'skills'))} ลงในช่องปุ่มลัดว่างช่องแรก` : `Add ${esc(s.name)} to the first empty action slot`}">${inner}<i>+ BAR</i></button>`;
+  return `<span class="flow-skill ${learned ? 'learned' : 'locked'}" title="${learned ? (currentLang === 'th' ? 'เรียนรู้แล้ว' : 'Learned') : (currentLang === 'th' ? 'ยังไม่ได้เรียนรู้' : 'Not learned yet')}">${inner}</span>`;
 }
 function combatLoopHtml(p, actives) {
   const M = TUNING.momentum;
@@ -2882,17 +2934,40 @@ function combatLoopHtml(p, actives) {
   const synergies = actives.filter(s => (s.effect && isDamageSkill(s)) || s.detonate);
   const finishers = actives.filter(s => s.finisher);
   const pips = Array.from({ length: M.max }, (_, i) => `<span class="pip${i < p.momentum ? ' on' : ''}${p.momentum >= M.finisherMin ? ' ready' : ''}"></span>`).join('');
-  const card = (step, title, copy, skills, cls) => `<div class="flow-card ${cls}"><div class="flow-step">${step}</div><div class="flow-title">${title}</div><div class="flow-copy">${copy}</div><div class="flow-skills">${skills.map(s => skillFlowChip(s, p)).join('') || '<span class="flow-empty">No skills in this role</span>'}</div></div>`;
-  return `<section class="skill-flow" aria-label="Skill combat loop">
-    <div class="flow-head"><div><b>Combat Loop</b><span>Build → create an opening → cash out</span></div><div class="flow-momentum"><small>NOW</small><span class="momentum-track">${pips}</span><b>${p.momentum}/${M.max}</b></div><button class="btn btn--ghost" data-open-panel="hotkeys">⌨ Keys</button></div>
+  
+  const emptyText = currentLang === 'th' ? 'ไม่มีความสามารถในส่วนนี้' : 'No skills in this role';
+  const card = (step, title, copy, skills, cls) => `<div class="flow-card ${cls}"><div class="flow-step">${step}</div><div class="flow-title">${title}</div><div class="flow-copy">${copy}</div><div class="flow-skills">${skills.map(s => skillFlowChip(s, p)).join('') || `<span class="flow-empty">${emptyText}</span>`}</div></div>`;
+  
+  const headTitle = currentLang === 'th' ? 'ลูปการต่อสู้' : 'Combat Loop';
+  const headSub = currentLang === 'th' ? 'สะสม → สร้างช่องโหว่ → เผด็จศึก' : 'Build → create an opening → cash out';
+  const nowText = currentLang === 'th' ? 'ปัจจุบัน' : 'NOW';
+  const keysBtn = currentLang === 'th' ? '⌨ ปุ่มกด' : '⌨ Keys';
+  
+  const step1Title = currentLang === 'th' ? 'สะสมโมเมนตัม' : 'BUILD';
+  const step1Desc = currentLang === 'th' ? `การโจมตีปกติและใช้สกิลกายภาพจะเพิ่มโมเมนตัม +${M.perHit}` : `Landed damage skills add +${M.perHit} Momentum.`;
+  
+  const step2Title = currentLang === 'th' ? 'คอมโบ & จุดชนวน' : 'SETUP + DETONATE';
+  const step2Desc = currentLang === 'th' ? `สร้างสถานะเผาไหม้/เชื่องช้า/สตัน การโจมตีจุดชนวนที่ตรงกันจะแรงขึ้น +${Math.round(M.detonateBonus * 100)}%` : `Apply burn, slow, or stun; matching detonators deal +${Math.round(M.detonateBonus * 100)}%.`;
+  
+  const step3Title = currentLang === 'th' ? 'เผด็จศึก' : 'FINISH';
+  const step3Desc = currentLang === 'th' ? `เมื่อมีโมเมนตัม ${M.finisherMin}+ ขึ้นไป สกิลเผด็จศึกจะใช้โมเมนตัมทั้งหมดเพิ่มดาเมจจุดละ +${Math.round(M.powerPerPoint * 100)}%` : `At ${M.finisherMin}+ Momentum, finishers consume all for +${Math.round(M.powerPerPoint * 100)}% damage per point.`;
+  
+  const legendBuilder = currentLang === 'th' ? 'สะสมโมเมนตัม' : 'Builder';
+  const legendSetup = currentLang === 'th' ? 'สร้างสถานะตั้งต้น' : 'Status setup';
+  const legendDetonate = currentLang === 'th' ? 'ตัวจุดชนวน' : 'Detonator';
+  const legendFinisher = currentLang === 'th' ? 'ตัวปิดเผด็จศึก' : 'Finisher';
+  const legendHint = currentLang === 'th' ? 'ลากความสามารถที่เรียนรู้แล้วลงไปในแถบปุ่มลัดด้านล่าง' : 'Drag any learned node onto the action bar.';
+
+  return `<section class="skill-flow" aria-label="${currentLang === 'th' ? 'ลูปคอมโบความสามารถ' : 'Skill combat loop'}">
+    <div class="flow-head"><div><b>${headTitle}</b><span>${headSub}</span></div><div class="flow-momentum"><small>${nowText}</small><span class="momentum-track">${pips}</span><b>${p.momentum}/${M.max}</b></div><button class="btn btn--ghost" data-open-panel="hotkeys">${keysBtn}</button></div>
     <div class="flow-grid">
-      ${card('01', 'BUILD', `Landed damage skills add +${M.perHit} Momentum.`, builders, 'build')}
+      ${card('01', step1Title, step1Desc, builders, 'build')}
       <div class="flow-arrow">›</div>
-      ${card('02', 'SETUP + DETONATE', `Apply burn, slow, or stun; matching detonators deal +${Math.round(M.detonateBonus * 100)}%.`, synergies, 'chain')}
+      ${card('02', step2Title, step2Desc, synergies, 'chain')}
       <div class="flow-arrow">›</div>
-      ${card('03', 'FINISH', `At ${M.finisherMin}+ Momentum, finishers consume all for +${Math.round(M.powerPerPoint * 100)}% damage per point.`, finishers, 'finish')}
+      ${card('03', step3Title, step3Desc, finishers, 'finish')}
     </div>
-    <div class="flow-legend"><span><i class="legend-box builder"></i> Builder</span><span><i class="legend-box setup"></i> Status setup</span><span><i class="legend-box detonate"></i> Detonator</span><span><i class="legend-box finisher"></i> Finisher</span><span>Drag any learned node onto the action bar.</span></div>
+    <div class="flow-legend"><span><i class="legend-box builder"></i> ${legendBuilder}</span><span><i class="legend-box setup"></i> ${legendSetup}</span><span><i class="legend-box detonate"></i> ${legendDetonate}</span><span><i class="legend-box finisher"></i> ${legendFinisher}</span><span>${legendHint}</span></div>
   </section>`;
 }
 function skillsPanelHtml(p) {
@@ -2940,7 +3015,7 @@ function skillsPanelHtml(p) {
     const tierCapped = !maxed && lv >= currentCap;
     const state = maxed ? 'maxed' : tierCapped ? 'owned tier-capped' : lv > 0 ? 'owned' : clickable ? 'ready' : 'locked';
     const glyph = isPassive ? '◈' : (SKILL_GLYPH[s.type] || '✦');
-    const name = isPassive ? pa.name : s.name;
+    const name = isPassive ? T(pa.name, 'passives') : T(s.name, 'skills');
     const attr = clickable ? (isPassive ? `data-passive="${id}"` : `data-learn="${id}"`) : '';
     const mechanicClasses = isPassive ? 'is-passive' : `${s.finisher ? 'is-finisher ' : ''}${s.detonate ? 'is-detonator ' : ''}${s.effect && isDamageSkill(s) ? 'is-setup ' : ''}${isDamageSkill(s) && !s.finisher ? 'is-builder' : ''}`;
     const tierBadge = isPassive ? (pa.reqTier || 0) : (node.reqTier || 0);
@@ -2952,8 +3027,11 @@ function skillsPanelHtml(p) {
       s.finisher ? { t: 'F', c: 'finish' } : null,
     ].filter(Boolean);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
+    const displayName = currentLang === 'th'
+      ? (isPassive ? T(id, 'passives_short') : T(id, 'skills_short'))
+      : (isPassive ? name.split(' ')[0] : shortName(name));
     return `<div class="sk-node ${state}${clickable ? ' can' : ''} ${mechanicClasses}" style="left:${o.x}px;top:${o.y}px" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}">
-      <span class="sk-ico">${glyph}</span><span class="sk-lv">${lv}/${max}</span><span class="sk-nm">${isPassive ? name.split(' ')[0] : shortName(name)}</span><span class="sk-tags">${badges.map(x => `<i class="${x.c}">${x.t}</i>`).join('')}</span></div>`;
+      <span class="sk-ico">${glyph}</span><span class="sk-lv">${lv}/${max}</span><span class="sk-nm">${displayName}</span><span class="sk-tags">${badges.map(x => `<i class="${x.c}">${x.t}</i>`).join('')}</span></div>`;
   };
   const activeNodes = Object.values(place).map(o => nodeHtml(o, false)).join('');
   const passiveNodes = passPlace.map(o => nodeHtml(o, true)).join('');
@@ -3082,37 +3160,65 @@ function panelBody(id) {
     const s = p.stats;
     const tiers = PROGRESSION.tiers[p.classId] || [];
     const next = tiers[p.tierIndex + 1];
-    const STAT_DESC = { str: 'phys ATK', agi: 'atk & walk speed · flee', vit: 'max HP · DEF', int: 'magic ATK · MP · reach', dex: 'HIT · ranged ATK', luk: 'crit chance' };
-    const statRow = k => { const c = statCost(p, k); return `<div class="stat-row"><span>${k.toUpperCase()} <b>${s[k]}</b> <small style="color:var(--text-muted)">${STAT_DESC[k]}</small></span>
-      <button class="btn stat-plus" data-stat="${k}" title="costs ${c} point${c > 1 ? 's' : ''}" ${p.statPoints >= c ? '' : 'disabled'}>+<small style="opacity:.75">${c}</small></button></div>`; };
+    
+    const STAT_DESC = currentLang === 'th' ? {
+      str: 'พลังโจมตีกายภาพ (phys ATK)',
+      agi: 'ความเร็วโจมตี & เดิน · หลบหลีก (ASPD/FLEE)',
+      vit: 'HP สูงสุด · พลังป้องกัน (max HP/DEF)',
+      int: 'พลังโจมตีเวท · MP · ระยะทาง (magic ATK/MP/reach)',
+      dex: 'ความแม่นยำ · โจมตีไกล (HIT/ranged ATK)',
+      luk: 'โอกาสคริติคอล (crit chance)'
+    } : {
+      str: 'phys ATK',
+      agi: 'atk & walk speed · flee',
+      vit: 'max HP · DEF',
+      int: 'magic ATK · MP · reach',
+      dex: 'HIT · ranged ATK',
+      luk: 'crit chance'
+    };
+    
+    const statRow = k => {
+      const c = statCost(p, k);
+      const titleText = currentLang === 'th'
+        ? `ใช้ ${c} ${c > 1 ? T('points', 'ui') : T('point', 'ui')}`
+        : `costs ${c} point${c > 1 ? 's' : ''}`;
+      return `<div class="stat-row"><span>${k.toUpperCase()} <b>${s[k]}</b> <small style="color:var(--text-muted)">${STAT_DESC[k]}</small></span>
+        <button class="btn stat-plus" data-stat="${k}" title="${titleText}" ${p.statPoints >= c ? '' : 'disabled'}>+<small style="opacity:.75">${c}</small></button></div>`;
+    };
+    
     const aspd = Math.round((1 - (p.atkDelay || 1000) / COMBAT.attackSpeedMs) * 100);
     const move = Math.round(((p.moveMult || 1) - 1) * 100);
+    
+    const tierText = currentLang === 'th'
+      ? `ระดับอาชีพ ${p.tierIndex + 1}${next ? ` · ถัดไป: <b style="color:var(--text)">${T(next.name, 'classes')}</b> ที่ Lv ${next.reqLevel}` : ` · ${T('max advancement', 'ui')}`}`
+      : `Tier ${p.tierIndex + 1}${next ? ` · next: <b style="color:var(--text)">${next.name}</b> @ Lv ${next.reqLevel}` : ' · max advancement'}`;
+      
     return `<div style="display:flex;gap:22px;flex-wrap:wrap">
       <div style="min-width:230px">
-        <b style="color:var(--accent-alt)">${p.name}</b> — ${p.className}
+        <b style="color:var(--accent-alt)">${p.name}</b> — ${T(p.className, 'classes')}
         <div style="color:var(--text-muted);font-size:12px;margin:2px 0 8px">
-          Tier ${p.tierIndex + 1}${next ? ` · next: <b style="color:var(--text)">${next.name}</b> @ Lv ${next.reqLevel}` : ' · max advancement'}<br>
-          Level <b style="color:var(--text)">${p.level}</b>/${DESIGN.levelCap} &nbsp; XP ${Math.floor(p.xp)}/${p.level >= DESIGN.levelCap ? 'MAX' : xpForNext(p.level)}<br>
-          Job Lv <b style="color:#6fb0ef">${p.jobLevel}/${PROGRESSION.jobLevelCap}</b> &nbsp; Job XP ${p.jobLevel >= PROGRESSION.jobLevelCap ? 'MAX' : `${Math.floor(p.jobXp)}/${jobXpForNext(p.jobLevel)}`}
+          ${tierText}<br>
+          ${T('Level', 'ui')} <b style="color:var(--text)">${p.level}</b>/${DESIGN.levelCap} &nbsp; XP ${Math.floor(p.xp)}/${p.level >= DESIGN.levelCap ? 'MAX' : xpForNext(p.level)}<br>
+          ${T('Job Lv', 'ui')} <b style="color:#6fb0ef">${p.jobLevel}/${PROGRESSION.jobLevelCap}</b> &nbsp; Job XP ${p.jobLevel >= PROGRESSION.jobLevelCap ? 'MAX' : `${Math.floor(p.jobXp)}/${jobXpForNext(p.jobLevel)}`}
         </div>
-        <div style="font-size:12px;margin-bottom:6px;color:var(--text-muted)">Recommended build: <b style="color:#c77dff;letter-spacing:2px">${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
-        <div style="color:var(--accent-alt);margin-bottom:6px">Unspent stat points: <b>${p.statPoints}</b> <small style="color:var(--text-muted)">· higher stats cost more per +</small></div>
+        <div style="font-size:12px;margin-bottom:6px;color:var(--text-muted)">${T('Recommended build:', 'ui')} <b style="color:#c77dff;letter-spacing:2px">${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
+        <div style="color:var(--accent-alt);margin-bottom:6px">${T('Unspent stat points:', 'ui')} <b>${p.statPoints}</b> <small style="color:var(--text-muted)">· ${T('higher stats cost more per +', 'ui')}</small></div>
         ${['str','agi','vit','int','dex','luk'].map(statRow).join('')}
       </div>
       <div style="color:var(--text-muted);min-width:240px">
         <div style="display:flex;justify-content:center;margin-bottom:4px">${svgRadar(s)}</div>
-        ATK <b style="color:var(--text)">${p.atkStat}</b> &nbsp; DEF <b style="color:var(--text)">${p.physDef}</b><br>
-        HIT ${p.hit} &nbsp; FLEE ${p.flee} &nbsp; CRIT ${p.critChance}%<br>
-        Max HP ${p.maxHp} &nbsp; Max MP ${p.maxMp}<br>
-        ASPD <b style="color:var(--text)">+${aspd}%</b> · Move <b style="color:var(--text)">+${move}%</b>${p.rangeBonus ? ` · Reach <b style="color:var(--text)">+${p.rangeBonus.toFixed(1)}</b> tiles` : ''}<br>
-        <div style="color:var(--accent-alt);margin:10px 0 6px">Equipment</div>
+        ${T('ATK', 'ui')} <b style="color:var(--text)">${p.atkStat}</b> &nbsp; ${T('DEF', 'ui')} <b style="color:var(--text)">${p.physDef}</b><br>
+        ${T('HIT', 'ui')} ${p.hit} &nbsp; ${T('FLEE', 'ui')} ${p.flee} &nbsp; ${T('CRIT', 'ui')} ${p.critChance}%<br>
+        ${T('Max HP', 'ui')} ${p.maxHp} &nbsp; ${T('Max MP', 'ui')} ${p.maxMp}<br>
+        ${T('ASPD', 'ui')} <b style="color:var(--text)">+${aspd}%</b> · ${T('Move', 'ui')} <b style="color:var(--text)">+${move}%</b>${p.rangeBonus ? ` · ${T('Reach', 'ui')} <b style="color:var(--text)">+${p.rangeBonus.toFixed(1)}</b> ${T('tiles', 'ui')}` : ''}<br>
+        <div style="color:var(--accent-alt);margin:10px 0 6px">${T('Equipment', 'ui')}</div>
         ${paperDoll(p)}
       </div></div>`;
   }
   if (id === 'inv') {
-    if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} zeny</div><i>Bag is empty.</i>`;
+    if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div><i>${T('Bag is empty.', 'ui')}</i>`;
     const tab = G._bagTab || 'all';
-    const tabs = [['all', 'All'], ['gear', 'Gear'], ['use', 'Use'], ['etc', 'Etc'], ['quest', 'Quest']];
+    const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
     const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory'].includes(it.type)) || (tab === 'use' && it.type === 'potion') || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
     const cat = ITEM_CAT, ORDER = ITEM_CAT_ORDER;
     const rarRank = e => e.uid ? RARITY_ORDER.indexOf(e.rarity) : -1;
@@ -3127,139 +3233,173 @@ function panelBody(id) {
         const rc = RARITY[e.rarity], slot = itemSlot(it), primary = it.atk ? 'ATK' : 'DEF';
         const val = it.atk ? effAtk(e) : effDef(e), cur = p.equip[slot], curVal = cur ? (it.atk ? effAtk(cur) : effDef(cur)) : 0;
         const dl = val - curVal;
-        const cmp = cur ? `<small style="color:${dl > 0 ? 'var(--success)' : dl < 0 ? 'var(--danger)' : 'var(--text-muted)'}"> (${dl > 0 ? '▲ +' + dl : dl < 0 ? '▼ ' + dl : '= same'} vs worn)</small>` : `<small style="color:var(--text-muted)"> (slot empty)</small>`;
+        const cmp = cur ? `<small style="color:${dl > 0 ? 'var(--success)' : dl < 0 ? 'var(--danger)' : 'var(--text-muted)'}"> (${dl > 0 ? '▲ +' + dl : dl < 0 ? '▼ ' + dl : '= ' + T('same', 'ui')} ${T('vs worn', 'ui')})</small>` : `<small style="color:var(--text-muted)"> (${T('slot empty', 'ui')})</small>`;
         const affix = e.affixes.map(a => `<span style="color:var(--success)">${a.label}</span>`).join(' · ');
         return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgba(201,162,75,.12)">
-          <span>${itemIconImg(e.itemId)} <b style="color:${rc.color}">${instName(e)}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${SLOT_LABEL[slot]}]</small> — ${primary} ${val}${cmp}<br>
-            <small>${affix || '<span style="color:var(--text-muted)">no bonuses</span>'}</small></span>
-          <button class="btn" data-equip="${e.uid}">Equip</button></div>`;
+          <span>${itemIconImg(e.itemId)} <b style="color:${rc.color}">${instName(e)}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small> — ${T(primary, 'ui')} ${val}${cmp}<br>
+            <small>${affix || `<span style="color:var(--text-muted)">${T('no bonuses', 'ui')}</span>`}</small></span>
+          <button class="btn" data-equip="${e.uid}">${T('Equip', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
-        ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">Use</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="Assign to a hotkey">→Bar</button></span>` : '';
+        ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>` : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
-        <span>${itemIconImg(e.itemId)} <b>${it.name}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${it.desc}</small></span>${act}</div>`;
+        <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${act}</div>`;
     };
     const tabsHtml = `<div class="bag-tabs">${tabs.map(([k, l]) => `<span class="bag-tab ${tab === k ? 'on' : ''}" data-bagtab="${k}">${l}</span>`).join('')}</div>`;
-    const body = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${c} (${groups[c].length})</div>${groups[c].map(rowHtml).join('')}`).join('');
-    return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} zeny</div>${tabsHtml}${body || '<i>Nothing in this tab.</i>'}`;
+    const body = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${T(c, 'ui')} (${groups[c].length})</div>${groups[c].map(rowHtml).join('')}`).join('');
+    return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div>${tabsHtml}${body || `<i>${T('Nothing in this tab.', 'ui')}</i>`}`;
   }
   if (id === 'skills') return skillsPanelHtml(p);
   if (id === 'quest') {
     const q = questById[G.quest], pending = questById[G.pendingQuest];
     let story = q
-      ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="Navigate to this task">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${q.name}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">Recommended Lv ${q.minLevel}+</small><br>${q.description}<br>
-          <small>Objective: ${q.objective.type} ${objectiveName(q.objective)} — ${questProgress(q)}/${q.objective.count}</small><br>
-          <small style="color:var(--text-muted)">Reward: ${q.rewards.exp} xp, ${q.rewards.zeny}z, ${q.rewards.items.map(i => itemById[i].name).join(', ')}</small></div>`
+      ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="Navigate to this task">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small><br>${T(q.description, 'quests')}<br>
+          <small>${T('Objective', 'ui')}: ${T(q.objective.type, 'ui')} ${objectiveName(q.objective)} — ${questProgress(q)}/${q.objective.count}</small><br>
+          <small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${q.rewards.exp} XP, ${q.rewards.zeny} Zeny, ${q.rewards.items.map(i => T(itemById[i].name, 'items')).join(', ')}</small></div>`
       : pending
-        ? `<div class="q-card story-wait-card">${storyPhaseBadge(pending)}<br><b style="color:var(--accent-alt)">Next · ${pending.name}</b> ${diffBadge(pending.difficulty)}<br>
-          <span class="story-lock-copy">🔒 Reach <b>Base Lv ${pending.minLevel}</b> to begin this quest. You are Lv ${p.level}.</span>
+        ? `<div class="q-card story-wait-card">${storyPhaseBadge(pending)}<br><b style="color:var(--accent-alt)">${T('Next ·', 'ui')} ${T(pending.name, 'quests')}</b> ${diffBadge(pending.difficulty)}<br>
+          <span class="story-lock-copy">${currentLang === 'th' ? `🔒 ต้องการ <b>เลเวลหลัก ${pending.minLevel}</b> เพื่อเริ่มต้นเควสต์นี้ ปัจจุบันคุณเลเวล ${p.level}` : `🔒 Reach <b>Base Lv ${pending.minLevel}</b> to begin this quest. You are Lv ${p.level}.`}</span>
           <div class="story-level-bar"><i style="width:${Math.min(100, Math.round(p.level / pending.minLevel * 100))}%"></i></div>
-          <small style="color:var(--text-muted)">Keep training through zone hunts and Adventurer's Guild bounties. The chapter starts automatically when you level up.</small></div>`
-      : `<div class="q-card"><i>Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.</i></div>`;
+          <small style="color:var(--text-muted)">${T("Keep training through zone hunts and Adventurer's Guild bounties. The chapter starts automatically when you level up.", 'ui')}</small></div>`
+        : `<div class="q-card"><i>${T("Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.", 'ui')}</i></div>`;
     if (G.advance) {
       const a = G.advance, o = a.def.objective;
-      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="Navigate to this task" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${a.def.name}</b> <small style="color:var(--text-muted)">(class advancement)</small><br>${a.def.desc}<br>
-        <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${o.type} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small></div>` + story;
+      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="Navigate to this task" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
+        <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small></div>` + story;
     }
     const bStatus = g => {
       if (g.kind === 'deliver') { const have = Math.min(itemQty(g.target), g.count);
-        return have >= g.count ? `<b style="color:var(--success)">✔ Goods ready — deliver to the guild hall</b>` : `have ${have}/${g.count}`; }
-      return g.done ? `<b style="color:var(--success)">✔ Complete — report to the guild hall</b>` : `Progress ${g.progress}/${g.count}`;
+        return have >= g.count ? `<b style="color:var(--success)">${T('Goods ready — deliver to the guild hall', 'ui')}</b>` : (currentLang === 'th' ? `มีแล้ว ${have}/${g.count}` : `have ${have}/${g.count}`); }
+      return g.done ? `<b style="color:var(--success)">${T('Complete — report to the guild hall', 'ui')}</b>` : (currentLang === 'th' ? `ความคืบหน้า ${g.progress}/${g.count}` : `Progress ${g.progress}/${g.count}`);
     };
     const active = G.activeGuilds.length
       ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="Navigate to this task" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
-          <b>${g.kind === 'deliver' ? '📦 Deliver' : '⚔ Cull'} ${g.count} ${g.targetName}</b> ${diffBadge(g.difficulty)}<br>
+          <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
           <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>
-          <small>${bStatus(g)} — Reward: ${g.reward.exp} xp, ${g.reward.zeny}z, ${g.pts || 0} pts</small></div>`).join('')
-      : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">No bounties accepted.</div>`;
-    return `<div class="q-cat">📖 Main Story · Base Lv 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
-      <div class="q-cat">🏰 Accepted Bounties (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
-      <div style="color:var(--text-muted);font-size:12px;margin-top:6px">Accept and <b>claim</b> bounties with <b>Elder Maro</b> at the guild hall in town.</div>`;
+          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small></div>`).join('')
+      : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
+    return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
+      <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
+      <div style="color:var(--text-muted);font-size:12px;margin-top:6px">${T('Accept and claim bounties with Elder Maro at the guild hall in town.', 'ui')}</div>`;
   }
   if (id === 'guild') {
     const slotsFree = GUILD_MAX_ACTIVE - G.activeGuilds.length;
     const active = G.activeGuilds.length
-      ? `<div class="q-cat" style="font-size:13px">📜 Your open bounties</div>` + G.activeGuilds.map(g => {
+      ? `<div class="q-cat" style="font-size:13px">📜 ${T('Your open bounties', 'ui')}</div>` + G.activeGuilds.map(g => {
         const ready = g.kind === 'deliver' ? itemQty(g.target) >= g.count : !!g.done;
-        const prog = g.kind === 'deliver' ? `have ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `${g.progress}/${g.count}`;
+        const prog = g.kind === 'deliver' ? (currentLang === 'th' ? `มีแล้ว ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `have ${Math.min(itemQty(g.target), g.count)}/${g.count}`) : `${g.progress}/${g.count}`;
         return `<div class="q-card" style="border-color:${ready ? 'var(--success)' : 'var(--panel-border)'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${g.targetName}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} xp, ${g.reward.zeny}z, <b style="color:#e6bd54">${g.pts || 0} pts</b></small></span>
-          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="Navigate to this task">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? 'Turn in' : 'Claim'}</button></span></div></div>`;
+          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:#e6bd54">${g.pts || 0} pts</b></small></span>
+          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="Navigate to this task">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button></span></div></div>`;
       }).join('') : '';
     let lockHint = '';
     for (let i = 1; i < ZONE_ORDER.length; i++) if (!G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) {
-      lockHint = `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 Slay <b>${monById[zoneGuardian(ZONE_ORDER[i - 1])].name}</b> (${MAPS[ZONE_ORDER[i - 1]].name}) to unlock <b>${MAPS[ZONE_ORDER[i]].name}</b> bounties.</div>`;
+      lockHint = currentLang === 'th'
+        ? `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 ปราบ <b>${T(monById[zoneGuardian(ZONE_ORDER[i - 1])].name, 'monsters')}</b> (${T(MAPS[ZONE_ORDER[i - 1]].name, 'maps')}) เพื่อปลดล็อกเควสต์ของ <b>${T(MAPS[ZONE_ORDER[i]].name, 'maps')}</b></div>`
+        : `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 Slay <b>${monById[zoneGuardian(ZONE_ORDER[i - 1])].name}</b> (${MAPS[ZONE_ORDER[i - 1]].name}) to unlock <b>${MAPS[ZONE_ORDER[i]].name}</b> bounties.</div>`;
       break;
     }
-    const acceptHint = lockHint + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">${slotsFree ? `${slotsFree} bounty slot${slotsFree > 1 ? 's' : ''} free — accept below:` : 'All bounty slots in use — finish one first.'}</div>`;
+    const acceptHint = lockHint + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">${
+      currentLang === 'th'
+        ? (slotsFree ? `มีช่องรับภารกิจว่างอยู่ ${slotsFree} ช่อง — เลือกรับได้ที่ด้านล่างนี้:` : 'ช่องรับภารกิจกิลด์เต็มแล้ว — ส่งเควสเดิมก่อน')
+        : (slotsFree ? `${slotsFree} bounty slot${slotsFree > 1 ? 's' : ''} free — accept below:` : 'All bounty slots in use — finish one first.')
+    }</div>`;
     const board = (G.guildBoard || []).map(bq => `<div class="q-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? 'Deliver' : 'Cull'} ${bq.count} <b>${bq.targetName}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br><small style="color:var(--text-muted)">Reward: ${bq.reward.exp} xp, ${bq.reward.zeny}z · <b style="color:#e6bd54">${bq.pts} guild pts</b></small></span>
-      <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>Accept</button></div></div>`).join('');
+      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:#e6bd54">${bq.pts} guild pts</b></small></span>
+      <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button></div></div>`).join('');
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
-    const unlocks = ri < GUILD_HARD_AT ? `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}` : ri < GUILD_ELITE_AT ? `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}` : 'all bounty tiers unlocked';
+    const unlocks = ri < GUILD_HARD_AT ? (currentLang === 'th' ? `เควสต์ระดับยากเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_HARD_AT], 'ui')}` : `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}`) : ri < GUILD_ELITE_AT ? (currentLang === 'th' ? `เควสต์ระดับอีลิทเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_ELITE_AT], 'ui')}` : `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}`) : T('all bounty tiers unlocked', 'ui');
     const rankHead = `<div class="q-cat" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-      <span>🏅 <span style="font-size:12px;background:rgba(230,189,84,.15);border:1px solid #e6bd54;border-radius:9px;padding:1px 9px;color:#e6bd54">Rank ${GUILD_RANKS[ri]}</span></span>
-      <small style="color:var(--text-muted);font-weight:400">${atMax ? 'MAX rank' : `${pts}/${guildPointsNeed(ri)} pts to ${GUILD_RANKS[ri + 1]}`} · ${unlocks}</small></div>`;
-    return `${rankHead}<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Points scale with the bounty's region (deeper zones pay far more) × its difficulty.</div>${active}${acceptHint}${board}`;
+      <span>🏅 <span style="font-size:12px;background:rgba(230,189,84,.15);border:1px solid #e6bd54;border-radius:9px;padding:1px 9px;color:#e6bd54">${currentLang === 'th' ? 'ยศ ' + T(GUILD_RANKS[ri], 'ui') : 'Rank ' + GUILD_RANKS[ri]}</span></span>
+      <small style="color:var(--text-muted);font-weight:400">${atMax ? T('MAX rank', 'ui') : `${pts}/${guildPointsNeed(ri)} pts ${currentLang === 'th' ? 'เพื่อเลื่อนเป็น' : 'to'} ${T(GUILD_RANKS[ri + 1], 'ui')}`} · ${unlocks}</small></div>`;
+    return `${rankHead}<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${T("Points scale with the bounty's region (deeper zones pay far more) × its difficulty.", 'ui')}</div>${active}${acceptHint}${board}`;
   }
   if (id === 'shop') {
     if (!G.shopRotation || now() - G.shopRotation.at > 300000) rerollShop();
     const tab = G._shopTab || 'buy', rankIdx = G.guildRankIdx || 0;
+    
+    const guildRankText = currentLang === 'th'
+      ? `ยศกิลด์ <b style="color:#e6bd54">${T(GUILD_RANKS[rankIdx], 'ui')}</b> · ปลดล็อกสินค้าพรีเมียม`
+      : `Guild Rank <b style="color:#e6bd54">${GUILD_RANKS[rankIdx]}</b> · unlocks premium stock`;
+
     const head = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="color:var(--accent-alt)">💰 ${p.zeny} zeny</span>
-      <span style="font-size:12px;color:var(--text-muted)">🏅 Guild Rank <b style="color:#e6bd54">${GUILD_RANKS[rankIdx]}</b> · unlocks premium stock</span></div>
-      <div class="bag-tabs"><span class="bag-tab ${tab === 'buy' ? 'on' : ''}" data-shoptab="buy">Buy</span><span class="bag-tab ${tab === 'sell' ? 'on' : ''}" data-shoptab="sell">Sell</span><span class="bag-tab ${tab === 'enhance' ? 'on' : ''}" data-shoptab="enhance">Enhance</span></div>`;
+      <span style="color:var(--accent-alt)">💰 ${p.zeny} ${T('zeny', 'ui')}</span>
+      <span style="font-size:12px;color:var(--text-muted)">🏅 ${guildRankText}</span></div>
+      <div class="bag-tabs">
+        <span class="bag-tab ${tab === 'buy' ? 'on' : ''}" data-shoptab="buy">${T('Buy', 'ui')}</span>
+        <span class="bag-tab ${tab === 'sell' ? 'on' : ''}" data-shoptab="sell">${T('Sell', 'ui')}</span>
+        <span class="bag-tab ${tab === 'enhance' ? 'on' : ''}" data-shoptab="enhance">${T('Enhance', 'ui')}</span>
+      </div>`;
+      
     if (tab === 'buy') {
-      const rowFor = itId => { const it = itemById[itId];
+      const rowFor = itId => {
+        const it = itemById[itId];
         const need = it.rankReq ? GUILD_RANKS.indexOf(it.rankReq) : -1, locked = need > rankIdx;
-        const btn = locked ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 Rank ${it.rankReq}</span>` : `<button class="btn" data-buy="${it.id}">Buy</button>`;
+        const btn = locked
+          ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 ${currentLang === 'th' ? `ยศ ${T(it.rankReq, 'ui')}` : `Rank ${it.rankReq}`}</span>`
+          : `<button class="btn" data-buy="${it.id}">${T('Buy', 'ui')}</button>`;
         return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15);${locked ? 'opacity:.65' : ''}">
-          <span>${itemIconImg(it.id)} <b>${it.name}</b> — ${it.value}z${it.rankReq ? ` <small style="color:#e6bd54">[Rank ${it.rankReq}]</small>` : ''}<br><small style="color:var(--text-muted)">${it.desc}</small></span>
-          ${btn}</div>`; };
+          <span>${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${it.value}z${it.rankReq ? ` <small style="color:#e6bd54">[${currentLang === 'th' ? `ยศ ${T(it.rankReq, 'ui')}` : `Rank ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
+          ${btn}</div>`;
+      };
       const baseIds = G._shopItems || [];
-      // group the staple stock by category (Weapons / Armor & Accessories / Potions / Materials)
       const grouped = {};
       for (const itId of baseIds) { const c = ITEM_CAT(itemById[itId]); (grouped[c] = grouped[c] || []).push(itId); }
       const rows = Object.keys(grouped).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
-        .map(c => `<div class="bag-cat">${c} (${grouped[c].length})</div>${grouped[c].map(rowFor).join('')}`).join('');
+        .map(c => `<div class="bag-cat">${T(c, 'ui')} (${grouped[c].length})</div>${grouped[c].map(rowFor).join('')}`).join('');
       const featuredIds = (G.shopRotation.ids || []).filter(itId => !baseIds.includes(itId));
-      const featured = `<div class="bag-cat">⭐ Featured — rotates with rank & time</div>` +
-        (featuredIds.length ? featuredIds.map(rowFor).join('') : '<small>Rank up in the guild to unlock featured stock.</small>');
+      const featured = `<div class="bag-cat">${T('⭐ Featured — rotates with rank & time', 'ui')}</div>` +
+        (featuredIds.length ? featuredIds.map(rowFor).join('') : `<small>${T('Rank up in the guild to unlock featured stock.', 'ui')}</small>`);
       return head + rows + featured;
     }
+    
     // sell tab — everything except quest items, at half value (rarity-scaled for gear), grouped by category
-    const sellRow = e => { const it = itemById[e.itemId], price = sellPrice(e);
-      const label = e.uid ? `<b style="color:${RARITY[e.rarity].color}">${instName(e)}</b> <small style="color:${RARITY[e.rarity].color}">◆${RARITY[e.rarity].name}</small>` : `<b>${it.name}</b> ×${e.qty}`;
+    const sellRow = e => {
+      const it = itemById[e.itemId], price = sellPrice(e);
+      const label = e.uid
+        ? `<b style="color:${RARITY[e.rarity].color}">${instName(e)}</b> <small style="color:${RARITY[e.rarity].color}">◆${RARITY[e.rarity].name}</small>`
+        : `<b>${T(it.name, 'items')}</b> ×${e.qty}`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(e.itemId)} ${label}<br><small style="color:var(--text-muted)">${it.desc}</small></span>
-        <button class="btn" data-sell="${e.uid || e.itemId}">Sell ${price}z</button></div>`; };
+        <span>${itemIconImg(e.itemId)} ${label}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
+        <button class="btn" data-sell="${e.uid || e.itemId}">${T('Sell', 'ui')} ${price}z</button></div>`;
+    };
     const sellables = p.inventory.filter(e => itemById[e.itemId].type !== 'quest');
     const sellGroups = {};
     for (const e of sellables) { const c = ITEM_CAT(itemById[e.itemId]); (sellGroups[c] = sellGroups[c] || []).push(e); }
     const rows = sellables.length
       ? Object.keys(sellGroups).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
-          .map(c => `<div class="bag-cat">${c} (${sellGroups[c].length})</div>${sellGroups[c].map(sellRow).join('')}`).join('')
-      : '<i>Nothing to sell.</i>';
+          .map(c => `<div class="bag-cat">${T(c, 'ui')} (${sellGroups[c].length})</div>${sellGroups[c].map(sellRow).join('')}`).join('')
+      : `<i>${T('Nothing to sell.', 'ui')}</i>`;
     if (tab === 'sell') return head + rows;
+    
     // enhance tab — equipped gear (with slot badges) first, then bag gear, each in its own section
-    const enhRow = (inst, ref, slot) => { const rc = RARITY[inst.rarity], plus = inst.plus || 0, cost = refineCost(inst);
+    const enhRow = (inst, ref, slot) => {
+      const rc = RARITY[inst.rarity], plus = inst.plus || 0, cost = refineCost(inst);
       const tier = refineTier(plus), frags = tierOwned(tier), haveFuel = frags >= REFINE_FRAGS || itemQty('blessed_ore') >= 1;
       const disabled = plus >= REFINE_MAX || !haveFuel || p.zeny < cost;
-      const badge = slot ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(95,191,122,.15);color:var(--success);border:1px solid rgba(95,191,122,.5)">${SLOT_LABEL[slot]}</span> ` : '';
+      const badge = slot ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(95,191,122,.15);color:var(--success);border:1px solid rgba(95,191,122,.5)">${T(SLOT_LABEL[slot], 'ui')}</span> ` : '';
       const fragName = itemById[REFINE_FRAG[tier]].name;
-      const fuelTxt = plus >= REFINE_MAX ? 'MAX' : `needs ${REFINE_FRAGS}× <b>${fragName}</b> <b style="color:${frags >= REFINE_FRAGS ? 'var(--success)' : 'var(--danger)'}">(have ${frags})</b> — or 1 Blessed Ore`;
+      const fuelTxt = plus >= REFINE_MAX ? 'MAX' : (currentLang === 'th'
+        ? `ต้องการ <b>${T(fragName, 'items')}</b> ×${REFINE_FRAGS} <b style="color:${frags >= REFINE_FRAGS ? 'var(--success)' : 'var(--danger)'}">(มีอยู่ ${frags})</b> — หรือ Blessed Ore 1 ชิ้น`
+        : `needs ${REFINE_FRAGS}× <b>${fragName}</b> <b style="color:${frags >= REFINE_FRAGS ? 'var(--success)' : 'var(--danger)'}">(have ${frags})</b> — or 1 Blessed Ore`);
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% success<br>
+        <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')}<br>
           <small style="color:var(--text-muted)">${fuelTxt}</small></span>
-        <button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>Refine (${cost}z)</button></div>`; };
+        <button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} (${cost}z)</button></div>`;
+    };
     const wornRows = EQUIP_SLOTS.filter(slot => p.equip[slot]).map(slot => enhRow(p.equip[slot], slot, slot)).join('');
     const bagRows = p.inventory.filter(e => e.uid).map(e => enhRow(e, e.uid, null)).join('');
     const enhBody =
-      `<div class="bag-cat" style="color:var(--success)">⚔ Currently Equipped</div>` +
-      (wornRows || '<small style="color:var(--text-muted)">Nothing equipped.</small>') +
-      `<div class="bag-cat">🎒 In Bag</div>` +
-      (bagRows || '<small style="color:var(--text-muted)">No spare equipment in the bag.</small>');
-    return head + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">🔨 Refining fuel: <b>Wolf Fang</b> for +0–2 · <b>Shade Dust</b> for +3–5 · <b>Star Iron</b> for +6–8 (${REFINE_FRAGS} per attempt) — or 1× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).</div>` + enhBody;
+      `<div class="bag-cat" style="color:var(--success)">⚔ ${T('Currently Equipped', 'ui')}</div>` +
+      (wornRows || `<small style="color:var(--text-muted)">${T('Nothing equipped.', 'ui')}</small>`) +
+      `<div class="bag-cat">🎒 ${T('In Bag', 'ui')}</div>` +
+      (bagRows || `<small style="color:var(--text-muted)">${T('No spare equipment in the bag.', 'ui')}</small>`);
+      
+    const refineFuelText = currentLang === 'th'
+      ? `🔨 เชื้อเพลิงตีบวก: <b>เขี้ยวหมาป่า (Wolf Fang)</b> สำหรับ +0–2 · <b>ผงเงา (Shade Dust)</b> สำหรับ +3–5 · <b>แร่ดารา (Star Iron)</b> สำหรับ +6–8 (ใช้ ${REFINE_FRAGS} ชิ้นต่อครั้ง) — หรือใช้ Blessed Ore 1 ชิ้นแทนได้ (คุณมีอยู่ ${itemQty('blessed_ore')} ชิ้น)`
+      : `🔨 Refining fuel: <b>Wolf Fang</b> for +0–2 · <b>Shade Dust</b> for +3–5 · <b>Star Iron</b> for +6–8 (${REFINE_FRAGS} per attempt) — or 1× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).`;
+      
+    return head + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">${refineFuelText}</div>` + enhBody;
   }
   if (id === 'admin') {
     const status = `<div style="color:#ffd24d;margin-bottom:8px;font-size:12px;line-height:1.6">
@@ -3466,12 +3606,40 @@ function showDialogue(name, lines, onClose) {
   if (dlg) dlg.remove();
   let i = 0;
   dlg = document.createElement('div'); dlg.className = 'dialogue';
+  const translatedName = T(name, 'npcs');
+  const translatedLines = lines.map(line => {
+    if (line.startsWith('You currently hold Guild Rank ')) {
+      const rank = line.substring('You currently hold Guild Rank '.length).replace('.', '');
+      return currentLang === 'th' ? `ปัจจุบันคุณมียศกิลด์ ${T(rank, 'ui')}` : line;
+    }
+    if (line.startsWith('Our next chapter is ')) {
+      const match = line.match(/Our next chapter is (.+?)\. Train until Base Level (\d+); I will call for you the moment you are ready\./);
+      if (match) {
+        return currentLang === 'th'
+          ? `บทต่อไปของเราคือ ${T(match[1], 'quests')} จงฝึกฝนจนกว่าเลเวลหลักจะถึง ${match[2]} แล้วฉันจะเรียกหาคุณทันทีที่คุณพร้อม`
+          : line;
+      }
+    }
+    if (line.startsWith('Current task — ')) {
+      const match = line.match(/Current task — (.+?): (.+)/);
+      if (match) {
+        return currentLang === 'th'
+          ? `ภารกิจปัจจุบัน — ${T(match[1], 'quests')}: ${T(match[2], 'quests')}`
+          : line;
+      }
+    }
+    const translated = T(line, 'dialogues');
+    if (translated !== line) return translated;
+    return T(line, 'quests');
+  });
+
   const render = () => {
-    dlg.innerHTML = `<div class="dialogue__name">${name}</div><div class="dialogue__text">${lines[i]}</div>
-      <div class="dialogue__choices"><button class="btn"><span>${i < lines.length - 1 ? 'Continue' : 'Close'}</span><kbd>Space</kbd></button></div>`;
+    const btnText = i < translatedLines.length - 1 ? T('Continue', 'ui') : T('Close', 'ui');
+    dlg.innerHTML = `<div class="dialogue__name">${translatedName}</div><div class="dialogue__text">${translatedLines[i]}</div>
+      <div class="dialogue__choices"><button class="btn"><span>${btnText}</span><kbd>Space</kbd></button></div>`;
     dlg.querySelector('button').onclick = () => {
       i++;
-      if (i >= lines.length) { dlg.remove(); dlg = null; if (onClose) onClose(); }
+      if (i >= translatedLines.length) { dlg.remove(); dlg = null; if (onClose) onClose(); }
       else render();
     };
   };

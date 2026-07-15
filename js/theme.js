@@ -75,7 +75,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .mp-bar .fill{background:var(--mp)}
 .xp-bar{position:fixed;left:0;right:0;bottom:0;height:7px;border-radius:0;border-width:1px 0 0}
 .xp-bar .fill{border-radius:0;background:var(--xp)}
-.stat-stack{position:fixed;top:12px;left:66px;width:210px;display:flex;flex-direction:column;gap:4px;
+.stat-stack{position:fixed;top:12px;left:66px;width:260px;display:flex;flex-direction:column;gap:4px;
   padding:5px 6px;background:rgba(10,17,28,.92);border:1px solid #738197;box-shadow:2px 2px 0 rgba(0,0,0,.55)}
 
 /* Level seal */
