@@ -882,7 +882,23 @@ export const L10N = {
       "The glowing monitors faded into absolute dark. No keyboard under your fingers. No hum of the server tower. Only cold, damp grass, and the sound of wind in high leaves.": "หน้าจอคอมพิวเตอร์ที่สว่างไสวดับวูบลงสู่ความมืดมิด ไร้สัมผัสของคีย์บอร์ดที่ปลายนิ้ว ไม่มีเสียงหึ่งๆ ของเคสคอมพิวเตอร์ มีเพียงยอดหญ้าชื้นแฉะอันเหน็บหนาว และเสียงสายลมพัดผ่านแมกไม้สูงชัน",
       "You sat up. The shirt was your own, but the jeans were gone — replaced by coarse Traveler's Tunic. Nearby, a rusted sword caught the dim light.": "คุณยันตัวลุกขึ้นยืน เสื้อเชิ้ตยังคงเป็นตัวเดิมของคุณ แต่กางเกงยีนส์หายไปแล้ว — ถูกทดแทนด้วยเสื้อคลุมนักเดินทางสุดหยาบ ใกล้กันนั้น มีดาบขึ้นสนิมเล่มหนึ่งสะท้อนแสงสลัวๆ",
       "A voice spoke from the shadows of a stone arch: 'Easy, outworlder. The crossing is always rough. Welcome to Aetheria.'": "สุ้มเสียงหนึ่งดังแว่วมาจากใต้เงาของซุ้มประตูศิลา: 'ทำใจร่มๆ ไว้ผู้ก้าวข้ามมิติ การข้ามทางเชื่อมมิติมันค่อนข้างทุลักทุเลเสมอ ยินดีต้อนรับสู่ Aetheria'",
-      "Died at your desk. Respawned with a sword.": "ตายที่โต๊ะทำงาน ฟื้นคืนชีพพร้อมใบดาบ"
+      "Died at your desk. Respawned with a sword.": "ตายที่โต๊ะทำงาน ฟื้นคืนชีพพร้อมใบดาบ",
+
+      // Story Cutscenes: Intro
+      "The last thing you remember is the office at midnight — the monitor's glow, one more deadline, your heart stumbling over its own beat.": "สิ่งสุดท้ายที่คุณจำได้คือออฟฟิศตอนเที่ยงคืน — แสงสลัวจากหน้าจอคอมพิวเตอร์ เส้นตายงานอีกหนึ่งชิ้น และหัวใจของคุณที่เริ่มเต้นผิดจังหวะ",
+      "Then — silence. Grass beneath your fingers. A sky far too blue, with two pale moons.": "จากนั้น — ความเงียบสงบ ต้นหญ้าใต้ปลายนิ้วของคุณ ท้องฟ้าที่ดูเป็นสีฟ้าจนเกินไปพร้อมกับดวงจันทร์สีซีดสองดวง",
+      "\"You're awake,\" says a voice. A woman in a green cloak kneels beside you.": "\"คุณฟื้นแล้ว,\" เสียงหนึ่งเอ่ยขึ้น หญิงสาวสวมเสื้อคลุมสีเขียวคุกเข่าอยู่ข้างๆ คุณ",
+      "\"I am Elowen. I pulled your soul across the veil. I'm sorry — there was no gentler way.\"": "\"ข้าคืออีโลเวน ข้าดึงวิญญาณของเจ้าข้ามผ่านม่านมิติมา ข้าขอโทษด้วยนะ — ไม่มีวิธีที่นุ่มนวลกว่านี้อีกแล้ว\"",
+      "\"This world is dying by inches, and its people are too afraid to change it. You are not.\"": "\"โลกใบนี้กำลังค่อยๆ ตายลงไปทีละนิด และผู้คนต่างหวาดกลัวเกินกว่าจะเปลี่ยนมัน แต่เจ้าไม่ใช่แบบนั้น\"",
+      "You have no idea how to swing a sword. But somehow, you know this is only the beginning.": "คุณไม่มีความรู้เลยเกี่ยวกับการแกว่งดาบ แต่ไม่ว่าอย่างไร คุณก็รู้ดีว่านี่เป็นเพียงจุดเริ่มต้นเท่านั้น",
+
+      // Story Cutscenes: Victory Outro
+      "The Nullking's crown clatters onto stone that no longer remembers how to be nothing.": "มงกุฎของราชันความดับสูญร่วงหล่นลงบนแผ่นหินที่จำไม่ได้อีกแล้วว่าความว่างเปล่าเป็นอย่างไร",
+      "Above you, the rift knits itself closed, stitch by starlit stitch, until only sky remains.": "เบื้องบนของคุณ รอยแยกมิติกำลังสมานตัวเองปิดลง ทีละเสี้ยวด้วยแสงดาว จนเหลือเพียงผืนฟ้าที่งดงาม",
+      "Elowen is there — she always is. \"You out-leveled the end of the world itself,\" she laughs, and it almost hides the tremble in her voice.": "อีโลเวนอยู่ที่นั่น — นางอยู่ที่นั่นเสมอ \"เจ้าเก่งเกินกว่าจุดจบของโลกใบนี้ไปแล้วนะ\" นางหัวเราะ และมันเกือบจะซ่อนความสั่นเครือในน้ำเสียงของนางได้มิด",
+      "\"The way home is open now, if you want it. But look at what you built here: a name, a rank, a legend.\"": "\"หนทางกลับบ้านเปิดออกแล้วหากเจ้าต้องการ แต่ลองมองดูสิ่งที่คุณสร้างขึ้นที่นี่สิ: ชื่อเสียง ยศถาบรรดาศักดิ์ และตำนาน\"",
+      "You look at your hands — calloused from a sword you once didn't know how to hold.": "คุณก้มลงมองมือของตัวเอง — มันด้านจากการฝึกดาบที่ครั้งหนึ่งคุณไม่เคยรู้วิธีจับมันด้วยซ้ำ",
+      "Home can wait a little longer. Aetheria is yours to roam.": "บ้านค่อยรออีกหน่อยก็ได้ Aetheria เป็นดินแดนให้คุณได้ออกเดินทางท่องเที่ยวแล้วตอนนี้"
     },
     quests: {
       "A Strange Awakening": "การตื่นขึ้นที่แปลกประหลาด",
@@ -1043,23 +1059,7 @@ export const L10N = {
       "Trial of the Tempest": "การทดสอบของจอมเวทเทมเพสต์",
       "Call the storm down on 5 Dire Wolves.": "ร่ายมนตร์เรียกอัสนีพัดถล่มลงใส่ไดร์วูลฟ์ 5 ตัว",
       "Rite of the Archon": "พิธีจุติอาร์คอนผู้คุมพายุ",
-      "Unleash the tempest on 5 Frost Wolves.": "ปลดปล่อยวาตภัยพัดกระหน่ำทำลายหมาป่าเยือกแข็ง 5 ตัว",
-
-      // Story Cutscenes: Intro
-      "The last thing you remember is the office at midnight — the monitor's glow, one more deadline, your heart stumbling over its own beat.": "สิ่งสุดท้ายที่คุณจำได้คือออฟฟิศตอนเที่ยงคืน — แสงสลัวจากหน้าจอคอมพิวเตอร์ เส้นตายงานอีกหนึ่งชิ้น และหัวใจของคุณที่เริ่มเต้นผิดจังหวะ",
-      "Then — silence. Grass beneath your fingers. A sky far too blue, with two pale moons.": "จากนั้น — ความเงียบสงบ ต้นหญ้าใต้ปลายนิ้วของคุณ ท้องฟ้าที่ดูเป็นสีฟ้าจนเกินไปพร้อมกับดวงจันทร์สีซีดสองดวง",
-      "\"You're awake,\" says a voice. A woman in a green cloak kneels beside you.": "\"คุณฟื้นแล้ว,\" เสียงหนึ่งเอ่ยขึ้น หญิงสาวสวมเสื้อคลุมสีเขียวคุกเข่าอยู่ข้างๆ คุณ",
-      "\"I am Elowen. I pulled your soul across the veil. I'm sorry — there was no gentler way.\"": "\"ข้าคืออีโลเวน ข้าดึงวิญญาณของเจ้าข้ามผ่านม่านมิติมา ข้าขอโทษด้วยนะ — ไม่มีวิธีที่นุ่มนวลกว่านี้อีกแล้ว\"",
-      "\"This world is dying by inches, and its people are too afraid to change it. You are not.\"": "\"โลกใบนี้กำลังค่อยๆ ตายลงไปทีละนิด และผู้คนต่างหวาดกลัวเกินกว่าจะเปลี่ยนมัน แต่เจ้าไม่ใช่แบบนั้น\"",
-      "You have no idea how to swing a sword. But somehow, you know this is only the beginning.": "คุณไม่มีความรู้เลยเกี่ยวกับการแกว่งดาบ แต่ไม่ว่าอย่างไร คุณก็รู้ดีว่านี่เป็นเพียงจุดเริ่มต้นเท่านั้น",
-
-      // Story Cutscenes: Victory Outro
-      "The Nullking's crown clatters onto stone that no longer remembers how to be nothing.": "มงกุฎของราชันความดับสูญร่วงหล่นลงบนแผ่นหินที่จำไม่ได้อีกแล้วว่าความว่างเปล่าเป็นอย่างไร",
-      "Above you, the rift knits itself closed, stitch by starlit stitch, until only sky remains.": "เบื้องบนของคุณ รอยแยกมิติกำลังสมานตัวเองปิดลง ทีละเสี้ยวด้วยแสงดาว จนเหลือเพียงผืนฟ้าที่งดงาม",
-      "Elowen is there — she always is. \"You out-leveled the end of the world itself,\" she laughs, and it almost hides the tremble in her voice.": "อีโลเวนอยู่ที่นั่น — นางอยู่ที่นั่นเสมอ \"เจ้าเก่งเกินกว่าจุดจบของโลกใบนี้ไปแล้วนะ\" นางหัวเราะ และมันเกือบจะซ่อนความสั่นเครือในน้ำเสียงของนางได้มิด",
-      "\"The way home is open now, if you want it. But look at what you built here: a name, a rank, a legend.\"": "\"หนทางกลับบ้านเปิดออกแล้วหากเจ้าต้องการ แต่ลองมองดูสิ่งที่คุณสร้างขึ้นที่นี่สิ: ชื่อเสียง ยศถาบรรดาศักดิ์ และตำนาน\"",
-      "You look at your hands — calloused from a sword you once didn't know how to hold.": "คุณก้มลงมองมือของตัวเอง — มันด้านจากการฝึกดาบที่ครั้งหนึ่งคุณไม่เคยรู้วิธีจับมันด้วยซ้ำ",
-      "Home can wait a little longer. Aetheria is yours to roam.": "บ้านค่อยรออีกหน่อยก็ได้ Aetheria เป็นดินแดนให้คุณได้ออกเดินทางท่องเที่ยวแล้วตอนนี้"
+      "Unleash the tempest on 5 Frost Wolves.": "ปลดปล่อยวาตภัยพัดกระหน่ำทำลายหมาป่าเยือกแข็ง 5 ตัว"
     },
     storyPhases: {
       "The Awakened Road": "เส้นทางผู้ตื่นรู้",
