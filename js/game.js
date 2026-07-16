@@ -3672,7 +3672,7 @@ function runCutscene(lines, done) {
   box.style.cssText = 'position:fixed;inset:0;background:rgba(8,10,7,.94);z-index:50;display:flex;align-items:center;justify-content:center';
   const render = () => {
     box.innerHTML = `<div style="max-width:640px;text-align:center;padding:30px;font-size:19px;line-height:1.7;color:#f4e8cf;font-family:var(--font-head)">
-      <p>${lines[i]}</p><button class="btn" style="margin-top:26px">${i < lines.length - 1 ? 'Continue' : 'Begin'}</button></div>`;
+      <p>${T(lines[i], 'dialogues')}</p><button class="btn" style="margin-top:26px">${i < lines.length - 1 ? (currentLang === 'th' ? 'ต่อไป' : 'Continue') : (currentLang === 'th' ? 'เริ่มต้น' : 'Begin')}</button></div>`;
     box.querySelector('button').onclick = () => { i++; if (i >= lines.length) { box.remove(); done(); } else render(); };
   };
   render();
