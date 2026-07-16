@@ -3060,6 +3060,18 @@ function skillsPanelHtml(p) {
 // plain-language "what does it do" line for a skill at level L
 function skillEffectLine(s, L, p) {
   const pow = s.power * skillRankScale(L);
+  if (currentLang === 'th') {
+    if (s.id === 'hunters_mark') return `ทำสัญลักษณ์บนเป้าหมาย ได้รับความเสียหายแรงขึ้น +${20 + 5 * (L - 1)}% เป็นเวลา 10 วินาที`;
+    if (s.id === 'sanctuary') return `สร้างวงเวทรักษา 6 วินาที (ฟื้นฟู HP รวม ≈ ${Math.round(p.maxHp * (0.395 + 0.059 * (L - 1)))} HP)`;
+    if (s.type === 'heal') return `ฟื้นฟู HP ≈ ${Math.round(p.maxHp * (0.12 * s.power) * (1 + 0.15 * (L - 1)))}`;
+    if (s.type === 'buff') return `เสริมความแกร่งให้ตัวเองเป็นเวลา 8 วินาที`;
+    const dmg = Math.round(p.atkStat * pow);
+    const extra = s.id === 'sunder' ? `; ลด DEF ลง ${20 + 5 * (L - 1)}% เป็นเวลา 7 วินาที`
+      : s.id === 'savage_leap' ? '; กระโดดพุ่งเข้าหาเป้าหมาย' : '';
+    if (s.type === 'aoe') return `สร้างความเสียหาย ≈ ${dmg} แก่ศัตรูทั้งหมดในรัศมี ${s.radius}${extra}`;
+    return `สร้างความเสียหาย ≈ ${dmg} แก่เป้าหมาย${extra}`;
+  }
+
   if (s.id === 'hunters_mark') return `Marks one foe for +${20 + 5 * (L - 1)}% damage taken for 10s`;
   if (s.id === 'sanctuary') return `Creates a 6s healing circle (≈ ${Math.round(p.maxHp * (0.395 + 0.059 * (L - 1)))} total HP)`;
   if (s.type === 'heal') return `Restores ≈ ${Math.round(p.maxHp * (0.12 * s.power) * (1 + 0.15 * (L - 1)))} HP`;
@@ -3076,44 +3088,132 @@ function skillNodeTip(id, isPassive) {
   if (isPassive) {
     const pa = PROGRESSION.passives[id]; if (!pa) return '';
     const lv = p.skillLevels[id] || 0, can = canLearnPassive(p, id);
-    const nxt = lv < pa.maxLevel ? pa.desc.replace('{v}', pa.per * (lv + 1)) : 'MAX';
+    const nxt = lv < pa.maxLevel ? T(pa.desc, 'passives').replace('{v}', pa.per * (lv + 1)) : 'MAX';
     const needs = [];
-    if (p.tierIndex < (pa.reqTier || 0)) needs.push(`advance to ${PROGRESSION.tiers[p.classId]?.[pa.reqTier]?.name || `Tier ${pa.reqTier + 1}`}`);
-    if (p.jobLevel < pa.reqLevel) needs.push(`Job Lv ${pa.reqLevel}`);
-    if (!p.skillPoints) needs.push('1 skill point');
-    const need = needs.length ? `<div class="tip-gate">🔒 Requires: ${needs.join(', ')}</div>` : '';
-    const hint = lv >= pa.maxLevel ? `<div class="tip-hint" style="color:#e6bd54">Maxed</div>` : can ? `<div class="tip-hint" style="color:var(--success)">Click to ${lv ? 'raise' : 'learn'} (1 point)</div>` : '';
-    return `<div class="tip-name" style="color:#6fb0ef">${pa.name} <small style="color:var(--text-muted)">· passive</small></div>
-      <div class="tip-eff">${lv ? `Now: ${pa.desc.replace('{v}', pa.per * lv)}` : `Each level: ${pa.desc.replace('{v}', pa.per)}`}</div>
-      <div class="tip-row">Level <b>${lv}/${pa.maxLevel}</b>${lv < pa.maxLevel ? ` · next: <b>${nxt}</b>` : ''}</div>
-      <div class="tip-flav">Permanent stat bonus — always on.</div>${need}${hint}`;
+    if (p.tierIndex < (pa.reqTier || 0)) {
+      const tierName = PROGRESSION.tiers[p.classId]?.[pa.reqTier]?.name;
+      needs.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'ui') || `ระดับ ${pa.reqTier + 1}`}` : `advance to ${tierName || `Tier ${pa.reqTier + 1}`}`);
+    }
+    if (p.jobLevel < pa.reqLevel) {
+      needs.push(currentLang === 'th' ? `เลเวลงาน ${pa.reqLevel}` : `Job Lv ${pa.reqLevel}`);
+    }
+    if (!p.skillPoints) {
+      needs.push(currentLang === 'th' ? `แต้มสกิล 1 แต้ม` : '1 skill point');
+    }
+    const need = needs.length ? `<div class="tip-gate">🔒 ${currentLang === 'th' ? 'ต้องการ' : 'Requires'}: ${needs.join(', ')}</div>` : '';
+    
+    let hint = '';
+    if (lv >= pa.maxLevel) {
+      hint = `<div class="tip-hint" style="color:#e6bd54">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed'}</div>`;
+    } else if (can) {
+      hint = `<div class="tip-hint" style="color:var(--success)">${currentLang === 'th' ? `คลิกเพื่อ${lv ? 'อัปเกรด' : 'เรียนรู้'} (ใช้ 1 แต้ม)` : `Click to ${lv ? 'raise' : 'learn'} (1 point)`}</div>`;
+    }
+
+    const displayName = T(pa.name, 'passives');
+    const displayDesc = lv ? `ปัจจุบัน: ${T(pa.desc, 'passives').replace('{v}', pa.per * lv)}` : `แต่ละเลเวล: ${T(pa.desc, 'passives').replace('{v}', pa.per)}`;
+    const displayDescEn = lv ? `Now: ${pa.desc.replace('{v}', pa.per * lv)}` : `Each level: ${pa.desc.replace('{v}', pa.per)}`;
+
+    return `<div class="tip-name" style="color:#6fb0ef">${displayName} <small style="color:var(--text-muted)">· ${currentLang === 'th' ? 'ติดตัว' : 'passive'}</small></div>
+      <div class="tip-eff">${currentLang === 'th' ? displayDesc : displayDescEn}</div>
+      <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${pa.maxLevel}</b>${lv < pa.maxLevel ? ` · ${currentLang === 'th' ? 'ถัดไป' : 'next'}: <b>${nxt}</b>` : ''}</div>
+      <div class="tip-flav">${currentLang === 'th' ? 'เพิ่มโบนัสสถานะถาวร — ทำงานตลอดเวลา' : 'Permanent stat bonus — always on.'}</div>${need}${hint}`;
   }
   const s = COMBAT.skills.find(x => x.id === id); if (!s) return '';
   const node = PROGRESSION.skillTree[id] || {}, lv = skillLevel(p, id), max = node.maxLevel || 1, L = lv || 1;
-  const rangeTxt = s.id === 'hunters_mark' ? `range ${s.range}` : (s.type === 'buff' || s.type === 'heal') ? 'self-cast' : s.type === 'aoe' ? `range ${s.range}, radius ${s.radius}` : `range ${s.range}`;
-  const resourceTxt = s.finisher ? `Momentum <b>${TUNING.momentum.finisherMin}+</b>` : `MP <b>${s.mpCost}</b>`;
+  
+  // Format range text
+  let rangeTxt = '';
+  if (currentLang === 'th') {
+    rangeTxt = s.id === 'hunters_mark' ? `ระยะ ${s.range}` : (s.type === 'buff' || s.type === 'heal') ? 'ใช้กับตัวเอง' : s.type === 'aoe' ? `ระยะ ${s.range}, รัศมี ${s.radius}` : `ระยะ ${s.range}`;
+  } else {
+    rangeTxt = s.id === 'hunters_mark' ? `range ${s.range}` : (s.type === 'buff' || s.type === 'heal') ? 'self-cast' : s.type === 'aoe' ? `range ${s.range}, radius ${s.radius}` : `range ${s.range}`;
+  }
+
+  // Format resource text
+  let resourceTxt = '';
+  if (currentLang === 'th') {
+    resourceTxt = s.finisher ? `โมเมนตัม <b>${TUNING.momentum.finisherMin}+</b>` : `MP <b>${s.mpCost}</b>`;
+  } else {
+    resourceTxt = s.finisher ? `Momentum <b>${TUNING.momentum.finisherMin}+</b>` : `MP <b>${s.mpCost}</b>`;
+  }
+
   const gates = [];
   const rankGate = skillRankGate(p, id);
-  if (rankGate && p.tierIndex < rankGate.reqTier) gates.push(`advance to ${PROGRESSION.tiers[p.classId]?.[rankGate.reqTier]?.name || `Tier ${rankGate.reqTier + 1}`}`);
-  if (rankGate && p.jobLevel < rankGate.reqLevel) gates.push(`Job Lv ${rankGate.reqLevel}`);
-  if (node.reqSkill && skillLevel(p, node.reqSkill.id) < node.reqSkill.lvl) gates.push(`${COMBAT.skills.find(x => x.id === node.reqSkill.id)?.name} Lv ${node.reqSkill.lvl}`);
-  if (!p.skillPoints && lv < max) gates.push('1 skill point');
-  const gateHtml = gates.length ? `<div class="tip-gate">🔒 Requires: ${gates.join(', ')}</div>` : '';
-  const hint = lv >= max ? `<div class="tip-hint" style="color:#e6bd54">Maxed out</div>` : gates.length ? '' : `<div class="tip-hint" style="color:var(--success)">Click to ${lv ? 'upgrade' : 'learn'} (1 point)</div>`;
-  const masteryHtml = node.tierCaps ? `<div class="tip-mastery">First-job cap <b>Lv ${node.tierCaps[0]}</b> · second-job mastery <b>Lv ${node.tierCaps[0] + 1}–${node.maxLevel}</b>${lv >= node.tierCaps[0] && lv < node.maxLevel ? ` · next rank at Job ${rankGate?.reqLevel}` : ''}</div>` : '';
+  if (rankGate && p.tierIndex < rankGate.reqTier) {
+    const tierName = PROGRESSION.tiers[p.classId]?.[rankGate.reqTier]?.name;
+    gates.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'ui') || `ระดับ ${rankGate.reqTier + 1}`}` : `advance to ${tierName || `Tier ${rankGate.reqTier + 1}`}`);
+  }
+  if (rankGate && p.jobLevel < rankGate.reqLevel) {
+    gates.push(currentLang === 'th' ? `เลเวลงาน ${rankGate.reqLevel}` : `Job Lv ${rankGate.reqLevel}`);
+  }
+  if (node.reqSkill && skillLevel(p, node.reqSkill.id) < node.reqSkill.lvl) {
+    const reqName = COMBAT.skills.find(x => x.id === node.reqSkill.id)?.name;
+    gates.push(currentLang === 'th' ? `${T(reqName, 'skills')} เลเวล ${node.reqSkill.lvl}` : `${reqName} Lv ${node.reqSkill.lvl}`);
+  }
+  if (!p.skillPoints && lv < max) {
+    gates.push(currentLang === 'th' ? `แต้มสกิล 1 แต้ม` : '1 skill point');
+  }
+
+  const gateHtml = gates.length ? `<div class="tip-gate">🔒 ${currentLang === 'th' ? 'ต้องการ' : 'Requires'}: ${gates.join(', ')}</div>` : '';
+  
+  let hint = '';
+  if (lv >= max) {
+    hint = `<div class="tip-hint" style="color:#e6bd54">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed out'}</div>`;
+  } else if (!gates.length) {
+    hint = `<div class="tip-hint" style="color:var(--success)">${currentLang === 'th' ? `คลิกเพื่อ${lv ? 'อัปเกรด' : 'เรียนรู้'} (ใช้ 1 แต้ม)` : `Click to ${lv ? 'upgrade' : 'learn'} (1 point)`}</div>`;
+  }
+
+  let masteryHtml = '';
+  if (node.tierCaps) {
+    if (currentLang === 'th') {
+      masteryHtml = `<div class="tip-mastery">จำกัดเลเวลอาชีพแรก <b>เลเวล ${node.tierCaps[0]}</b> · ความชำนาญอาชีพที่สอง <b>เลเวล ${node.tierCaps[0] + 1}–${node.maxLevel}</b>${lv >= node.tierCaps[0] && lv < node.maxLevel ? ` · ขั้นถัดไปที่เลเวลงาน ${rankGate?.reqLevel}` : ''}</div>`;
+    } else {
+      masteryHtml = `<div class="tip-mastery">First-job cap <b>Lv ${node.tierCaps[0]}</b> · second-job mastery <b>Lv ${node.tierCaps[0] + 1}–${node.maxLevel}</b>${lv >= node.tierCaps[0] && lv < node.maxLevel ? ` · next rank at Job ${rankGate?.reqLevel}` : ''}</div>`;
+    }
+  }
+
+  const displayEffect = currentLang === 'th' ? ({ bleed: 'เลือดออก', poison: 'ยาพิษ', freeze: 'แช่แข็ง', stun: 'มึนงง', slow: 'สโลว์', mark: 'มาร์ก' }[s.effect] || s.effect) : s.effect;
+
   const mechanics = [];
-  if (isDamageSkill(s) && !s.finisher) mechanics.push(`<span class="tip-mechanic build">+M Builder</span> Land a hit to gain +${TUNING.momentum.perHit} Momentum.`);
-  if (s.effect && isDamageSkill(s)) mechanics.push(`<span class="tip-mechanic setup">Setup</span> Applies <b>${s.effect}</b>.`);
-  if (s.detonate) mechanics.push(`<span class="tip-mechanic detonate">Detonate</span> Consumes active <b>${s.detonate}</b> for +${Math.round(TUNING.momentum.detonateBonus * 100)}% damage${s.effect === s.detonate ? ', then reapplies it' : ''}.`);
-  if (s.finisher) mechanics.push(`<span class="tip-mechanic finish">Finisher</span> Consumes all Momentum for +${Math.round(TUNING.momentum.powerPerPoint * 100)}% damage per point.`);
+  if (isDamageSkill(s) && !s.finisher) {
+    mechanics.push(currentLang === 'th' 
+      ? `<span class="tip-mechanic build">+M บิวเดอร์</span> โจมตีโดนเพื่อรับโมเมนตัม +${TUNING.momentum.perHit} แต้ม`
+      : `<span class="tip-mechanic build">+M Builder</span> Land a hit to gain +${TUNING.momentum.perHit} Momentum.`);
+  }
+  if (s.effect && isDamageSkill(s)) {
+    mechanics.push(currentLang === 'th'
+      ? `<span class="tip-mechanic setup">เซ็ตอัป</span> มอบสถานะ <b>${displayEffect}</b>`
+      : `<span class="tip-mechanic setup">Setup</span> Applies <b>${s.effect}</b>.`);
+  }
+  if (s.detonate) {
+    mechanics.push(currentLang === 'th'
+      ? `<span class="tip-mechanic detonate">ระเบิดสถานะ</span> ใช้สถานะ <b>${displayEffect}</b> เพื่อสร้างความเสียหายเพิ่ม +${Math.round(TUNING.momentum.detonateBonus * 100)}%${s.effect === s.detonate ? ' แล้วมอบสถานะอีกครั้ง' : ''}`
+      : `<span class="tip-mechanic detonate">Detonate</span> Consumes active <b>${s.detonate}</b> for +${Math.round(TUNING.momentum.detonateBonus * 100)}% damage${s.effect === s.detonate ? ', then reapplies it' : ''}.`);
+  }
+  if (s.finisher) {
+    mechanics.push(currentLang === 'th'
+      ? `<span class="tip-mechanic finish">ฟินิชเชอร์</span> ใช้โมเมนตัมทั้งหมดเพื่อสร้างความเสียหายเพิ่มขึ้น +${Math.round(TUNING.momentum.powerPerPoint * 100)}% ต่อแต้ม`
+      : `<span class="tip-mechanic finish">Finisher</span> Consumes all Momentum for +${Math.round(TUNING.momentum.powerPerPoint * 100)}% damage per point.`);
+  }
   const mechanicHtml = mechanics.length ? `<div class="tip-mechanics">${mechanics.map(x => `<div>${x}</div>`).join('')}</div>` : '';
+  
   const key = hotkeyForSkill(p, id);
-  const barHint = lv ? `<div class="tip-bar">${key ? `Action key <kbd>${key}</kbd>` : 'Not on action bar — drag this node onto a slot.'}</div>` : '';
-  return `<div class="tip-name">${s.name} <small style="color:var(--text-muted)">· ${s.type}${s.effect ? ` · inflicts ${s.effect}` : ''}</small></div>
-    <div class="tip-eff">${skillEffectLine(s, L, p)} <small style="color:var(--text-muted)">(${lv ? 'Lv ' + lv : 'at Lv 1'})</small></div>
-    <div class="tip-row">${resourceTxt} · cooldown <b>${s.cooldownMs / 1000}s</b> · ${rangeTxt}</div>
-    <div class="tip-row">Level <b>${lv}/${max}</b></div>${masteryHtml}
-    ${mechanicHtml}<div class="tip-flav">"${s.flavor}"</div>${barHint}${gateHtml}${hint}`;
+  let barHint = '';
+  if (lv) {
+    if (currentLang === 'th') {
+      barHint = `<div class="tip-bar">${key ? `ปุ่มใช้งาน <kbd>${key}</kbd>` : 'ไม่ได้อยู่บนแถบใช้งาน — ลากโหนดนี้ลงในช่อง'}</div>`;
+    } else {
+      barHint = `<div class="tip-bar">${key ? `Action key <kbd>${key}</kbd>` : 'Not on action bar — drag this node onto a slot.'}</div>`;
+    }
+  }
+
+  const displayType = currentLang === 'th' ? ({ active: 'ใช้งาน', passive: 'ติดตัว', heal: 'รักษา', aoe: 'โจมตีหมู่', buff: 'บัฟ' }[s.type] || s.type) : s.type;
+
+  return `<div class="tip-name">${T(s.name, 'skills')} <small style="color:var(--text-muted)">· ${displayType}${s.effect ? ` · ${currentLang === 'th' ? 'มอบสถานะ' : 'inflicts'} ${displayEffect}` : ''}</small></div>
+    <div class="tip-eff">${skillEffectLine(s, L, p)} <small style="color:var(--text-muted)">(${lv ? (currentLang === 'th' ? 'เลเวล ' : 'Lv ') + lv : (currentLang === 'th' ? 'ที่ เลเวล 1' : 'at Lv 1')})</small></div>
+    <div class="tip-row">${resourceTxt} · ${currentLang === 'th' ? 'คูลดาวน์' : 'cooldown'} <b>${s.cooldownMs / 1000}${currentLang === 'th' ? ' วินาที' : 's'}</b> · ${rangeTxt}</div>
+    <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${max}</b></div>${masteryHtml}
+    ${mechanicHtml}<div class="tip-flav">"${T(s.flavor, 'skills')}"</div>${barHint}${gateHtml}${hint}`;
 }
 function hideSkillTip() { const t = document.getElementById('sk-tip'); if (t) t.style.display = 'none'; }
 
