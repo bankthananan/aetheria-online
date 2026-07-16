@@ -2971,23 +2971,23 @@ function combatLoopHtml(p, actives) {
   </section>`;
 }
 function skillsPanelHtml(p) {
-  const cc = p.combatClass, T = PROGRESSION.skillTree, actives = skillsFor(cc);
+  const cc = p.combatClass, tree = PROGRESSION.skillTree, actives = skillsFor(cc);
   // node label: first word, unless shared with another skill (Arcane Bolt/Arcane Nova → Bolt/Nova)
   const firsts = {};
   for (const s of actives) { const f = s.name.split(' ')[0]; firsts[f] = (firsts[f] || 0) + 1; }
   const shortName = n => { const w = n.split(' '); return (firsts[w[0]] > 1 && w[1]) ? w[1] : w[0]; };
-  const depth = id => { const n = T[id]; return (n && n.reqSkill) ? depth(n.reqSkill.id) + 1 : 0; };
+  const depth = id => { const n = tree[id]; return (n && n.reqSkill) ? depth(n.reqSkill.id) + 1 : 0; };
   const rows = {};
   for (const s of actives) { const r = depth(s.id); (rows[r] = rows[r] || []).push(s); }
   const rowKeys = Object.keys(rows).map(Number).sort((a, b) => a - b);
-  for (const r of rowKeys) rows[r].sort((a, b) => ((T[a.id]?.reqLevel || 0) - (T[b.id]?.reqLevel || 0)) || a.name.localeCompare(b.name));
+  for (const r of rowKeys) rows[r].sort((a, b) => ((tree[a.id]?.reqLevel || 0) - (tree[b.id]?.reqLevel || 0)) || a.name.localeCompare(b.name));
   const maxLen = Math.max(...rowKeys.map(r => rows[r].length), 1);
   const COLW = 96, ROWH = 92, NODE = 56, PADX = 30, PADY = 20;
   const centerX = PADX + (maxLen - 1) / 2 * COLW + NODE / 2;
   const place = {};
   rowKeys.forEach((r, ri) => rows[r].forEach((s, ci) => {
     const x = centerX + (ci - (rows[r].length - 1) / 2) * COLW - NODE / 2, y = PADY + ri * ROWH;
-    place[s.id] = { x, y, cx: x + NODE / 2, cy: y + NODE / 2, skill: s, node: T[s.id] };
+    place[s.id] = { x, y, cx: x + NODE / 2, cy: y + NODE / 2, skill: s, node: tree[s.id] };
   }));
   const activeRows = rowKeys.length;
   const passives = passivesFor(cc), pLen = passives.length;
@@ -3000,7 +3000,7 @@ function skillsPanelHtml(p) {
 
   let lines = '';
   for (const s of actives) {
-    const n = T[s.id]; if (!n?.reqSkill || !place[n.reqSkill.id]) continue;
+    const n = tree[s.id]; if (!n?.reqSkill || !place[n.reqSkill.id]) continue;
     const a = place[n.reqSkill.id], b = place[s.id], owned = skillLevel(p, s.id) > 0;
     lines += `<line x1="${a.cx}" y1="${a.cy}" x2="${b.cx}" y2="${b.cy}" stroke="${owned ? '#6fcf7a' : '#5c5240'}" stroke-width="${owned ? 2.4 : 1.6}"/>`;
     if (n.reqSkill.lvl > 1) lines += `<text x="${((a.cx + b.cx) / 2 + 7).toFixed(1)}" y="${((a.cy + b.cy) / 2).toFixed(1)}" fill="#8fbf6f" font-size="9">L${n.reqSkill.lvl}</text>`;
