@@ -458,10 +458,16 @@ function learnSkill(id) {
   // a freshly learned skill hops onto the first free hotbar slot automatically
   if (p.skillLevels[id] === 1 && !p.hotbar.some(s => s && s.type === 'skill' && s.id === id)) {
     const free = p.hotbar.findIndex(s => !s);
-    if (free >= 0) { p.hotbar[free] = { type: 'skill', id }; renderHotbar(); logMsg(`${COMBAT.skills.find(s => s.id === id).name} → hotkey ${hotkeyLabel(p.hotkeys[free])}.`, 'sys'); }
+    if (free >= 0) {
+      p.hotbar[free] = { type: 'skill', id };
+      renderHotbar();
+      const skName = COMBAT.skills.find(s => s.id === id).name;
+      logMsg(currentLang === 'th' ? `${T(skName, 'skills')} → ปุ่มลัด ${hotkeyLabel(p.hotkeys[free])}` : `${skName} → hotkey ${hotkeyLabel(p.hotkeys[free])}.`, 'sys');
+    }
   }
   AUDIO.playSfx('levelup');
-  logMsg(`Learned ${COMBAT.skills.find(s => s.id === id).name} Lv ${p.skillLevels[id]}.`, 'good');
+  const skName = COMBAT.skills.find(s => s.id === id).name;
+  logMsg(currentLang === 'th' ? `เรียนรู้ความสามารถ ${T(skName, 'skills')} เลเวล ${p.skillLevels[id]}` : `Learned ${skName} Lv ${p.skillLevels[id]}.`, 'good');
 }
 // ---- passive skills ----
 const passivesFor = cc => Object.entries(PROGRESSION.passives || {}).filter(([, v]) => v.classId === cc).map(([id, v]) => ({ id, ...v }));
@@ -479,7 +485,8 @@ function learnPassive(id) {
   const p = G.player; if (!canLearnPassive(p, id)) return;
   p.skillLevels[id] = (p.skillLevels[id] || 0) + 1; p.skillPoints--;
   recompute(p); AUDIO.playSfx('levelup');
-  logMsg(`Passive ${PROGRESSION.passives[id].name} → Lv ${p.skillLevels[id]}.`, 'good');
+  const paName = PROGRESSION.passives[id].name;
+  logMsg(currentLang === 'th' ? `เรียนรู้ความสามารถติดตัว ${T(paName, 'passives')} → เลเวล ${p.skillLevels[id]}` : `Passive ${paName} → Lv ${p.skillLevels[id]}.`, 'good');
 }
 function skillPointEntitlement(p) {
   return PROGRESSION.startSkillPoints
@@ -811,11 +818,11 @@ function loadMap(mapId, spawnX, spawnY) {
   if (!G.guildBoard || !G.guildBoard.length) refreshGuildBoard();
   AUDIO.playMusic(MAP_MUSIC[mapId] || 'field');
   const firstVisit = !G.visited.has(mapId);
-  logMsg(map.ambient, 'sys');
+  logMsg(T(map.ambient, 'maps'), 'sys');
   showZoneBanner(map, firstVisit);
   updateMinimap();
   G.visited.add(mapId); checkQuest();   // explore objectives (guild regions unlock via guardian kills)
-  if (firstVisit) logMsg(`✦ Chronicle updated — ${map.chronicle.epithet}.`, 'good');
+  if (firstVisit) logMsg(currentLang === 'th' ? `✦ อัปเดตพงศาวดารแล้ว — ${T(map.chronicle.epithet, 'maps')}` : `✦ Chronicle updated — ${map.chronicle.epithet}.`, 'good');
   refreshPanel('world');
   if (G.taskGuide) setTimeout(continueTaskGuide, 0);
   saveGame();   // persist on every zone change (no-op until the run is live)
@@ -2449,7 +2456,7 @@ function toast(text, kind = '') {
 function showZoneBanner(map, firstVisit) {
   document.querySelector('.zone-banner')?.remove();
   const el = document.createElement('div'); el.className = 'zone-banner' + (firstVisit ? ' discovery' : '');
-  el.innerHTML = `<small>${firstVisit ? 'NEW DISCOVERY · ' : ''}${esc(map.chronicle.province)}</small><b>${esc(map.name)}</b><em>${esc(map.chronicle.epithet)}</em><span>${esc(map.ambient)}</span>`;
+  el.innerHTML = `<small>${firstVisit ? (currentLang === 'th' ? 'ค้นพบดินแดนใหม่ · ' : 'NEW DISCOVERY · ') : ''}${esc(T(map.chronicle.province, 'maps'))}</small><b>${esc(T(map.name, 'maps'))}</b><em>${esc(T(map.chronicle.epithet, 'maps'))}</em><span>${esc(T(map.ambient, 'maps'))}</span>`;
   document.body.appendChild(el);
   setTimeout(() => el.classList.add('leaving'), 2100);
   setTimeout(() => el.remove(), 2700);
@@ -2727,26 +2734,27 @@ function updateHud() {
 function updateQuestTracker() {
   const el = $('#quest-tracker'); if (!el) return;
   let html = '';
+  const typeName = (t) => { if (currentLang === 'th') { return { kill: 'กำจัด', collect: 'รวบรวม', explore: 'สำรวจ', talk: 'คุยกับ' }[t] || t; } return t; };
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
     html += `<button class="task-link${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="Navigate to this task" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)">
-      <b style="color:#e6a23c">✦ ${a.def.name}</b><br>${a.def.desc}<br>
-      <span style="color:${done ? 'var(--success)' : 'var(--text)'}">▸ ${o.type} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</span></button>`;
+      <b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b><br>${T(a.def.desc, 'quests')}<br>
+      <span style="color:${done ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(o.type)} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</span></button>`;
   }
   const q = questById[G.quest], pending = questById[G.pendingQuest];
   if (!q && pending) {
     const phase = storyPhaseFor(pending);
     html += `<div class="quest-wait"><small style="color:${phase?.color || 'var(--accent-alt)'}">${storyPhaseLabel(pending)}</small><br>
-      <b style="color:var(--accent-alt)">Next · ${pending.name}</b><br>
-      <span>🔒 Base Lv ${pending.minLevel} required</span><br>
-      <small style="color:var(--text-muted)">You are Lv ${G.player.level}. Train with hunts or guild bounties.</small></div>`;
-  } else if (!q) html += '<b>Quest</b><br><span style="color:var(--text-muted)">Story complete — free roam.</span>';
+      <b style="color:var(--accent-alt)">${T('Next', 'ui')} · ${T(pending.name, 'quests')}</b><br>
+      <span>${T('🔒 Base Lv {v} required', 'ui').replace('{v}', pending.minLevel)}</span><br>
+      <small style="color:var(--text-muted)">${T('You are Lv {lvl}. Train with hunts or guild bounties.', 'ui').replace('{lvl}', G.player.level)}</small></div>`;
+  } else if (!q) html += `<b>${T('Quest', 'ui')}</b><br><span style="color:var(--text-muted)">${T('Story complete — free roam.', 'ui')}</span>`;
   else {
     const prog = questProgress(q);
     html += `<button class="task-link${G.taskGuide?.source === 'story' ? ' active' : ''}" data-task="story" data-task-id="${q.id}" title="Navigate to this task">
       <small style="color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}">${storyPhaseLabel(q)}</small><br>
-      <b style="color:var(--accent-alt)">${q.name}</b><br>${q.description}<br>
-      <span style="color:${prog >= q.objective.count ? 'var(--success)' : 'var(--text)'}">▸ ${q.objective.type} ${objectiveName(q.objective)}: ${prog}/${q.objective.count}</span></button>`;
+      <b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b><br>${T(q.description, 'quests')}<br>
+      <span style="color:${prog >= q.objective.count ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(q.objective.type)} ${objectiveName(q.objective)}: ${prog}/${q.objective.count}</span></button>`;
   }
   if (G.activeGuilds.length) {
     html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(95,191,122,.3)"><b style="color:var(--success)">🏰 Bounties (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</b>` +
@@ -3119,36 +3127,36 @@ function worldChronicleHtml() {
     const map = MAPS[id], known = G.visited.has(id), current = G.mapId === id;
     const routed = G.taskGuide?.source === 'world' && G.taskGuide.mapId === id;
     if (!known) {
-      return `<article class="world-node unknown" aria-label="Uncharted region">
-        <div class="world-sigil">?</div><div class="world-copy"><span class="world-province">UNCHARTED</span>
-        <b>Beyond the inked road</b><p>Walk this land before its name and history can enter your Chronicle.</p></div></article>`;
+      return `<article class="world-node unknown" aria-label="${T('Uncharted region', 'ui')}">
+        <div class="world-sigil">?</div><div class="world-copy"><span class="world-province">${T('UNCHARTED', 'ui')}</span>
+        <b>${T('Beyond the inked road', 'ui')}</b><p>${T('Walk this land before its name and history can enter your Chronicle.', 'ui')}</p></div></article>`;
     }
     const c = map.chronicle, guardianId = zoneGuardian(id), guardian = guardianId ? monById[guardianId] : null;
     const guardianSlain = guardianId && G.guardiansSlain.has(guardianId);
-    const threat = map.band ? `Lv ${map.band[0]}–${map.band[1]}` : 'Sanctuary';
+    const threat = map.band ? `Lv ${map.band[0]}–${map.band[1]}` : T('Sanctuary', 'ui');
     const guardianFact = guardian
-      ? `<span class="world-fact ${guardianSlain ? 'cleared' : ''}"><small>GUARDIAN</small>${guardianSlain ? '✓ ' : ''}${esc(guardian.name)}</span>`
-      : `<span class="world-fact cleared"><small>STATUS</small>Safe haven</span>`;
+      ? `<span class="world-fact ${guardianSlain ? 'cleared' : ''}"><small>${T('GUARDIAN', 'ui')}</small>${guardianSlain ? '✓ ' : ''}${esc(T(guardian.name, 'monsters'))}</span>`
+      : `<span class="world-fact cleared"><small>${T('STATUS', 'ui')}</small>${T('Safe haven', 'ui')}</span>`;
     const route = current
-      ? `<span class="world-you-are-here">◆ YOU ARE HERE</span>`
-      : `<button class="btn btn--ghost world-route${routed ? ' active' : ''}" data-world-route="${id}">${routed ? '◆ Route active' : '➤ Plot route'}</button>`;
+      ? `<span class="world-you-are-here">◆ ${T('YOU ARE HERE', 'ui')}</span>`
+      : `<button class="btn btn--ghost world-route${routed ? ' active' : ''}" data-world-route="${id}">${routed ? '◆ ' + T('Route active', 'ui') : '➤ ' + T('Plot route', 'ui')}</button>`;
     return `<article class="world-node known${current ? ' current' : ''}${routed ? ' routing' : ''}">
       <div class="world-sigil">${WORLD_SIGIL[id] || '◆'}</div>
       <div class="world-copy">
-        <div class="world-node-head"><div><span class="world-province">${esc(c.province)}</span><b>${esc(map.name)}</b><em>${esc(c.epithet)}</em></div>${route}</div>
-        <p>${esc(c.lore)}</p>
-        <div class="world-facts"><span class="world-fact"><small>LANDMARK</small>${esc(c.landmark)}</span><span class="world-fact"><small>THREAT</small>${threat}</span>${guardianFact}</div>
+        <div class="world-node-head"><div><span class="world-province">${esc(T(c.province, 'maps'))}</span><b>${esc(T(map.name, 'maps'))}</b><em>${esc(T(c.epithet, 'maps'))}</em></div>${route}</div>
+        <p>${esc(T(c.lore, 'maps'))}</p>
+        <div class="world-facts"><span class="world-fact"><small>${T('LANDMARK', 'ui')}</small>${esc(T(c.landmark, 'maps'))}</span><span class="world-fact"><small>${T('THREAT', 'ui')}</small>${threat}</span>${guardianFact}</div>
       </div></article>`;
   }).map((node, index) => {
     if (index >= WORLD_ORDER.length - 1) return node;
     const roadKnown = G.visited.has(WORLD_ORDER[index]) && G.visited.has(WORLD_ORDER[index + 1]);
-    return `${node}<div class="world-link${roadKnown ? ' known' : ''}"><i></i><span>${roadKnown ? 'ROAD RECORDED' : 'THE INK FADES'}</span></div>`;
+    return `${node}<div class="world-link${roadKnown ? ' known' : ''}"><i></i><span>${roadKnown ? T('ROAD RECORDED', 'ui') : T('THE INK FADES', 'ui')}</span></div>`;
   }).join('');
   return `<section class="world-chronicle">
-    <header class="world-head"><div><small>AETHERIA · THE THIRD VEIL AGE</small><h2>Roads of the Outworlder</h2><p>Places become history only after you walk them. Recorded roads can be plotted, but never skipped.</p></div>
-      <div class="world-seal" role="progressbar" aria-label="Regions discovered" aria-valuemin="0" aria-valuemax="${WORLD_ORDER.length}" aria-valuenow="${knownCount}"><b>${knownCount}/${WORLD_ORDER.length}</b><span>CHARTED</span></div></header>
+    <header class="world-head"><div><small>${T('AETHERIA · THE THIRD VEIL AGE', 'ui')}</small><h2>${T('Roads of the Outworlder', 'ui')}</h2><p>${T('Places become history only after you walk them. Recorded roads can be plotted, but never skipped.', 'ui')}</p></div>
+      <div class="world-seal" role="progressbar" aria-label="${T('Regions discovered', 'ui')}" aria-valuemin="0" aria-valuemax="${WORLD_ORDER.length}" aria-valuenow="${knownCount}"><b>${knownCount}/${WORLD_ORDER.length}</b><span>${T('CHARTED', 'ui')}</span></div></header>
     <div class="world-road">${nodes}</div>
-    <footer class="world-foot"><span>◆ current location</span><span>✓ guardian conquered</span><span>Route guidance follows real portals</span></footer>
+    <footer class="world-foot"><span>◆ ${T('current location', 'ui')}</span><span>✓ ${T('guardian conquered', 'ui')}</span><span>${T('Route guidance follows real portals', 'ui')}</span></footer>
   </section>`;
 }
 

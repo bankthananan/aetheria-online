@@ -759,7 +759,35 @@ export const L10N = {
       "Astral Greaves": "รองเท้าเกราะดารา",
       "Each step rings like a struck bell in the void.": "รองเท้าเกราะดารา ทุกย่างก้าวดังสะท้อนราวกับระฆังในความว่างเปล่า",
       "Voidweave Cloak": "ผ้าคลุมใยว่างเปล่า",
-      "A cut of the rift itself; blades slide into nothing.": "ผ้าคลุมมิติรอยแยก ใบดาบที่ฟันเข้ามาจะลื่นไหลหายไปในความว่างเปล่า"
+      "A cut of the rift itself; blades slide into nothing.": "ผ้าคลุมมิติรอยแยก ใบดาบที่ฟันเข้ามาจะลื่นไหลหายไปในความว่างเปล่า",
+
+      // World Chronicle & Quest Tracker & Notifications
+      "AETHERIA · THE THIRD VEIL AGE": "เอเธเรีย · ยุคม่านมิติที่สาม",
+      "Roads of the Outworlder": "เส้นทางของผู้มาจากต่างโลก",
+      "Places become history only after you walk them. Recorded roads can be plotted, but never skipped.": "สถานที่ต่างๆ จะกลายเป็นประวัติศาสตร์ก็ต่อเมื่อคุณได้เดินผ่านมันไปแล้ว ถนนที่บันทึกแล้วสามารถนำทางได้ แต่ไม่สามารถข้ามผ่านได้",
+      "CHARTED": "สำรวจแล้ว",
+      "Beyond the inked road": "พ้นจากเส้นทางบนแผ่นหมึก",
+      "Walk this land before its name and history can enter your Chronicle.": "จงออกเดินทางสำรวจดินแดนนี้ก่อนที่ชื่อและประวัติศาสตร์ของมันจะจดบันทึกลงในบันทึกของคุณ",
+      "UNCHARTED": "ยังไม่ได้รับการสำรวจ",
+      "Sanctuary": "ดินแดนศักดิ์สิทธิ์",
+      "GUARDIAN": "ผู้พิทักษ์",
+      "STATUS": "สถานะ",
+      "Safe haven": "เขตปลอดภัย",
+      "YOU ARE HERE": "คุณอยู่ตรงนี้",
+      "Route active": "เปิดระบบนำทางแล้ว",
+      "Plot route": "กำหนดเส้นทาง",
+      "LANDMARK": "จุดสำคัญ",
+      "THREAT": "ระดับอันตราย",
+      "ROAD RECORDED": "บันทึกเส้นทางแล้ว",
+      "THE INK FADES": "เส้นทางเลือนราง",
+      "current location": "ตำแหน่งปัจจุบัน",
+      "guardian conquered": "พิชิตผู้พิทักษ์แล้ว",
+      "Route guidance follows real portals": "ระบบนำทางจะเป็นไปตามพอร์ทัลจริง",
+      "Quest": "เควสต์",
+      "🔒 Base Lv {v} required": "🔒 ต้องการเลเวลหลัก {v}",
+      "You are Lv {lvl}. Train with hunts or guild bounties.": "คุณเลเวล {lvl} ฝึกฝนเลเวลผ่านการล่ามอนสเตอร์หรือทำเควสต์ล่าค่าหัวกิลด์",
+      "Story complete — free roam.": "เนื้อเรื่องเสร็จสิ้น — ท่องโลกกว้างอย่างอิสระ",
+      "Next": "ถัดไป"
     },
     monsters: {
       "Gel Slime": "เจลสไลม์",
@@ -1062,7 +1090,15 @@ export const L10N = {
       "The Starfall Scar": "รอยแผลเป็นดาวตก",
       "Where the Third Moon Should Be": "จุดที่ควรเป็นดวงจันทร์ดวงที่สาม",
       "The Unwritten Throne": "บัลลังก์ที่ไม่มีการจดจารึก",
-      "The first summoners tore this wound while reaching beyond one world too many. Every stolen destiny gathers here around a king whom history refuses to record.": "ผู้อัญเชิญรุ่นแรกๆ ได้ฉีกกระชากฟากฟ้าสร้างบาดแผลนี้ขึ้นในตอนที่พยายามเอื้อมมือข้ามโลกมากเกินไป โชคชะตาที่ถูกพรากทั้งหมดมารวมตัวกันที่นี่รอบราชาผู้ซึ่งประวัติศาสตร์ปฏิเสธที่จะจดบันทึกไว้"
+      "The first summoners tore this wound while reaching beyond one world too many. Every stolen destiny gathers here around a king whom history refuses to record.": "ผู้อัญเชิญรุ่นแรกๆ ได้ฉีกกระชากฟากฟ้าสร้างบาดแผลนี้ขึ้นในตอนที่พยายามเอื้อมมือข้ามโลกมากเกินไป โชคชะตาที่ถูกพรากทั้งหมดมารวมตัวกันที่นี่รอบราชาผู้ซึ่งประวัติศาสตร์ปฏิเสธที่จะจดบันทึกไว้",
+
+      // Ambients
+      "Warm bells and unfamiliar stars — you are not home.": "เสียงระฆังอันอบอุ่นและหมู่ดาวที่ไม่คุ้นเคย — ที่นี่ไม่ใช่บ้านของคุณ",
+      "Leaves murmur secrets; small things rustle in the brush.": "ใบไม้กระซิบกระซาบความลับ สิ่งมีชีวิตตัวเล็กๆ ส่งเสียงกรอบแกรบอยู่ในพุ่มไม้",
+      "Dripping dark and old stone — something huge stirs below.": "หยาดน้ำหยดในความมืดและหินโบราณ — บางสิ่งที่มีขนาดมหึมาขยับเขยื้อนอยู่ด้านล่าง",
+      "Wind screams across the white silence; something hunts here.": "สายลมกรีดร้องผ่านความเงียบสงบสีขาวโพลน — บางสิ่งกำลังล่าเหยื่ออยู่ที่นี่",
+      "The air shimmers with heat. Far below, something vast stirs.": "อากาศสั่นระยิบระยับด้วยความร้อน ลึกลงไปด้านล่าง บางสิ่งที่กว้างใหญ่ขยับเขยื้อน",
+      "Reality thins here; stars bleed through the cracks in the world.": "ความจริงเริ่มบางเบาที่นี่ ดวงดาวรั่วไหลผ่านรอยร้าวของโลก"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",
