@@ -38,6 +38,12 @@ for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'el
 for (const role of ['shop', 'guild', 'quest', 'story']) assert.ok(PX.npc[role], `NPC role ${role} needs art`);
 for (const monster of CONTENT.monsters) assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
 
+const expandedMinimums = {
+  town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],
+  frostpeak_tundra: [48, 36], dragon_caldera: [50, 38], astral_rift: [50, 38],
+};
+const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
+
 for (const map of Object.values(MAPS)) {
   for (const field of ['province', 'epithet', 'landmark', 'lore']) {
     assert.ok(typeof map.chronicle?.[field] === 'string' && map.chronicle[field].trim(), `${map.id} needs chronicle.${field}`);
@@ -58,9 +64,15 @@ for (const map of Object.values(MAPS)) {
   const connected = connectedWalkableTiles(map, entrance.x, entrance.y);
   const reachable = new Set(connected.map(tile => `${tile.col},${tile.row}`));
   assert.ok(connected.length, `${map.id} entrance has no connected walkable region`);
+  const [minWidth, minHeight] = expandedMinimums[map.id];
+  assert.ok(map.width >= minWidth && map.height >= minHeight, `${map.id} lost its expanded footprint`);
   for (const portal of map.portals) assert.ok(reachable.has(`${portal.x},${portal.y}`), `${map.id} portal is isolated from the entrance`);
   for (const npc of map.npcs || []) assert.ok(reachable.has(`${npc.x},${npc.y}`), `${map.id} NPC ${npc.id} is isolated from the entrance`);
   if (map.spawns.length) {
+    const normalSpawns = map.spawns.filter(spawn => monsterById[spawn.monsterId]?.sizeTiles < 2);
+    assert.ok(new Set(normalSpawns.map(spawn => spawn.monsterId)).size >= 3, `${map.id} needs at least three normal monster species`);
+    const population = normalSpawns.reduce((sum, spawn) => sum + spawn.count, 0);
+    assert.ok(population / connected.length * 100 >= 1.5, `${map.id} monster population is too sparse for its expanded map`);
     const bossRow = map.tiles.findIndex(row => row.includes('B'));
     const bossCol = map.tiles[bossRow].indexOf('B');
     assert.ok(reachable.has(`${bossCol},${bossRow}`), `${map.id} guardian is isolated from the entrance`);

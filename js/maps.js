@@ -248,9 +248,10 @@ export const MAPS = {
       'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
     ],
     spawns: [
-      { monsterId: 'slime',  count: 12, minLevelHint: 1 },
-      { monsterId: 'goblin', count: 9, minLevelHint: 2 },
-      { monsterId: 'wolf',   count: 8, minLevelHint: 3 },
+      { monsterId: 'slime',  count: 14, minLevelHint: 1 },
+      { monsterId: 'goblin', count: 11, minLevelHint: 2 },
+      { monsterId: 'wolf',   count: 10, minLevelHint: 3 },
+      { monsterId: 'thornback_boar', count: 8, minLevelHint: 5 },
       { monsterId: 'elderwood_treant', count: 1, minLevelHint: 7 },   // zone guardian
     ],
     npcs: [
@@ -306,7 +307,9 @@ export const MAPS = {
       '##############################',
     ],
     spawns: [
-      { monsterId: 'shade',      count: 14, minLevelHint: 16 },
+      { monsterId: 'shade',      count: 16, minLevelHint: 16 },
+      { monsterId: 'mire_leech', count: 8, minLevelHint: 18 },
+      { monsterId: 'drowned_acolyte', count: 7, minLevelHint: 20 },
       { monsterId: 'ruin_golem', count: 1, minLevelHint: 8 }, // mini-boss, marked 'B' at ~18,24
     ],
     npcs: [
@@ -329,11 +332,14 @@ export const MAPS = {
     },
     width: 40, height: 30, band: [31, 45], legend: LEGEND, tiles: tundraTiles,
     spawns: [
-      { monsterId: 'frost_wolf', count: 14, minLevelHint: 10 },
-      { monsterId: 'ice_wraith', count: 10, minLevelHint: 13 },
+      { monsterId: 'frost_wolf', count: 16, minLevelHint: 10 },
+      { monsterId: 'ice_wraith', count: 12, minLevelHint: 13 },
+      { monsterId: 'rime_harpy', count: 8, minLevelHint: 14 },
       { monsterId: 'frost_revenant', count: 1, minLevelHint: 15 },   // zone guardian
     ],
-    npcs: [],
+    npcs: [
+      { id: 'hakon', name: 'Hakon of the Last Watch', x: 42, y: 31, role: 'story', title: 'Exiled Watchman', color: '#bfe6ff' },
+    ],
     portals: [
       { x: 1, y: 1, toMap: 'sunken_ruins', toX: 20, toY: 23, label: 'Back to Ruins' },
       { x: 38, y: 28, toMap: 'dragon_caldera', toX: 2, toY: 2, label: 'To Dragon Caldera' },
@@ -351,11 +357,14 @@ export const MAPS = {
     },
     width: 42, height: 32, band: [46, 60], legend: LEGEND, tiles: calderaTiles,
     spawns: [
-      { monsterId: 'ember_imp', count: 12, minLevelHint: 18 },
-      { monsterId: 'sand_stalker', count: 10, minLevelHint: 16 },
+      { monsterId: 'ember_imp', count: 14, minLevelHint: 18 },
+      { monsterId: 'sand_stalker', count: 12, minLevelHint: 16 },
+      { monsterId: 'magma_beetle', count: 8, minLevelHint: 20 },
       { monsterId: 'flame_dragon', count: 1, minLevelHint: 22 },
     ],
-    npcs: [],
+    npcs: [
+      { id: 'ashsmith', name: 'Veya the Ashsmith', x: 44, y: 33, role: 'story', title: 'Last Forgekeeper', color: '#ffb06a' },
+    ],
     portals: [
       { x: 1, y: 1, toMap: 'frostpeak_tundra', toX: 37, toY: 28, label: 'Back to Frostpeak' },
       { x: 40, y: 30, toMap: 'astral_rift', toX: 2, toY: 2, label: 'To the Astral Rift' },
@@ -373,14 +382,108 @@ export const MAPS = {
     },
     width: 42, height: 32, band: [61, 80], legend: LEGEND, tiles: astralTiles,
     spawns: [
-      { monsterId: 'void_wisp', count: 11, minLevelHint: 25 },
-      { monsterId: 'star_reaver', count: 9, minLevelHint: 28 },
-      { monsterId: 'astral_knight', count: 7, minLevelHint: 32 },
+      { monsterId: 'void_wisp', count: 13, minLevelHint: 25 },
+      { monsterId: 'star_reaver', count: 11, minLevelHint: 28 },
+      { monsterId: 'astral_knight', count: 9, minLevelHint: 32 },
+      { monsterId: 'rift_manta', count: 8, minLevelHint: 34 },
       { monsterId: 'nullking', count: 1, minLevelHint: 38 },
     ],
-    npcs: [],
+    npcs: [
+      { id: 'star_echo', name: 'Echo of Serin', x: 44, y: 33, role: 'story', title: 'Rift Cartographer', color: '#d7c2ff' },
+    ],
     portals: [
       { x: 1, y: 1, toMap: 'dragon_caldera', toX: 39, toY: 30, label: 'Back to Caldera' },
     ],
   },
 };
+
+// Keep every established landmark, portal, boss marker, and save coordinate in
+// place, then grow each region east and south into a distinct optional annex.
+// This preserves the heat-map difficulty curve while giving hunts more room.
+function expandRegion(map, spec) {
+  const oldWidth = map.width, oldHeight = map.height;
+  const width = oldWidth + spec.east, height = oldHeight + spec.south;
+  const grid = Array.from({ length: height }, () => Array(width).fill(spec.ground));
+
+  for (let row = 0; row < oldHeight; row++)
+    for (let col = 0; col < oldWidth; col++) grid[row][col] = map.tiles[row][col];
+
+  // Retire the old east/south boundary so the annex is part of the same region.
+  for (let row = 1; row < oldHeight - 1; row++) grid[row][oldWidth - 1] = spec.ground;
+  for (let col = 1; col < oldWidth - 1; col++) grid[oldHeight - 1][col] = spec.ground;
+
+  // Sparse deterministic clusters make each annex readable without creating
+  // noisy mazes or depending on random generation at runtime.
+  for (let row = 1; row < height - 1; row++) for (let col = 1; col < width - 1; col++) {
+    if (col < oldWidth - 1 && row < oldHeight - 1) continue;
+    const hash = ((col * 73856093) ^ (row * 19349663) ^ spec.seed) >>> 0;
+    grid[row][col] = hash % 23 === 0 ? spec.blocked : hash % 7 === 0 ? spec.accent : spec.ground;
+  }
+
+  for (const stamp of spec.stamps || []) for (let dy = 0; dy < stamp.rows.length; dy++) {
+    for (let dx = 0; dx < stamp.rows[dy].length; dx++) {
+      const ch = stamp.rows[dy][dx], col = stamp.x + dx, row = stamp.y + dy;
+      if (ch !== ' ' && col > 0 && row > 0 && col < width - 1 && row < height - 1) grid[row][col] = ch;
+    }
+  }
+
+  // Broad landmark roads keep the old map and new district visually linked.
+  for (const path of spec.paths || []) {
+    const steps = Math.max(Math.abs(path.to.x - path.from.x), Math.abs(path.to.y - path.from.y), 1);
+    for (let i = 0; i <= steps; i++) {
+      const col = Math.round(path.from.x + (path.to.x - path.from.x) * i / steps);
+      const row = Math.round(path.from.y + (path.to.y - path.from.y) * i / steps);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+        if (col + dx > 0 && row + dy > 0 && col + dx < width - 1 && row + dy < height - 1) grid[row + dy][col + dx] = path.tile;
+    }
+  }
+
+  for (const point of spec.safe || []) grid[point.y][point.x] = spec.ground;
+  for (let col = 0; col < width; col++) grid[0][col] = grid[height - 1][col] = spec.border;
+  for (let row = 0; row < height; row++) grid[row][0] = grid[row][width - 1] = spec.border;
+
+  map.tiles = grid.map(row => row.join(''));
+  map.width = width;
+  map.height = height;
+}
+
+const REGION_EXPANSIONS = {
+  town_awakening: {
+    east: 6, south: 6, ground: '.', border: 'A', blocked: 'g', accent: 'o', seed: 101,
+    stamps: [{ x: 3, y: 29, rows: ['ffffffffffff', 'foooooooooof', 'ffffffffffff'] }],
+    paths: [{ from: { x: 16, y: 26 }, to: { x: 20, y: 31 }, tile: 'c' }],
+    safe: [{ x: 20, y: 31 }],
+  },
+  whispering_woods: {
+    east: 8, south: 6, ground: '.', border: 'T', blocked: 'T', accent: ',', seed: 211,
+    stamps: [{ x: 42, y: 5, rows: ['TTT,,T', 'T,,,,T', 'TT,,TT'] }, { x: 8, y: 35, rows: ['TTT,,,TT', 'T,,,,,,T', 'TT,,,,TT'] }],
+    paths: [{ from: { x: 38, y: 31 }, to: { x: 46, y: 37 }, tile: 'R' }],
+    safe: [{ x: 46, y: 37 }],
+  },
+  sunken_ruins: {
+    east: 10, south: 6, ground: 'F', border: '#', blocked: '#', accent: ',', seed: 307,
+    stamps: [{ x: 32, y: 8, rows: ['WWWWW', 'WFFFWW', 'WFFFWW', 'WWWWW'] }, { x: 5, y: 29, rows: ['##FFFFF##', '#FFcccFF#', '##FFFFF##'] }],
+    paths: [{ from: { x: 20, y: 24 }, to: { x: 36, y: 30 }, tile: 'c' }],
+    safe: [{ x: 36, y: 30 }],
+  },
+  frostpeak_tundra: {
+    east: 8, south: 6, ground: 'S', border: 'M', blocked: 'M', accent: 'I', seed: 401,
+    stamps: [{ x: 41, y: 8, rows: ['IIII', 'IIIII', 'IIIII', 'IIII'] }, { x: 10, y: 32, rows: ['MMSSSMM', 'MSSSSSM'] }],
+    paths: [{ from: { x: 38, y: 28 }, to: { x: 42, y: 31 }, tile: 'c' }],
+    safe: [{ x: 42, y: 31 }],
+  },
+  dragon_caldera: {
+    east: 8, south: 6, ground: 'D', border: 'M', blocked: 'M', accent: 'F', seed: 503,
+    stamps: [{ x: 43, y: 8, rows: ['LLLLL', 'LDDDL', 'LLDLL', 'LDDDL', 'LLLLL'] }, { x: 12, y: 34, rows: ['MDDDDDMM', 'MDFRFDMM'] }],
+    paths: [{ from: { x: 40, y: 30 }, to: { x: 44, y: 33 }, tile: 'c' }],
+    safe: [{ x: 44, y: 33 }],
+  },
+  astral_rift: {
+    east: 8, south: 6, ground: 'X', border: 'O', blocked: 'O', accent: 'I', seed: 601,
+    stamps: [{ x: 43, y: 7, rows: ['FFIIFF', 'FpIIpF', 'FFIIFF'] }, { x: 12, y: 34, rows: ['OOXXXOO', 'OXXIXXO'] }],
+    paths: [{ from: { x: 38, y: 28 }, to: { x: 44, y: 33 }, tile: 'I' }],
+    safe: [{ x: 44, y: 33 }],
+  },
+};
+
+for (const [mapId, spec] of Object.entries(REGION_EXPANSIONS)) expandRegion(MAPS[mapId], spec);

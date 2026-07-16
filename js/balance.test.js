@@ -105,8 +105,16 @@ while (storyQuest && !walked.has(storyQuest.id)) {
 }
 assert.equal(walked.size, CONTENT.quests.length, 'every story quest must belong to the main chain');
 assert.equal(questById.q_nullking.minLevel, DESIGN.levelCap, 'the final main quest must unlock at Base Lv 80');
-for (const bridge of ['q_treant', 'q_shades', 'q_dust', 'q_revenant', 'q_stalkers'])
+for (const bridge of ['q_briar', 'q_treant', 'q_shades', 'q_drowned', 'q_hakon', 'q_harpy', 'q_ashsmith', 'q_beetles', 'q_echo', 'q_manta'])
   assert.ok(questById[bridge], `${bridge} must bridge its region's level gaps`);
+for (const [questId, target] of [
+  ['q_briar', 'thornback_boar'], ['q_drowned', 'drowned_acolyte'], ['q_harpy', 'rime_harpy'],
+  ['q_beetles', 'magma_beetle'], ['q_manta', 'rift_manta'],
+]) assert.equal(questById[questId].objective.target, target, `${questId} must feature its region's new monster`);
+for (const [questId, target] of [['q_hakon', 'hakon'], ['q_ashsmith', 'ashsmith'], ['q_echo', 'star_echo']]) {
+  assert.equal(questById[questId].objective.type, 'talk', `${questId} must be a field-NPC story beat`);
+  assert.equal(questById[questId].objective.target, target, `${questId} points at the wrong field NPC`);
+}
 
 // Every class gets a Lv5 first-job signature that becomes Lv10 mastery after
 // the second-class change, plus at least one new second-job skill.

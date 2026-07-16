@@ -1,0 +1,26 @@
+[agents]
+# This repo is small enough that more than three simultaneous helpers usually
+# costs more context than it saves. Keep children from recursively fanning out.
+max_threads = 3
+max_depth = 1
+interrupt_message = false
+
+[agents.scout]
+description = "Quick read-only routing for unfamiliar or cross-cutting tasks."
+config_file = "./agents/scout.toml"
+
+[agents.planner]
+description = "Deep read-only planning for ambiguous architecture or cross-system work."
+config_file = "./agents/planner.toml"
+
+[agents.implementer]
+description = "Focused implementation for a bounded gameplay, UI, or data change."
+config_file = "./agents/implementer.toml"
+
+[agents.verifier]
+description = "Low-cost independent test and runtime verification."
+config_file = "./agents/verifier.toml"
+
+[agents.reviewer]
+description = "Deep correctness review for risky or cross-cutting changes."
+config_file = "./agents/reviewer.toml"
