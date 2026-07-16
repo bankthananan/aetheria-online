@@ -313,7 +313,12 @@ export const L10N = {
       "Arrived: {destination}.": "มาถึงแล้ว: {destination}",
       "Could not reach {label}.": "ไม่สามารถเดินไปถึง {label} ได้",
       "Quest complete: {name}  (+{exp} xp, +{gold}z)": "ทำเควสต์สำเร็จ: {name} (+{exp} xp, +{gold}z)",
+      "Rewards: {items}": "รางวัล: {items}",
       "Next: {quest} — unlocks at Base Lv {level}.": "ถัดไป: {quest} — ปลดล็อกตอนเลเวล {level}",
+      "Phase": "ช่วงที่",
+      "The next chapter": "บทถัดไป",
+      "{chapter} is waiting. Reach Base Lv {level} to continue.": "{chapter} กำลังรออยู่ ต้องมีเลเวลหลัก {level} เพื่อดำเนินเรื่องต่อ",
+      "Navigate to this task": "นำทางไปยังภารกิจนี้",
       "🏅 Guild rank up — you are now Rank {rank}!": "🏅 เลื่อนยศกิลด์ — ยศของคุณคือระดับ {rank}!",
       "🛒 New featured stock at the trader!": "🛒 มีไอเทมแนะนำชิ้นใหม่ที่ร้านค้า!",
       "✔ Guild bounty done! +{exp} xp, +{gold}z, +{pts} guild pts": "✔ เควสต์ล่าค่าหัวสำเร็จ! +{exp} xp, +{gold}z, +{pts} แต้มกิลด์",
@@ -336,6 +341,8 @@ export const L10N = {
       "Travel route cleared.": "ยกเลิกเส้นทางนำทาง",
       "Quest guidance stopped.": "ยกเลิกเส้นทางนำทางเควสต์",
       "Auto-farm ON — auto attacks, casts skills, buffs & heals (bosses excluded).": "เปิดฟาร์มออโต้ — ตีธรรมดา ใช้สกิล บัฟ และฮีลอัตโนมัติ (ยกเว้นเจอบอส)",
+      "Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.": "เปิดล่าอัตโนมัติ — เลือกเป้าหมายได้ถึงเลเวล {level}; มอนสเตอร์ที่แข็งแกร่งกว่าจะถูกข้าม",
+      "Auto-hunt target limit: Lv {level}": "ขีดจำกัดเป้าหมายล่าอัตโนมัติ: เลเวล {level}",
       "Auto-farm off.": "ปิดฟาร์มออโต้",
       "⏸ Stop (F)": "⏸ หยุด (F)"
     },
@@ -936,6 +943,18 @@ export const L10N = {
       "You survived the slimes. See? Ten thousand hours of grinding turned out to be a job skill after all.": "เจ้ารอดจากฝูงสไลม์มาได้ เห็นไหมล่ะ? การเล่นเกมเก็บเลเวลสะสมชั่วโมงมาเป็นหมื่นชั่วโมง สุดท้ายมันก็เป็นประโยชน์จริงๆ ด้วย",
       "There's someone you should meet — the Lost Oracle, down by the riverbank. She saw you coming before I ever cast the summons.": "มีใครบางคนทีเจ้าสมควรไปพบ — ผู้หยั่งรู้ที่สาบสูญ อยู่แถวๆ ริมตลิ่งน้ำนั่นแหละ เธอรู้ว่าเจ้าจะมาตั้งแต่ก่อนข้าจะเริ่มลงมือท่องมนต์อัญเชิญเสียอีก",
 
+      "Supplies for the Road": "เสบียงสำหรับการเดินทาง",
+      "Meet Marla at Moonwell Market and learn where to buy, sell, and restock before following the road deeper.": "ไปพบมาร์ลาที่ตลาดมูนเวลล์ เพื่อเรียนรู้วิธีซื้อ ขาย และเติมเสบียงก่อนออกเดินทางลึกเข้าไป",
+      "Before you leave town again, meet Marla at the market. A hero without supplies is just a better-dressed ghost.": "ก่อนออกจากเมืองอีกครั้ง ไปพบมาร์ลาที่ตลาดก่อน ผู้กล้าที่ไร้เสบียงก็เป็นเพียงผีที่แต่งตัวดีกว่าเท่านั้น",
+      "She buys your loot and sells potions and gear. Knowing when to restock is part of surviving Aetheria.": "เธอรับซื้อของที่เจ้าหามาได้ และขายยาอุปกรณ์ต่างๆ การรู้ว่าเมื่อใดควรเติมเสบียงคือส่วนหนึ่งของการเอาชีวิตรอดใน Aetheria",
+      "Marla has marked the potion shelf for you. The road is dangerous; running out of supplies is optional.": "มาร์ลาทำเครื่องหมายชั้นวางยาไว้ให้แล้ว เส้นทางนั้นอันตราย แต่การปล่อยให้เสบียงหมดเป็นสิ่งที่เจ้าหลีกเลี่ยงได้",
+
+      "A Name on the Board": "ชื่อบนกระดานกิลด์",
+      "Meet Elder Maro at the guild hall and learn how repeatable bounties can fund training between story chapters.": "ไปพบผู้เฒ่ามาโรที่หอกิลด์ และเรียนรู้ว่าภารกิจค่าหัวที่ทำซ้ำได้จะช่วยสนับสนุนการฝึกระหว่างบทเนื้อเรื่องอย่างไร",
+      "One more introduction: Elder Maro runs the Adventurer's Guild from the eastern hall.": "ยังมีอีกคนที่ต้องแนะนำ: ผู้เฒ่ามาโรดูแลกิลด์นักผจญภัยอยู่ที่หอทางตะวันออก",
+      "His board offers repeatable hunts and deliveries. When the next chapter asks for more levels, the guild keeps your journey moving.": "กระดานของเขามีภารกิจล่าและส่งของที่ทำซ้ำได้ เมื่อบทถัดไปต้องการเลเวลเพิ่ม กิลด์จะช่วยให้การเดินทางของเจ้าดำเนินต่อไป",
+      "Your name is on the guild ledger now. Take up to three bounties, then return to Maro to claim their rewards.": "ตอนนี้ชื่อของเจ้าอยู่ในทะเบียนกิลด์แล้ว รับภารกิจค่าหัวได้สูงสุดสามงาน แล้วกลับมาหามาโรเพื่อรับรางวัล",
+
       "Prove Yourself": "พิสูจน์ตนเอง",
       "Goblins harass the town road. Cull five of them and gather proof to earn the town's trust.": "ฝูงก็อบลินก่อกวนเส้นทางสัญจรของเมือง จงกำจัดพวกมัน 5 ตัวและเก็บรวมรวมหูเป็นหลักฐานเพื่อเอาชนะใจคนในเมือง",
       "The townsfolk don't trust outsiders. The last 'hero' someone summoned burned half a granary showing off.": "ชาวเมืองยังไม่ไว้วางใจคนแปลกหน้าหรอกนะ 'ผู้กล้า' คนล่าสุดที่มีคนอัญเชิญมา ก่อเรื่องทำไฟไหม้ยุ้งฉางไปครึ่งหนึ่งเพื่อโอ้อวดพลังตัวเองน่ะ",
@@ -1187,7 +1206,18 @@ export const L10N = {
       "Dripping dark and old stone — something huge stirs below.": "หยาดน้ำหยดในความมืดและหินโบราณ — บางสิ่งที่มีขนาดมหึมาขยับเขยื้อนอยู่ด้านล่าง",
       "Wind screams across the white silence; something hunts here.": "สายลมกรีดร้องผ่านความเงียบสงบสีขาวโพลน — บางสิ่งกำลังล่าเหยื่ออยู่ที่นี่",
       "The air shimmers with heat. Far below, something vast stirs.": "อากาศสั่นระยิบระยับด้วยความร้อน ลึกลงไปด้านล่าง บางสิ่งที่กว้างใหญ่ขยับเขยื้อน",
-      "Reality thins here; stars bleed through the cracks in the world.": "ความจริงเริ่มบางเบาที่นี่ ดวงดาวรั่วไหลผ่านรอยร้าวของโลก"
+      "Reality thins here; stars bleed through the cracks in the world.": "ความจริงเริ่มบางเบาที่นี่ ดวงดาวรั่วไหลผ่านรอยร้าวของโลก",
+      // Portal labels
+      "To Whispering Woods": "ไปยังผืนป่ากระซิบ",
+      "Back to Town": "กลับเมือง",
+      "To Sunken Ruins": "ไปยังโบราณสถานจมน้ำ",
+      "Back to Woods": "กลับผืนป่า",
+      "To Frostpeak Tundra": "ไปยังทุ่งหิมะฟรอสต์พีก",
+      "Back to Ruins": "กลับโบราณสถาน",
+      "To Dragon Caldera": "ไปยังแอ่งภูเขาไฟมังกร",
+      "Back to Frostpeak": "กลับฟรอสต์พีก",
+      "To the Astral Rift": "ไปยังรอยแยกดวงดารา",
+      "Back to Caldera": "กลับแอ่งภูเขาไฟ"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",

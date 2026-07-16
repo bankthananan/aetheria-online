@@ -116,6 +116,51 @@ for (const [questId, target] of [['q_hakon', 'hakon'], ['q_ashsmith', 'ashsmith'
   assert.equal(questById[questId].objective.target, target, `${questId} points at the wrong field NPC`);
 }
 
+// Guidance onboarding deliberately introduces the town's three core services
+// before the story sends the player into its longer combat loop.
+assert.equal(questById.q_meet.nextQuestId, 'q_market_intro');
+assert.deepEqual(
+  [questById.q_market_intro.objective.type, questById.q_market_intro.objective.target, questById.q_market_intro.nextQuestId],
+  ['talk', 'merchant', 'q_guild_intro'],
+  'Oracle guidance must lead to the Trader introduction',
+);
+assert.deepEqual(
+  [questById.q_guild_intro.objective.type, questById.q_guild_intro.objective.target, questById.q_guild_intro.nextQuestId],
+  ['talk', 'elder', 'q_prove'],
+  'Trader guidance must lead to the Guild introduction before normal story quests',
+);
+
+// A quest should unlock where its target species can actually appear. Collect
+// objectives use the level range of at least one monster that drops the item.
+const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
+const spawnByMonster = new Map();
+for (const map of Object.values(MAPS)) for (const spawn of map.spawns || []) {
+  spawnByMonster.set(spawn.monsterId, { map, spawn });
+}
+for (const quest of CONTENT.quests) {
+  if (quest.objective.type === 'kill') {
+    const habitat = spawnByMonster.get(quest.objective.target);
+    assert.ok(habitat, `${quest.id} target ${quest.objective.target} has no map spawn`);
+    if (habitat.spawn.levelRange) {
+      assert.ok(quest.minLevel >= habitat.spawn.levelRange[0] && quest.minLevel <= habitat.spawn.levelRange[1],
+        `${quest.id} unlock level misses ${quest.objective.target}'s level range`);
+    } else {
+      assert.ok(Math.abs(quest.minLevel - monsterById[quest.objective.target].level) <= 2,
+        `${quest.id} unlocks too far from its guardian's fixed level`);
+    }
+  }
+  if (quest.objective.type === 'collect') {
+    const sources = CONTENT.monsters.filter(monster => monster.drops?.some(drop => drop.itemId === quest.objective.target))
+      .map(monster => spawnByMonster.get(monster.id))
+      .filter(Boolean);
+    assert.ok(sources.length, `${quest.id} item ${quest.objective.target} has no spawned drop source`);
+    assert.ok(sources.some(({ spawn, map }) => {
+      const [lo, hi] = spawn.levelRange || map.band || [monsterById[spawn.monsterId].level, monsterById[spawn.monsterId].level];
+      return quest.minLevel >= lo && quest.minLevel <= hi;
+    }), `${quest.id} unlock level misses every source of ${quest.objective.target}`);
+  }
+}
+
 // Every class gets a Lv5 first-job signature that becomes Lv10 mastery after
 // the second-class change, plus at least one new second-job skill.
 const signatureIds = ['rift_slash', 'reckless_hew', 'arcane_bolt', 'piercing_shot', 'smite', 'jab', 'spark'];

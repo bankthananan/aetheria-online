@@ -12,25 +12,49 @@ function freq(note) {
   return 440 * Math.pow(2, semis / 12);
 }
 
-// Themes: 8th-note grids. lead = melody, bass = one note per beat pair.
-const THEMES = {
-  town: { // calm, hopeful arrival
-    bpm: 108, wave: 'triangle',
-    lead: ['C5','E5','G5','E5','A4','C5','E5','C5','F4','A4','C5','A4','G4','B4','D5','G4'],
-    bass: ['C3','C3','A2','A2','F2','F2','G2','G2'],
+// Every region has its own synthesized score. The same tiny sequencer supports
+// distinct tempo, scale, timbre, note density, bass motion, swing, and pad layer.
+export const MUSIC_THEMES = Object.freeze({
+  town_awakening: { // hopeful bells around the Moonwell
+    bpm: 104, leadWave: 'triangle', bassWave: 'sine', padWave: 'sine',
+    leadPeak: 0.16, bassPeak: 0.20, padPeak: 0.055, leadGate: 0.82, padEvery: 4,
+    lead: ['C5','E5','G5','E5','A4','C5','E5','R','F4','A4','C5','A4','G4','B4','D5','R'],
+    bass: ['C3','C3','A2','A2','F2','F2','G2','G2'], pad: ['C4','A3','F3','G3'],
   },
-  field: { // adventurous
-    bpm: 132, wave: 'square',
-    lead: ['E5','G5','A5','G5','E5','D5','E5','G5','C5','E5','G5','E5','D5','B4','D5','B4'],
-    bass: ['A2','A2','E2','E2','F2','F2','G2','G2'],
+  whispering_woods: { // brisk D-Dorian footsteps beneath the leaves
+    bpm: 126, leadWave: 'square', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.13, bassPeak: 0.19, padPeak: 0.035, leadGate: 0.58, padEvery: 8, swing: 0.08,
+    lead: ['D5','F5','A5','R','G5','E5','D5','A4','C5','D5','F5','E5','D5','C5','A4','R'],
+    bass: ['D3','D3','C3','C3','G2','G2','A2','A2'], pad: ['D4','G3'],
   },
-  battle: { // tense boss
-    bpm: 152, wave: 'square',
-    lead: ['A4','A4','C5','A4','E5','A4','C5','E5','F4','F4','A4','F4','G4','B4','D5','B4'],
-    bass: ['A2','A2','A2','A2','F2','F2','G2','G2'],
+  sunken_ruins: { // slow drowned-chapel descent in D minor
+    bpm: 82, leadWave: 'sine', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.12, bassPeak: 0.18, padPeak: 0.075, leadGate: 0.74, padEvery: 4,
+    lead: ['D5','R','C5','A4','R','F4','E4','R','A4','R','G4','E4','D4','R','C#4','R'],
+    bass: ['D2','D2','Bb2','Bb2','G2','G2','A2','A2'], pad: ['D3','Bb2','G2','A2'],
   },
-};
-THEMES.boss = THEMES.battle;
+  frostpeak_tundra: { // glassy open fifths carried by the gale
+    bpm: 96, leadWave: 'triangle', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.17, padPeak: 0.045, leadGate: 0.68, padEvery: 8,
+    lead: ['E5','B5','R','G5','D5','R','B4','E5','F#5','B5','R','A5','E5','D5','B4','R'],
+    bass: ['E2','E2','C3','C3','G2','G2','D3','D3'], pad: ['E3','B2'],
+  },
+  dragon_caldera: { // fast E-Phrygian forge pulse
+    bpm: 148, leadWave: 'sawtooth', bassWave: 'square', padWave: 'triangle',
+    leadPeak: 0.12, bassPeak: 0.18, padPeak: 0.035, leadGate: 0.48, padEvery: 8,
+    lead: ['E4','F4','E4','G4','E4','F4','B4','R','E4','F4','A4','G4','F4','E4','D4','R'],
+    bass: ['E2','E2','F2','E2','C3','Bb2','F2','E2'], pad: ['E3','F3'],
+  },
+  astral_rift: { // unstable whole-tone orbit with asymmetric rests
+    bpm: 118, leadWave: 'sine', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.15, bassPeak: 0.16, padPeak: 0.065, leadGate: 0.88, padEvery: 4, swing: -0.06,
+    lead: ['C5','D5','E5','R','F#5','A#5','G#5','R','D5','F#5','G#5','E5','R','A#4','C5','R'],
+    bass: ['C3','E3','F#2','A#2','D3','G#2','E3','C3'], pad: ['C4','F#3','D4','G#3'],
+  },
+});
+
+// Compatibility for console callers and older tests; maps use the regional IDs.
+const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battle: 'dragon_caldera', boss: 'dragon_caldera' };
 
 const AC = window.AudioContext || window.webkitAudioContext;
 
@@ -85,9 +109,10 @@ function playMusic(themeId) {
   init();
   if (!ctx) return;
   resume();
-  const theme = THEMES[themeId];
+  const resolvedId = MUSIC_THEMES[themeId] ? themeId : THEME_ALIASES[themeId];
+  const theme = MUSIC_THEMES[resolvedId];
   if (!theme) return;
-  if (loop && loop.theme === themeId) return;
+  if (loop && loop.theme === resolvedId) return;
 
   // crossfade: fade out & retire the old loop, fade in a fresh bus.
   const old = loop;
@@ -106,7 +131,7 @@ function playMusic(themeId) {
   bus.connect(musicGain);
 
   const spb = 60 / theme.bpm;      // seconds per beat (8th note)
-  const cur = { theme: themeId, gain: bus, step: 0, retired: false };
+  const cur = { theme: resolvedId, gain: bus, step: 0, retired: false };
   loop = cur;
 
   // schedule one 8th-note step, then chain the next slightly ahead of time.
@@ -114,13 +139,19 @@ function playMusic(themeId) {
     if (cur.retired) return;
     const i = cur.step % theme.lead.length;
     const t = ctx.currentTime + 0.02;
-    tone(bus, freq(theme.lead[i]), t, spb * 0.9, theme.wave, 0.18);
+    tone(bus, freq(theme.lead[i]), t, spb * (theme.leadGate || 0.9), theme.leadWave, theme.leadPeak);
     if (i % 2 === 0) { // bass on downbeats
       const b = theme.bass[(i / 2) % theme.bass.length];
-      tone(bus, freq(b), t, spb * 1.8, 'triangle', 0.22);
+      tone(bus, freq(b), t, spb * 1.8, theme.bassWave, theme.bassPeak);
+    }
+    if (theme.pad?.length && i % theme.padEvery === 0) {
+      const pad = theme.pad[(i / theme.padEvery) % theme.pad.length];
+      tone(bus, freq(pad), t, spb * theme.padEvery * 0.92, theme.padWave, theme.padPeak);
     }
     cur.step++;
-    cur.timer = setTimeout(tick, spb * 1000);
+    const swing = theme.swing || 0;
+    const stepMs = spb * (1 + (cur.step % 2 ? swing : -swing)) * 1000;
+    cur.timer = setTimeout(tick, stepMs);
   }
   tick();
 }
@@ -187,4 +218,4 @@ function setMuted(bool) {
   if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, ctx.currentTime, 0.02);
 }
 
-export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted };
+export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, currentMusicTheme: () => loop?.theme || null };
