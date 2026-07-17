@@ -10,7 +10,7 @@ import { PROGRESSION } from './progression.js';
 import { SPRITES } from './sprites.js';
 import { PAL, PX } from './pixelart.js';
 import { RARITY, RARITY_ORDER, AFFIXES } from './loot.js';
-import { connectedWalkableTiles, nextPortalToward } from './pathing.js';
+import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
 import { T, currentLang, setLanguage } from './locale.js';
 
 const TS = 32;                       // tile size in px
@@ -21,7 +21,11 @@ const CLASS_COMBAT = { reborn_blade:'blade', drifter:'berserker', codeweaver:'ma
 const MELEE = new Set(['blade','berserker','paladin','monk']);
 const MAGIC = new Set(['mage','elementalist']);
 const NPC_BY_ROLE = { shop:'npc_shopkeeper', guild:'elder', quest:'npc_guide', story:'npc_storyteller' };
-const MAP_MUSIC = { town_awakening:'town', whispering_woods:'field', sunken_ruins:'boss', frostpeak_tundra:'field', dragon_caldera:'boss', astral_rift:'boss' };
+const MAP_MUSIC = {
+  town_awakening: 'town_awakening', whispering_woods: 'whispering_woods',
+  sunken_ruins: 'sunken_ruins', frostpeak_tundra: 'frostpeak_tundra',
+  dragon_caldera: 'dragon_caldera', astral_rift: 'astral_rift',
+};
 const TUNING = DESIGN.tuning;
 // quest / bounty difficulty tiers: colour + reward multiplier + monster-level band for guild rolls
 const DIFFICULTY = {
@@ -57,6 +61,13 @@ const monById = Object.fromEntries(CONTENT.monsters.map(m => [m.id, m]));
 const itemById = Object.fromEntries(CONTENT.items.map(i => [i.id, i]));
 const npcById = Object.fromEntries(CONTENT.npcs.map(n => [n.id, n]));
 const questById = Object.fromEntries(CONTENT.quests.map(q => [q.id, q]));
+const translateAny = (key, categories) => {
+  for (const category of categories) {
+    const translated = T(key, category);
+    if (translated !== key) return translated;
+  }
+  return key;
+};
 // each monster's home zone name (first map it spawns in) — for guild bounty location hints
 const monsterMapName = {};
 const monsterMapId = {};
@@ -183,6 +194,16 @@ function selfCheck() {
       if (typeof map.chronicle?.[field] !== 'string' || !map.chronicle[field].trim())
         errs.push(`map ${map.id} missing chronicle.${field}`);
     for (const sp of map.spawns) if (!monById[sp.monsterId]) errs.push(`map ${map.id} spawns unknown ${sp.monsterId}`);
+    for (const sp of map.spawns) {
+      const def = monById[sp.monsterId];
+      if (!def || def.sizeTiles >= 2) continue;
+      if (!(Array.isArray(sp.depth) && sp.depth.length === 2 && sp.depth[0] >= 0 && sp.depth[0] < sp.depth[1] && sp.depth[1] <= 1))
+        errs.push(`map ${map.id} spawn ${sp.monsterId} has invalid depth habitat`);
+      if (!(Array.isArray(sp.levelRange) && sp.levelRange.length === 2 && Number.isInteger(sp.levelRange[0])
+        && Number.isInteger(sp.levelRange[1]) && sp.levelRange[0] <= def.level && def.level <= sp.levelRange[1]
+        && sp.levelRange[0] >= map.band?.[0] && sp.levelRange[1] <= map.band?.[1]))
+        errs.push(`map ${map.id} spawn ${sp.monsterId} has invalid level range`);
+    }
     for (const pt of map.portals || []) if (!MAPS[pt.toMap]) errs.push(`map ${map.id} portal → unknown map ${pt.toMap}`);
     // every hunting ground needs a zone guardian (guild bounties scale by unlocked regions)
     if (map.spawns.length && !map.spawns.some(sp => monById[sp.monsterId]?.sizeTiles >= 2))
@@ -205,7 +226,12 @@ function selfCheck() {
     if (o.type === 'collect' && !itemDropSource(o.target)) errs.push(`quest ${q.id} collect target has no monster source ${o.target}`);
     if (o.type === 'explore' && !MAPS[o.target]) errs.push(`quest ${q.id} explore target unknown map ${o.target}`);
     if (o.type === 'talk' && !allNpcIds.includes(o.target)) errs.push(`quest ${q.id} talk target unknown npc ${o.target}`);
-    if (q.nextQuestId && !questById[q.nextQuestId]) errs.push(`quest ${q.id} chains to unknown quest ${q.nextQuestId}`);
+    for (const nid of questSuccessorIds(q)) if (!questById[nid]) errs.push(`quest ${q.id} chains to unknown quest ${nid}`);
+    if (q.nextQuestByClass) {
+      const classIds = DESIGN.classes.map(c => c.id);
+      for (const cid of classIds) if (!q.nextQuestByClass[cid]) errs.push(`quest ${q.id} class fork misses class ${cid}`);
+      for (const cid of Object.keys(q.nextQuestByClass)) if (!classIds.includes(cid)) errs.push(`quest ${q.id} class fork names unknown class ${cid}`);
+    }
     if (q.giverNpcId && !npcById[q.giverNpcId]) errs.push(`quest ${q.id} giver unknown npc ${q.giverNpcId}`);
     for (const f of ['startLines', 'doneLines'])
       if (q[f] && !(Array.isArray(q[f]) && q[f].length && q[f].every(l => typeof l === 'string' && l))) errs.push(`quest ${q.id} bad ${f}`);
@@ -225,15 +251,27 @@ function selfCheck() {
     const phase = phases.find(entry => entry.id === q.phase);
     if (!phase) errs.push(`quest ${q.id} has unknown story phase ${q.phase}`);
     else if (!(q.minLevel >= phase.levelMin && q.minLevel <= phase.levelMax)) errs.push(`quest ${q.id} level gate is outside phase ${q.phase}`);
-    const next = questById[q.nextQuestId];
-    if (next && (next.phase < q.phase || next.minLevel < q.minLevel)) errs.push(`quest ${q.id} chains backward to ${next.id}`);
+    for (const nid of questSuccessorIds(q)) {
+      const next = questById[nid];
+      if (next && (next.phase < q.phase || next.minLevel < q.minLevel)) errs.push(`quest ${q.id} chains backward to ${next.id}`);
+    }
   }
-  const chainedIds = new Set(CONTENT.quests.map(q => q.nextQuestId).filter(Boolean));
+  const chainedIds = new Set(CONTENT.quests.flatMap(q => questSuccessorIds(q)));
   const roots = CONTENT.quests.filter(q => !chainedIds.has(q.id));
   if (roots.length !== 1 || roots[0]?.id !== 'q_awaken') errs.push('main story must have one q_awaken root');
-  const storyWalk = new Set(); let storyNode = questById.q_awaken;
-  while (storyNode && !storyWalk.has(storyNode.id)) { storyWalk.add(storyNode.id); storyNode = questById[storyNode.nextQuestId]; }
-  if (storyWalk.size !== CONTENT.quests.length || storyNode) errs.push('main story chain has an orphan or cycle');
+  // the story is linear except one per-class fork: walk it once per class and
+  // require every quest to be reached by some class, with no cycles anywhere
+  const storyUnion = new Set();
+  for (const cls of DESIGN.classes) {
+    const storyWalk = new Set(); let storyNode = questById.q_awaken;
+    while (storyNode && !storyWalk.has(storyNode.id)) {
+      storyWalk.add(storyNode.id);
+      storyNode = questById[storyNode.nextQuestByClass ? storyNode.nextQuestByClass[cls.id] : storyNode.nextQuestId];
+    }
+    if (storyNode) errs.push(`story chain for class ${cls.id} has a cycle`);
+    storyWalk.forEach(id => storyUnion.add(id));
+  }
+  if (storyUnion.size !== CONTENT.quests.length) errs.push('main story chain has an orphan');
   const s = { baseHp:100, vit:9, level:5, int:10, str:8, dex:10, weaponAtk:15, agi:9, luk:6, armorDef:8, attackerAtk:40, defenderDef:12, isCrit:true };
   for (const [k, fn] of Object.entries(F)) if (!Number.isFinite(fn(s))) errs.push(`formula ${k} not finite`);
   if (!Number.isFinite(xpForNext(5))) errs.push('xpCurve not finite');
@@ -275,11 +313,26 @@ function selfCheck() {
   }
   for (const k of new Set(Object.values(SLOT_ICON))) if (!PX.item[k]) errs.push(`missing slot icon '${k}'`);
   // tuning knobs + quest difficulty tiers must be present/valid
-  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','bossHpMult','monsterExpMult','expGapFalloff','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery'])
+  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','bossHpMult','monsterExpMult','expGapFalloff','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','autoHuntMaxLevelGap','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery','rareBossEveryMs','dayCycleMs','rebirthStatBonus','rebirthHpMpPct','rebirthMonsterMult','rebirthMonsterExp'])
     if (!Number.isFinite(TUNING?.[k])) errs.push(`tuning.${k} missing/non-numeric`);
   for (const k of ['max','finisherMin','perHit','decayMs','powerPerPoint','detonateBonus'])
     if (!Number.isFinite(TUNING?.momentum?.[k])) errs.push(`tuning.momentum.${k} missing/non-numeric`);
   for (const s of COMBAT.skills) if (s.detonate && !COMBAT.statusEffects[s.detonate]) errs.push(`skill ${s.id} detonate → unknown status ${s.detonate}`);
+  for (const r of CONTENT.recipes || []) {
+    if (!itemById[r.out]) errs.push(`recipe ${r.id} → unknown output ${r.out}`);
+    if (!Number.isFinite(r.cost) || r.cost < 0) errs.push(`recipe ${r.id} bad cost`);
+    if (!r.mats?.length) errs.push(`recipe ${r.id} has no materials`);
+    for (const m of r.mats || []) if (!itemById[m.itemId]) errs.push(`recipe ${r.id} → unknown material ${m.itemId}`);
+  }
+  if (!(CONTENT.recipes || []).length) errs.push('no crafting recipes defined');
+  const achIds = new Set();
+  for (const a of CONTENT.achievements || []) {
+    if (achIds.has(a.id)) errs.push(`duplicate achievement ${a.id}`); achIds.add(a.id);
+    if (a.type === 'guardian' && !monById[a.target]) errs.push(`achievement ${a.id} → unknown monster ${a.target}`);
+    if (a.type === 'rank' && !GUILD_RANKS.includes(a.target)) errs.push(`achievement ${a.id} → unknown guild rank ${a.target}`);
+    if (!a.name || !a.desc || !a.icon) errs.push(`achievement ${a.id} missing name/desc/icon`);
+  }
+  if (!achIds.size) errs.push('no achievements defined');
   for (const q of CONTENT.quests) if (q.difficulty && !DIFFICULTY[q.difficulty]) errs.push(`quest ${q.id} bad difficulty ${q.difficulty}`);
   for (const it of CONTENT.items) if (it.rankReq && !GUILD_RANKS.includes(it.rankReq)) errs.push(`item ${it.id} bad rankReq ${it.rankReq}`);
   for (const fid of REFINE_FRAG) if (!itemById[fid]) errs.push(`refine fragment unknown item ${fid}`);
@@ -297,11 +350,13 @@ function selfCheck() {
 const G = {
   player: null,
   map: null, mapId: null, tiles: null, legend: null,
+  heatField: null,
   monsters: [], npcs: [], portals: [],
   spawnTiles: [],
   cam: { x: 0, y: 0 },
   keys: {},
   target: null,
+  targetSource: null,   // hunt | retaliate | manual; preserves deliberate high-level challenges
   effects: [],          // transient attack/spell visuals
   path: null,           // [{x,y}] pixel waypoints for click-to-move (A* routed)
   manualIntent: null,   // explicit click action: finish moving/talking before Hunt reacquires
@@ -316,6 +371,11 @@ const G = {
   autoFarm: false,      // auto-target & attack nearby non-boss monsters
   huntTargetId: null,   // focused task hunting ignores every other monster type
   taskGuide: null,      // active tracker navigation across maps / to NPCs
+  rareBossMapId: null,  // map currently prowled by the roaming rare boss (null = none)
+  nextRareBossAt: 0,    // ponytail: not persisted — the hunt simply restarts each session
+  storage: [],          // town chest: item entries parked outside the backpack (persisted)
+  achievements: new Set(), // unlocked achievement ids (persisted)
+  dayPhaseOverride: null,  // test/screenshot hook: force a day-cycle phase 0..1
   guildBoard: [],       // repeatable adventurer's-guild bounties
   activeGuilds: [],     // up to GUILD_MAX_ACTIVE accepted bounties
   guildRankIdx: 0,      // index into GUILD_RANKS
@@ -341,6 +401,7 @@ function makePlayer(classId, name) {
     classId, combatClass: CLASS_COMBAT[classId], name: name || 'Hero',
     className: tiers[0].name, tierIndex: 0, level: 1, xp: 0,
     jobLevel: 1, jobXp: 0,     // finite RO-style job track; every level through the cap grants 1 point
+    rebirths: 0,               // NG+ count — permanent stat/HP/MP bonuses scale with it
     zeny: 50,
     inventory: [{ itemId: 'minor_potion', qty: 3 }],
     equip: { weapon: null, head: null, body: null, hands: null, cloak: null, feet: null, accessory: null },
@@ -416,9 +477,10 @@ function tierBonusFor(p) {
 }
 function statBlock(p) {
   const c = p._cls, g = c.statGrowthPerLevel, lv = p.level - 1, tb = tierBonusFor(p);
+  const rb = (p.rebirths || 0) * TUNING.rebirthStatBonus;   // NG+: permanent all-stat bonus
   const st = {};
   for (const k of ['str','agi','vit','int','dex','luk'])
-    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0);
+    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0) + rb;
   return st;
 }
 
@@ -583,6 +645,10 @@ function recompute(p, fill) {
   const base = { ...st, level: p.level, baseHp: 100, weaponAtk, armorDef, isCrit: false };
   p.maxHp = F.maxHp(base);
   p.maxMp = F.maxMp(base);
+  // NG+: each rebirth deepens the vessel permanently
+  const rbMult = 1 + (p.rebirths || 0) * TUNING.rebirthHpMpPct;
+  p.maxHp = Math.round(p.maxHp * rbMult);
+  p.maxMp = Math.round(p.maxMp * rbMult);
   p.physAtk = F.physAtk(base);
   p.rangedAtk = F.rangedAtk(base);
   p.magicAtk = F.magicAtk(base);
@@ -652,7 +718,8 @@ function gainXp(amount) {
       p.statPoints += PROGRESSION.statPointsPerLevel;
       recompute(p, true);
       AUDIO.playSfx('levelup');
-      toast(`Level up! Lv ${p.level} — +${PROGRESSION.statPointsPerLevel} stat points.`, 'good');
+      toast(T('Level up! Lv {level} — +{points} stat points.', 'ui')
+        .replace('{level}', p.level).replace('{points}', PROGRESSION.statPointsPerLevel), 'good');
       maybeStartAdvance(p);
     }
     if (p.level >= DESIGN.levelCap) p.xp = 0;
@@ -665,7 +732,9 @@ function gainXp(amount) {
       p.jobLevel++;
       p.skillPoints += PROGRESSION.skillPointsPerLevel;
       AUDIO.playSfx('levelup');
-      toast(`Job level up! Job Lv ${p.jobLevel}/${PROGRESSION.jobLevelCap} — +${PROGRESSION.skillPointsPerLevel} skill point.`, 'good');
+      toast(T('Job level up! Job Lv {level}/{cap} — +{points} skill point.', 'ui')
+        .replace('{level}', p.jobLevel).replace('{cap}', PROGRESSION.jobLevelCap)
+        .replace('{points}', PROGRESSION.skillPointsPerLevel), 'good');
     }
     if (p.jobLevel >= PROGRESSION.jobLevelCap) p.jobXp = 0;
   }
@@ -686,20 +755,23 @@ function walkableAt(px, py) {
   const info = G.legend[tileChar(col, row)];
   return info ? info.walkable : false;
 }
-function randomWalkableTile(predicate) {
+function randomWalkableTile(predicate, allowFallback = true) {
   const connected = G.spawnTiles?.length
     ? G.spawnTiles
     : connectedWalkableTiles(G.map, G.map.playerStart?.x ?? 1, G.map.playerStart?.y ?? 1);
   const eligible = predicate ? connected.filter(predicate) : connected;
-  const pool = eligible.length ? eligible : connected;
+  const pool = eligible.length ? eligible : allowFallback ? connected : [];
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
 }
-// a walkable tile inside a zone's nursery (heat at the band floor, near a gate) — used to
-// guarantee fair, at-level prey for a freshly-arriving player instead of leaving it to chance
-function walkableInNursery(map) {
-  const lo = map.band?.[0];
-  if (lo == null) return randomWalkableTile();
-  return randomWalkableTile(t => heatLevel(map, t.col, t.row) <= lo + 1);
+function spawnTileFor(spawn, nurseryOnly = false, used = new Set()) {
+  const [minDepth, maxDepth] = spawn.depth || [0, 1];
+  const nurseryMax = Math.min(maxDepth, TUNING.heatNursery);
+  const inHabitat = tile => {
+    const depth = heatDepthAt(G.heatField, tile.col, tile.row);
+    return depth != null && depth >= minDepth && depth <= (nurseryOnly ? nurseryMax : maxDepth);
+  };
+  return randomWalkableTile(tile => inHabitat(tile) && !used.has(`${tile.col},${tile.row}`), false)
+    || randomWalkableTile(inHabitat, false);
 }
 function findChar(ch) {
   for (let row = 0; row < G.map.height; row++) {
@@ -768,7 +840,8 @@ function followPath(e, path, speed, rad) {
 function loadMap(mapId, spawnX, spawnY) {
   const map = MAPS[mapId];
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
-  G.target = null; G.path = null; G.manualIntent = null; G.effects = [];   // don't carry paths/spell zones across maps
+  G.heatField = buildHeatField(map);
+  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = [];   // don't carry paths/spell zones across maps
   if (G.player) G.player.sanctuary = null;
 
   // NPCs: map gives position/identity, content gives behavior
@@ -794,12 +867,12 @@ function loadMap(mapId, spawnX, spawnY) {
   const openSpawnTiles = connected.filter(tile => !reserved.has(`${tile.col},${tile.row}`) && tileChar(tile.col, tile.row) !== 'B');
   G.spawnTiles = openSpawnTiles.length ? openSpawnTiles : connected;
 
-  // monsters from spawn table — level by POSITION (heat map): entry = band floor, guardian = ceiling
+  // Species occupy explicit habitats along the walkable entry→guardian depth field.
+  // Instance level then rises only inside that species' own regional level range.
   G.monsters = [];
-  // the zone's weakest mob stocks the nursery (near-gate) so an arrival always has fair prey;
-  // without this, sparse random placement can leave the gate empty and the nearest mob 4+ levels up
-  const weakestId = map.spawns.filter(s => monById[s.monsterId].sizeTiles < 2)
-    .sort((a, b) => monById[a.monsterId].level - monById[b.monsterId].level)[0]?.monsterId;
+  const usedSpawnTiles = new Set();
+  const weakestId = map.spawns.filter(spawn => monById[spawn.monsterId].sizeTiles < 2)
+    .sort((a, b) => a.levelRange[0] - b.levelRange[0])[0]?.monsterId;
   for (const sp of map.spawns) {
     const def = monById[sp.monsterId];
     const nurseryCount = (map.band && sp.monsterId === weakestId) ? Math.ceil(sp.count * 0.4) : 0;
@@ -809,14 +882,21 @@ function loadMap(mapId, spawnX, spawnY) {
         const b = findChar('B') || randomWalkableTile();
         if (!b) continue;
         col = b.col; row = b.row;
-      } else { const t = i < nurseryCount ? walkableInNursery(map) : randomWalkableTile(); if (!t) continue; col = t.col; row = t.row; }
-      const lvl = def.sizeTiles >= 2 ? def.level : heatLevel(map, col, row);
-      G.monsters.push(makeMonster(def, col * TS + TS / 2, row * TS + TS / 2, lvl ?? undefined));
+      } else {
+        const t = spawnTileFor(sp, i < nurseryCount, usedSpawnTiles);
+        if (!t) continue;
+        col = t.col; row = t.row;
+        usedSpawnTiles.add(`${col},${row}`);
+      }
+      const lvl = def.sizeTiles >= 2 ? def.level : heatLevel(map, col, row, sp, G.heatField);
+      G.monsters.push(makeMonster(def, col * TS + TS / 2, row * TS + TS / 2, lvl ?? undefined, sp));
     }
   }
 
+  if (G.rareBossMapId === mapId) placeRareBoss();   // the roaming rare prowls here until slain
+
   if (!G.guildBoard || !G.guildBoard.length) refreshGuildBoard();
-  AUDIO.playMusic(MAP_MUSIC[mapId] || 'field');
+  AUDIO.playMusic(MAP_MUSIC[mapId] || 'whispering_woods');
   const firstVisit = !G.visited.has(mapId);
   logMsg(T(map.ambient, 'maps'), 'sys');
   showZoneBanner(map, firstVisit);
@@ -839,43 +919,34 @@ function rollMonsterLevel(def) {
 // level → concrete combat stats for a definition (shared by spawn and respawn)
 function monsterStatsFor(def, lvl) {
   const scale = 1 + (lvl - def.level) * TUNING.monsterStatPerLevel;
-  const atk = Math.round(def.atk * scale * TUNING.monsterAtkMult);
+  // NG+ hardcore: the whole world toughens with every rebirth, and pays more EXP for it
+  const rb = G.player?.rebirths || 0;
+  const rbMult = 1 + rb * TUNING.rebirthMonsterMult;
+  const atk = Math.round(def.atk * scale * TUNING.monsterAtkMult * rbMult);
   const bossMult = def.sizeTiles >= 2 ? TUNING.bossHpMult : 1;
-  return { lvl, atk, atkBase: atk, dv: Math.round(def.def * scale),
-    exp: Math.round(def.exp * scale * TUNING.monsterExpMult),
-    hp: Math.round(def.hp * scale * TUNING.monsterHpMult * bossMult),
+  return { lvl, atk, atkBase: atk, dv: Math.round(def.def * scale * rbMult),
+    exp: Math.round(def.exp * scale * TUNING.monsterExpMult * (1 + rb * TUNING.rebirthMonsterExp)),
+    hp: Math.round(def.hp * scale * TUNING.monsterHpMult * bossMult * rbMult),
     flee: 30 + lvl * 1.5, hit: 85 + lvl * 2.5 };
 }
-// HEAT MAP: a monster's level comes from WHERE it stands — band floor at the entry,
-// band ceiling beside the zone guardian. Depth = danger; the player picks how deep to push.
-function heatLevel(map, col, row) {
+// HEAT MAP: shortest walkable-path depth selects the habitat; level interpolation
+// happens inside that species' range so entry Slimes can never become deep-map
+// enemies and deep Thornback Boars can never roll down to Lv1.
+function heatLevel(map, col, row, spawn, field = G.map === map ? G.heatField : buildHeatField(map)) {
   if (!map.band) return null;
-  const [lo, hi] = map.band;
-  const b = (() => { for (let r = 0; r < map.height; r++) { const i = map.tiles[r].indexOf('B'); if (i >= 0) return { x: i, y: r }; } return null; })();
-  if (!b) return null;
-  // entries = every gate far from the guardian (an exit pad NEXT to the boss is not a safe zone)
-  const gates = (map.portals || []).concat(map.playerStart ? [map.playerStart] : []);
-  const dists = gates.map(g => Math.hypot(b.x - g.x, b.y - g.y));
-  const maxD = Math.max(...dists, 1);
-  const entries = gates.filter((g, i) => dists[i] >= 0.6 * maxD);
-  const t = Math.min(...entries.map(e => {
-    const span = Math.hypot(b.x - e.x, b.y - e.y) || 1;
-    return clamp(Math.hypot(col - e.x, row - e.y) / span, 0, 1);
-  }));
-  // NURSERY: the stretch just past each gate stays at the band floor, so an arrival always
-  // finds fair, at-level prey there (without it, sparse spawns land deep enough that the
-  // nearest mob is already several levels up — a Lv1 with nothing to fight).
-  const NURSERY = TUNING.heatNursery;
-  if (t <= NURSERY) return clamp(lo + rndInt(0, 1), lo, hi);
-  const tt = (t - NURSERY) / (1 - NURSERY);
-  return clamp(Math.round(lo + tt * (hi - lo)) + rndInt(0, TUNING.monsterLevelSpread), lo, hi);
+  const depth = heatDepthAt(field, col, row);
+  if (depth == null) return null;
+  const [minDepth, maxDepth] = spawn?.depth || [0, 1];
+  const [lo, hi] = spawn?.levelRange || map.band;
+  const progress = clamp((depth - minDepth) / Math.max(0.001, maxDepth - minDepth), 0, 1);
+  return clamp(Math.round(lo + progress * (hi - lo)) + rndInt(0, TUNING.monsterLevelSpread), lo, hi);
 }
-function makeMonster(def, x, y, levelOverride) {
+function makeMonster(def, x, y, levelOverride, spawnSpec = null) {
   const lvl = levelOverride != null ? levelOverride : rollMonsterLevel(def);
   const st = monsterStatsFor(def, lvl);
   const { atk, atkBase, dv, exp, hp } = st;
   return {
-    def, x, y, homeX: x, homeY: y,
+    def, spawnSpec, x, y, homeX: x, homeY: y,
     lvl, atk, atkBase, dv,
     exp,
     hp, maxHp: hp,
@@ -892,6 +963,11 @@ function makeMonster(def, x, y, levelOverride) {
 const R = COMBAT.combatRules;
 
 function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+
+const autoHuntLevelCap = p => (p?.level || 1) + TUNING.autoHuntMaxLevelGap;
+function autoHuntEligible(m, p = G.player) {
+  return Boolean(m?.alive && m.lvl <= autoHuntLevelCap(p));
+}
 
 function rollHit(atkHit, defFlee) {
   if (!R.missIfFleeExceedsHit) return true;
@@ -999,7 +1075,7 @@ function killMonster(m) {
   m.alive = false;
   m.deadUntil = now() + R.respawnMs;
   AUDIO.playSfx('monsterDie');
-  if (G.target === m) { G.target = null; G.path = null; }
+  if (G.target === m) { G.target = null; G.targetSource = null; G.path = null; }
   const p = G.player;
   const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl)));
   gainXp(xpGain);
@@ -1023,9 +1099,17 @@ function killMonster(m) {
   guildKill(m.def.id);
   if (m.def.id === 'ruin_golem') { toast('The ruins are cleared — a frozen path opens to the north.', 'good'); }
   if (m.def.id === 'flame_dragon') { toast('☠ The Flame Dragon falls — and behind its throne, the sky TEARS OPEN. The Astral Rift awaits.', 'good'); logMsg('A rift portal has opened at the far edge of the caldera.', 'sys'); }
-  if (m.def.id === 'nullking') { toast('✦☠ The Nullking is unmade!', 'good'); triggerVictory(); }   // the TRUE finale
+  if (m.def.id === 'nullking') { toast(T('✦☠ The Nullking is unmade!', 'ui'), 'good'); triggerVictory(); }   // the TRUE finale
+  // a slain roaming rare never respawns in place — the world timer re-announces it later
+  if (m.def.rare) {
+    m.deadUntil = Infinity;
+    G.rareBossMapId = null;
+    G.nextRareBossAt = now() + TUNING.rareBossEveryMs;
+    const msg = T('🏆 {name} slain — a rare trophy claimed!', 'ui').replace('{name}', T(m.def.name, 'monsters'));
+    toast(msg, 'good'); logMsg(msg, 'good');
+  }
   // conquest unlocks the guild's next hunting ground
-  if (m.def.sizeTiles >= 2 && !G.guardiansSlain.has(m.def.id)) {
+  if (m.def.sizeTiles >= 2 && !m.def.rare && !G.guardiansSlain.has(m.def.id)) {
     G.guardiansSlain.add(m.def.id);
     const zi = ZONE_ORDER.findIndex(mid => zoneGuardian(mid) === m.def.id);
     refreshGuildBoard();
@@ -1038,8 +1122,11 @@ function applyStatus(m, effect, skillLvl = 1) {
   if (!effect) return;
   const def = COMBAT.statusEffects[effect];
   if (!def) return;
+  // burn scales with the caster's ATK, so it must obey the same level-gap
+  // penalty as every other player damage source — else DOTs bypass the wall
   const tickDamage = effect === 'burn'
-    ? Math.max(def.tickDamage, Math.round((G.player?.atkStat || 0) * (def.powerRatio || 0)))
+    ? Math.max(def.tickDamage, Math.round((G.player?.atkStat || 0) * (def.powerRatio || 0)
+        * combatGapFactor(G.player?.level || 1, m.lvl)))
     : def.tickDamage;
   const status = { until: now() + def.durationMs, nextTick: now() + 1000, tickDamage };
   if (def.damageTaken) status.damageTaken = def.damageTaken + (def.perLevel || 0) * (skillLvl - 1);
@@ -1263,7 +1350,9 @@ function updateMonsters(dt) {
           if (!p.godMode) p.hp -= dmg;                                  // admin god mode
           AUDIO.playSfx('playerHurt');
           floatText(p.x, p.y, p.godMode ? '0' : dmg, p.godMode ? 'heal' : 'enemy');
-          if (!G.target || !G.target.alive) G.target = m;              // auto-retaliate against the attacker
+          if ((!G.target || !G.target.alive) && (!G.autoFarm || autoHuntEligible(m, p))) {
+            G.target = m; G.targetSource = 'retaliate';
+          }
           if (p.hp <= 0) { playerDeath(); return; }
         } else floatText(p.x, p.y, 'miss', 'miss');
       }
@@ -1276,23 +1365,141 @@ function updateMonsters(dt) {
 function walkableNearHome(m, rad = 6) {
   const hc = Math.floor(m.homeX / TS), hr = Math.floor(m.homeY / TS);
   const connected = new Set(G.spawnTiles.map(tile => `${tile.col},${tile.row}`));
+  const inHabitat = tile => {
+    if (!m.spawnSpec?.depth) return true;
+    const depth = heatDepthAt(G.heatField, tile.col, tile.row);
+    return depth != null && depth >= m.spawnSpec.depth[0] && depth <= m.spawnSpec.depth[1];
+  };
   for (let i = 0; i < 40; i++) {
     const c = hc + rndInt(-rad, rad), r = hr + rndInt(-rad, rad);
-    if (connected.has(`${c},${r}`)) return { col: c, row: r };
+    const tile = { col: c, row: r };
+    if (connected.has(`${c},${r}`) && inHabitat(tile)) return tile;
   }
-  return randomWalkableTile();
+  return randomWalkableTile(inHabitat, false) || (m.spawnSpec?.depth ? null : randomWalkableTile());
 }
 function respawn(m) {
   const t = m.def.sizeTiles >= 2 ? (findChar('B') || { col: 2, row: 2 }) : walkableNearHome(m);
   if (!t) return;
   m.x = t.col * TS + TS / 2; m.y = t.row * TS + TS / 2;
-  // heat map: re-level for the NEW position (a mob that respawns deep is deep-level)
+  // Re-level at the new home-near position, clamped to the species habitat/range.
   if (m.def.sizeTiles < 2) {
-    const lvl = heatLevel(G.map, t.col, t.row);
+    const lvl = heatLevel(G.map, t.col, t.row, m.spawnSpec, G.heatField);
     if (lvl != null) { const st = monsterStatsFor(m.def, lvl); Object.assign(m, st, { maxHp: st.hp }); }
   }
   m.hp = m.maxHp; m.alive = true; m.statuses = {}; m.provoked = false; m.path = null; m.leashing = false;
   m.enraged = false; m.phase = 0; m.atk = m.atkBase; m.slamAt = null; m.nextSlamAt = 0;
+}
+
+// ---- roaming rare boss: an MVP-style world event announced on a timer ----
+const rareBossDef = () => CONTENT.monsters.find(m => m.rare);
+function spawnRareBoss(mapId) {
+  const fields = Object.keys(MAPS).filter(id => MAPS[id].band);
+  G.rareBossMapId = mapId || fields[rndInt(0, fields.length - 1)];
+  G.nextRareBossAt = now() + TUNING.rareBossEveryMs;
+  const def = rareBossDef();
+  const msg = T('⚠ A rare beast stirs — {name} prowls {map}!', 'ui')
+    .replace('{name}', T(def.name, 'monsters'))
+    .replace('{map}', T(MAPS[G.rareBossMapId].name, 'maps'));
+  toast(msg, 'bad'); logMsg(msg, 'sys');
+  AUDIO.playSfx('quest');
+  if (G.mapId === G.rareBossMapId) placeRareBoss();
+}
+function placeRareBoss() {
+  const def = rareBossDef();
+  if (!def || G.monsters.some(m => m.def === def && m.alive)) return;
+  const t = G.spawnTiles.length ? G.spawnTiles[rndInt(0, G.spawnTiles.length - 1)] : null;
+  if (!t) return;
+  G.monsters.push(makeMonster(def, t.col * TS + TS / 2, t.row * TS + TS / 2));
+}
+
+// ---- rebirth (NG+): reset the character at the level cap for permanent power.
+// Gear, zeny, storage, guild rank, and world/story state all survive; only the
+// hero's level/job/skills/stat points start over. ponytail: the active story
+// quest is deliberately left running — a reborn Lv1 simply grinds back to it.
+function doRebirth() {
+  const p = G.player;
+  if (p.level < DESIGN.levelCap) return false;
+  const fresh = makePlayer(p.classId, p.name);   // canonical starting progression for this class
+  p.rebirths = (p.rebirths || 0) + 1;
+  Object.assign(p, { level: 1, xp: 0, jobLevel: 1, jobXp: 0, tierIndex: 0, className: fresh.className,
+    alloc: fresh.alloc, statPoints: fresh.statPoints, skillPoints: fresh.skillPoints,
+    skillLevels: fresh.skillLevels, hotbar: fresh.hotbar, momentum: 0, skillCd: {}, buffs: [] });
+  G.advance = null;   // the class-advancement trials will re-offer at their level gates
+  recompute(p, true);
+  const msg = `✦ ${T('Rebirth {n} — the world begins again, but your soul remembers.', 'ui').replace('{n}', p.rebirths)}`;
+  toast(msg, 'good'); logMsg(msg, 'good');
+  AUDIO.playSfx('levelup');
+  checkAchievements(); updateHud(); renderHotbar(); refreshPanel('char'); saveGame();
+  return true;
+}
+
+// ---- achievements: declarative lifetime badges, polled every couple seconds ----
+function checkAchievements() {
+  const p = G.player; if (!p) return;
+  const kills = Object.values(G.killCounts).reduce((s, n) => s + n, 0);
+  const met = a =>
+    a.type === 'kills' ? kills >= a.count :
+    a.type === 'guardian' ? G.guardiansSlain.has(a.target) :
+    a.type === 'guardians' ? G.guardiansSlain.size >= a.count :
+    a.type === 'level' ? p.level >= a.count :
+    a.type === 'jobLevel' ? p.jobLevel >= a.count :
+    a.type === 'zeny' ? p.zeny >= a.count :
+    a.type === 'refine' ? [...Object.values(p.equip || {}), ...p.inventory].some(e => e && (e.plus || 0) >= a.count) :
+    a.type === 'rank' ? (G.guildRankIdx || 0) >= GUILD_RANKS.indexOf(a.target) :
+    a.type === 'rebirths' ? (p.rebirths || 0) >= a.count :
+    a.type === 'story' ? G.won : false;
+  for (const a of CONTENT.achievements) {
+    if (G.achievements.has(a.id) || !met(a)) continue;
+    G.achievements.add(a.id);
+    const msg = `${a.icon} ${T('Achievement unlocked:', 'ui')} ${T(a.name, 'achievements')}`;
+    toast(msg, 'good'); logMsg(msg, 'good'); AUDIO.playSfx('quest');
+    refreshPanel('char');
+  }
+}
+
+// ---- trader crafting: consume zeny + material stacks, produce the recipe output ----
+function craftItem(recipeId) {
+  const r = (CONTENT.recipes || []).find(x => x.id === recipeId), p = G.player;
+  if (!r) return;
+  const stack = id => p.inventory.find(e => !e.uid && e.itemId === id);
+  if (p.zeny < r.cost || r.mats.some(m => (stack(m.itemId)?.qty || 0) < m.qty)) {
+    logMsg(T('Not enough materials.', 'ui'), 'bad'); return;
+  }
+  p.zeny -= r.cost;
+  for (const m of r.mats) {
+    const s = stack(m.itemId);
+    s.qty -= m.qty;
+    if (s.qty <= 0) p.inventory.splice(p.inventory.indexOf(s), 1);
+  }
+  const got = addItem(r.out, 1);
+  const name = got?.uid ? instName(got) : T(itemById[r.out].name, 'items');
+  toast(`🔨 ${T('Crafted', 'ui')} ${name}!`, 'good');
+  AUDIO.playSfx('pickup');
+  refreshPanel('shop');
+}
+
+// ---- town storage chest (kept at the trader): move items between bag and chest ----
+function depositItem(idx) {
+  const e = G.player.inventory[idx]; if (!e || itemById[e.itemId].type === 'quest') return;
+  if (e.uid) { G.player.inventory.splice(idx, 1); G.storage.push(e); }
+  else {
+    e.qty--;
+    const s = G.storage.find(x => !x.uid && x.itemId === e.itemId);
+    if (s) s.qty++; else G.storage.push({ itemId: e.itemId, qty: 1 });
+    if (e.qty <= 0) G.player.inventory.splice(idx, 1);
+  }
+  AUDIO.playSfx('pickup'); refreshPanel('shop');
+}
+function withdrawItem(idx) {
+  const e = G.storage[idx]; if (!e) return;
+  if (e.uid) { G.storage.splice(idx, 1); G.player.inventory.push(e); }
+  else {
+    e.qty--;
+    const b = G.player.inventory.find(x => !x.uid && x.itemId === e.itemId);
+    if (b) b.qty++; else G.player.inventory.push({ itemId: e.itemId, qty: 1 });
+    if (e.qty <= 0) G.storage.splice(idx, 1);
+  }
+  AUDIO.playSfx('pickup'); refreshPanel('shop');
 }
 
 function moveEntity(e, dx, dy, rad) {
@@ -1322,6 +1529,7 @@ function stopAutomationOnDeath() {
   G.huntTargetId = null;
   G.taskGuide = null;
   G.target = null;
+  G.targetSource = null;
   G.path = null;
   G.manualIntent = null;
   G.keys = {};              // a held movement key must not carry through respawn
@@ -1395,6 +1603,10 @@ function maybeStartPendingQuest() {
   G.pendingQuest = null;
   return startQuest(q.id, false);
 }
+
+// the story forks once per class (nextQuestByClass on the hub quest); everywhere else it's linear
+const nextQuestFor = q => questById[q.nextQuestByClass ? q.nextQuestByClass[G.player.classId] : q.nextQuestId];
+const questSuccessorIds = q => q.nextQuestByClass ? Object.values(q.nextQuestByClass) : (q.nextQuestId ? [q.nextQuestId] : []);
 
 function startQuest(id, quiet) {
   const q = questById[id];
@@ -1490,6 +1702,7 @@ function activateTaskGuide(source, taskId) {
   G.huntTargetId = null;
   G.autoFarm = false;
   G.target = null;
+  G.targetSource = null;
   G.path = null;
   G.manualIntent = null;
   continueTaskGuide();
@@ -1509,6 +1722,7 @@ function activateWorldRoute(mapId) {
   G.huntTargetId = null;
   G.autoFarm = false;
   G.target = null;
+  G.targetSource = null;
   G.path = null;
   G.manualIntent = null;
   continueTaskGuide();
@@ -1524,6 +1738,7 @@ function finishTaskGuide(restoreAutoFarm = true) {
   G.taskGuide = null;
   G.huntTargetId = null;
   G.target = null;
+  G.targetSource = null;
   G.path = null;
   G.manualIntent = null;
   G.autoFarm = restoreAutoFarm && guide.resumeAutoFarm;
@@ -1536,12 +1751,14 @@ function continueTaskGuide() {
   const guide = G.taskGuide;
   if (!guide || !G.player || !G.map) return;
   G.target = null;
+  G.targetSource = null;
   G.path = null;
 
   if (G.mapId !== guide.mapId) {
     const portal = nextPortalToward(MAPS, G.mapId, guide.mapId);
     if (!portal || !pathTo(portal.x * TS + TS / 2, portal.y * TS + TS / 2)) {
-      toast(currentLang === 'th' ? `ไม่มีเส้นทางไปยัง ${T(guide.label, 'maps') || T(guide.label, 'npcs') || T(guide.label, 'monsters') || guide.label}` : `No path to ${guide.label}.`, 'bad');
+      const label = translateAny(guide.label, ['maps', 'npcs', 'monsters']);
+      toast(T('No path to {label}.', 'ui').replace('{label}', label), 'bad');
       finishTaskGuide();
       return;
     }
@@ -1553,46 +1770,50 @@ function continueTaskGuide() {
     G.huntTargetId = guide.monsterId;
     G.autoFarm = true;
     updateFarmButton();
-    toast(`Focused hunt: ${monById[guide.monsterId]?.name || guide.label}.`, 'good');
+    const name = T(monById[guide.monsterId]?.name || guide.label, 'monsters');
+    toast(T('Focused hunt: {name}.', 'ui').replace('{name}', name), 'good');
     return;
   }
   if (guide.mode === 'explore') {
     G.visited.add(guide.mapId);
     const arrivedByChronicle = guide.source === 'world';
-    const destination = guide.label;
+    const destination = translateAny(guide.label, ['maps', 'npcs', 'monsters']);
     finishTaskGuide();
     checkQuest();
-    if (arrivedByChronicle) toast(`Arrived: ${destination}.`, 'good');
+    if (arrivedByChronicle) toast(T('Arrived: {destination}.', 'ui').replace('{destination}', destination), 'good');
     return;
   }
   if (guide.mode === 'npc') {
     const npc = G.npcs.find(n => n.id === guide.npcId);
     if (!npc || !pathTo(npc.x * TS + TS / 2, npc.y * TS + TS / 2)) {
-      toast(`Could not reach ${guide.label}.`, 'bad');
+      const label = translateAny(guide.label, ['npcs', 'maps', 'monsters']);
+      toast(T('Could not reach {label}.', 'ui').replace('{label}', label), 'bad');
       finishTaskGuide();
     }
   }
 }
 
-function checkQuest() {
+function checkQuest(options) {
   const q = questById[G.quest];
   if (!q) return;
   updateQuestTracker();
-  if (questProgress(q) >= q.objective.count) completeQuest(q);
+  if (questProgress(q) >= q.objective.count) completeQuest(q, options);
 }
 
-function completeQuest(q) {
+function completeQuest(q, { suppressDialogue = false } = {}) {
   if (q.objective.type === 'collect') removeItem(q.objective.target, q.objective.count);   // hand the goods over
   gainXp(q.rewards.exp);
   G.player.zeny += q.rewards.zeny;
   for (const it of q.rewards.items) addItem(it, 1, 1.4);   // quest gear rolls a bit better
-  toast(`Quest complete: ${q.name}  (+${q.rewards.exp} xp, +${q.rewards.zeny}z)`, 'good');
-  logMsg(`Rewards: ${q.rewards.items.map(i => itemById[i].name).join(', ')}`, 'good');
+  toast(T('Quest complete: {name}  (+{exp} xp, +{gold}z)', 'ui')
+    .replace('{name}', T(q.name, 'quests')).replace('{exp}', q.rewards.exp).replace('{gold}', q.rewards.zeny), 'good');
+  const rewardNames = q.rewards.items.map(id => T(itemById[id].name, 'items')).join(', ');
+  logMsg(T('Rewards: {items}', 'ui').replace('{items}', rewardNames), 'good');
   AUDIO.playSfx('levelup');
   // reset kill counter for the target so chained kill-quests count fresh
   if (q.objective.type === 'kill') G.killCounts[q.objective.target] = 0;
   if (G.taskGuide?.source === 'story' && G.taskGuide.taskId === q.id) finishTaskGuide();
-  const next = questById[q.nextQuestId];
+  const next = nextQuestFor(q);
   const nextReady = next && G.player.level >= (next.minLevel || 1);
   G.quest = null;
   G.pendingQuest = next && !nextReady ? next.id : null;
@@ -1600,12 +1821,15 @@ function completeQuest(q) {
   // one dialogue for the beat: this quest's outro + the next one's intro (the chain itself
   // never waits on the dialogue — a replaced dialogue must not strand the story)
   const lines = [...(q.doneLines || []), ...(nextReady ? (next.startLines || []) : [])];
-  if (lines.length) showDialogue(npcById[q.giverNpcId]?.name || 'Elowen', lines);
+  if (!suppressDialogue && lines.length) showDialogue(npcById[q.giverNpcId]?.name || 'Elowen', lines);
   if (nextReady) setTimeout(() => startQuest(next.id, true), 800);
   else if (next) {
     const phase = storyPhaseFor(next);
-    toast(`Next: ${next.name} — unlocks at Base Lv ${next.minLevel}.`, 'sys');
-    logMsg(`${phase ? `Phase ${phase.numeral}: ${phase.name}` : 'The next chapter'} is waiting. Reach Base Lv ${next.minLevel} to continue.`, 'sys');
+    toast(T('Next: {quest} — unlocks at Base Lv {level}.', 'ui')
+      .replace('{quest}', T(next.name, 'quests')).replace('{level}', next.minLevel), 'sys');
+    const chapter = phase ? `${T('Phase', 'ui')} ${phase.numeral}: ${T(phase.name, 'storyPhases')}` : T('The next chapter', 'ui');
+    logMsg(T('{chapter} is waiting. Reach Base Lv {level} to continue.', 'ui')
+      .replace('{chapter}', chapter).replace('{level}', next.minLevel), 'sys');
   }
 }
 
@@ -1762,7 +1986,7 @@ function triggerVictory() {
   G.won = true;
   setTimeout(() => runCutscene(CONTENT.story.victoryOutro, () => {
     G.running = true; last = now(); requestAnimationFrame(frame);   // resume — free-roam & farming continue
-    toast('Victory! The world is yours to roam. Toggle auto-farm with F.', 'good');
+    toast(T('Victory! The world is yours to roam. Toggle auto-farm with F.', 'ui'), 'good');
   }), 500);
 }
 
@@ -2028,6 +2252,16 @@ function render() {
 
   drawEffects();   // attack/spell visual effects on top
   drawAtmosphere();
+  drawDayNight();
+}
+
+// day/night tint riding the world clock: day → amber dusk → blue night → dawn
+function drawDayNight() {
+  const ph = G.dayPhaseOverride ?? (now() % TUNING.dayCycleMs) / TUNING.dayCycleMs;
+  const nightA = ph < 0.45 ? 0 : ph < 0.55 ? (ph - 0.45) * 10 * 0.32 : ph < 0.9 ? 0.32 : (1 - ph) * 10 * 0.32;
+  if (nightA > 0.001) { ctx.fillStyle = `rgba(14,22,58,${nightA.toFixed(3)})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
+  const duskA = ph > 0.42 && ph < 0.58 ? (1 - Math.abs(ph - 0.5) / 0.08) * 0.10 : 0;
+  if (duskA > 0.001) { ctx.fillStyle = `rgba(255,138,40,${duskA.toFixed(3)})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
 }
 
 // Region weather uses crisp pixel clusters and streaks so the scene keeps its
@@ -2088,8 +2322,8 @@ function drawNpc(n, cx, cy) {
   groundShadow(x, y + 14, 11);
   if (!drawPx('npc', n.role, x, y, 32)) { ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill(); }
   const role = NPC_ROLE[n.role] || NPC_ROLE.quest;
-  labelText(n.name, x, y - 34, '#fff4d6', 'bold 11px sans-serif');
-  labelText(`${role.mark} ${n.title || role.label}`, x, y - 23, role.color, '9px sans-serif');
+  labelText(T(n.name, 'npcs'), x, y - 34, '#fff4d6', 'bold 11px sans-serif');
+  labelText(`${role.mark} ${T(n.title || role.label, 'npcs')}`, x, y - 23, role.color, '9px sans-serif');
 }
 function monsterNameColor(m) {
   const lv = m.lvl || m.def.level;
@@ -2112,7 +2346,7 @@ function drawMonster(m, cx, cy) {
   ctx.fillStyle = THEME.palette.hpRed; ctx.fillRect(x - w / 2, y - s / 2 - 8, hpw, 4);
   // name label — level prefix + boss/elite colour-coding
   const boss = m.def.sizeTiles >= 2;
-  const label = `Lv${m.lvl} ${boss ? '☠ ' : ''}${m.def.name}`;
+  const label = `Lv${m.lvl} ${boss ? '☠ ' : ''}${T(m.def.name, 'monsters')}`;
   labelText(label, x, y - s / 2 - 12, monsterNameColor(m), boss ? 'bold 12px sans-serif' : '10px sans-serif');
   const statusName = { stun: 'STUN', burn: 'BURN', slow: 'SLOW', mark: 'MARK', sunder: 'BROKEN' };
   const statuses = Object.keys(m.statuses).filter(id => liveStatus(m, id) && statusName[id]).map(id => statusName[id]);
@@ -2303,6 +2537,11 @@ function frame(t) {
 
 function step(dt) {
   const p = G.player;
+  // roaming rare boss world timer (first window arms lazily on the first frame)
+  if (!G.nextRareBossAt) G.nextRareBossAt = now() + TUNING.rareBossEveryMs;
+  else if (!G.rareBossMapId && now() >= G.nextRareBossAt) spawnRareBoss();
+  // achievements poll (cheap declarative checks, one integration point)
+  if (now() >= (G._nextAchAt || 0)) { G._nextAchAt = now() + 2000; checkAchievements(); }
   // prune buffs
   p.buffs = p.buffs.filter(b => b.until > now());
   // Momentum decays out of combat
@@ -2329,6 +2568,12 @@ function step(dt) {
 
   if (!G.manualIntent && G.huntTargetId && G.target && G.target.def.id !== G.huntTargetId) {
     G.target = null;
+    G.targetSource = null;
+    G.path = null;
+  }
+  if (G.autoFarm && !G.manualIntent && G.target && G.targetSource !== 'manual' && !autoHuntEligible(G.target, p)) {
+    G.target = null;
+    G.targetSource = null;
     G.path = null;
   }
   if (!G.manualIntent && G.taskGuide && G.taskGuide.mode !== 'hunt' && !G.path && !G.target) continueTaskGuide();
@@ -2337,13 +2582,14 @@ function step(dt) {
   if (G.autoFarm && !G.manualIntent && !dlg && (!G.target || !G.target.alive)) {
     const focusId = G.huntTargetId;
     const candidates = G.monsters
-      .filter(m => m.alive
+      .filter(m => autoHuntEligible(m, p)
         && (focusId ? m.def.id === focusId : m.def.sizeTiles < 2)
         && (focusId || dist(p.x, p.y, m.x, m.y) < 14 * TS))
       .sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
     for (const candidate of candidates) {
       if (!pathTo(candidate.x, candidate.y)) continue;
       G.target = candidate;
+      G.targetSource = 'hunt';
       candidate.provoked = true;
       break;
     }
@@ -2386,7 +2632,7 @@ function step(dt) {
       G.path = null; G.manualIntent = null; interact(npc.id);
     } else if (!G.path) {
       G.manualIntent = null;
-      toast(`Could not reach ${npc.name}.`, 'bad');
+      toast(T('Could not reach {name}.', 'ui').replace('{name}', T(npc.name, 'npcs')), 'bad');
     }
   } else if (G.manualIntent?.type === 'move' && !G.path) {
     G.manualIntent = null;   // next tick Hunt finds the nearest monster from here
@@ -2527,8 +2773,9 @@ function updateFarmButton() {
   const b = $('#farm-btn'); if (!b) return;
   const routing = G.taskGuide && G.mapId !== G.taskGuide.mapId;
   const worldRoute = routing && G.taskGuide.source === 'world';
+  const huntLimit = T('Auto-hunt target limit: Lv {level}', 'ui').replace('{level}', autoHuntLevelCap(G.player));
   b.textContent = routing ? `➤ ${worldRoute ? T('Travel', 'ui') : T('Quest', 'ui')} (F)` : G.huntTargetId ? T('⚔ Quest Hunt ✓ (F)', 'ui') : G.autoFarm ? T('⚔ Hunting ✓ (F)', 'ui') : T('⚔ Hunt (F)', 'ui');
-  b.title = routing ? T('Heading to {name}', 'ui').replace('{name}', T(G.taskGuide.label, 'monsters') || T(G.taskGuide.label, 'npcs')) : G.huntTargetId ? T('Focused hunt: {name}', 'ui').replace('{name}', T(monById[G.huntTargetId]?.name || G.huntTargetId, 'monsters')) : T('Toggle automatic hunting', 'ui');
+  b.title = routing ? T('Heading to {name}', 'ui').replace('{name}', translateAny(G.taskGuide.label, ['monsters', 'npcs', 'maps'])) : G.huntTargetId ? `${T('Focused hunt: {name}', 'ui').replace('{name}', T(monById[G.huntTargetId]?.name || G.huntTargetId, 'monsters'))}. ${huntLimit}` : `${T('Toggle automatic hunting', 'ui')}. ${huntLimit}`;
   b.style.color = (G.autoFarm || routing) ? 'var(--success)' : '';
   b.style.borderColor = (G.autoFarm || routing) ? 'var(--success)' : '';
 }
@@ -2542,7 +2789,10 @@ function toggleFarm() {
   G.huntTargetId = null;
   G.autoFarm = !G.autoFarm;
   updateFarmButton();
-  toast(G.autoFarm ? T('Auto-farm ON — auto attacks, casts skills, buffs & heals (bosses excluded).', 'ui') : T('Auto-farm off.', 'ui'), G.autoFarm ? 'good' : 'sys');
+  const message = G.autoFarm
+    ? T('Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.', 'ui').replace('{level}', autoHuntLevelCap(G.player))
+    : T('Auto-farm off.', 'ui');
+  toast(message, G.autoFarm ? 'good' : 'sys');
 }
 
 function hotbarSlotHtml(slot, i) {
@@ -2737,7 +2987,7 @@ function updateQuestTracker() {
   const typeName = (t) => { if (currentLang === 'th') { return { kill: 'กำจัด', collect: 'รวบรวม', explore: 'สำรวจ', talk: 'คุยกับ' }[t] || t; } return t; };
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
-    html += `<button class="task-link${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="Navigate to this task" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)">
+    html += `<button class="task-link${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)">
       <b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b><br>${T(a.def.desc, 'quests')}<br>
       <span style="color:${done ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(o.type)} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</span></button>`;
   }
@@ -2751,17 +3001,18 @@ function updateQuestTracker() {
   } else if (!q) html += `<b>${T('Quest', 'ui')}</b><br><span style="color:var(--text-muted)">${T('Story complete — free roam.', 'ui')}</span>`;
   else {
     const prog = questProgress(q);
-    html += `<button class="task-link${G.taskGuide?.source === 'story' ? ' active' : ''}" data-task="story" data-task-id="${q.id}" title="Navigate to this task">
+    html += `<button class="task-link${G.taskGuide?.source === 'story' ? ' active' : ''}" data-task="story" data-task-id="${q.id}" title="${T('Navigate to this task', 'ui')}">
       <small style="color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}">${storyPhaseLabel(q)}</small><br>
       <b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b><br>${T(q.description, 'quests')}<br>
       <span style="color:${prog >= q.objective.count ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(q.objective.type)} ${objectiveName(q.objective)}: ${prog}/${q.objective.count}</span></button>`;
   }
   if (G.activeGuilds.length) {
-    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(95,191,122,.3)"><b style="color:var(--success)">🏰 Bounties (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</b>` +
+    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(95,191,122,.3)"><b style="color:var(--success)">🏰 ${T('Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</b>` +
       G.activeGuilds.map(g => {
         const prog = g.kind === 'deliver' ? Math.min(itemQty(g.target), g.count) : g.progress;
         const ready = g.kind === 'deliver' ? prog >= g.count : !!g.done;
-        return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="Navigate to this task"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${g.targetName}: ${prog}/${g.count}${ready ? ' — report to guild!' : ''}</span></button>`;
+        const targetName = T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters');
+        return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${targetName}: ${prog}/${g.count}${ready ? T(' — report to guild!', 'ui') : ''}</span></button>`;
       }).join('') + `</div>`;
   }
   el.innerHTML = html;
@@ -3321,6 +3572,15 @@ function panelBody(id) {
         ${T('ASPD', 'ui')} <b style="color:var(--text)">+${aspd}%</b> · ${T('Move', 'ui')} <b style="color:var(--text)">+${move}%</b>${p.rangeBonus ? ` · ${T('Reach', 'ui')} <b style="color:var(--text)">+${p.rangeBonus.toFixed(1)}</b> ${T('tiles', 'ui')}` : ''}<br>
         <div style="color:var(--accent-alt);margin:10px 0 6px">${T('Equipment', 'ui')}</div>
         ${paperDoll(p)}
+        <div style="color:var(--accent-alt);margin:10px 0 6px">✦ ${T('Rebirth', 'ui')}${p.rebirths ? ` <b style="color:#c77dff">×${p.rebirths}</b>` : ''}</div>
+        <div style="font-size:12px">${T('Each rebirth: +{s} all stats, +{p}% HP/MP — forever.', 'ui').replace('{s}', TUNING.rebirthStatBonus).replace('{p}', Math.round(TUNING.rebirthHpMpPct * 100))}</div>
+        <div style="font-size:12px;color:#e2695f">${T('The world bites back: monsters gain +{m}% power and pay +{x}% EXP per rebirth.', 'ui').replace('{m}', Math.round(TUNING.rebirthMonsterMult * 100)).replace('{x}', Math.round(TUNING.rebirthMonsterExp * 100))}</div>
+        ${p.level >= DESIGN.levelCap
+          ? `<button class="btn" data-rebirth="1" style="margin-top:6px">✦ ${T('Rebirth now', 'ui')}</button>
+             <div style="font-size:11px;color:#e2695f;margin-top:4px">${T('Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.', 'ui')}</div>`
+          : `<div style="font-size:11px;color:var(--text-muted)">${T('Unlocks at Base Lv {lvl}.', 'ui').replace('{lvl}', DESIGN.levelCap)}</div>`}
+        <div style="color:var(--accent-alt);margin:10px 0 6px">🏆 ${T('Achievements', 'ui')} (${G.achievements.size}/${CONTENT.achievements.length})</div>
+        ${CONTENT.achievements.map(a => { const got = G.achievements.has(a.id); return `<div style="opacity:${got ? 1 : .45};padding:1px 0;font-size:12px">${a.icon} <b style="color:${got ? 'var(--text)' : 'var(--text-muted)'}">${T(a.name, 'achievements')}</b> — <small>${T(a.desc, 'achievements')}</small></div>`; }).join('')}
       </div></div>`;
   }
   if (id === 'inv') {
@@ -3361,7 +3621,7 @@ function panelBody(id) {
   if (id === 'quest') {
     const q = questById[G.quest], pending = questById[G.pendingQuest];
     let story = q
-      ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="Navigate to this task">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small><br>${T(q.description, 'quests')}<br>
+      ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="${T('Navigate to this task', 'ui')}">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small><br>${T(q.description, 'quests')}<br>
           <small>${T('Objective', 'ui')}: ${T(q.objective.type, 'ui')} ${objectiveName(q.objective)} — ${questProgress(q)}/${q.objective.count}</small><br>
           <small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${q.rewards.exp} XP, ${q.rewards.zeny} Zeny, ${q.rewards.items.map(i => T(itemById[i].name, 'items')).join(', ')}</small></div>`
       : pending
@@ -3372,7 +3632,7 @@ function panelBody(id) {
         : `<div class="q-card"><i>${T("Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.", 'ui')}</i></div>`;
     if (G.advance) {
       const a = G.advance, o = a.def.objective;
-      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="Navigate to this task" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
+      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
         <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small></div>` + story;
     }
     const bStatus = g => {
@@ -3381,7 +3641,7 @@ function panelBody(id) {
       return g.done ? `<b style="color:var(--success)">${T('Complete — report to the guild hall', 'ui')}</b>` : (currentLang === 'th' ? `ความคืบหน้า ${g.progress}/${g.count}` : `Progress ${g.progress}/${g.count}`);
     };
     const active = G.activeGuilds.length
-      ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="Navigate to this task" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
+      ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
           <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
           <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>
           <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small></div>`).join('')
@@ -3398,7 +3658,7 @@ function panelBody(id) {
         const prog = g.kind === 'deliver' ? (currentLang === 'th' ? `มีแล้ว ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `have ${Math.min(itemQty(g.target), g.count)}/${g.count}`) : `${g.progress}/${g.count}`;
         return `<div class="q-card" style="border-color:${ready ? 'var(--success)' : 'var(--panel-border)'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
           <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:#e6bd54">${g.pts || 0} pts</b></small></span>
-          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="Navigate to this task">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button></span></div></div>`;
+          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button></span></div></div>`;
       }).join('') : '';
     let lockHint = '';
     for (let i = 1; i < ZONE_ORDER.length; i++) if (!G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) {
@@ -3437,7 +3697,45 @@ function panelBody(id) {
         <span class="bag-tab ${tab === 'buy' ? 'on' : ''}" data-shoptab="buy">${T('Buy', 'ui')}</span>
         <span class="bag-tab ${tab === 'sell' ? 'on' : ''}" data-shoptab="sell">${T('Sell', 'ui')}</span>
         <span class="bag-tab ${tab === 'enhance' ? 'on' : ''}" data-shoptab="enhance">${T('Enhance', 'ui')}</span>
+        <span class="bag-tab ${tab === 'craft' ? 'on' : ''}" data-shoptab="craft">${T('Craft', 'ui')}</span>
+        <span class="bag-tab ${tab === 'storage' ? 'on' : ''}" data-shoptab="storage">${T('Storage', 'ui')}</span>
       </div>`;
+
+    if (tab === 'craft') {
+      const have = id => p.inventory.find(e => !e.uid && e.itemId === id)?.qty || 0;
+      const rows = (CONTENT.recipes || []).map(r => {
+        const out = itemById[r.out];
+        const ok = p.zeny >= r.cost && r.mats.every(m => have(m.itemId) >= m.qty);
+        const mats = r.mats.map(m => {
+          const g = have(m.itemId) >= m.qty;
+          return `<span style="color:${g ? 'var(--text)' : '#e2695f'}">${itemIconImg(m.itemId)} ${T(itemById[m.itemId].name, 'items')} ${Math.min(have(m.itemId), m.qty)}/${m.qty}</span>`;
+        }).join(' · ');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(201,162,75,.15)">
+          <span>${itemIconImg(r.out)} <b>${T(out.name, 'items')}</b> — ${r.cost}z<br>
+            <small style="color:var(--text-muted)">${T(out.desc, 'items')}</small><br><small>${mats}</small></span>
+          <button class="btn" data-craft="${r.id}" ${ok ? '' : 'disabled'}>${T('Craft', 'ui')}</button></div>`;
+      }).join('');
+      return head + `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${T('Turn spare materials into supplies and gear.', 'ui')}</div>${rows}`;
+    }
+
+    if (tab === 'storage') {
+      const line = (e, action, idx) => {
+        const it = itemById[e.itemId];
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
+          <span>${itemIconImg(e.itemId)} ${e.uid ? instName(e) : `<b>${T(it.name, 'items')}</b>`}${!e.uid && e.qty > 1 ? ` ×${e.qty}` : ''}</span>
+          <button class="btn" data-${action}="${idx}">${T(action === 'deposit' ? 'Deposit' : 'Withdraw', 'ui')}</button></div>`;
+      };
+      const stored = G.storage.map((e, i) => line(e, 'withdraw', i)).join('')
+        || `<div style="color:var(--text-muted);padding:4px 0">${T('The chest is empty.', 'ui')}</div>`;
+      const bag = p.inventory
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => itemById[e.itemId].type !== 'quest')
+        .map(({ e, i }) => line(e, 'deposit', i)).join('')
+        || `<div style="color:var(--text-muted);padding:4px 0">${T('Your backpack is empty.', 'ui')}</div>`;
+      return head + `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${T('Goods left here are kept safe between adventures.', 'ui')}</div>
+        <div class="bag-cat">📦 ${T('Storage', 'ui')} (${G.storage.length})</div>${stored}
+        <div class="bag-cat">🎒 ${T('Backpack', 'ui')}</div>${bag}`;
+    }
       
     if (tab === 'buy') {
       const rowFor = itId => {
@@ -3528,8 +3826,14 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { buy(b.dataset.buy); refreshPanel('shop'); });
   el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { sellItem(b.dataset.sell); refreshPanel('shop'); });
   el.querySelectorAll('[data-refine]').forEach(b => b.onclick = () => { refineItem(b.dataset.refine); refreshPanel('shop'); });
+  el.querySelectorAll('[data-deposit]').forEach(b => b.onclick = () => depositItem(+b.dataset.deposit));
+  el.querySelectorAll('[data-withdraw]').forEach(b => b.onclick = () => withdrawItem(+b.dataset.withdraw));
+  el.querySelectorAll('[data-craft]').forEach(b => b.onclick = () => craftItem(b.dataset.craft));
   el.querySelectorAll('[data-shoptab]').forEach(b => b.onclick = () => { G._shopTab = b.dataset.shoptab; refreshPanel('shop'); });
   el.querySelectorAll('[data-stat]').forEach(b => b.onclick = () => { spendStat(b.dataset.stat); refreshPanel('char'); });
+  el.querySelectorAll('[data-rebirth]').forEach(b => b.onclick = () => {
+    if (typeof confirm !== 'function' || confirm(T('Rebirth resets your level, job, skills, and stat points — permanently gaining power. Continue?', 'ui'))) doRebirth();
+  });
   el.querySelectorAll('[data-learn]').forEach(b => b.onclick = () => { learnSkill(b.dataset.learn); refreshPanel('skills'); });
   el.querySelectorAll('[data-passive]').forEach(b => b.onclick = () => { learnPassive(b.dataset.passive); refreshPanel('skills'); });
   el.querySelectorAll('[data-guild]').forEach(b => b.onclick = () => { acceptGuild(b.dataset.guild); refreshPanel(id); });
@@ -3688,24 +3992,38 @@ function nearbyNpc(npcId) {
 }
 function interact(npcId) {
   const n = nearbyNpc(npcId); if (!n) return false;
-  G.target = null; G.path = null; G.manualIntent = null;
+  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null;
   AUDIO.playSfx('menu');
-  G.talked.add(n.id); checkQuest();     // talk objectives
+  const talkQuest = questById[G.quest];
+  const completesTalkQuest = talkQuest?.objective.type === 'talk' && talkQuest.objective.target === n.id;
+  const next = completesTalkQuest ? nextQuestFor(talkQuest) : null;
+  const nextReady = next && G.player.level >= (next.minLevel || 1);
+  const questFollowup = completesTalkQuest
+    ? [...(talkQuest.doneLines || []), ...(nextReady ? (next.startLines || []) : [])]
+    : [];
+  G.talked.add(n.id);
+  checkQuest(completesTalkQuest ? { suppressDialogue: true } : undefined);
   const content = n.content;
+  // A talk objective first lets the named NPC introduce their service/lore,
+  // then presents Elowen's quest follow-up instead of replacing either dialog.
+  const afterNpcDialogue = onClose => {
+    if (questFollowup.length) showDialogue(npcById[talkQuest.giverNpcId]?.name || 'Elowen', questFollowup, onClose);
+    else if (onClose) onClose();
+  };
   if (n.role === 'guild') {
     const lines = [...(content?.dialogue || []), `You currently hold Guild Rank ${GUILD_RANKS[G.guildRankIdx || 0]}.`];
-    showDialogue(n.name, lines, () => togglePanel('guild'));
+    showDialogue(n.name, lines, () => afterNpcDialogue(() => togglePanel('guild')));
     return true;
   }
-  if (n.role === 'shop') { G._shopItems = content?.shopItems || []; showDialogue(n.name, content?.dialogue || ['Welcome, traveler.'], () => togglePanel('shop')); }
+  if (n.role === 'shop') { G._shopItems = content?.shopItems || []; showDialogue(n.name, content?.dialogue || ['Welcome, traveler.'], () => afterNpcDialogue(() => togglePanel('shop'))); }
   else if (n.role === 'quest') {
     const q = questById[G.quest];
     const pending = questById[G.pendingQuest];
     const lines = content?.dialogue ? [...content.dialogue] : ['The path awaits, hero.'];
     if (q) lines.push(`Current task — ${q.name}: ${q.description}`);
     else if (pending) lines.push(`Our next chapter is ${pending.name}. Train until Base Level ${pending.minLevel}; I will call for you the moment you are ready.`);
-    showDialogue(n.name, lines);
-  } else { showDialogue(n.name, content?.dialogue || CONTENT.story.intro.slice(0, 2)); }
+    showDialogue(n.name, lines, () => afterNpcDialogue());
+  } else { showDialogue(n.name, content?.dialogue || CONTENT.story.intro.slice(0, 2), () => afterNpcDialogue()); }
   return true;
 }
 
@@ -4185,7 +4503,7 @@ function saveGame() {
   const p = G.player;
   const data = { v: 3,
     player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex,
-      level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, zeny: p.zeny, hp: p.hp, mp: p.mp,
+      level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, zeny: p.zeny, hp: p.hp, mp: p.mp,
       alloc: p.alloc, statPoints: p.statPoints, skillPoints: p.skillPoints, skillLevels: p.skillLevels,
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
@@ -4193,7 +4511,8 @@ function saveGame() {
       huntTargetId: G.huntTargetId, taskGuide: G.taskGuide,
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
-      visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain] } };
+      visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
+      storage: G.storage, achievements: [...G.achievements] } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); } catch {}
 }
 // shared canvas/HUD boot used by both new-game and continue
@@ -4221,7 +4540,7 @@ function resumeGame() {
   AUDIO.init();
   const sp = d.player, p = makePlayer(sp.classId, sp.name);
   Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, level: sp.level, xp: sp.xp,
-    jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0,
+    jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0,
     zeny: sp.zeny, alloc: sp.alloc, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
     skillLevels: sp.skillLevels || p.skillLevels, equip: sp.equip || p.equip, inventory: sp.inventory || p.inventory,
     hotbar: Array.isArray(sp.hotbar) ? sp.hotbar.slice(0, 9) : p.hotbar,
@@ -4231,6 +4550,7 @@ function resumeGame() {
   // restore the uid counter past every saved instance so fresh drops don't collide
   let maxUid = 0; const scan = e => { if (e && e.uid > maxUid) maxUid = e.uid; };
   Object.values(sp.equip || {}).forEach(scan); (sp.inventory || []).forEach(scan);
+  (d.world?.storage || []).forEach(scan);   // stored gear carries uids too
   _uid = maxUid;
   G.player = p; recompute(p, false);
   p.hp = clamp(sp.hp ?? p.maxHp, 1, p.maxHp); p.mp = clamp(sp.mp ?? p.maxMp, 0, p.maxMp);
@@ -4249,6 +4569,7 @@ function resumeGame() {
     for (let i = 1; i < ZONE_ORDER.length; i++)
       if (w.visited.includes(ZONE_ORDER[i])) G.guardiansSlain.add(zoneGuardian(ZONE_ORDER[i - 1]));
   G.visited = new Set(w.visited || []); G.talked = new Set(w.talked || []);
+  G.storage = w.storage || []; G.achievements = new Set(w.achievements || []);
   preloadSprites();
   $('#root').innerHTML = '';
   startRuntime();
@@ -4257,7 +4578,8 @@ function resumeGame() {
   updateQuestTracker();
   updateFarmButton();
   G.running = true; last = now(); requestAnimationFrame(frame);
-  toast(`Welcome back, ${p.name} — Lv ${p.level} ${p.className}.`, 'good');
+  toast(T('Welcome back, {name} — Lv {level} {class}.', 'ui')
+    .replace('{name}', p.name).replace('{level}', p.level).replace('{class}', T(p.className, 'classes')), 'good');
   return true;
 }
 
@@ -4267,6 +4589,7 @@ function begin(classId, name) {
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
   G.won = false; G.autoFarm = false; G.huntTargetId = null; G.taskGuide = null; G.advance = null; G.quest = null; G.pendingQuest = null; G.killCounts = {};
   G.visited = new Set(); G.talked = new Set();
+  G.storage = []; G.achievements = new Set();
   G.activeGuilds = []; G.guildRankIdx = 0; G.guildPoints = 0; G.guardiansSlain = new Set(); refreshGuildBoard();
   preloadSprites();
   $('#root').innerHTML = '';
@@ -4291,19 +4614,20 @@ function handleClick(wx, wy) {
   // interaction so a distant click means "walk there, then talk".
   const n = G.npcs.find(nn => dist(wx, wy, nn.x * TS + TS / 2, nn.y * TS + TS / 2) < TS);
   if (n) {
-    G.target = null; G.path = null;
+    G.target = null; G.targetSource = null; G.path = null;
     const close = dist(G.player.x, G.player.y, n.x * TS + TS / 2, n.y * TS + TS / 2) < TS * 1.6;
     if (close) { G.manualIntent = null; interact(n.id); }
     else if (pathTo(n.x * TS + TS / 2, n.y * TS + TS / 2)) G.manualIntent = { type: 'npc', npcId: n.id };
-    else { G.manualIntent = null; toast(`Could not reach ${n.name}.`, 'bad'); }
+    else { G.manualIntent = null; toast(T('Could not reach {name}.', 'ui').replace('{name}', T(n.name, 'npcs')), 'bad'); }
     return;
   }
   // 2) click a monster → target it and A*-route into range
   let best = null, bestD = 1e9;
   for (const m of G.monsters) if (m.alive) { const d = dist(wx, wy, m.x, m.y); if (d < m.size / 2 + 14 && d < bestD) { best = m; bestD = d; } }
-  if (best) { G.manualIntent = null; G.target = best; best.provoked = true; pathTo(best.x, best.y); return; }
+  if (best) { G.manualIntent = null; G.target = best; G.targetSource = 'manual'; best.provoked = true; pathTo(best.x, best.y); return; }
   // 3) click ground → route there
   G.target = null;
+  G.targetSource = null;
   G.manualIntent = pathTo(wx, wy) ? { type: 'move', x: wx, y: wy } : null;
 }
 
@@ -4346,6 +4670,6 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); } };
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); } };
 
 boot();

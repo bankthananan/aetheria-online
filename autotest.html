@@ -79,6 +79,20 @@
               A.recompute(A.G.player); A.updateHud();
             }
             if (params.get('farm')) A.toggleFarm();
+            if (params.get('night')) A.G.dayPhaseOverride = +params.get('night') === 1 ? 0.7 : +params.get('night');   // force night (or any 0..1 phase)
+            if (params.get('shoptab')) A.G._shopTab = params.get('shoptab');   // e.g. panel=shop&shoptab=storage
+            if (params.get('stash')) { A.addItem('iron_sword', 1, 6); A.addItem('greater_potion', 5); A.depositItem(A.G.player.inventory.length - 1); }
+            if (params.get('trial')) A.startQuest('q_calling_' + A.G.player.classId, true);   // jump to the class calling trial
+            if (params.get('cap80')) { A.G.player.level = A.DESIGN.levelCap; A.recompute(A.G.player, true); A.updateHud(); }   // stage the Rebirth button
+            if (params.get('craftmats')) {            // seed materials so the Craft tab shows ready + missing states
+              A.addItem('wolf_fang', 4); A.addItem('frost_shard', 2); A.addItem('wolf_pelt', 1);
+              A.addItem('star_iron', 3); A.addItem('void_shard', 1); A.G.player.zeny += 2000;
+            }
+            if (params.get('rare')) {                 // stage the roaming rare boss on the current map
+              A.spawnRareBoss(A.G.mapId);
+              const rb = A.G.monsters.find(m => m.def.rare && m.alive);
+              if (rb) { A.G.player.x = rb.x - 70; A.G.player.y = rb.y; }
+            }
             if (warp === 'dragon_caldera') { const d = A.G.monsters.find(m => m.def.id === 'flame_dragon'); if (d) { A.G.player.x = d.x - 60; A.G.player.y = d.y; } }
             if (warp === 'astral_rift') { const d = A.G.monsters.find(m => m.def.id === 'nullking'); if (d) { A.G.player.x = d.x - 64; A.G.player.y = d.y; } }
             if (params.get('gear')) {                 // seed varied-rarity loot for the inventory shot

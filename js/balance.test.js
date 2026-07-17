@@ -90,20 +90,34 @@ assert.equal(jobLevel, PROGRESSION.jobLevelCap, `job track must reach its cap by
 assert.deepEqual(CONTENT.storyPhases.map(phase => [phase.levelMin, phase.levelMax]),
   [[1, 15], [16, 30], [31, 45], [46, 60], [61, 80]], 'story phases must cover Base Lv 1–80 without gaps');
 const questById = Object.fromEntries(CONTENT.quests.map(quest => [quest.id, quest]));
-const chainedQuestIds = new Set(CONTENT.quests.map(quest => quest.nextQuestId).filter(Boolean));
+const successorIds = quest => quest.nextQuestByClass
+  ? Object.values(quest.nextQuestByClass) : (quest.nextQuestId ? [quest.nextQuestId] : []);
+const chainedQuestIds = new Set(CONTENT.quests.flatMap(successorIds));
 const storyRoots = CONTENT.quests.filter(quest => !chainedQuestIds.has(quest.id));
 assert.deepEqual(storyRoots.map(quest => quest.id), ['q_awaken'], 'story must have one awakening root');
-const walked = new Set(); let storyQuest = questById.q_awaken;
-while (storyQuest && !walked.has(storyQuest.id)) {
-  walked.add(storyQuest.id);
-  const phase = CONTENT.storyPhases.find(entry => entry.id === storyQuest.phase);
-  assert.ok(storyQuest.minLevel >= phase.levelMin && storyQuest.minLevel <= phase.levelMax,
-    `${storyQuest.id} must unlock inside its story phase`);
-  const next = questById[storyQuest.nextQuestId];
-  if (next) assert.ok(next.minLevel >= storyQuest.minLevel && next.phase >= storyQuest.phase, `${storyQuest.id} must chain forward`);
-  storyQuest = next;
+// the story is linear except one per-class fork; every class's walk must be
+// forward-moving and cycle-free, and together the walks must cover every quest
+const walked = new Set();
+for (const cls of DESIGN.classes) {
+  const classWalk = new Set(); let storyQuest = questById.q_awaken;
+  while (storyQuest && !classWalk.has(storyQuest.id)) {
+    classWalk.add(storyQuest.id); walked.add(storyQuest.id);
+    const phase = CONTENT.storyPhases.find(entry => entry.id === storyQuest.phase);
+    assert.ok(storyQuest.minLevel >= phase.levelMin && storyQuest.minLevel <= phase.levelMax,
+      `${storyQuest.id} must unlock inside its story phase`);
+    const next = questById[storyQuest.nextQuestByClass ? storyQuest.nextQuestByClass[cls.id] : storyQuest.nextQuestId];
+    if (next) assert.ok(next.minLevel >= storyQuest.minLevel && next.phase >= storyQuest.phase, `${storyQuest.id} must chain forward`);
+    storyQuest = next;
+  }
+  assert.equal(storyQuest, undefined, `story chain for ${cls.id} must terminate without a cycle`);
 }
 assert.equal(walked.size, CONTENT.quests.length, 'every story quest must belong to the main chain');
+// every class gets its own calling trial between the guild intro and q_prove
+for (const cls of DESIGN.classes) {
+  const trial = questById[questById.q_guild_intro.nextQuestByClass[cls.id]];
+  assert.ok(trial, `class ${cls.id} must have a calling trial`);
+  assert.equal(trial.nextQuestId, 'q_prove', `${trial.id} must merge back into q_prove`);
+}
 assert.equal(questById.q_nullking.minLevel, DESIGN.levelCap, 'the final main quest must unlock at Base Lv 80');
 for (const bridge of ['q_briar', 'q_treant', 'q_shades', 'q_drowned', 'q_hakon', 'q_harpy', 'q_ashsmith', 'q_beetles', 'q_echo', 'q_manta'])
   assert.ok(questById[bridge], `${bridge} must bridge its region's level gaps`);
@@ -114,6 +128,52 @@ for (const [questId, target] of [
 for (const [questId, target] of [['q_hakon', 'hakon'], ['q_ashsmith', 'ashsmith'], ['q_echo', 'star_echo']]) {
   assert.equal(questById[questId].objective.type, 'talk', `${questId} must be a field-NPC story beat`);
   assert.equal(questById[questId].objective.target, target, `${questId} points at the wrong field NPC`);
+}
+
+// Guidance onboarding deliberately introduces the town's three core services
+// before the story sends the player into its longer combat loop.
+assert.equal(questById.q_meet.nextQuestId, 'q_market_intro');
+assert.deepEqual(
+  [questById.q_market_intro.objective.type, questById.q_market_intro.objective.target, questById.q_market_intro.nextQuestId],
+  ['talk', 'merchant', 'q_guild_intro'],
+  'Oracle guidance must lead to the Trader introduction',
+);
+assert.deepEqual(
+  [questById.q_guild_intro.objective.type, questById.q_guild_intro.objective.target],
+  ['talk', 'elder'],
+  'Trader guidance must lead to the Guild introduction before normal story quests',
+);
+assert.ok(questById.q_guild_intro.nextQuestByClass, 'the guild intro must fork into per-class calling trials');
+
+// A quest should unlock where its target species can actually appear. Collect
+// objectives use the level range of at least one monster that drops the item.
+const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
+const spawnByMonster = new Map();
+for (const map of Object.values(MAPS)) for (const spawn of map.spawns || []) {
+  spawnByMonster.set(spawn.monsterId, { map, spawn });
+}
+for (const quest of CONTENT.quests) {
+  if (quest.objective.type === 'kill') {
+    const habitat = spawnByMonster.get(quest.objective.target);
+    assert.ok(habitat, `${quest.id} target ${quest.objective.target} has no map spawn`);
+    if (habitat.spawn.levelRange) {
+      assert.ok(quest.minLevel >= habitat.spawn.levelRange[0] && quest.minLevel <= habitat.spawn.levelRange[1],
+        `${quest.id} unlock level misses ${quest.objective.target}'s level range`);
+    } else {
+      assert.ok(Math.abs(quest.minLevel - monsterById[quest.objective.target].level) <= 2,
+        `${quest.id} unlocks too far from its guardian's fixed level`);
+    }
+  }
+  if (quest.objective.type === 'collect') {
+    const sources = CONTENT.monsters.filter(monster => monster.drops?.some(drop => drop.itemId === quest.objective.target))
+      .map(monster => spawnByMonster.get(monster.id))
+      .filter(Boolean);
+    assert.ok(sources.length, `${quest.id} item ${quest.objective.target} has no spawned drop source`);
+    assert.ok(sources.some(({ spawn, map }) => {
+      const [lo, hi] = spawn.levelRange || map.band || [monsterById[spawn.monsterId].level, monsterById[spawn.monsterId].level];
+      return quest.minLevel >= lo && quest.minLevel <= hi;
+    }), `${quest.id} unlock level misses every source of ${quest.objective.target}`);
+  }
 }
 
 // Every class gets a Lv5 first-job signature that becomes Lv10 mastery after
@@ -180,6 +240,17 @@ for (const rarity of RARITY_ORDER) {
 }
 assert.ok(RARITY.legendary.mult <= 1.8, 'legendary base multiplier overwhelms affix power');
 assert.ok(Math.max(...AFFIXES.filter(a => a.stat === 'atkPct').map(a => a.max)) <= 12, 'ATK affix cap is too high');
+
+// Crafting must never mint zeny deterministically: an output's resale value cannot
+// exceed the recipe's zeny cost plus what the consumed materials would have sold for.
+const itemValueById = Object.fromEntries(CONTENT.items.map(item => [item.id, item.value]));
+for (const recipe of CONTENT.recipes) {
+  const matResale = recipe.mats.reduce((sum, mat) => sum + itemValueById[mat.itemId] * 0.5 * mat.qty, 0);
+  assert.ok(itemValueById[recipe.out] * 0.5 <= recipe.cost + matResale + 1,
+    `recipe ${recipe.id} mints zeny: sell ${itemValueById[recipe.out] * 0.5} > ${recipe.cost} + ${matResale}`);
+  assert.ok(recipe.cost + matResale <= itemValueById[recipe.out] * 2.5,
+    `recipe ${recipe.id} is a rip-off: costs ${recipe.cost + matResale} for a ${itemValueById[recipe.out]}-value item`);
+}
 
 // Even a +9 legendary remains worth less than its shop price, preventing resale loops.
 for (const rarity of RARITY_ORDER) {

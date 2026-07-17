@@ -60,6 +60,12 @@ CONTENT.monsters.forEach(m => {
   assert.notEqual(T(m.flavor, 'monsters'), m.flavor, `Missing translation for monster flavor: ${m.flavor}`);
 });
 
+// Test 6b: Check achievements
+CONTENT.achievements.forEach(a => {
+  assert.notEqual(T(a.name, 'achievements'), a.name, `Missing translation for achievement name: ${a.name}`);
+  assert.notEqual(T(a.desc, 'achievements'), a.desc, `Missing translation for achievement desc: ${a.desc}`);
+});
+
 // Test 7: Check NPCs and general NPC dialogues
 CONTENT.npcs.forEach(n => {
   assert.notEqual(T(n.name, 'npcs'), n.name, `Missing translation for NPC name: ${n.name}`);
@@ -106,13 +112,23 @@ CONTENT.storyPhases.forEach(sp => {
   assert.notEqual(T(sp.name, 'storyPhases'), sp.name, `Missing translation for story phase name: ${sp.name}`);
 });
 
-// Test 12: Check Maps and their NPC titles
+// Test 12: Check every player-facing map, route, and NPC label
 Object.values(MAPS).forEach(m => {
   if (m.name) {
     assert.notEqual(T(m.name, 'maps'), m.name, `Missing translation for map name: ${m.name}`);
   }
+  if (m.ambient) {
+    assert.notEqual(T(m.ambient, 'maps'), m.ambient, `Missing translation for map ambient: ${m.ambient}`);
+  }
+  for (const [field, value] of Object.entries(m.chronicle || {})) {
+    assert.notEqual(T(value, 'maps'), value, `Missing translation for ${m.id} chronicle.${field}: ${value}`);
+  }
+  for (const portal of m.portals || []) {
+    assert.notEqual(T(portal.label, 'maps'), portal.label, `Missing translation for portal label: ${portal.label}`);
+  }
   if (m.npcs) {
     m.npcs.forEach(n => {
+      assert.notEqual(T(n.name, 'npcs'), n.name, `Missing translation for map NPC name: ${n.name}`);
       if (n.title) {
         assert.notEqual(T(n.title, 'npcs'), n.title, `Missing translation for NPC title: ${n.title}`);
       }
@@ -123,5 +139,23 @@ Object.values(MAPS).forEach(m => {
 // Test 13: Check and cover all values in design.js concept
 assert.notEqual(T(DESIGN.concept.tagline, 'dialogues'), DESIGN.concept.tagline, 'Missing translation for concept tagline');
 assert.notEqual(T(DESIGN.concept.premise, 'dialogues'), DESIGN.concept.premise, 'Missing translation for concept premise');
+
+// Test 14: Cutscenes and runtime guidance must not fall back to English.
+for (const line of [...CONTENT.story.intro, ...CONTENT.story.victoryOutro]) {
+  assert.notEqual(T(line, 'dialogues'), line, `Missing translation for story cutscene line: ${line}`);
+}
+for (const key of [
+  'Navigate to this task', 'Rewards: {items}', 'Focused hunt: {name}.',
+  'Arrived: {destination}.', 'Could not reach {label}.',
+  'Quest complete: {name}  (+{exp} xp, +{gold}z)',
+  'Next: {quest} — unlocks at Base Lv {level}.',
+  'Phase', 'The next chapter', '{chapter} is waiting. Reach Base Lv {level} to continue.',
+  'Level up! Lv {level} — +{points} stat points.',
+  'Job level up! Job Lv {level}/{cap} — +{points} skill point.',
+  '✦☠ The Nullking is unmade!', 'Victory! The world is yours to roam. Toggle auto-farm with F.',
+  'Welcome back, {name} — Lv {level} {class}.',
+  'Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.',
+  'Auto-hunt target limit: Lv {level}',
+]) assert.notEqual(T(key, 'ui'), key, `Missing translation for runtime guidance: ${key}`);
 
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

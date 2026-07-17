@@ -106,10 +106,12 @@ export const DESIGN = {
     dropLevelBias: 0.11,       // rarity bias added per monster level
     dropLuckBias: 0.012,       // rarity bias added per point of player LUK
     zenyPerLevel: 3,           // ~this much zeny dropped per monster level
-    combatGapFalloff: 0.10,    // player damage shrinks this much per monster-level above you...
-    combatGapFloor: 0.25,      // ...to a floor — pushing ahead is dangerous, but remains playable
-    combatGapHitPerLvl: 4,     // ...and a monster ABOVE your level gets +this HIT/level vs you —
+    combatGapFalloff: 0.15,    // player damage shrinks this much per monster-level above you...
+    combatGapFloor: 0.12,      // ...to a floor — +6 and beyond is a wall, not a speed bump
+    combatGapHitPerLvl: 6,     // ...and a monster ABOVE your level gets +this HIT/level vs you —
                                // over-extending into high-level turf punishes evasion builds too
+    autoHuntMaxLevelGap: 5,    // Hunt ignores monsters more than this many levels above the player;
+                               // deliberate manual monster clicks can still challenge stronger prey
     hitBaseChance: 0.82,       // equal HIT/FLEE baseline; stats then bend the result within the caps
     hitStatScale: 0.012,       // hit chance gained/lost per point of HIT minus FLEE
     hitChanceMin: 0.15,        // evasion is powerful but never grants complete immunity
@@ -118,6 +120,12 @@ export const DESIGN = {
     bossSlamEveryMs: 8000,     // bosses telegraph a ground slam this often while fighting
     bossEnrageAt: 0.35,        // bosses enrage below this HP fraction (+atk, faster swings)
     statCostEvery: 25,         // stat upgrade costs 1 + floor(stat/this) points — high stats cost more
+    rareBossEveryMs: 1200000,  // a roaming rare boss is announced somewhere in the world this often
+    dayCycleMs: 600000,        // one full day/night cycle (render tint only — no gameplay effect)
+    rebirthStatBonus: 5,       // permanent +this to every base stat per rebirth (NG+)
+    rebirthHpMpPct: 0.10,      // permanent +this fraction of max HP/MP per rebirth
+    rebirthMonsterMult: 0.15,  // NG+ bite: monsters gain +this hp/atk/def per rebirth...
+    rebirthMonsterExp: 0.10,   // ...and pay +this much more EXP per rebirth to match
     potionCdMs: 1500,          // shared restore-potion cooldown — spam must not out-heal a fight you shouldn't win
     agiAtkSpeed: 0.004,        // AGI: each point shaves this fraction off attack delay (cap 45%)
     agiMoveSpeed: 0.0025,      // AGI: each point adds this fraction of walk speed (cap 50%)

@@ -3,7 +3,7 @@ import { PAL, PX } from './pixelart.js';
 import { MAPS } from './maps.js';
 import { CONTENT } from './content.js';
 import { THEME } from './theme.js';
-import { connectedWalkableTiles, nextPortalToward } from './pathing.js';
+import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const spriteGroups = ['player', 'playerWalk', 'npc', 'monster', 'item'];
@@ -76,8 +76,38 @@ for (const map of Object.values(MAPS)) {
     const bossRow = map.tiles.findIndex(row => row.includes('B'));
     const bossCol = map.tiles[bossRow].indexOf('B');
     assert.ok(reachable.has(`${bossCol},${bossRow}`), `${map.id} guardian is isolated from the entrance`);
+
+    const heatField = buildHeatField(map);
+    assert.ok(heatField?.depths.size, `${map.id} needs a walkable entry-to-guardian heat field`);
+    let previousMinDepth = -1;
+    for (const spawn of normalSpawns) {
+      const def = monsterById[spawn.monsterId];
+      assert.ok(Array.isArray(spawn.depth) && spawn.depth.length === 2, `${map.id}/${spawn.monsterId} needs a depth habitat`);
+      assert.ok(spawn.depth[0] >= 0 && spawn.depth[0] <= spawn.depth[1] && spawn.depth[1] <= 1,
+        `${map.id}/${spawn.monsterId} has an invalid depth habitat`);
+      assert.ok(spawn.depth[0] >= previousMinDepth, `${map.id} species must be ordered entry-to-guardian`);
+      previousMinDepth = spawn.depth[0];
+      assert.ok(Array.isArray(spawn.levelRange) && spawn.levelRange.length === 2,
+        `${map.id}/${spawn.monsterId} needs a level range`);
+      assert.ok(spawn.levelRange[0] >= map.band[0] && spawn.levelRange[1] <= map.band[1],
+        `${map.id}/${spawn.monsterId} level range escaped the map band`);
+      assert.ok(def.level >= spawn.levelRange[0] && def.level <= spawn.levelRange[1],
+        `${map.id}/${spawn.monsterId} base level escaped its species range`);
+      const habitatTiles = connected.filter(tile => {
+        const depth = heatDepthAt(heatField, tile.col, tile.row);
+        return depth != null && depth >= spawn.depth[0] && depth <= spawn.depth[1];
+      });
+      assert.ok(habitatTiles.length >= spawn.count,
+        `${map.id}/${spawn.monsterId} habitat has ${habitatTiles.length} tiles for ${spawn.count} monsters`);
+    }
   }
 }
+
+const woodsNormals = MAPS.whispering_woods.spawns.filter(spawn => monsterById[spawn.monsterId].sizeTiles < 2);
+assert.ok(woodsNormals.find(spawn => spawn.monsterId === 'slime').depth[1] <= 0.30,
+  'Slimes must remain beside the Whispering Woods entrance');
+assert.ok(woodsNormals.find(spawn => spawn.monsterId === 'thornback_boar').depth[0] >= 0.65,
+  'Thornback Boars must remain in the deep Whispering Woods');
 
 const mapIds = Object.keys(MAPS);
 for (const from of mapIds) for (const to of mapIds) {

@@ -248,11 +248,11 @@ export const MAPS = {
       'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
     ],
     spawns: [
-      { monsterId: 'slime',  count: 14, minLevelHint: 1 },
-      { monsterId: 'goblin', count: 11, minLevelHint: 2 },
-      { monsterId: 'wolf',   count: 10, minLevelHint: 3 },
-      { monsterId: 'thornback_boar', count: 8, minLevelHint: 5 },
-      { monsterId: 'elderwood_treant', count: 1, minLevelHint: 7 },   // zone guardian
+      { monsterId: 'slime', count: 14, depth: [0.00, 0.30], levelRange: [1, 5] },
+      { monsterId: 'goblin', count: 11, depth: [0.15, 0.55], levelRange: [3, 8] },
+      { monsterId: 'wolf', count: 10, depth: [0.38, 0.76], levelRange: [5, 11] },
+      { monsterId: 'thornback_boar', count: 8, depth: [0.68, 1.00], levelRange: [10, 15] },
+      { monsterId: 'elderwood_treant', count: 1 },   // zone guardian
     ],
     npcs: [
       { id: 'ranger', name: 'Woodwatch Ilya', x: 4, y: 3, role: 'quest', title: 'Wood Warden', color: '#8fe86a' },
@@ -307,10 +307,10 @@ export const MAPS = {
       '##############################',
     ],
     spawns: [
-      { monsterId: 'shade',      count: 16, minLevelHint: 16 },
-      { monsterId: 'mire_leech', count: 8, minLevelHint: 18 },
-      { monsterId: 'drowned_acolyte', count: 7, minLevelHint: 20 },
-      { monsterId: 'ruin_golem', count: 1, minLevelHint: 8 }, // mini-boss, marked 'B' at ~18,24
+      { monsterId: 'mire_leech', count: 8, depth: [0.00, 0.35], levelRange: [16, 20] },
+      { monsterId: 'shade', count: 16, depth: [0.18, 0.62], levelRange: [18, 24] },
+      { monsterId: 'drowned_acolyte', count: 7, depth: [0.55, 0.92], levelRange: [24, 28] },
+      { monsterId: 'ruin_golem', count: 1 }, // mini-boss, marked 'B' at ~18,24
     ],
     npcs: [
       { id: 'ghost_scholar', name: 'Bound Scholar', x: 4, y: 3, role: 'story', title: 'Ruins Archivist', color: '#9ad0e8' },
@@ -332,10 +332,10 @@ export const MAPS = {
     },
     width: 40, height: 30, band: [31, 45], legend: LEGEND, tiles: tundraTiles,
     spawns: [
-      { monsterId: 'frost_wolf', count: 16, minLevelHint: 10 },
-      { monsterId: 'ice_wraith', count: 12, minLevelHint: 13 },
-      { monsterId: 'rime_harpy', count: 8, minLevelHint: 14 },
-      { monsterId: 'frost_revenant', count: 1, minLevelHint: 15 },   // zone guardian
+      { monsterId: 'frost_wolf', count: 16, depth: [0.00, 0.40], levelRange: [31, 35] },
+      { monsterId: 'ice_wraith', count: 12, depth: [0.30, 0.72], levelRange: [35, 40] },
+      { monsterId: 'rime_harpy', count: 8, depth: [0.62, 0.94], levelRange: [40, 44] },
+      { monsterId: 'frost_revenant', count: 1 },   // zone guardian
     ],
     npcs: [
       { id: 'hakon', name: 'Hakon of the Last Watch', x: 42, y: 31, role: 'story', title: 'Exiled Watchman', color: '#bfe6ff' },
@@ -357,10 +357,10 @@ export const MAPS = {
     },
     width: 42, height: 32, band: [46, 60], legend: LEGEND, tiles: calderaTiles,
     spawns: [
-      { monsterId: 'ember_imp', count: 14, minLevelHint: 18 },
-      { monsterId: 'sand_stalker', count: 12, minLevelHint: 16 },
-      { monsterId: 'magma_beetle', count: 8, minLevelHint: 20 },
-      { monsterId: 'flame_dragon', count: 1, minLevelHint: 22 },
+      { monsterId: 'ember_imp', count: 14, depth: [0.00, 0.40], levelRange: [46, 51] },
+      { monsterId: 'sand_stalker', count: 12, depth: [0.32, 0.73], levelRange: [51, 56] },
+      { monsterId: 'magma_beetle', count: 8, depth: [0.64, 0.95], levelRange: [55, 59] },
+      { monsterId: 'flame_dragon', count: 1 },
     ],
     npcs: [
       { id: 'ashsmith', name: 'Veya the Ashsmith', x: 44, y: 33, role: 'story', title: 'Last Forgekeeper', color: '#ffb06a' },
@@ -382,11 +382,11 @@ export const MAPS = {
     },
     width: 42, height: 32, band: [61, 80], legend: LEGEND, tiles: astralTiles,
     spawns: [
-      { monsterId: 'void_wisp', count: 13, minLevelHint: 25 },
-      { monsterId: 'star_reaver', count: 11, minLevelHint: 28 },
-      { monsterId: 'astral_knight', count: 9, minLevelHint: 32 },
-      { monsterId: 'rift_manta', count: 8, minLevelHint: 34 },
-      { monsterId: 'nullking', count: 1, minLevelHint: 38 },
+      { monsterId: 'void_wisp', count: 13, depth: [0.00, 0.32], levelRange: [61, 66] },
+      { monsterId: 'star_reaver', count: 11, depth: [0.22, 0.52], levelRange: [66, 71] },
+      { monsterId: 'astral_knight', count: 9, depth: [0.45, 0.72], levelRange: [71, 75] },
+      { monsterId: 'rift_manta', count: 8, depth: [0.65, 0.96], levelRange: [75, 79] },
+      { monsterId: 'nullking', count: 1 },
     ],
     npcs: [
       { id: 'star_echo', name: 'Echo of Serin', x: 44, y: 33, role: 'story', title: 'Rift Cartographer', color: '#d7c2ff' },
