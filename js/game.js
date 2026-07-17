@@ -10,6 +10,7 @@ import { PROGRESSION } from './progression.js';
 import { SPRITES } from './sprites.js';
 import { PAL, PX } from './pixelart.js';
 import { RARITY, RARITY_ORDER, AFFIXES } from './loot.js';
+import { LPC } from './lpc.js';
 import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
 import { T, currentLang, setLanguage } from './locale.js';
 
@@ -383,6 +384,7 @@ const G = {
   visited: new Set(),   // mapIds entered (explore objectives)
   talked: new Set(),    // map-NPC ids spoken to (talk objectives)
   guardiansSlain: new Set(),   // zone guardians defeated — gates guild bounty regions
+  debugAnim: null,      // {state,frame,dir?} freeze override for LPC anim screenshots/tests
 };
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
@@ -409,6 +411,7 @@ function makePlayer(classId, name) {
     x: 0, y: 0, facing: { x: 0, y: 1 },
     hp: 1, mp: 1,
     attackCdUntil: 0, skillCd: {}, buffs: [], momentum: 0, lastSkillAt: 0,
+    animAttackUntil: 0, animCastUntil: 0, hurtUntil: 0,   // LPC anim-state timers
     // progression
     alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 },
     statPoints: PROGRESSION.startStatPoints,
@@ -1017,6 +1020,7 @@ function playerBasicAttack() {
   if (dist(p.x, p.y, t.x, t.y) > p.basicRange * TS + t.size / 2) return;
   if (now() < p.attackCdUntil) return;
   p.attackCdUntil = now() + (p.atkDelay || COMBAT.attackSpeedMs);   // AGI-scaled swing speed
+  p.animAttackUntil = now() + ANIM.attackMs;
   faceToward(p, t.x, t.y);
   AUDIO.playSfx('attack');
   const atk = p.atkStat * buffMult(p, 'atk');
@@ -1177,6 +1181,7 @@ function castSkillById(id) {
   if (sk.finisher) { momentumMult = 1 + M.powerPerPoint * p.momentum; p.momentum = 0; }
   else { p.mp -= sk.mpCost; }
   p.skillCd[sk.id] = now() + sk.cooldownMs;
+  p.animCastUntil = now() + ANIM.castMs;
   AUDIO.playSfx('skill');
   const lvl = skillLevel(p, sk.id);
   const atk = p.atkStat * buffMult(p, 'atk') * skillPower(p, sk) * momentumMult;
@@ -1324,6 +1329,7 @@ function updateMonsters(dt) {
           if (dist(p.x, p.y, m.slamX, m.slamY) <= TS * 1.8) {
             const { dmg } = calcDamage(m.atk * 1.6, p.physDef * buffMult(p, 'def'), 0);
             if (!p.godMode) p.hp -= dmg;
+            p.hurtUntil = now() + ANIM.hurtMs;
             AUDIO.playSfx('playerHurt');
             floatText(p.x, p.y, p.godMode ? '0' : dmg, 'enemy');
             // Death replaces the map and monster roster. Stop this old roster's
@@ -1348,6 +1354,7 @@ function updateMonsters(dt) {
           const { dmg, isCrit } = calcDamage(m.atk, p.physDef * buffMult(p, 'def'), 5);
           if (m.def.attackRange) spawnBolt(m.x, m.y, p.x, p.y, m.def.projectileColor || '#ffffff', '#ffffff');
           if (!p.godMode) p.hp -= dmg;                                  // admin god mode
+          p.hurtUntil = now() + ANIM.hurtMs;
           AUDIO.playSfx('playerHurt');
           floatText(p.x, p.y, p.godMode ? '0' : dmg, p.godMode ? 'heal' : 'enemy');
           if ((!G.target || !G.target.alive) && (!G.autoFarm || autoHuntEligible(m, p))) {
@@ -2036,6 +2043,38 @@ function drawPx(group, name, cx, cy, size, flip) {
   return true;
 }
 
+// ---- LPC spritesheet rendering (players/NPCs); pixel matrices remain the fallback ----
+const lpcCache = {};
+function lpcImage(src) {
+  if (!src || typeof Image === 'undefined') return null;      // headless-safe
+  let img = lpcCache[src];
+  if (!img) { img = new Image(); img.src = src; lpcCache[src] = img; }
+  return img.complete && img.naturalWidth ? img : null;
+}
+function drawLpc(src, cx, cy, state, dir, frame, size) {
+  const img = lpcImage(src); if (!img) return false;
+  const st = LPC.states[state] || LPC.states.walk;
+  const row = st.row + (st.downOnly ? 0 : LPC.dirs.indexOf(dir));
+  const f = Math.min(frame, st.frames - 1);
+  const c = LPC.cell;
+  ctx.drawImage(img, f * c, row * c, c, c, Math.round(cx - size / 2), Math.round(cy - size + c * 0.28), size, size);
+  return true;
+}
+function facingDir(p) {
+  const { x, y } = p.facing;
+  return Math.abs(x) >= Math.abs(y) ? (x < 0 ? 'left' : 'right') : (y < 0 ? 'up' : 'down');
+}
+const ANIM = { walkMs: 90, attackMs: 340, castMs: 420, hurtMs: 200, idleMs: 600 };
+function playerAnim(p) {
+  if (G.debugAnim) return { state: G.debugAnim.state, dir: G.debugAnim.dir || 'down', frame: G.debugAnim.frame | 0 };
+  const t = now(), dir = facingDir(p);
+  if (p.hurtUntil > t) return { state: 'hurt', dir, frame: Math.floor((ANIM.hurtMs - (p.hurtUntil - t)) / (ANIM.hurtMs / 3)) };
+  if (p.animCastUntil > t) return { state: 'cast', dir, frame: Math.floor((ANIM.castMs - (p.animCastUntil - t)) / (ANIM.castMs / 7)) };
+  if (p.animAttackUntil > t) return { state: 'attack', dir, frame: Math.floor((ANIM.attackMs - (p.animAttackUntil - t)) / (ANIM.attackMs / 6)) };
+  if (p.moving) return { state: 'walk', dir, frame: 1 + Math.floor(t / ANIM.walkMs) % 8 };
+  return { state: 'walk', dir, frame: 0 };                    // walk frame 0 = standing idle
+}
+
 // ---- procedural 16×16 pixel tiles (deterministic, cached offscreen canvases) ----
 const tileCache = {};
 const hash2 = (x, y) => { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); };
@@ -2356,11 +2395,14 @@ function drawPlayer(p, cx, cy) {
   const px = p.x - cx, py = p.y - cy;
   groundShadow(px, py + 15, 11);
   if (p.buffs.some(b => b.until > now())) { ctx.strokeStyle = THEME.palette.accentAlt; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py + 4, 18, 0, 7); ctx.stroke(); }
-  const moving = p.moving, group = (moving && Math.floor(now() / 140) % 2 === 1) ? 'playerWalk' : 'player';
-  const bob = moving ? -Math.abs(Math.sin(now() / 90)) * 2 : 0;
-  if (!drawPx(group, p.combatClass, px, py + bob, 36, p.facing.x < 0)) {
-    const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0' }[p.combatClass];
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px, py, 13, 0, 7); ctx.fill();
+  const a = playerAnim(p);
+  if (drawLpc(LPC.player[p.combatClass], px, py + 8, a.state, a.dir, a.frame, 64)) { /* skip matrix path */ } else {
+    const moving = p.moving, group = (moving && Math.floor(now() / 140) % 2 === 1) ? 'playerWalk' : 'player';
+    const bob = moving ? -Math.abs(Math.sin(now() / 90)) * 2 : 0;
+    if (!drawPx(group, p.combatClass, px, py + bob, 36, p.facing.x < 0)) {
+      const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0' }[p.combatClass];
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px, py, 13, 0, 7); ctx.fill();
+    }
   }
 }
 // text with a dark outline for readability over any tile
@@ -4670,6 +4712,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); } };
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+    LPC, playerAnim, drawLpc };
 
 boot();
