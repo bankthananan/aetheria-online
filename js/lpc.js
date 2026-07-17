@@ -13,6 +13,14 @@ export const LPC = {
     hurt:   { row: 20, frames: 6, downOnly: true },
   },
   dirs: ['up', 'left', 'down', 'right'],
-  player: {},   // combatClass -> sheet path
+  player: {    // combatClass -> sheet path (see assets/lpc/CREDITS.md for seeds)
+    blade: 'assets/lpc/blade.png',
+    berserker: 'assets/lpc/berserker.png',
+    mage: 'assets/lpc/mage.png',
+    ranger: 'assets/lpc/ranger.png',
+    paladin: 'assets/lpc/paladin.png',
+    monk: 'assets/lpc/monk.png',
+    elementalist: 'assets/lpc/elementalist.png',
+  },
   npc: {},      // npc role/id -> sheet path
 };

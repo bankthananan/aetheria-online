@@ -88,6 +88,8 @@
               A.addItem('wolf_fang', 4); A.addItem('frost_shard', 2); A.addItem('wolf_pelt', 1);
               A.addItem('star_iron', 3); A.addItem('void_shard', 1); A.G.player.zeny += 2000;
             }
+            const anim = params.get('anim');           // e.g. anim=attack:3 or anim=walk:4:left — freeze LPC pose for a screenshot
+            if (anim) { const [st, fr, dir] = anim.split(':'); A.G.debugAnim = { state: st, frame: +fr || 0, dir: dir || 'down' }; }
             if (params.get('rare')) {                 // stage the roaming rare boss on the current map
               A.spawnRareBoss(A.G.mapId);
               const rb = A.G.monsters.find(m => m.def.rare && m.alive);
