@@ -2359,7 +2359,9 @@ const NPC_ROLE = {
 function drawNpc(n, cx, cy) {
   const x = n.x * TS - cx + TS / 2, y = n.y * TS - cy + TS / 2;
   groundShadow(x, y + 14, 11);
-  if (!drawPx('npc', n.role, x, y, 32)) { ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill(); }
+  if (!drawLpc(LPC.npc[n.role], x, y + 8, 'walk', 'down', Math.floor(now() / 800) % 2, 64)) {
+    if (!drawPx('npc', n.role, x, y, 32)) { ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill(); }
+  }
   const role = NPC_ROLE[n.role] || NPC_ROLE.quest;
   labelText(T(n.name, 'npcs'), x, y - 34, '#fff4d6', 'bold 11px sans-serif');
   labelText(`${role.mark} ${T(n.title || role.label, 'npcs')}`, x, y - 23, role.color, '9px sans-serif');

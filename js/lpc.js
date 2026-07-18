@@ -22,5 +22,10 @@ export const LPC = {
     monk: 'assets/lpc/monk.png',
     elementalist: 'assets/lpc/elementalist.png',
   },
-  npc: {},      // npc role/id -> sheet path
+  npc: {        // npc role -> sheet path (see assets/lpc/CREDITS.md for seeds)
+    shop: 'assets/lpc/npc_shop.png',
+    quest: 'assets/lpc/npc_quest.png',
+    guild: 'assets/lpc/npc_guild.png',
+    story: 'assets/lpc/npc_story.png',
+  },
 };
