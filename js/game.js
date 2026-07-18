@@ -302,7 +302,25 @@ function selfCheck() {
   }
   // pixel sprites: art for each class, monster, and NPC role
   for (const cc of Object.values(CLASS_COMBAT)) if (!PX.player[cc]) errs.push(`no player pixel sprite for ${cc}`);
-  for (const m of CONTENT.monsters) if (!PX.monster[m.id]) errs.push(`no monster pixel sprite for ${m.id}`);
+  for (const m of CONTENT.monsters) {
+    const rows = PX.monster[m.id];
+    if (!rows) { errs.push(`no monster pixel sprite for ${m.id}`); continue; }
+    if (Array.isArray(rows)) continue;                          // legacy single matrix — valid as-is
+    const states = Object.keys(rows);
+    if (states.length !== 3 || !['idle', 'walk', 'attack'].every(st => rows[st])) {
+      errs.push(`monster ${m.id} frame-set must have exactly idle/walk/attack`); continue;
+    }
+    for (const st of ['idle', 'walk', 'attack']) {
+      const frames = rows[st];
+      if (!Array.isArray(frames) || frames.length !== 2) { errs.push(`monster ${m.id} state ${st} must have exactly 2 frames`); continue; }
+      const [h0, w0] = [frames[0].length, Math.max(...frames[0].map(r => r.length))];
+      frames.forEach((f, fi) => {
+        const h = f.length, w = Math.max(...f.map(r => r.length));
+        if (h !== h0 || w !== w0) errs.push(`monster ${m.id} state ${st} frame ${fi} dimension mismatch`);
+        if (h > 32 || w > 32) errs.push(`monster ${m.id} state ${st} frame ${fi} exceeds 32x32`);
+      });
+    }
+  }
   for (const role of Object.keys(NPC_BY_ROLE)) if (!PX.npc[role]) errs.push(`no npc pixel sprite for role ${role}`);
   for (const cc of Object.values(CLASS_COMBAT)) if (!PX.playerWalk[cc]) errs.push(`no walk frame for ${cc}`);
   for (const k of new Set(Object.values(ITEM_ICON))) if (!PX.item[k]) errs.push(`missing item icon '${k}'`);
@@ -1347,6 +1365,7 @@ function updateMonsters(dt) {
       if (d > range) followMonsterPath(m, p.x, p.y, speed, dt);       // route around trees/walls
       else if (now() >= m.atkCdUntil) {                                // attack player
         m.atkCdUntil = now() + COMBAT.attackSpeedMs * (m.def.attackCooldownMult || 1) * (slowed ? 2 : 1) * (m.enraged ? 0.7 : 1);
+        m.animAttackUntil = now() + 300;
         m.path = null; m.lastCombatAt = now();
         // fighting up is dangerous both ways: a monster above your level lands hits an
         // evasion build would otherwise dodge (mirror of combatGapFactor on your damage)
@@ -1516,11 +1535,13 @@ function moveEntity(e, dx, dy, rad) {
 
 // monster movement toward (tx,ty) via A* (throttled repath, staggered, greedy fallback)
 function followMonsterPath(m, tx, ty, speed, dt) {
+  m.facingLeft = tx < m.x;                                    // face the movement/chase target
   if (!m.path || m.path.length === 0 || now() >= (m.repathAt || 0)) {
     const pa = findPath(Math.floor(m.x / TS), Math.floor(m.y / TS), Math.floor(tx / TS), Math.floor(ty / TS));
     m.path = (pa && pa.length > 1) ? pa.slice(1).map(t => ({ x: t.c * TS + TS / 2, y: t.r * TS + TS / 2 })) : null;
     m.repathAt = now() + 450 + (Math.floor(m.x) % 100) * 3;   // stagger without Math.random
   }
+  const ox = m.x, oy = m.y;
   if (m.path && m.path.length) {
     const wp = m.path[0], dd = dist(m.x, m.y, wp.x, wp.y);
     if (dd < 6) m.path.shift();
@@ -1528,6 +1549,7 @@ function followMonsterPath(m, tx, ty, speed, dt) {
   } else {
     moveEntity(m, Math.sign(tx - m.x) * speed * dt, Math.sign(ty - m.y) * speed * dt, m.size * 0.35);
   }
+  if (m.x !== ox || m.y !== oy) m.movedAt = now();
 }
 
 function stopAutomationOnDeath() {
@@ -2028,9 +2050,16 @@ function pxDataURL(group, name) {
 }
 const itemIconImg = (id, sz = 24) => `<img src="${pxDataURL('item', ITEM_ICON[id] || 'gem')}" width="${sz}" height="${sz}" style="image-rendering:pixelated;vertical-align:middle;flex:0 0 ${sz}px" alt="">`;
 // draw a pixel sprite centered at (cx,cy), nearest-neighbor upscaled to `size`; flip = mirror horizontally
-function drawPx(group, name, cx, cy, size, flip) {
-  const rows = PX[group]?.[name]; if (!rows) return false;
-  const cvs = matrixCanvas(group + ':' + name, rows);
+function drawPx(group, name, cx, cy, size, flip, state = 'idle', frame = 0) {
+  let rows = PX[group]?.[name]; if (!rows) return false;
+  let key = group + ':' + name;
+  if (!Array.isArray(rows)) {                                  // frame-set object {idle/walk/attack:[frames]}
+    const st = rows[state] ? state : 'idle';
+    const frames = rows[st]; if (!frames?.length) return false;
+    const fi = frame % frames.length;
+    rows = frames[fi]; key += ':' + st + ':' + fi;
+  }
+  const cvs = matrixCanvas(key, rows);
   if (!cvs.width) return false;
   // aspect-aware: fit width to `size`, anchor feet at the old square's bottom line.
   // square sprites (all NPCs/monsters) → dh === size → pixel-identical to before; taller sprites grow upward.
@@ -2073,6 +2102,14 @@ function playerAnim(p) {
   if (p.animAttackUntil > t) return { state: 'attack', dir, frame: Math.floor((ANIM.attackMs - (p.animAttackUntil - t)) / (ANIM.attackMs / 6)) };
   if (p.moving) return { state: 'walk', dir, frame: 1 + Math.floor(t / ANIM.walkMs) % 8 };
   return { state: 'walk', dir, frame: 0 };                    // walk frame 0 = standing idle
+}
+// monster equivalent of playerAnim — no `dir`, just state/frame (monster frame-sets are flip-only, no 4-way facing)
+function monsterAnim(m) {
+  if (G.debugAnim) return { state: G.debugAnim.state, frame: G.debugAnim.frame | 0 };
+  const t = now();
+  if (m.animAttackUntil > t) return { state: 'attack', frame: (m.animAttackUntil - t) > 150 ? 0 : 1 };
+  if (t - (m.movedAt || 0) < 120) return { state: 'walk', frame: Math.floor(t / 180) % 2 };
+  return { state: 'idle', frame: Math.floor(t / 600) % 2 };
 }
 
 // ---- procedural 16×16 pixel tiles (deterministic, cached offscreen canvases) ----
@@ -2241,7 +2278,10 @@ function drawTile(type, x, y) {
   return true;
 }
 function preloadSprites() {
-  for (const [group, set] of Object.entries(PX)) for (const name of Object.keys(set)) matrixCanvas(group + ':' + name, set[name]);
+  for (const [group, set] of Object.entries(PX)) for (const [name, rows] of Object.entries(set)) {
+    if (Array.isArray(rows)) { matrixCanvas(group + ':' + name, rows); continue; }
+    for (const [st, frames] of Object.entries(rows)) frames.forEach((f, fi) => matrixCanvas(`${group}:${name}:${st}:${fi}`, f));
+  }
   ['grass', 'bush', 'water', 'road', 'floor', 'wall', 'tree', 'snow', 'ice', 'sand', 'lava', 'rock', 'void', 'voidrock',
    'cobble', 'plaza', 'roof', 'hwall', 'door', 'window', 'fence', 'hedge', 'flowers', 'fountain',
    'townwall', 'gate', 'lamp', 'stall', 'bridge'].forEach(t => buildTile(t));
@@ -2380,7 +2420,8 @@ function drawMonster(m, cx, cy) {
     ctx.strokeStyle = '#ff3b2f'; ctx.lineWidth = 2 + Math.abs(Math.sin(now() / 110)) * 2;
     ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
   }
-  if (!drawPx('monster', m.def.id, x, y, s)) { ctx.fillStyle = m.def.spriteColor; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
+  const a = monsterAnim(m);
+  if (!drawPx('monster', m.def.id, x, y, s, m.facingLeft, a.state, a.frame)) { ctx.fillStyle = m.def.spriteColor; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
   if (m === G.target) { ctx.strokeStyle = THEME.palette.danger; ctx.lineWidth = 2; ctx.strokeRect(x - s / 2 - 3, y - s / 2 - 3, s + 6, s + 6); }
   const w = s, hpw = w * (m.hp / m.maxHp);
   ctx.fillStyle = '#000'; ctx.fillRect(x - w / 2, y - s / 2 - 8, w, 4);
@@ -4715,6 +4756,6 @@ function boot() {
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
   window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
-    LPC, playerAnim, drawLpc };
+    LPC, playerAnim, drawLpc, monsterAnim, drawPx, PX, selfCheck };
 
 boot();

@@ -1,9 +1,16 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PAL, PX } from './pixelart.js';
 import { MAPS } from './maps.js';
 import { CONTENT } from './content.js';
 import { THEME } from './theme.js';
+import { LPC } from './lpc.js';
 import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.join(__dirname, '..');
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const spriteGroups = ['player', 'playerWalk', 'npc', 'monster', 'item'];
@@ -14,23 +21,43 @@ for (const [key, color] of Object.entries(PAL)) {
 
 for (const group of spriteGroups) {
   assert.ok(PX[group] && Object.keys(PX[group]).length, `${group} sprite group is empty`);
-  for (const [name, rows] of Object.entries(PX[group])) {
-    assert.ok(Array.isArray(rows) && rows.length >= 8, `${group}.${name} needs a readable sprite matrix`);
-    const width = Math.max(...rows.map(row => row.length));
-    assert.ok(width >= 8 && width <= 32 && rows.length <= 32, `${group}.${name} exceeds the supported sprite scale`);
-    let painted = 0;
-    const colors = new Set();
-    for (const row of rows) {
-      assert.equal(typeof row, 'string', `${group}.${name} contains a non-string row`);
-      for (const pixel of row) {
-        assert.ok(pixel === ' ' || pixel === '.' || pixel in PAL, `${group}.${name} uses unknown palette key '${pixel}'`);
-        if (PAL[pixel]) { painted++; colors.add(pixel); }
+  for (const [name, entry] of Object.entries(PX[group])) {
+    const isFrameSet = !Array.isArray(entry);
+    if (isFrameSet) {                                          // {idle/walk/attack:[frame,frame]} contract
+      assert.deepEqual(Object.keys(entry).sort(), ['attack', 'idle', 'walk'], `${group}.${name} frame-set must have exactly idle/walk/attack`);
+      for (const st of ['idle', 'walk', 'attack']) {
+        const frames = entry[st];
+        assert.equal(frames.length, 2, `${group}.${name}.${st} must have exactly 2 frames`);
+        const h0 = frames[0].length, w0 = Math.max(...frames[0].map(row => row.length));
+        frames.forEach((f, fi) => {
+          const h = f.length, w = Math.max(...f.map(row => row.length));
+          assert.ok(h === h0 && w === w0, `${group}.${name}.${st} frame ${fi} dimension mismatch`);
+          assert.ok(h <= 32 && w <= 32, `${group}.${name}.${st} frame ${fi} exceeds 32x32`);
+        });
       }
     }
-    assert.ok(painted >= 20, `${group}.${name} silhouette is too sparse`);
-    assert.ok(colors.size >= 3, `${group}.${name} needs at least three material/shading colors`);
+    const frames = isFrameSet ? Object.values(entry).flat() : [entry];
+    for (const rows of frames) {
+      assert.ok(Array.isArray(rows) && rows.length >= 8, `${group}.${name} needs a readable sprite matrix`);
+      const width = Math.max(...rows.map(row => row.length));
+      assert.ok(width >= 8 && width <= 32 && rows.length <= 32, `${group}.${name} exceeds the supported sprite scale`);
+      let painted = 0;
+      const colors = new Set();
+      for (const row of rows) {
+        assert.equal(typeof row, 'string', `${group}.${name} contains a non-string row`);
+        for (const pixel of row) {
+          assert.ok(pixel === ' ' || pixel === '.' || pixel in PAL, `${group}.${name} uses unknown palette key '${pixel}'`);
+          if (PAL[pixel]) { painted++; colors.add(pixel); }
+        }
+      }
+      assert.ok(painted >= 20, `${group}.${name} silhouette is too sparse`);
+      assert.ok(colors.size >= 3, `${group}.${name} needs at least three material/shading colors`);
+    }
   }
 }
+
+for (const [id, file] of Object.entries(LPC.player)) assert.ok(fs.existsSync(path.join(repoRoot, file)), `LPC.player.${id} sheet missing on disk: ${file}`);
+for (const [role, file] of Object.entries(LPC.npc)) assert.ok(fs.existsSync(path.join(repoRoot, file)), `LPC.npc.${role} sheet missing on disk: ${file}`);
 
 for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist']) {
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
