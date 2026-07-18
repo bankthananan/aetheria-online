@@ -2056,7 +2056,7 @@ function drawPx(group, name, cx, cy, size, flip, state = 'idle', frame = 0) {
   if (!Array.isArray(rows)) {                                  // frame-set object {idle/walk/attack:[frames]}
     const st = rows[state] ? state : 'idle';
     const frames = rows[st]; if (!frames?.length) return false;
-    const fi = frame % frames.length;
+    const fi = ((frame % frames.length) + frames.length) % frames.length;   // safe for negative frame (debugAnim abuse)
     rows = frames[fi]; key += ':' + st + ':' + fi;
   }
   const cvs = matrixCanvas(key, rows);
@@ -2280,7 +2280,10 @@ function drawTile(type, x, y) {
 function preloadSprites() {
   for (const [group, set] of Object.entries(PX)) for (const [name, rows] of Object.entries(set)) {
     if (Array.isArray(rows)) { matrixCanvas(group + ':' + name, rows); continue; }
-    for (const [st, frames] of Object.entries(rows)) frames.forEach((f, fi) => matrixCanvas(`${group}:${name}:${st}:${fi}`, f));
+    for (const [st, frames] of Object.entries(rows)) {
+      if (!Array.isArray(frames)) continue;                     // malformed — selfCheck reports it cleanly, don't throw here
+      frames.forEach((f, fi) => { if (Array.isArray(f)) matrixCanvas(`${group}:${name}:${st}:${fi}`, f); });
+    }
   }
   ['grass', 'bush', 'water', 'road', 'floor', 'wall', 'tree', 'snow', 'ice', 'sand', 'lava', 'rock', 'void', 'voidrock',
    'cobble', 'plaza', 'roof', 'hwall', 'door', 'window', 'fence', 'hedge', 'flowers', 'fountain',
@@ -2421,7 +2424,10 @@ function drawMonster(m, cx, cy) {
     ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
   }
   const a = monsterAnim(m);
-  if (!drawPx('monster', m.def.id, x, y, s, m.facingLeft, a.state, a.frame)) { ctx.fillStyle = m.def.spriteColor; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
+  // legacy matrices aren't left-right symmetric (one-sided markings) — only frame-set
+  // art (Tasks 5-9) is drawn flip-aware; flipping a legacy monster would visibly mirror it.
+  const flip = Array.isArray(PX.monster[m.def.id]) ? false : m.facingLeft;
+  if (!drawPx('monster', m.def.id, x, y, s, flip, a.state, a.frame)) { ctx.fillStyle = m.def.spriteColor; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
   if (m === G.target) { ctx.strokeStyle = THEME.palette.danger; ctx.lineWidth = 2; ctx.strokeRect(x - s / 2 - 3, y - s / 2 - 3, s + 6, s + 6); }
   const w = s, hpw = w * (m.hp / m.maxHp);
   ctx.fillStyle = '#000'; ctx.fillRect(x - w / 2, y - s / 2 - 8, w, 4);
@@ -4756,6 +4762,6 @@ function boot() {
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
   window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
-    LPC, playerAnim, drawLpc, monsterAnim, drawPx, PX, selfCheck };
+    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck };
 
 boot();
