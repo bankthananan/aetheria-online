@@ -90,6 +90,7 @@
             }
             const anim = params.get('anim');           // e.g. anim=attack:3 or anim=walk:4:left — freeze LPC pose for a screenshot
             if (anim) { const [st, fr, dir] = anim.split(':'); A.G.debugAnim = { state: st, frame: +fr || 0, dir: dir || 'down' }; }
+            if (params.has('tilephase')) A.G.debugTilePhase = +params.get('tilephase') || 0; // deterministic ambient tile frame
             if (params.get('rare')) {                 // stage the roaming rare boss on the current map
               A.spawnRareBoss(A.G.mapId);
               const rb = A.G.monsters.find(m => m.def.rare && m.alive);

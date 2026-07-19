@@ -25,6 +25,8 @@ for (const group of spriteGroups) {
     const isFrameSet = !Array.isArray(entry);
     if (isFrameSet) {                                          // {idle/walk/attack:[frame,frame]} contract
       assert.deepEqual(Object.keys(entry).sort(), ['attack', 'idle', 'walk'], `${group}.${name} frame-set must have exactly idle/walk/attack`);
+      assert.equal(new Set(Object.values(entry).flat().map(frame => frame.join('\n'))).size, 6,
+        `${group}.${name} must provide six visually distinct frames`);
       for (const st of ['idle', 'walk', 'attack']) {
         const frames = entry[st];
         assert.equal(frames.length, 2, `${group}.${name}.${st} must have exactly 2 frames`);
@@ -33,6 +35,7 @@ for (const group of spriteGroups) {
           const h = f.length, w = Math.max(...f.map(row => row.length));
           assert.ok(h === h0 && w === w0, `${group}.${name}.${st} frame ${fi} dimension mismatch`);
           assert.ok(h <= 32 && w <= 32, `${group}.${name}.${st} frame ${fi} exceeds 32x32`);
+          assert.ok(f.some(row => row.includes('k')), `${group}.${name}.${st} frame ${fi} needs a hard outline`);
         });
       }
     }
@@ -63,7 +66,10 @@ for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'el
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
 }
 for (const role of ['shop', 'guild', 'quest', 'story']) assert.ok(PX.npc[role], `NPC role ${role} needs art`);
-for (const monster of CONTENT.monsters) assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
+for (const monster of CONTENT.monsters) {
+  assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
+  assert.ok(!Array.isArray(PX.monster[monster.id]), `monster ${monster.id} must use the final six-frame animation contract`);
+}
 
 const expandedMinimums = {
   town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],

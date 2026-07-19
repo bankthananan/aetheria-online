@@ -305,7 +305,7 @@ function selfCheck() {
   for (const m of CONTENT.monsters) {
     const rows = PX.monster[m.id];
     if (!rows) { errs.push(`no monster pixel sprite for ${m.id}`); continue; }
-    if (Array.isArray(rows)) continue;                          // legacy single matrix — valid as-is
+    if (Array.isArray(rows)) { errs.push(`monster ${m.id} still uses a legacy single-frame sprite`); continue; }
     const states = Object.keys(rows);
     if (states.length !== 3 || !['idle', 'walk', 'attack'].every(st => rows[st])) {
       errs.push(`monster ${m.id} frame-set must have exactly idle/walk/attack`); continue;
@@ -403,6 +403,7 @@ const G = {
   talked: new Set(),    // map-NPC ids spoken to (talk objectives)
   guardiansSlain: new Set(),   // zone guardians defeated — gates guild bounty regions
   debugAnim: null,      // {state,frame,dir?} freeze override for LPC anim screenshots/tests
+  debugTilePhase: null, // deterministic ambient-tile phase for screenshots/tests
 };
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
@@ -2114,25 +2115,39 @@ function monsterAnim(m) {
 
 // ---- procedural 16×16 pixel tiles (deterministic, cached offscreen canvases) ----
 const tileCache = {};
+const TILE_PHASES = Object.freeze({ water: 4, grass: 2, tree: 2 });
+const TILE_PHASE_MS = Object.freeze({ water: 260, grass: 420, tree: 420 });
+const reducedMotionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+const prefersReducedMotion = () => !!reducedMotionQuery?.matches;
 const hash2 = (x, y) => { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); };
-function buildTile(type, col) {
-  if (col !== undefined) return tileCache[type];               // (col unused; per-type only)
-  if (tileCache[type]) return tileCache[type];
+function buildTile(type, phase = 0) {
+  const phases = TILE_PHASES[type] || 1;
+  phase = ((phase % phases) + phases) % phases;
+  const cacheKey = `${type}:${phase}`;
+  if (tileCache[cacheKey]) return tileCache[cacheKey];
   const N = 16, cvs = document.createElement('canvas'); cvs.width = N; cvs.height = N;
   const c = cvs.getContext('2d');
-  if (!c.fillRect) { tileCache[type] = cvs; return cvs; }      // headless-safe
+  if (!c?.fillRect) { tileCache[cacheKey] = cvs; return cvs; } // headless-safe
   const put = (x, y, hex, wd = 1, ht = 1) => { c.fillStyle = hex; c.fillRect(x, y, wd, ht); };
   const P = PAL;
   if (type === 'grass' || type === 'bush') {
     put(0, 0, P.f, N, N);
     // FF5-style: tonal clumps + scattered grass blades, not flat noise
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x, y); if (r > 0.90) put(x, y, P.j); else if (r < 0.14) put(x, y, P.F); }
-    [[3, 12], [4, 11], [8, 14], [12, 7], [13, 6], [6, 5], [10, 10]].forEach(([x, y]) => { put(x, y, P.j); put(x, y - 1, P.g); });  // upright blades w/ lit tips
+    const sway = type === 'grass' && phase === 1 ? 1 : 0;
+    [[3, 12], [4, 11], [8, 14], [12, 7], [13, 6], [6, 5], [10, 10]].forEach(([x, y], i) => {
+      const dx = i % 2 ? -sway : sway;
+      put(x + dx, y, P.j); put(x + dx, y - 1, P.g);
+    });
+    if (type === 'grass' && phase === 1) { put(2, 3, P.F); put(14, 12, P.j); put(9, 4, P.g); }
     if (type === 'bush') { c.fillStyle = P.G; c.beginPath(); c.arc(8, 10, 5, 0, 7); c.fill(); c.fillStyle = P.g; c.fillRect(6, 8, 2, 2); c.fillRect(10, 9, 2, 2); c.fillStyle = P.k; c.fillRect(3, 14, 10, 1); }
   } else if (type === 'water') {
     for (let y = 0; y < N; y++) put(0, y, (y % 4 < 2) ? P.v : P.V, N, 1);        // banded depth
-    for (let y = 1; y < N; y += 4) { put(2, y, P.C, 4, 1); put(9, y + 2, P.C, 4, 1); }   // ripple crests
-    put(3, 2, '#bfe3f5', 3, 1); put(10, 6, '#bfe3f5', 2, 1); put(5, 11, '#bfe3f5', 3, 1); // sun glints
+    const wave = (phase * 4) % N, counter = (12 - phase * 3 + N) % N;
+    for (let y = 1; y < N; y += 4) { put(wave, y, P.C, 4, 1); put(counter, y + 2, P.C, 4, 1); }
+    put((3 + phase * 2) % 13, 2, '#bfe3f5', 3, 1);
+    put((10 - phase * 2 + N) % 14, 6, '#bfe3f5', 2, 1);
+    put((5 + phase * 3) % 13, 11, '#bfe3f5', 3, 1); // moving sun glints
   } else if (type === 'road') {
     put(0, 0, '#81745e', N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 5, y + 9); if (r > 0.88) put(x, y, '#a09070'); else if (r < 0.08) put(x, y, '#655b4c'); }
@@ -2164,9 +2179,10 @@ function buildTile(type, col) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 1, y + 5); if (r > 0.82) put(x, y, '#ffd24d'); else if (r < 0.12) put(x, y, '#9e2f10'); }
   } else if (type === 'rock') {
     put(0, 0, '#6b5a4a', N, N);
-    c.fillStyle = '#57493c'; c.beginPath(); c.arc(8, 9, 6, 0, 7); c.fill();
-    c.fillStyle = '#7d6b58'; c.fillRect(5, 4, 3, 2); c.fillRect(10, 7, 2, 2);
-    c.fillStyle = PAL.k; c.fillRect(2, 14, 12, 1);
+    c.fillStyle = P.k; c.beginPath(); c.moveTo(2, 13); c.lineTo(3, 7); c.lineTo(6, 3); c.lineTo(11, 3); c.lineTo(14, 8); c.lineTo(13, 14); c.closePath(); c.fill();
+    c.fillStyle = '#57493c'; c.beginPath(); c.moveTo(3, 12); c.lineTo(4, 7); c.lineTo(7, 4); c.lineTo(11, 4); c.lineTo(13, 8); c.lineTo(12, 13); c.closePath(); c.fill();
+    c.fillStyle = '#7d6b58'; c.beginPath(); c.moveTo(4, 7); c.lineTo(7, 4); c.lineTo(10, 5); c.lineTo(8, 9); c.lineTo(4, 10); c.closePath(); c.fill();
+    put(6, 5, '#a58d72', 3, 1); put(9, 10, '#3e352f', 3, 2); put(3, 14, P.k, 10, 1);
   } else if (type === 'void') {
     put(0, 0, '#111a2c', N, N);   // blue-black celestial cathedral floor
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 2, y + 6); if (r > 0.96) put(x, y, '#f0d98b'); else if (r > 0.91) put(x, y, '#7891c2'); else if (r < 0.06) put(x, y, '#263653'); }
@@ -2178,12 +2194,13 @@ function buildTile(type, col) {
   } else if (type === 'tree') {
     put(0, 0, P.f, N, N);                                      // grass base
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (hash2(x, y) < 0.12) put(x, y, P.F); }
-    put(7, 11, P.N, 2, 4); put(7, 11, P.n, 1, 4);             // shaded trunk
-    c.fillStyle = P.G; c.beginPath(); c.arc(8, 7, 6.5, 0, 7); c.fill();          // canopy body
-    c.fillStyle = P.F; c.beginPath(); c.arc(10, 10, 3.2, 0, 7); c.fill();        // shadow side (SE)
-    c.fillStyle = P.g; c.beginPath(); c.arc(6, 5, 3, 0, 7); c.fill(); c.beginPath(); c.arc(10, 5, 2.4, 0, 7); c.fill();  // sunlit clumps (NW)
-    c.fillStyle = P.j; [[5, 4], [8, 3], [11, 5], [7, 7]].forEach(([x, y]) => c.fillRect(x, y, 1, 1));   // leaf speckle
-    c.strokeStyle = P.k; c.lineWidth = 1; c.beginPath(); c.arc(8, 7, 6.5, 0, 7); c.stroke();            // outline
+    put(6, 10, P.k, 4, 6); put(7, 10, P.N, 2, 5); put(7, 10, P.o, 1, 4);        // outlined trunk + root shadow
+    c.fillStyle = P.k; c.beginPath(); c.arc(5, 7, 4.8, 0, 7); c.arc(10, 6, 5.2, 0, 7); c.arc(9, 10, 5.1, 0, 7); c.fill();
+    c.fillStyle = P.G; c.beginPath(); c.arc(5, 7, 4, 0, 7); c.arc(10, 6, 4.4, 0, 7); c.arc(9, 10, 4.2, 0, 7); c.fill();
+    c.fillStyle = P.F; c.beginPath(); c.arc(11, 10, 2.8, 0, 7); c.fill();
+    c.fillStyle = P.g; c.beginPath(); c.arc(5, 5, 2.4, 0, 7); c.fill(); c.beginPath(); c.arc(9, 4, 2.1, 0, 7); c.fill();
+    const shimmer = phase === 1 ? 1 : 0;
+    c.fillStyle = P.j; [[4, 4], [8, 3], [11, 5], [6, 8]].forEach(([x, y], i) => c.fillRect(x + (i % 2 ? -shimmer : shimmer), y, 1, 1));
   } else if (type === 'cobble') {
     put(0, 0, '#5d6065', N, N);                                // cool mortar base
     const stones = [[1,1,4,3],[6,1,5,3],[12,1,3,3],[1,5,3,3],[5,5,4,3],[10,5,5,3],[1,9,5,3],[7,9,4,3],[12,9,3,3],[2,13,4,2],[7,13,5,2],[13,13,2,2]];
@@ -2194,41 +2211,47 @@ function buildTile(type, col) {
     c.beginPath(); c.moveTo(8, 0); c.lineTo(8, 16); c.moveTo(0, 8); c.lineTo(16, 8); c.stroke();
     put(0, 0, '#b1afa6', N, 1);
   } else if (type === 'roof') {
-    put(0, 0, '#3d4858', N, N);                                // northern slate
-    for (let y = 3; y < N; y += 4) { put(0, y, '#222b38', N, 1); put(0, y - 1, '#657286', N, 1); }
-    for (let y = 0; y < N; y += 4) for (let x = (y % 8 ? 4 : 0); x < N; x += 8) put(x, y, '#2a3443', 1, 3);
-    put(0, 0, '#8290a3', N, 1);
+    put(0, 0, '#303b4b', N, N);                                // outlined northern slate
+    put(0, 0, P.k, N, 1); put(0, 1, '#8290a3', N, 2);          // ridge cap
+    for (let y = 4; y < N; y += 4) {
+      put(0, y, '#18212d', N, 1); put(0, y + 1, '#657286', N, 1);
+      for (let x = (y % 8 ? 4 : 0); x < N; x += 8) put(x, y + 1, '#202b38', 1, 3);
+    }
+    put(2, 3, '#4d5b6e', 5, 1); put(10, 7, '#4d5b6e', 4, 1);
   } else if (type === 'hwall') {
-    put(0, 0, '#c4b48e', N, N);                                // lime plaster
-    put(0, 0, '#8e7a5d', N, 3);
-    for (const x of [0, 7, 15]) put(x, 3, '#3b2b22', 1, N - 3);
-    put(0, 8, '#3b2b22', N, 1); put(0, N - 1, '#3b2b22', N, 1);
+    put(0, 0, '#c4b48e', N, N);                                // plaster in a dark timber frame
+    put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    for (const x of [0, 7, 15]) { put(x, 3, P.k, 2, N - 3); put(x + 1, 3, '#6a452c', 1, N - 3); }
+    put(0, 8, P.k, N, 2); put(0, 9, '#6a452c', N, 1); put(0, N - 1, P.k, N, 1);
+    for (let i = 2; i < 7; i++) { put(i, i + 2, '#8e6b48'); put(14 - i, i + 2, '#8e6b48'); }
   } else if (type === 'door') {
-    put(0, 0, '#c4b48e', N, N); put(0, 0, '#8e7a5d', N, 3);
-    put(4, 3, '#2f211a', 8, 13);
-    put(5, 4, '#59402d', 6, 11); c.fillStyle = '#2f211a'; c.fillRect(8, 4, 1, 11); c.fillRect(5, 9, 6, 1);
-    put(9, 9, P.y, 1, 2);                                     // brass knob
+    put(0, 0, '#c4b48e', N, N); put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    put(3, 4, P.k, 10, 12); put(4, 4, '#59402d', 8, 12);
+    for (const x of [6, 9]) put(x, 5, '#7b5737', 1, 10);       // vertical oak boards
+    put(4, 8, '#2f211a', 8, 1); put(4, 13, '#2f211a', 8, 1);
+    put(10, 10, P.y, 1, 2); put(10, 10, '#fff2a6');            // brass knob
   } else if (type === 'window') {
-    put(0, 0, '#c4b48e', N, N); put(0, 0, '#8e7a5d', N, 3);
-    put(3, 4, '#2f211a', 10, 9);
-    put(4, 5, P.y, 8, 7);                                     // warm lamplight glow
-    c.fillStyle = P.N; c.fillRect(8, 5, 1, 7); c.fillRect(4, 8, 8, 1);          // muntins
-    put(3, 13, P.n, 10, 1);                                   // sill
+    put(0, 0, '#c4b48e', N, N); put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    put(2, 3, '#7d643f', 12, 11); put(3, 4, P.k, 10, 9);
+    put(4, 5, '#e8a73f', 8, 7); put(5, 5, '#ffe39a', 5, 4);    // warm two-tone glow
+    put(8, 5, P.N, 1, 7); put(4, 8, P.N, 8, 1);               // cross muntin
+    put(2, 13, P.k, 12, 1); put(3, 14, P.n, 10, 1);           // outlined sill
   } else if (type === 'fence') {
     put(0, 0, P.f, N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (hash2(x, y) < 0.10) put(x, y, P.F); }
-    put(0, 6, P.n, N, 2); put(0, 10, P.n, N, 2);             // rails
-    for (const x of [2, 8, 14]) { put(x, 3, P.N, 2, 11); put(x, 3, P.o, 1, 11); }   // posts
+    put(0, 5, P.k, N, 4); put(0, 6, P.n, N, 2); put(0, 10, P.k, N, 3); put(0, 11, P.n, N, 1);
+    for (const x of [2, 8, 14]) { put(x - 1, 2, P.k, 4, 13); put(x, 3, P.N, 2, 11); put(x, 3, P.o, 1, 10); put(x, 2, P.k, 2, 1); }
   } else if (type === 'hedge') {
     put(0, 0, P.f, N, N);
-    c.fillStyle = P.G; c.fillRect(1, 2, 14, 12);            // boxy hedge body
-    c.fillStyle = P.g; for (let x = 2; x < 15; x += 3) for (let y = 3; y < 13; y += 3) if (hash2(x, y) > 0.4) put(x, y, P.g, 2, 2);
-    c.fillStyle = P.k; c.strokeStyle = P.k; c.lineWidth = 1; c.strokeRect(1.5, 2.5, 13, 11);
+    c.fillStyle = P.k; c.beginPath(); c.arc(4, 8, 4, 0, 7); c.arc(8, 6, 5, 0, 7); c.arc(12, 8, 4, 0, 7); c.fill();
+    c.fillStyle = P.G; c.beginPath(); c.arc(4, 8, 3.2, 0, 7); c.arc(8, 6, 4.2, 0, 7); c.arc(12, 8, 3.2, 0, 7); c.fill();
+    c.fillStyle = P.g; [[4,6],[7,4],[10,6],[6,9],[12,9]].forEach(([x,y]) => c.fillRect(x, y, 2, 2));
+    put(2, 12, P.k, 12, 2); put(3, 12, P.F, 10, 1);
   } else if (type === 'flowers') {
     put(0, 0, P.f, N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x, y); if (r > 0.92) put(x, y, P.j); else if (r < 0.10) put(x, y, P.F); }
     const buds = [[3,4,P.r],[11,3,P.p],[6,9,P.y],[13,11,P.x],[2,12,P.p],[9,13,P.r],[8,6,P.x]];
-    for (const [x,y,col] of buds) { put(x, y, col, 2, 2); put(x, y - 1, P.j, 1, 1); }   // blossom + stem tip
+    for (const [x,y,col] of buds) { put(x, y + 2, P.G, 1, 3); put(x - 1, y, P.k, 4, 3); put(x, y, col, 2, 2); put(x + 1, y, P.x); }
   } else if (type === 'fountain') {
     put(0, 0, '#8c8b85', N, N);                               // chapel-square base
     c.fillStyle = P.a; c.beginPath(); c.arc(8, 8, 7, 0, 7); c.fill();          // stone basin rim
@@ -2250,31 +2273,123 @@ function buildTile(type, col) {
     put(2, 0, P.o, 2, 2); put(12, 0, P.o, 2, 2);                  // raised portcullis wood
   } else if (type === 'lamp') {
     put(0, 0, '#5d6065', N, N);
-    put(7, 4, '#252930', 2, 10);
-    c.fillStyle = '#171a20'; c.fillRect(6, 3, 4, 4);
-    c.fillStyle = P.y; c.fillRect(7, 4, 2, 2); c.fillStyle = '#fff2c0'; c.fillRect(7, 4, 1, 1);  // warm flame
-    put(6, 13, P.N, 4, 1);                                    // base
+    put(4, 1, 'rgba(255,210,92,.18)', 8, 8); put(5, 2, 'rgba(255,210,92,.24)', 6, 6); // pixel glow halo
+    put(7, 6, '#252930', 2, 8); put(6, 13, P.k, 4, 2); put(7, 12, P.N, 2, 2);
+    put(5, 2, P.k, 6, 6); put(6, 3, '#81572d', 4, 4); put(7, 3, P.y, 2, 3); put(7, 3, '#fff2c0');
   } else if (type === 'stall') {
     put(0, 0, '#81745e', N, N);
+    put(0, 0, P.k, N, 1);
     for (let x = 0; x < N; x += 4) put(x, 1, '#842f3d', 2, 4); // oxblood guild awning
     for (let x = 2; x < N; x += 4) put(x, 1, '#d8cfb8', 2, 4);
-    put(0, 5, P.N, N, 1);                                     // awning trim
-    put(1, 8, P.n, N - 2, 5); put(1, 8, P.o, N - 2, 1);       // wooden counter
+    put(0, 5, P.k, N, 2); put(1, 5, P.N, N - 2, 1);            // outlined awning trim
+    put(0, 8, P.k, N, 6); put(1, 9, P.n, N - 2, 4); put(1, 9, P.o, N - 2, 1); // wooden counter
     put(3, 6, P.g, 2, 2); put(7, 6, P.r, 2, 2); put(11, 6, P.y, 2, 2);   // goods on display
   } else if (type === 'bridge') {
     for (let y = 0; y < N; y++) put(0, y, (y % 4 < 2) ? P.v : P.V, N, 1);   // water beneath
-    for (let x = 1; x < N; x += 3) put(x, 2, P.N, 2, 12);     // plank shadows
-    for (let x = 0; x < N; x += 3) put(x, 2, P.n, 2, 12);     // wooden planks
-    put(0, 1, P.o, N, 1); put(0, 14, P.o, N, 1);              // bridge rails
+    put(0, 1, P.k, N, 3); put(0, 13, P.k, N, 3);              // hard rail outline
+    put(0, 2, P.o, N, 1); put(0, 14, P.o, N, 1);
+    for (let x = 0; x < N; x += 3) { put(x, 4, P.k, 1, 9); put(x + 1, 4, P.n, 2, 9); put(x + 1, 4, P.o, 1, 9); }
   } else { // fallback flat
     put(0, 0, P.f, N, N);
   }
-  tileCache[type] = cvs; return cvs;
+  tileCache[cacheKey] = cvs; return cvs;
 }
 function drawTile(type, x, y) {
-  const cvs = buildTile(type);
+  const phase = G.debugTilePhase != null
+    ? G.debugTilePhase
+    : (prefersReducedMotion() ? 0 : Math.floor(now() / (TILE_PHASE_MS[type] || 1000)));
+  const cvs = buildTile(type, phase);
   if (!cvs.width) return false;
   ctx.drawImage(cvs, Math.floor(x), Math.floor(y), TS + 1, TS + 1);
+  return true;
+}
+
+// Small direct overdraws soften the most visible terrain seams without
+// obscuring the readable walk grid. Edge pixels stay inside the current tile.
+function drawTileEdges(type, col, row, x, y) {
+  const neighbors = [
+    { dc: 0, dr: -1, dir: 'top' }, { dc: 1, dr: 0, dir: 'right' },
+    { dc: 0, dr: 1, dir: 'bottom' }, { dc: -1, dr: 0, dir: 'left' },
+  ];
+  let drawn = 0;
+  const band = (dir, color, thickness = 2, dotted = false) => {
+    ctx.fillStyle = color;
+    const horizontal = dir === 'top' || dir === 'bottom';
+    const bx = dir === 'right' ? x + TS - thickness : x;
+    const by = dir === 'bottom' ? y + TS - thickness : y;
+    ctx.fillRect(Math.floor(bx), Math.floor(by), horizontal ? TS : thickness, horizontal ? thickness : TS);
+    if (dotted) {
+      ctx.fillStyle = '#dff2ff';
+      for (let p = 4; p < TS; p += 9) {
+        const dx = horizontal ? x + p : (dir === 'right' ? x + TS - 1 : x);
+        const dy = horizontal ? (dir === 'bottom' ? y + TS - 1 : y) : y + p;
+        ctx.fillRect(Math.floor(dx), Math.floor(dy), horizontal ? 3 : 1, horizontal ? 1 : 3);
+      }
+    }
+    drawn++;
+  };
+  for (const n of neighbors) {
+    const neighborInfo = G.legend[tileChar(col + n.dc, row + n.dr)];
+    const other = neighborInfo?.type;
+    if (!other || other === type) continue;
+    if (type === 'water' && other !== 'bridge') band(n.dir, '#e8dcae', 2, true);
+    else if (type === 'road' && (other === 'grass' || other === 'bush')) band(n.dir, '#3f7d3a', 2);
+    else if ((type === 'snow' && other === 'grass') || (type === 'grass' && other === 'snow')) band(n.dir, '#9eabbc', 1);
+    else if ((type === 'lava' && other === 'rock') || (type === 'rock' && other === 'lava')) band(n.dir, '#612817', 1);
+  }
+  return drawn;
+}
+
+// Cached procedural backdrop strips: two cloud bands share one canvas, then
+// mountains and treeline scroll at progressively faster parallax rates.
+const parallaxCache = {};
+function buildParallaxStrip(kind) {
+  if (parallaxCache[kind]) return parallaxCache[kind];
+  const sizes = { clouds: [512, 190], mountains: [512, 190], trees: [512, 130] };
+  const [w, h] = sizes[kind];
+  const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+  const c = cvs.getContext('2d');
+  if (!c?.fillRect) { parallaxCache[kind] = cvs; return cvs; }
+  c.clearRect(0, 0, w, h);
+  if (kind === 'clouds') {
+    const cloud = (x, y, scale, color) => {
+      c.fillStyle = color;
+      c.fillRect(x, y + 8 * scale, 42 * scale, 8 * scale);
+      c.fillRect(x + 8 * scale, y + 3 * scale, 24 * scale, 10 * scale);
+      c.fillRect(x + 16 * scale, y, 10 * scale, 8 * scale);
+    };
+    cloud(22, 26, 2, 'rgba(239,246,245,.38)'); cloud(286, 88, 1, 'rgba(231,241,239,.30)');
+    cloud(402, 22, 1, 'rgba(255,244,218,.30)'); cloud(156, 132, 1, 'rgba(226,238,236,.23)');
+  } else if (kind === 'mountains') {
+    c.fillStyle = '#263b4e'; c.beginPath(); c.moveTo(0, h); c.lineTo(0, 130); c.lineTo(78, 48); c.lineTo(130, 116); c.lineTo(218, 30); c.lineTo(306, 126); c.lineTo(394, 57); c.lineTo(512, 138); c.lineTo(512, h); c.closePath(); c.fill();
+    c.fillStyle = '#39536a'; c.beginPath(); c.moveTo(60, 132); c.lineTo(78, 48); c.lineTo(102, 105); c.lineTo(132, 116); c.lineTo(218, 30); c.lineTo(245, 94); c.lineTo(394, 57); c.lineTo(420, 92); c.lineTo(512, 140); c.lineTo(512, h); c.lineTo(0, h); c.closePath(); c.fill();
+    c.fillStyle = '#90a8b4'; [[72,55,18],[207,38,24],[385,65,18]].forEach(([x,y,w2]) => c.fillRect(x, y, w2, 5));
+  } else {
+    c.fillStyle = '#183426'; c.fillRect(0, 82, w, h - 82);
+    for (let x = 0; x < w; x += 18) {
+      const top = 25 + Math.floor(hash2(x, 41) * 42);
+      c.fillStyle = '#10291d'; c.fillRect(x + 7, top + 18, 4, h - top);
+      c.beginPath(); c.moveTo(x, top + 32); c.lineTo(x + 9, top); c.lineTo(x + 18, top + 32); c.closePath(); c.fill();
+      c.fillStyle = '#2b5335'; c.fillRect(x + 3, top + 24, 12, 5);
+    }
+  }
+  parallaxCache[kind] = cvs; return cvs;
+}
+function drawParallax(cx = 0, cy = 0) {
+  if (!ctx) return false;
+  const sky = ctx.createLinearGradient?.(0, 0, 0, CANVAS_H);
+  if (sky?.addColorStop) { sky.addColorStop(0, '#6989a3'); sky.addColorStop(0.55, '#9db7b5'); sky.addColorStop(1, '#d7c38f'); ctx.fillStyle = sky; }
+  else ctx.fillStyle = '#6989a3';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  const drawStrip = (kind, y, factor, drift = 0) => {
+    const strip = buildParallaxStrip(kind);
+    if (!strip?.width) return;
+    const offset = ((cx * factor + drift) % strip.width + strip.width) % strip.width;
+    for (let x = -offset; x < CANVAS_W; x += strip.width) ctx.drawImage(strip, Math.floor(x), Math.floor(y - cy * factor * 0.04));
+  };
+  drawStrip('clouds', 18, 0.10, prefersReducedMotion() ? 0 : now() / 40000 * 512);
+  drawStrip('mountains', CANVAS_H - 290, 0.25);
+  drawStrip('trees', CANVAS_H - 130, 0.50);
   return true;
 }
 function preloadSprites() {
@@ -2288,29 +2403,34 @@ function preloadSprites() {
   }
   ['grass', 'bush', 'water', 'road', 'floor', 'wall', 'tree', 'snow', 'ice', 'sand', 'lava', 'rock', 'void', 'voidrock',
    'cobble', 'plaza', 'roof', 'hwall', 'door', 'window', 'fence', 'hedge', 'flowers', 'fountain',
-   'townwall', 'gate', 'lamp', 'stall', 'bridge'].forEach(t => buildTile(t));
+   'townwall', 'gate', 'lamp', 'stall', 'bridge'].forEach(type => {
+     for (let phase = 0; phase < (TILE_PHASES[type] || 1); phase++) buildTile(type, phase);
+   });
+  ['clouds', 'mountains', 'trees'].forEach(buildParallaxStrip);
 }
 
 function render() {
   const p = G.player;
-  // camera
+  // camera — a narrow overscan reveals the parallax beyond authored map edges.
   const mapW = G.map.width * TS, mapH = G.map.height * TS;
-  G.cam.x = clamp(p.x - CANVAS_W / 2, 0, Math.max(0, mapW - CANVAS_W));
-  G.cam.y = clamp(p.y - CANVAS_H / 2, 0, Math.max(0, mapH - CANVAS_H));
+  const edgeReveal = TS * 2;
+  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal);
+  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal);
   const cx = G.cam.x, cy = G.cam.y;
 
   ctx.imageSmoothingEnabled = false;   // crisp pixel-art upscaling
-  ctx.fillStyle = THEME.palette.bg;
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  drawParallax(cx, cy);
 
   // tiles — pixel-art texture per legend type, flat-color fallback
   const col0 = Math.floor(cx / TS), row0 = Math.floor(cy / TS);
   for (let row = row0; row <= row0 + CANVAS_H / TS + 1; row++) {
     for (let col = col0; col <= col0 + CANVAS_W / TS + 1; col++) {
+      if (row < 0 || col < 0 || row >= G.map.height || col >= G.map.width) continue;
       const ch = tileChar(col, row), info = G.legend[ch];
       if (!info) continue;
       const x = col * TS - cx, y = row * TS - cy;
       if (!drawTile(info.type, x, y)) { ctx.fillStyle = info.color; ctx.fillRect(x, y, TS, TS); }
+      drawTileEdges(info.type, col, row, x, y);
       if (ch === 'P') { ctx.fillStyle = 'rgba(224,182,76,.30)'; ctx.fillRect(x, y, TS, TS); }
       else if (ch === 'B') { ctx.fillStyle = 'rgba(180,40,40,.30)'; ctx.fillRect(x, y, TS, TS); }
     }
@@ -4227,6 +4347,13 @@ function showSignIn() {
 }
 
 function showTitle() {
+  // Keep the procedural world backdrop visible beneath the DOM title card.
+  const titleCanvas = $('#game-canvas');
+  if (titleCanvas?.getContext) {
+    canvas = titleCanvas; ctx = canvas.getContext('2d');
+    Object.assign(canvas.style, { display: 'block', position: 'fixed', inset: '0', width: '100vw', height: '100vh', imageRendering: 'pixelated' });
+    drawParallax(0, 0);
+  }
   const profile = currentProfile();
   const cards = DESIGN.classes.map(c => {
     const cc = CLASS_COMBAT[c.id], url = pxDataURL('player', cc);
@@ -4615,9 +4742,9 @@ function syncRuntimeScale() {
   fx.style.transform = `translate(-50%,-50%) scale(${scale})`;
 }
 function startRuntime() {
-  canvas = $('#game-canvas'); canvas.style.display = 'block';
+  canvas = $('#game-canvas');
   canvas.classList.add('world-canvas');
-  canvas.style.cssText += ';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:pixelated';
+  Object.assign(canvas.style, { display: 'block', position: 'fixed', inset: 'auto', top: '50%', left: '50%', width: '', height: '', transform: 'translate(-50%,-50%)', imageRendering: 'pixelated' });
   ctx = canvas.getContext('2d');
   canvas.onclick = onCanvasClick;
   // overlay the FX layer exactly on top of the (centered) canvas so damage numbers land on target
@@ -4763,6 +4890,7 @@ function boot() {
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
   window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
-    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck };
+    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
+    TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 
 boot();
