@@ -179,6 +179,9 @@ for (const token of ['--text:#3a2b19', '--text-muted:#69583b', '--accent-alt:#5d
 for (const [label, color] of [['text', '#3a2b19'], ['muted', '#69583b'], ['accent', '#5d4016'], ['success', '#285a31']]) {
   assert.ok(contrast(color, '#e3d4ad') >= 4.5, `quest tracker ${label} ink contrast is below WCAG AA`);
 }
+assert.ok(THEME.css.includes('.bounty-level--danger'), 'over-level bounty warnings lost their dedicated danger style');
+assert.ok(THEME.css.includes('.btn--confirm'), 'two-step bounty revoke lost its visible confirmation state');
+assert.ok(contrast('#7b202c', '#f7edcf') >= 4.5, 'danger bounty level text contrast is below WCAG AA');
 assert.ok(!/letter-spacing:\s*-/.test(THEME.css), 'theme uses negative letter spacing');
 
 console.log('Art audit passed: sprites, maps, palette keys, HUD contracts, and contrast are valid.');

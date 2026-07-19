@@ -299,6 +299,12 @@ body .panel .difficulty-badge{color:#342718;border-color:var(--difficulty-color)
 body .panel .bounty-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
 body .panel[data-kind="quest"] .bounty-actions{margin-top:7px;padding-top:7px;border-top:1px solid rgba(91,62,28,.22)}
 body .panel .bounty-actions .btn{min-height:25px;padding:4px 8px;font-size:10px}
+body .bounty-level{display:inline-block;margin:3px 0;padding:2px 6px;border:1px solid #5e754e;background:rgba(72,105,63,.12);color:#31502f;font-size:10px;font-weight:800;line-height:1.25}
+body .bounty-level--danger{border-color:#9b3e45;background:rgba(139,43,51,.13);color:#7b202c}
+#hud .quest-tracker .bounty-level{margin:2px 0 0;padding:1px 4px;font-size:8px}
+body .panel .guild-board-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body .panel .guild-board-head .btn{min-height:25px;padding:4px 8px;font-size:10px}
+body .btn--confirm{border-color:#f0b45f;box-shadow:inset 0 0 0 1px #d78a54,0 0 0 2px rgba(135,40,44,.28),2px 2px 0 rgba(34,18,8,.56)}
 body .panel .sk-scroll{border-top-color:#9d7a3c}
 body .panel .sk-node{color:#392b1b;background:var(--paper-grain),linear-gradient(#f3e7c5,#d9c492);border-color:#8b6835;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.38),2px 2px 0 rgba(51,30,12,.35)}
