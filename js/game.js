@@ -2279,6 +2279,7 @@ function drawTile(type, x, y) {
 }
 function preloadSprites() {
   for (const [group, set] of Object.entries(PX)) for (const [name, rows] of Object.entries(set)) {
+    if (!rows) continue;                                        // malformed — selfCheck reports it cleanly, don't throw here
     if (Array.isArray(rows)) { matrixCanvas(group + ':' + name, rows); continue; }
     for (const [st, frames] of Object.entries(rows)) {
       if (!Array.isArray(frames)) continue;                     // malformed — selfCheck reports it cleanly, don't throw here
