@@ -42,7 +42,7 @@ python3 -m http.server 8777
 - **Safe death recovery**: death revives the hero in town at half HP/MP and explicitly disables Hunt, focused quest hunting, active quest/world navigation, targets, queued paths, and held movement. The story quest remains active, but the player must deliberately resume its route. Monster processing also stops on the lethal hit so the previous map cannot damage the revived hero again in the same frame.
 - **Boss mechanics**: bosses telegraph a red **ground slam** every ~8s (step out of the ring to dodge) and **enrage** below 35% HP (+40% ATK, faster swings, red aura). Leashing/respawn resets both.
 - **Death penalty**: dying costs 10% of carried zeny and revives you at half HP/MP in town.
-- **Level-phased main story**: the **24-quest arc** is divided into five visible chapters matching the world bands — Woods 1–15, Ruins 16–30, Tundra 31–45, Caldera 46–60, Rift 61–80. Every quest has a recommended/unlock Base Level; if the next beat is early, the Journal holds it as **Next Chapter**, shows the required level, and starts it automatically after hunting or bounty XP reaches the gate. The five-phase roadmap remains visible in the Quest Journal.
+- **Level-phased main story**: the **35-quest playthrough** (41 declarations including seven class-trial alternatives) is divided into five visible chapters matching the world bands — Woods 1–15, Ruins 16–30, Tundra 31–45, Caldera 46–60, Rift 61–80. Every quest has a recommended/unlock Base Level; if the next beat is early, the Journal holds it as **Next Chapter**, shows the required level, and starts it automatically after hunting or bounty XP reaches the gate. The five-phase roadmap remains visible in the Quest Journal.
 - **Quest objectives beyond kills**: `kill`, `collect` (items are consumed on turn-in), `explore` (set foot in a map), `talk` (speak with an NPC). The main story mixes all four types (pelts for winter, reporting victories, gathering frost shards/ember ash/star iron between battles). Guild bounties roll **deliveries** 40% of the time (pays ×1.3, Turn-in button in the Quest panel).
 - **Up to 3 guild bounties at once**: accept multiple; one kill advances every matching bounty; the HUD tracker and the Quest window (even while open) update live as progress lands. Every bounty shows **where to go** — 📍 the target's home zone for culls, and 📍 *which monster drops it · where* for deliveries.
 - **Bounty regions unlock by CONQUEST**: the guild only posts a zone's bounties after you slay the **previous zone's guardian** (woods are always posted) — merely walking into a new map unlocks nothing. Each guardian kill refreshes the board and the guild panel names the next gate ("Slay the Elderwood Treant to unlock Sunken Ruins bounties"). Legacy saves migrate (zones you'd reached stay unlocked).
@@ -65,19 +65,20 @@ python3 -m http.server 8777
 
 ## World & content (expanded)
 - **Base level cap 80 / Job level cap 50**, with endless free-roam & farming after the story — slaying the finale boss doesn't end the game.
-- **5 classes**: Reborn Blade (tank), Drifter (dps), Codeweaver (mage), Far Shot (archer), and **Lightbringer** (paladin — melee + a self-**heal** skill).
+- **7 classes**: Reborn Blade (tank), Drifter (dps), Codeweaver (mage), Far Shot (archer), **Lightbringer** (paladin — melee + self-heal), **Iron Fist** (melee combo), and **Stormcaller** (ranged caster).
 - **6 biomes**: Town → Whispering Woods → Sunken Ruins → **Frostpeak Tundra** (snow/ice) → **Dragon Caldera** (sand/lava) → **Astral Rift** (void starfield), each with pixel tiles.
 - **Regional history**: all six maps carry Chronicle records for their province, epithet, landmark, and place in Aetheria's failed summoning age; first arrival updates the Chronicle and enriches the zone-introduction banner.
-- **14 monsters** incl. three bosses (Ruin Golem, **Flame Dragon**, **The Nullking**), plus Frost Wolf, Ice Wraith, Sand Stalker, Ember Imp, and the endgame Void Wisp / Star Reaver / Astral Knight.
+- **23 animated monsters** incl. six guardians/bosses (Elderwood Treant, Frost Revenant, Gilded Ravager, Ruin Golem, **Flame Dragon**, **The Nullking**), plus Frost Wolf, Ice Wraith, Sand Stalker, Ember Imp, and the endgame Void Wisp / Star Reaver / Astral Knight.
 - **Expanded gear**: Mythril/Frost/Dawn/**Void/Astral** weapons, Mythril Plate, Seraph Ward & **Astral Plate** armor, Greater Potion, Elixir & **Celestial Draught** — all roll the full rarity/affix range. Hands/feet/cloak have mid & late upgrades too (Mythril Gauntlets, Drakescale Boots, Aurora Cloak → Titan Grips, Astral Greaves, Voidweave Cloak), dropped in their bands and sold rank-gated.
-- **24-quest, five-phase arc** chaining from the awakening through each region guardian to the Lv80 Nullking, then farm freely.
+- **35-quest, five-phase playthrough** chaining from the awakening and one of seven class trials through each region guardian to the Lv80 Nullking, then farm freely.
 - **Class calling trials**: after the guild introduction the story forks once per class (`nextQuestByClass` on the hub quest) — each of the 7 classes gets its own flavored trial (the tank holds the road, the mage gathers debugging paste, the archer thins the treeline…) before every branch merges back at *Prove Yourself*. `selfCheck()` walks the chain once per class and requires full coverage with no cycles.
 - **Rebirth (NG+)**: at Base Lv 80 the Character panel offers **Rebirth** — level/job/skills/stat points reset to 1, while gear, zeny, storage, guild rank, and the world all survive. Each rebirth permanently grants **+5 all stats and +10% max HP/MP**, and the world bites back: monsters gain **+15% HP/ATK/DEF** and pay **+10% EXP** per rebirth (knobs: `tuning.rebirth*`). Stacks without limit.
 - **Roaming rare boss**: every ~20 minutes the **Gilded Ravager** (Lv45 ☠) is announced prowling a random field map — full slam/enrage boss mechanics, a zeny jackpot, and a guaranteed Blessed Ore among its trophy drops. It stays put until slain and never counts as zone conquest (knob: `tuning.rareBossEveryMs`).
 
 ## Graphics & combat feel
-- **16-bit pixel art** (`js/pixelart.js`): sprites are char-matrices rasterized to offscreen canvases and upscaled nearest-neighbor; tiles (grass/water/tree/road/wall/floor) are procedural pixel textures. Crisp, no blur.
-- **2.5D presentation**: ground shadows, **depth-sorted** entities (nearer sprites overlap farther ones), and a 2-frame **walk animation** (with left/right flip + bob) while moving.
+- **Layered 16-bit art pipeline**: players and NPCs use 4-direction LPC sheets (`assets/lpc/`, with pixel-matrix fallbacks); every monster has two hand-authored-style frames for idle, walk, and attack in `js/pixelart.js`. Everything renders nearest-neighbour: crisp, no blur.
+- **Living world presentation**: animated water/grass/tree tiles, neighbour-aware shore and terrain seams, richer outlined town/prop tiles, cached cloud/mountain/treeline parallax, ground shadows, and **depth-sorted** entities.
+- **Wood-and-parchment UI kit**: HUD bars, panels, hotbar, minimap, Quest tracker, dialogue, toasts, and tooltips share the same chunky brass-framed visual language, including mobile layouts.
 - **Monster name plates**: shown above every monster, colour-coded — white (normal) · orange (strong) · **purple** (elite) · **red ☠** (boss).
 - **Item icons**: every weapon/armor/potion/material has a pixel icon shown in the inventory, shop, equip lines, and hotbar (`PX.item` in `js/pixelart.js`, mapped by `ITEM_ICON`).
 - **Admin tools**: name your hero **`admin`** on the title screen to get a ⚙ Admin panel — god mode, +levels/zeny/points, spawn legendary gear, learn-all, force class advance, spawn/kill monsters, and map warps.
@@ -96,14 +97,15 @@ Each specialist agent produced one data module; `js/game.js` is the engine that 
 
 | Role | File | Owns |
 |------|------|------|
-| Game Director / System Designer | `js/design.js` | concept, 5 classes, stat formulas, xp curve, **`tuning` balance knobs** |
-| Combat Designer | `js/combat.js` | 44 active skills across 5 classes, status effects, combat rules |
+| Game Director / System Designer | `js/design.js` | concept, 7 classes, stat formulas, xp curve, **`tuning` balance knobs** |
+| Combat Designer | `js/combat.js` | 75 active skills across 7 classes, status effects, combat rules |
 | Map Designer | `js/maps.js` | 6 tile biomes, spawns, portals |
-| Content Designer | `js/content.js` | 14 monsters, 40+ items, NPCs, 24-quest phased arc, story |
+| Content Designer | `js/content.js` | 23 monsters, 63 items, 10 NPCs, 35-quest playthrough, story |
 | Music Director / Sound Engineer | `js/audio.js` | Web Audio chiptune themes + SFX (no asset files) |
 | UX/UI Designer | `js/theme.js` | parchment/emerald/gold design system + full CSS |
 | — progression — | `js/progression.js` | stat points, skill trees, class tiers |
-| — pixel art — | `js/pixelart.js` | 16-bit palette + pixel-matrix sprites (class/NPC/monster) |
+| — pixel art — | `js/pixelart.js` | palette + class/NPC fallbacks + six-frame monster sets |
+| — LPC art — | `js/lpc.js`, `assets/lpc/` | 4-direction player/NPC sheet mappings + attribution |
 | — loot — | `js/loot.js` | equipment rarity tiers + affix pool |
 | — menu art — | `js/sprites.js` | SVG class portraits for the title screen |
 | — engine — | `js/game.js` | loop, movement, combat, effects, quests, HUD, panels, shops, progression + loot wiring |
@@ -126,7 +128,8 @@ no sprite, a missing item icon, a bad quest difficulty, a broken formula. So "di
 it up right?" is answered the moment you reload.
 
 Recipes (each is one data edit + whatever the self-check demands):
-- **Monster** → add to `CONTENT.monsters` (id, level, hp/atk/def/exp, drops) · add a sprite to `PX.monster` (or it falls back to `spriteColor`) · spawn it in a `MAPS` zone · icons for its drops in `ITEM_ICON`.
+- **Monster** → add to `CONTENT.monsters` (id, level, hp/atk/def/exp, drops) · add `PX.monster[id] = { idle:[f0,f1], walk:[f0,f1], attack:[f0,f1] }` (same dimensions per state, ≤32×32, hard outline) · spawn it in a `MAPS` zone · icons for its drops in `ITEM_ICON`.
+- **Player class / NPC art** → add the credited LPC PNG under `assets/lpc/` · map it in `LPC.player` or `LPC.npc` in `js/lpc.js` · keep a matching `PX.player`/`PX.npc` matrix fallback for headless tests and slow image loads.
 - **Item / gear** → add to `CONTENT.items` (weapons/armor/accessory auto-roll rarity+affixes) · map an icon in `ITEM_ICON` · optional fields: `slot` (head/hands/feet/cloak), `rankReq` (guild-rank gate + featured-rotation pool), `buff: {stat, mult, durationMs}` (consumable buff), `teleport: <mapId>` (scroll).
 - **Quest** objectives → `{ type: 'kill'|'collect'|'explore'|'talk', target, count }` — collect consumes on turn-in; explore target is a mapId; talk target is a map NPC id. selfCheck validates all four.
 - **Skill** → add to `COMBAT.skills` (classId, type, power, cost, cooldown) · add a `PROGRESSION.skillTree` node (`maxLevel`, `reqLevel`, optional `reqSkill`/`reqTier`). The tree UI **auto-positions** it by dependency depth — no coordinates.
