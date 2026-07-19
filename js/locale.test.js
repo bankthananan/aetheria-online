@@ -156,6 +156,9 @@ for (const key of [
   'Welcome back, {name} — Lv {level} {class}.',
   'Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.',
   'Auto-hunt target limit: Lv {level}',
+  'Revoke', 'Revoke bounty',
+  'Revoke this bounty? Progress will be lost, but delivery items stay in your bag.',
+  'Guild bounty revoked: {name}. No rewards were granted.',
 ]) assert.notEqual(T(key, 'ui'), key, `Missing translation for runtime guidance: ${key}`);
 
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

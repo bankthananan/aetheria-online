@@ -174,6 +174,23 @@ A.activateTaskGuide('story', 'q_briar');
 assert.equal(A.G.huntTargetId, 'thornback_boar', 'deep-Woods quest focuses Thornback Boars');
 assert.equal(A.G.autoFarm, true, 'deep-Woods quest starts focused hunting on arrival');
 
+// Revoking an accepted guild bounty frees its slot, clears matching guidance,
+// grants nothing, and never consumes delivery materials or other inventory.
+const revokedBounty = { id: 'guild-revoke-test', kind: 'kill', target: 'slime', targetName: 'Slime', count: 8,
+  progress: 5, difficulty: 'easy', pts: 3, reward: { exp: 80, zeny: 120 } };
+A.G.activeGuilds = [revokedBounty];
+A.G.taskGuide = { source: 'guild', taskId: revokedBounty.id, mode: 'hunt', monsterId: 'slime', mapId: 'whispering_woods', resumeAutoFarm: false };
+A.G.autoFarm = true; A.G.huntTargetId = 'slime';
+const zenyBeforeRevoke = A.G.player.zeny;
+const inventoryBeforeRevoke = JSON.stringify(A.G.player.inventory);
+assert.equal(A.revokeGuild(revokedBounty.id), true, 'accepted guild bounty can be revoked');
+assert.equal(A.G.activeGuilds.length, 0, 'revoking frees the accepted bounty slot');
+assert.equal(A.G.taskGuide, null, 'revoking the focused bounty clears its guidance');
+assert.equal(A.G.autoFarm, false, 'revoking the focused bounty stops its Hunt mode');
+assert.equal(A.G.player.zeny, zenyBeforeRevoke, 'revoking grants no bounty reward');
+assert.equal(JSON.stringify(A.G.player.inventory), inventoryBeforeRevoke, 'revoking preserves inventory and delivery items');
+assert.equal(A.revokeGuild(revokedBounty.id), false, 'revoking an absent bounty is a safe no-op');
+
 setLanguage('th');
 for (const [key, category] of [
   ['Supplies for the Road', 'quests'], ['A Name on the Board', 'quests'],

@@ -35,7 +35,7 @@ const DIFFICULTY = {
   hard:   { name: 'Hard',   color: '#e8963c', mult: 1.4, band: [13, 18] },
   elite:  { name: 'Elite',  color: '#e0574b', mult: 2.0, band: [18, 99] },
 };
-const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:${c.color}22;color:${c.color};border:1px solid ${c.color}66">${T(c.name, 'ui')}</span>`; };
+const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span class="difficulty-badge" style="--difficulty-color:${c.color};display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;border:1px solid var(--difficulty-color)">${T(c.name, 'ui')}</span>`; };
 // Adventurer's Guild rank ladder. Bounties award points by difficulty; ranking up
 // unlocks harder bounties (hard @ D-, elite @ B-), multiplies rewards, sweetens
 // loot rarity, and opens rank-gated shop stock (items with `rankReq`).
@@ -1991,6 +1991,19 @@ function acceptGuild(id) {
   toast(msg, 'good');
   updateQuestTracker();
 }
+function revokeGuild(id) {
+  const idx = G.activeGuilds.findIndex(g => g.id === id);
+  if (idx < 0) return false;
+  const [g] = G.activeGuilds.splice(idx, 1);
+  if (G.taskGuide?.source === 'guild' && G.taskGuide.taskId === g.id) finishTaskGuide();
+  const targetName = T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters');
+  const msg = T('Guild bounty revoked: {name}. No rewards were granted.', 'ui').replace('{name}', targetName);
+  toast(msg, 'sys');
+  logMsg(msg, 'sys');
+  updateQuestTracker();
+  saveGame();
+  return true;
+}
 function guildKill(monId) {
   // every accepted kill-bounty on this monster advances together; payout waits for the guild hall
   for (const g of G.activeGuilds) {
@@ -3844,7 +3857,7 @@ function panelBody(id) {
         : `<div class="q-card"><i>${T("Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.", 'ui')}</i></div>`;
     if (G.advance) {
       const a = G.advance, o = a.def.objective;
-      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
+      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:var(--accent-alt)"><b style="color:var(--accent-alt)">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
         <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small></div>` + story;
     }
     const bStatus = g => {
@@ -3856,7 +3869,8 @@ function panelBody(id) {
       ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
           <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
           <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>
-          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small></div>`).join('')
+          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small>
+          <div class="bounty-actions"><button class="btn btn--danger" data-guildrevoke="${g.id}" title="${T('Revoke bounty', 'ui')}">✕ ${T('Revoke', 'ui')}</button></div></div>`).join('')
       : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
     return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
       <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
@@ -3869,8 +3883,8 @@ function panelBody(id) {
         const ready = g.kind === 'deliver' ? itemQty(g.target) >= g.count : !!g.done;
         const prog = g.kind === 'deliver' ? (currentLang === 'th' ? `มีแล้ว ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `have ${Math.min(itemQty(g.target), g.count)}/${g.count}`) : `${g.progress}/${g.count}`;
         return `<div class="q-card" style="border-color:${ready ? 'var(--success)' : 'var(--panel-border)'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:#e6bd54">${g.pts || 0} pts</b></small></span>
-          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button></span></div></div>`;
+          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:var(--accent-alt)">${g.pts || 0} pts</b></small></span>
+          <span class="bounty-actions"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button><button class="btn btn--danger" data-guildrevoke="${g.id}" title="${T('Revoke bounty', 'ui')}">✕ ${T('Revoke', 'ui')}</button></span></div></div>`;
       }).join('') : '';
     let lockHint = '';
     for (let i = 1; i < ZONE_ORDER.length; i++) if (!G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) {
@@ -3885,7 +3899,7 @@ function panelBody(id) {
         : (slotsFree ? `${slotsFree} bounty slot${slotsFree > 1 ? 's' : ''} free — accept below:` : 'All bounty slots in use — finish one first.')
     }</div>`;
     const board = (G.guildBoard || []).map(bq => `<div class="q-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:#e6bd54">${bq.pts} guild pts</b></small></span>
+      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:var(--accent-alt)">${bq.pts} guild pts</b></small></span>
       <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button></div></div>`).join('');
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
     const unlocks = ri < GUILD_HARD_AT ? (currentLang === 'th' ? `เควสต์ระดับยากเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_HARD_AT], 'ui')}` : `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}`) : ri < GUILD_ELITE_AT ? (currentLang === 'th' ? `เควสต์ระดับอีลิทเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_ELITE_AT], 'ui')}` : `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}`) : T('all bounty tiers unlocked', 'ui');
@@ -4050,6 +4064,11 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-passive]').forEach(b => b.onclick = () => { learnPassive(b.dataset.passive); refreshPanel('skills'); });
   el.querySelectorAll('[data-guild]').forEach(b => b.onclick = () => { acceptGuild(b.dataset.guild); refreshPanel(id); });
   el.querySelectorAll('[data-guildclaim]').forEach(b => b.onclick = () => { claimGuild(b.dataset.guildclaim); refreshPanel(id); });
+  el.querySelectorAll('[data-guildrevoke]').forEach(b => b.onclick = event => {
+    event.stopPropagation();
+    const prompt = T('Revoke this bounty? Progress will be lost, but delivery items stay in your bag.', 'ui');
+    if (typeof confirm !== 'function' || confirm(prompt)) revokeGuild(b.dataset.guildrevoke);
+  });
   el.querySelectorAll('[data-assign-item]').forEach(b => b.onclick = () => assignItemHotbar(b.dataset.assignItem));
   el.querySelectorAll('[data-assign-skill]').forEach(b => b.onclick = () => assignSkillHotbar(b.dataset.assignSkill));
   el.querySelectorAll('[data-rebind]').forEach(b => b.onclick = () => startHotkeyRebind(+b.dataset.rebind));
@@ -4889,7 +4908,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 

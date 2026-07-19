@@ -13,6 +13,8 @@ export const THEME = {
     xpGold: "#c49c43",
     danger: "#c65356",
     success: "#6f9669",
+    questPaper: "#f2e7c8",
+    questInk: "#302619",
   },
 
   fonts: {
@@ -52,6 +54,7 @@ export const THEME = {
   --wood-deep:#180d07;--wood:#342313;--wood-mid:#51351d;--wood-light:#74502d;
   --gold-deep:#74501d;--gold:#d6b45a;--gold-bright:#f2d88a;
   --parchment:#e3d4ad;--parchment-light:#f2e7c8;--parchment-shadow:#b7a273;--parchment-ink:#302619;
+  --quest-paper:#f2e7c8;--quest-ink:#302619;--quest-muted:#66583f;
   --wood-grain:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 5px);
   --paper-grain:repeating-linear-gradient(0deg,rgba(72,48,22,.035) 0,rgba(72,48,22,.035) 1px,transparent 1px,transparent 4px);
   --font-ui:ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
@@ -72,7 +75,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 /* Compact command bars */
 .bar{position:relative;height:14px;border:1px solid #d4dbe2;border-radius:1px;
   background:#080d14;overflow:hidden;box-shadow:inset 0 0 0 1px #344254,2px 2px 0 rgba(0,0,0,.5)}
-.bar > .fill{height:100%;width:50%;border-radius:0;transition:width .2s steps(8,end);background:var(--accent)}
+.bar > .fill{height:100%;width:0;border-radius:0;transition:width .2s steps(8,end);background:var(--accent)}
 .bar > .label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   padding:0 4px;font-size:9px;font-weight:700;line-height:1;white-space:nowrap;text-shadow:1px 1px 0 #000}
 .hp-bar .fill{background:var(--hp)}
@@ -233,6 +236,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #hud .minimap #minimap-name{right:4px!important;bottom:3px!important;left:4px!important;padding:2px 4px;background:rgba(31,17,8,.86);
   color:#f5e7bb!important;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:1px 1px #000}
 #hud .quest-tracker{padding:9px 10px;color:#3a2b19;background:var(--paper-grain),linear-gradient(135deg,var(--parchment-light),var(--parchment));
+  --text:#3a2b19;--text-muted:#69583b;--accent-alt:#5d4016;--success:#285a31;
   border:3px solid var(--gold);outline:2px solid #29170c;box-shadow:inset 0 0 0 1px var(--parchment-shadow),4px 4px 0 rgba(9,5,2,.65);
   font-size:10px;line-height:1.48;scrollbar-color:var(--wood-light) var(--parchment-shadow)}
 #hud .quest-tracker b,#hud .quest-tracker strong{color:#3d2814}
@@ -277,6 +281,24 @@ body .panel .bag-tab{border:2px solid #92733c;background:rgba(255,248,220,.35);c
 body .panel .bag-tab:hover{border-color:#6e4b1d;color:#382812}
 body .panel .bag-tab.on{background:linear-gradient(#7b5928,#5d3e18);border-color:#3d270e;color:#fff3c0;box-shadow:inset 0 0 0 1px #c5a057}
 body .panel .q-card{border:2px solid #92733c;background:var(--paper-grain),#eee0bb;box-shadow:2px 2px 0 rgba(80,51,21,.22)}
+body .panel[data-kind="quest"] .panel__body,body .panel[data-kind="guild"] .panel__body{color:var(--quest-ink);background:var(--paper-grain),var(--quest-paper)}
+body .panel[data-kind="quest"] .q-card,body .panel[data-kind="guild"] .q-card{color:var(--quest-ink);background:var(--paper-grain),#f7edcf;border-color:#846837}
+body .panel[data-kind="quest"] .q-card small,body .panel[data-kind="guild"] .q-card small{color:var(--quest-muted)}
+body .panel[data-kind="quest"] .task-card:hover,body .panel[data-kind="quest"] .task-card.active{background:var(--paper-grain),#fff3d4;border-color:#6b4b1f!important}
+body .panel[data-kind="quest"] .story-phase{background:var(--paper-grain),#e5d5ad;border-color:#8a7044;border-top-color:var(--phase-color);box-shadow:1px 1px 0 rgba(76,48,20,.28)}
+body .panel[data-kind="quest"] .story-phase.cleared{background:var(--paper-grain),#dce3c8;border-color:#6d815b;border-top-color:var(--phase-color)}
+body .panel[data-kind="quest"] .story-phase.active{background:var(--paper-grain),#fff0c9;box-shadow:inset 0 0 0 1px #9a7940,1px 1px 0 rgba(76,48,20,.28)}
+body .panel[data-kind="quest"] .story-phase.locked{background:var(--paper-grain),#d4c6a5;filter:saturate(.55);opacity:.78}
+body .panel[data-kind="quest"] .story-phase__copy small{color:#66583f}
+body .panel[data-kind="quest"] .story-phase__copy b{color:#302619;text-shadow:none}
+body .panel[data-kind="quest"] .story-phase__copy em{color:#5d421c}
+body .panel[data-kind="quest"] .story-phase__state{color:#4d391e}
+body .panel[data-kind="quest"] .story-phase__sigil{background:#3a2918;color:#fff0c0;border-color:var(--phase-color)}
+body .panel[data-kind="quest"] .story-phase-badge{background:#f8edcf;color:#3c2c18;border-color:#8b7040;border-left-color:var(--phase-color);text-shadow:none}
+body .panel .difficulty-badge{color:#342718;border-color:var(--difficulty-color);background:#f0e2c2}
+body .panel .bounty-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+body .panel[data-kind="quest"] .bounty-actions{margin-top:7px;padding-top:7px;border-top:1px solid rgba(91,62,28,.22)}
+body .panel .bounty-actions .btn{min-height:25px;padding:4px 8px;font-size:10px}
 body .panel .sk-scroll{border-top-color:#9d7a3c}
 body .panel .sk-node{color:#392b1b;background:var(--paper-grain),linear-gradient(#f3e7c5,#d9c492);border-color:#8b6835;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.38),2px 2px 0 rgba(51,30,12,.35)}
@@ -290,7 +312,12 @@ body .btn{min-height:29px;padding:6px 11px;border:2px solid var(--gold-deep);bac
 body .btn:hover{background:var(--wood-grain),linear-gradient(#75502c,#472a15);border-color:var(--gold-bright);color:#fff9e0}
 body .btn--ghost{background:var(--wood-grain),linear-gradient(#4d3520,#27180d);border-color:#a8874d;color:#f3e5bb}
 body .btn--ghost:hover{background:var(--wood-grain),linear-gradient(#684725,#392211)}
+body .btn--danger{background:var(--wood-grain),linear-gradient(#8d3d43,#542128);border-color:#a85255;color:#fff1df;box-shadow:inset 0 0 0 1px #b76568,2px 2px 0 rgba(34,18,8,.56)}
+body .btn--danger:hover{background:var(--wood-grain),linear-gradient(#a84a4e,#6e292f);border-color:#d8847e;color:#fff}
 body .btn:disabled{opacity:.48;filter:grayscale(.35);box-shadow:none}
+
+/* Numeric resource labels and fills must describe the same instant. */
+#hud .hp-bar .fill,#hud .mp-bar .fill{transition:none!important}
 
 body .dialogue{max-height:calc(100vh - 98px);overflow:auto;padding:12px 14px;background:var(--wood-grain),linear-gradient(135deg,var(--wood-mid),var(--wood-deep));
   border:4px solid var(--gold);outline:3px solid #190d06;box-shadow:inset 0 0 0 2px #76502c,var(--panel-shadow)}
@@ -358,6 +385,8 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
   body .panel{min-width:0;width:calc(100vw - 16px);max-width:calc(100vw - 16px);max-height:84vh;border-width:3px;outline-width:2px}
   body .panel .panel__head{min-height:36px;padding:6px 8px 6px 10px;font-size:15px}
   body .panel .panel__body{padding:9px}
+  body .panel .q-card>div{align-items:flex-start!important;flex-direction:column}
+  body .panel .bounty-actions{width:100%;justify-content:flex-start}
   body .dialogue{bottom:72px;width:calc(100vw - 16px);max-height:calc(100vh - 86px);padding:8px;border-width:3px;outline-width:2px}
   body .dialogue .dialogue__text{font-size:13px;min-height:42px;padding:9px}
   body .toast{max-width:calc(100vw - 16px);padding:7px 10px}

@@ -159,15 +159,26 @@ function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-for (const key of ['bg', 'panelBg', 'panelBorder', 'textPrimary', 'textMuted', 'accent', 'accentAlt', 'hpRed', 'mpBlue']) {
+for (const key of ['bg', 'panelBg', 'panelBorder', 'textPrimary', 'textMuted', 'accent', 'accentAlt', 'hpRed', 'mpBlue', 'questPaper', 'questInk']) {
   assert.ok(HEX.test(THEME.palette[key]), `theme palette is missing ${key}`);
 }
 assert.ok(contrast(THEME.palette.textPrimary, THEME.palette.panelBg) >= 4.5, 'panel text contrast is below WCAG AA');
+assert.ok(contrast(THEME.palette.questInk, THEME.palette.questPaper) >= 7, 'quest parchment text contrast is below WCAG AAA');
 assert.ok(THEME.css.includes('.hud') && THEME.css.includes('.panel') && THEME.css.includes('.hotbar'), 'theme lost core HUD selectors');
+assert.ok(THEME.css.includes('.panel[data-kind="quest"] .panel__body'), 'quest journal lost its dedicated readable surface');
+assert.ok(THEME.css.includes('#hud .hp-bar .fill,#hud .mp-bar .fill{transition:none!important}'), 'numeric HP/MP bars must not visually lag their labels');
 const trackerCss = THEME.css.match(/#hud \.quest-tracker\{([^}]*)\}/)?.[1] || '';
 assert.match(trackerCss, /overflow-y:\s*auto/, 'HUD quest tracker must scroll when quests exceed its max height');
 assert.match(trackerCss, /overscroll-behavior:\s*contain/, 'HUD quest tracker must not pass wheel scrolling to the game page');
 assert.match(trackerCss, /touch-action:\s*pan-y/, 'HUD quest tracker must support touch scrolling');
+const trackerBlocks = [...THEME.css.matchAll(/#hud \.quest-tracker\{([^}]*)\}/g)].map(match => match[1]);
+const parchmentTrackerCss = trackerBlocks.find(block => block.includes('var(--paper-grain)')) || '';
+for (const token of ['--text:#3a2b19', '--text-muted:#69583b', '--accent-alt:#5d4016', '--success:#285a31']) {
+  assert.ok(parchmentTrackerCss.includes(token), `parchment quest tracker is missing readable local color ${token}`);
+}
+for (const [label, color] of [['text', '#3a2b19'], ['muted', '#69583b'], ['accent', '#5d4016'], ['success', '#285a31']]) {
+  assert.ok(contrast(color, '#e3d4ad') >= 4.5, `quest tracker ${label} ink contrast is below WCAG AA`);
+}
 assert.ok(!/letter-spacing:\s*-/.test(THEME.css), 'theme uses negative letter spacing');
 
 console.log('Art audit passed: sprites, maps, palette keys, HUD contracts, and contrast are valid.');
