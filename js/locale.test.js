@@ -191,6 +191,20 @@ for (const key of [
   'CLASS SKILL MANUAL', 'FIRST JOB', 'SECOND JOB', 'ADVANCED JOB',
   'ACTIVE SKILLS', 'PASSIVE MASTERIES', 'RESET YOUR BUILD', 'COMBAT COMBO GUIDE',
   'Soul Ledger and Memory Prism are sold by Marla. Reset items preserve your level, gear, and rebirth bonuses.',
+  'Automation Console', '⚙ Auto', 'Automation ready', 'Track a task or enable Hunt.', 'Open Automation Console',
+  'Tracking route', 'Tracking objective', 'Focused hunt', 'Searching', 'Finding next encounter',
+  'Finding the next safe encounter.', 'Encounter found', 'Unsafe encounter', 'Waiting for encounter', 'Automation stopped',
+  'Auto Heal', 'Auto Potion', 'Auto Mana', 'Auto Skill', 'Basic attack', 'nearby monsters',
+  '{name} begins at Lv {level}; safe limit is Lv {cap}.', '{name} respawns in about {seconds}s.',
+  'No reachable {name} found on this map.', 'Skipped unreachable {name}.',
+  'Death canceled Hunt mode and active quest navigation.', 'Free Hunt', 'LIVE DECISION', 'CURRENT OBJECTIVE',
+  'SAFE HUNT LIMIT', 'Combat Decisions', 'Tracking owns travel and target choice. Your clicks always take priority.',
+  'Smart Skills', 'Uses setup, detonators, finishers, buffs, and mana recovery.',
+  'Uses learned healing skills before emergency potions.', 'Auto Potions',
+  'Chooses the smallest useful HP or MP recovery item.', 'Recovery Profile',
+  'Choose how early automation recovers. Potion cooldown is always respected.', 'Cautious', 'Balanced', 'Aggressive',
+  'Heal skill {heal}% · HP potion {hp}% · MP potion {mp}%', 'ON', 'OFF',
+  'Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.',
 ]) assert.notEqual(T(key, 'ui'), key, `Missing translation for runtime guidance: ${key}`);
 
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

@@ -25,7 +25,7 @@
   <script type="module" src="./js/game.js"></script>
   <script>
     // Auto-driver: click through class-select -> start -> cutscene, set up the woods,
-    // exercise progression, then optionally open a panel (?panel=char|skills|world) for the screenshot.
+    // exercise progression, then optionally open a panel (?panel=char|skills|world|automation) for the screenshot.
     const params = new URLSearchParams(location.search);
     const wantPanel = params.get('panel');
     const wantClass = params.get('class');   // e.g. codeweaver, far_shot — to screenshot each sprite
@@ -80,6 +80,12 @@
               A.recompute(A.G.player); A.updateHud();
             }
             if (params.get('farm')) A.toggleFarm();
+            if (params.get('automation')) {         // stable decision state for Automation Console/HUD review
+              A.G.autoFarm = true;
+              A.G.autoConfig = { skills: true, heal: true, potions: true, profile: 'balanced' };
+              A.setAutoState('recover', 'Auto Heal', 'Sanctuary');
+              A.updateHud();
+            }
             if (params.get('night')) A.G.dayPhaseOverride = +params.get('night') === 1 ? 0.7 : +params.get('night');   // force night (or any 0..1 phase)
             if (params.get('shoptab')) A.G._shopTab = params.get('shoptab');   // e.g. panel=shop&shoptab=storage
             if (params.get('stash')) { A.addItem('iron_sword', 1, 6); A.addItem('greater_potion', 5); A.depositItem(A.G.player.inventory.length - 1); }

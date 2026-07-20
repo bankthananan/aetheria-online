@@ -137,6 +137,11 @@ export const DESIGN = {
     rebirthGearHpCap: 4.5,      // ...capped and faded to zero as the hero approaches Base Lv 80
     rebirthMonsterExp: 0.10,   // ...and pay +this much more EXP per rebirth to match
     potionCdMs: 1500,          // shared restore-potion cooldown — spam must not out-heal a fight you shouldn't win
+    automationProfiles: {      // player-selectable recovery risk; logic remains in game.js
+      cautious:   { healSkillAt: 0.70, hpPotionAt: 0.56, mpPotionAt: 0.36 },
+      balanced:   { healSkillAt: 0.58, hpPotionAt: 0.42, mpPotionAt: 0.25 },
+      aggressive: { healSkillAt: 0.44, hpPotionAt: 0.30, mpPotionAt: 0.16 },
+    },
     agiAtkSpeed: 0.004,        // AGI: each point shaves this fraction off attack delay (cap 45%)
     agiMoveSpeed: 0.0025,      // AGI: each point adds this fraction of walk speed (cap 50%)
     intRange: 0.02,            // INT: each point adds this many tiles of reach to ranged/magic

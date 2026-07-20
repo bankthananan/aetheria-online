@@ -403,6 +403,9 @@ function selfCheck() {
   for (const [mid, m] of Object.entries(MAPS)) m.tiles.forEach((row, y) => { if (row.length !== m.width) errs.push(`map ${mid} row ${y} width ${row.length} != ${m.width}`); });
   for (const it of CONTENT.items) if (it.buff && !(['atk', 'def'].includes(it.buff.stat) && Number.isFinite(it.buff.mult) && it.buff.durationMs > 0)) errs.push(`item ${it.id} bad buff spec`);
   for (const it of CONTENT.items) if (it.teleport && !MAPS[it.teleport]) errs.push(`item ${it.id} teleport → unknown map ${it.teleport}`);
+  for (const [id, profile] of Object.entries(TUNING.automationProfiles || {})) {
+    if (!(profile.healSkillAt > profile.hpPotionAt && profile.hpPotionAt > profile.mpPotionAt && profile.mpPotionAt > 0 && profile.healSkillAt < 1)) errs.push(`automation profile ${id} thresholds invalid`);
+  }
   if (errs.length) { console.error('[selfcheck] FAILED:\n' + errs.join('\n')); throw new Error('data self-check failed'); }
   console.log('[selfcheck] OK — classes/skills/maps/drops/quests/formulas all resolve');
 }
@@ -434,6 +437,8 @@ const G = {
   autoFarm: false,      // auto-target & attack nearby non-boss monsters
   huntTargetId: null,   // focused task hunting ignores every other monster type
   taskGuide: null,      // active tracker navigation across maps / to NPCs
+  autoConfig: { skills: true, heal: true, potions: true, profile: 'balanced' },
+  autoState: { phase: 'idle', label: 'Automation ready', detail: 'Track a task or enable Hunt.' },
   rareBossMapId: null,  // map currently prowled by the roaming rare boss (null = none)
   nextRareBossAt: 0,    // ponytail: not persisted — the hunt simply restarts each session
   storage: [],          // town chest: item entries parked outside the backpack (persisted)
@@ -1183,6 +1188,191 @@ function autoHuntEligible(m, p = G.player) {
   return Boolean(m?.alive && m.lvl <= autoHuntLevelCap(p));
 }
 
+const AUTO_DEFAULTS = Object.freeze({ skills: true, heal: true, potions: true, profile: 'balanced' });
+function normaliseAutoConfig(raw) {
+  const cfg = raw && typeof raw === 'object' ? raw : {};
+  const profile = TUNING.automationProfiles?.[cfg.profile] ? cfg.profile : AUTO_DEFAULTS.profile;
+  return {
+    skills: cfg.skills !== false,
+    heal: cfg.heal !== false,
+    potions: cfg.potions !== false,
+    profile,
+  };
+}
+const autoProfile = () => TUNING.automationProfiles[G.autoConfig?.profile] || TUNING.automationProfiles.balanced;
+function setAutoState(phase, label, detail = '') {
+  const next = { phase, label, detail, changedAt: now() };
+  const prev = G.autoState || {};
+  if (prev.phase === phase && prev.label === label && prev.detail === detail) return prev;
+  G.autoState = next;
+  updateAutomationHud();
+  return next;
+}
+const automationActive = () => Boolean(G.autoFarm || G.taskGuide);
+
+function healAmountForSkill(p, skill) {
+  const lvl = skillLevel(p, skill.id);
+  if (skill.id === 'sanctuary') return Math.round(p.maxHp * (0.12 + 0.055 * 5) * (1 + 0.15 * (lvl - 1)));
+  return Math.round(p.maxHp * (0.12 * skill.power) * (1 + 0.15 * (lvl - 1)));
+}
+function chooseAutoHealSkill(p = G.player) {
+  const missing = Math.max(0, p.maxHp - p.hp);
+  const candidates = skillsFor(p.combatClass)
+    .filter(skill => skill.type === 'heal' && skillLevel(p, skill.id) > 0
+      && now() >= (p.skillCd[skill.id] || 0) && p.mp >= skill.mpCost
+      && !(skill.id === 'sanctuary' && p.sanctuary && p.sanctuary.until > now()))
+    .map(skill => ({ skill, amount: healAmountForSkill(p, skill) }))
+    .sort((a, b) => {
+      const aEnough = a.amount >= missing, bEnough = b.amount >= missing;
+      if (aEnough !== bEnough) return aEnough ? -1 : 1;
+      return aEnough ? a.amount - b.amount : b.amount - a.amount;
+    });
+  return candidates[0]?.skill || null;
+}
+
+function bestRecoveryItem(p = G.player, kind = 'hp') {
+  const restoreKey = kind === 'mp' ? 'mpRestore' : 'hpRestore';
+  const max = kind === 'mp' ? p.maxMp : p.maxHp, value = kind === 'mp' ? p.mp : p.hp;
+  const missing = Math.max(0, max - value), profile = autoProfile();
+  const otherLow = kind === 'hp'
+    ? (p.maxMp > 0 ? p.mp / p.maxMp : 0) <= profile.mpPotionAt
+    : (p.maxHp > 0 ? p.hp / p.maxHp : 0) <= profile.hpPotionAt;
+  return p.inventory
+    .filter(entry => !entry.uid && entry.qty > 0 && itemById[entry.itemId]?.[restoreKey] > 0)
+    .map(entry => {
+      const item = itemById[entry.itemId], restore = item[restoreKey];
+      const shortfall = Math.max(0, missing - restore), overfill = Math.max(0, restore - missing);
+      const otherRestore = kind === 'hp' ? item.mpRestore : item.hpRestore;
+      const scarceComboPenalty = otherRestore && !otherLow ? (item.value || 0) * 2 : 0;
+      return { entry, item, score: shortfall * 3 + overfill + scarceComboPenalty + (item.value || 0) * 0.02 };
+    })
+    .sort((a, b) => a.score - b.score || (a.item.value || 0) - (b.item.value || 0))[0]?.item || null;
+}
+
+const AUTO_BUFF_STAT = {
+  guard_sigil: 'def', bulwark: 'def', mana_shield: 'def', holy_shield: 'def',
+  iron_guard: 'def', ki_barrier: 'def', storm_ward: 'def',
+  blood_frenzy: 'atk', bloodlust: 'atk', blessing: 'atk',
+};
+function autoSkillReady(p, skill) {
+  return skillLevel(p, skill.id) > 0 && now() >= (p.skillCd[skill.id] || 0)
+    && (skill.finisher ? p.momentum >= TUNING.momentum.finisherMin : p.mp >= skill.mpCost);
+}
+function skillTargetInRange(p, target, skill) {
+  if (skill.type === 'heal' || (skill.type === 'buff' && skill.id !== 'hunters_mark')) return true;
+  if (!target?.alive) return false;
+  const reach = ((skill.type === 'melee' && skill.id !== 'savage_leap') ? skill.range : skill.range + (p.rangeBonus || 0)) * TS + target.size / 2;
+  return dist(p.x, p.y, target.x, target.y) <= reach;
+}
+function chooseAutoSkill(p = G.player, target = G.target) {
+  if (!G.autoConfig.skills || !target?.alive) return null;
+  const nearby = G.monsters.filter(monster => monster.alive && dist(target.x, target.y, monster.x, monster.y) <= 3 * TS + monster.size / 2).length;
+  const mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 0;
+  const candidates = [];
+  for (const skill of skillsFor(p.combatClass)) {
+    if (skill.type === 'heal' || !autoSkillReady(p, skill) || !skillTargetInRange(p, target, skill)) continue;
+    let score = skill.power * 10 - skill.mpCost * 0.15;
+    if (skill.type === 'buff') {
+      if (skill.id === 'hunters_mark') {
+        if (liveStatus(target, 'mark')) continue;
+        score = 82;
+      } else {
+        const stat = AUTO_BUFF_STAT[skill.id] || 'atk';
+        if (p.buffs.some(buff => buff.sourceSkillId && buff.stat === stat && buff.until > now())) continue;
+        score = 68;
+      }
+    } else {
+      const healingReserve = G.autoConfig.heal
+        ? Math.min(...skillsFor(p.combatClass).filter(candidate => candidate.type === 'heal' && skillLevel(p, candidate.id) > 0).map(candidate => candidate.mpCost), Infinity)
+        : 0;
+      if (!skill.finisher && Number.isFinite(healingReserve) && p.mp - skill.mpCost < healingReserve
+        && p.hp / Math.max(1, p.maxHp) <= autoProfile().healSkillAt + 0.15) continue;
+      const setupLive = skill.effect ? liveStatus(target, skill.effect) : null;
+      const detonateLive = skill.detonate ? liveStatus(target, skill.detonate) : null;
+      if (skill.detonate) score += detonateLive ? 115 : -45;
+      if (skill.effect) score += setupLive ? -16 : 30;
+      if (skill.finisher) score += 64 + p.momentum * 7;
+      if (skill.type === 'aoe') score += Math.max(0, nearby - 1) * 13;
+      if (target.hp / target.maxHp < 0.24) score += skill.finisher ? 24 : 5;
+      if (!skill.finisher && mpRatio < 0.25) score -= skill.mpCost * 0.8;
+    }
+    candidates.push({ skill, score });
+  }
+  candidates.sort((a, b) => b.score - a.score || a.skill.cooldownMs - b.skill.cooldownMs || a.skill.id.localeCompare(b.skill.id));
+  return candidates[0]?.skill || null;
+}
+
+function autoRecoveryAction() {
+  const p = G.player, cfg = G.autoConfig, profile = autoProfile();
+  const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 0, mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 0;
+  if (cfg.heal && hpRatio <= profile.healSkillAt) {
+    const heal = chooseAutoHealSkill(p);
+    if (heal) {
+      castSkillById(heal.id);
+      // Sanctuary only heals while its caster holds the circle. Give it enough
+      // time to tick before Hunt resumes its chase, unless manual input takes over.
+      if (heal.id === 'sanctuary' && p.sanctuary) {
+        p._autoHoldUntil = Math.min(p.sanctuary.until, now() + 3500);
+        G.path = null;
+      }
+      setAutoState('recover', T('Auto Heal', 'ui'), T(heal.name, 'skills'));
+      return { type: 'skill', id: heal.id };
+    }
+  }
+  if (cfg.potions && now() >= (p.potionCdUntil || 0) && hpRatio <= profile.hpPotionAt) {
+    const item = bestRecoveryItem(p, 'hp');
+    if (item && useItem(item.id)) {
+      setAutoState('recover', T('Auto Potion', 'ui'), T(item.name, 'items'));
+      return { type: 'item', id: item.id };
+    }
+  }
+  // Mana recovery waits until HP is comfortably above its danger line so the
+  // shared potion cooldown remains available for an emergency health potion.
+  if (cfg.skills && cfg.potions && now() >= (p.potionCdUntil || 0)
+    && mpRatio <= profile.mpPotionAt && hpRatio > profile.hpPotionAt + 0.12) {
+    const item = bestRecoveryItem(p, 'mp');
+    if (item && useItem(item.id)) {
+      setAutoState('recover', T('Auto Mana', 'ui'), T(item.name, 'items'));
+      return { type: 'item', id: item.id };
+    }
+  }
+  return null;
+}
+
+function acquireAutoTarget(p = G.player) {
+  if (!G.autoFarm || G.manualIntent || dlg) return null;
+  const focusId = G.huntTargetId;
+  const species = G.monsters.filter(monster => focusId ? monster.def.id === focusId : monster.def.sizeTiles < 2);
+  const alive = species.filter(monster => monster.alive);
+  const safeAlive = alive.filter(monster => autoHuntEligible(monster, p));
+  const eligible = safeAlive.filter(monster => now() >= (monster._autoSkipUntil || 0));
+  const local = focusId ? eligible : eligible.filter(monster => dist(p.x, p.y, monster.x, monster.y) < 14 * TS);
+  const candidates = (local.length ? local : eligible)
+    .sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
+  for (const candidate of candidates) {
+    if (!pathTo(candidate.x, candidate.y)) continue;
+    G.target = candidate;
+    G.targetSource = 'hunt';
+    candidate.provoked = true;
+    const name = T(candidate.def.name, 'monsters');
+    setAutoState('encounter', T('Encounter found', 'ui'), `${name} · Lv ${candidate.lvl}`);
+    return candidate;
+  }
+  const name = focusId ? T(monById[focusId]?.name || focusId, 'monsters') : T('nearby monsters', 'ui');
+  if (alive.length && !safeAlive.length) {
+    const minLevel = Math.min(...alive.map(monster => monster.lvl));
+    setAutoState('blocked', T('Unsafe encounter', 'ui'), T('{name} begins at Lv {level}; safe limit is Lv {cap}.', 'ui')
+      .replace('{name}', name).replace('{level}', minLevel).replace('{cap}', autoHuntLevelCap(p)));
+  } else if (species.length && !alive.length) {
+    const next = Math.min(...species.map(monster => monster.deadUntil || Infinity));
+    const seconds = Number.isFinite(next) ? Math.max(1, Math.ceil((next - now()) / 1000)) : '?';
+    setAutoState('waiting', T('Waiting for encounter', 'ui'), T('{name} respawns in about {seconds}s.', 'ui').replace('{name}', name).replace('{seconds}', seconds));
+  } else {
+    setAutoState('search', T('Searching', 'ui'), T('No reachable {name} found on this map.', 'ui').replace('{name}', name));
+  }
+  return null;
+}
+
 function rollHit(atkHit, defFlee) {
   if (!R.missIfFleeExceedsHit) return true;
   const hitChance = clamp(
@@ -1198,31 +1388,20 @@ function calcDamage(atk, def) {
   return { dmg, isCrit };
 }
 
-// while auto-farming: heal when hurt, keep buffs up, and rotate damage skills on the target
+// Objective-aware recovery and skill rotation. Basic attacks continue even when
+// either optional automation feature is disabled.
 function autoFarmActions() {
   const p = G.player;
-  // 1) heal at <45% HP — prefer a heal skill, else a restore potion
-  if (p.hp < p.maxHp * 0.45) {
-    const heal = skillsFor(p.combatClass).find(s => s.type === 'heal' && skillLevel(p, s.id) && now() >= (p.skillCd[s.id] || 0) && p.mp >= s.mpCost);
-    if (heal) { castSkillById(heal.id); return; }
-    const pot = p.inventory.find(e => !e.uid && itemById[e.itemId].hpRestore && e.qty > 0);
-    if (pot) { useItem(pot.itemId); return; }
-  }
+  if (autoRecoveryAction()) return;
   const t = G.target;
   if (!t || !t.alive) return;
-  const d = dist(p.x, p.y, t.x, t.y);
-  // finishers gate on Momentum (not MP), matching castSkillById — else auto-farm wastes ticks on ungated finishers
-  const ready = s => skillLevel(p, s.id) && now() >= (p.skillCd[s.id] || 0) && (s.finisher ? p.momentum >= TUNING.momentum.finisherMin : p.mp >= s.mpCost);
-  // 2) keep a buff up first, then fire a ready damage skill if the target is in range
-  if (!p.buffs.some(b => b.until > now())) {
-    const buff = skillsFor(p.combatClass).find(s => s.type === 'buff' && ready(s));
-    if (buff) { castSkillById(buff.id); return; }
+  const skill = chooseAutoSkill(p, t);
+  if (skill) {
+    castSkillById(skill.id);
+    setAutoState('combat', T('Auto Skill', 'ui'), T(skill.name, 'skills'));
+    return;
   }
-  for (const s of skillsFor(p.combatClass)) {
-    if (s.type === 'buff' || s.type === 'heal' || !ready(s)) continue;
-    const reach = (s.type === 'melee' ? s.range : s.range + (p.rangeBonus || 0)) * TS + t.size / 2;
-    if (d <= reach) { castSkillById(s.id); return; }   // melee/ranged/aoe damage
-  }
+  setAutoState('combat', T('Basic attack', 'ui'), `${T(t.def.name, 'monsters')} · Lv ${t.lvl}`);
 }
 
 function playerBasicAttack() {
@@ -1291,6 +1470,7 @@ function killMonster(m) {
   m.deadUntil = now() + R.respawnMs;
   AUDIO.playSfx('monsterDie');
   if (G.target === m) { G.target = null; G.targetSource = null; G.path = null; }
+  if (G.autoFarm) setAutoState('search', T('Finding next encounter', 'ui'), T(m.def.name, 'monsters'));
   const p = G.player;
   const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl)));
   gainXp(xpGain);
@@ -1427,7 +1607,7 @@ function castSkillById(id) {
       bulwark: ['def', 1.6], mana_shield: ['def', 1.4], bloodlust: ['atk', 1.45], blessing: ['atk', 1.35],
       iron_guard: ['def', 1.5], ki_barrier: ['def', 1.4], storm_ward: ['def', 1.4] }[sk.id] || ['atk', 1.3];
     const mult = 1 + (eff[1] - 1) * (1 + 0.25 * (lvl - 1));
-    p.buffs.push({ stat: eff[0], mult, until: now() + 8000 });
+    p.buffs.push({ stat: eff[0], mult, until: now() + 8000, sourceSkillId: sk.id });
     skillFx(sk, p.x, p.y);
     toast(`${sk.name} Lv${lvl} active!`, 'good');
     return;
@@ -1569,7 +1749,8 @@ function updateMonsters(dt) {
           p.hurtUntil = now() + ANIM.hurtMs;
           AUDIO.playSfx('playerHurt');
           floatText(p.x, p.y, p.godMode ? '0' : dmg, p.godMode ? 'heal' : 'enemy');
-          if ((!G.target || !G.target.alive) && (!G.autoFarm || autoHuntEligible(m, p))) {
+          const matchesFocus = !G.huntTargetId || m.def.id === G.huntTargetId;
+          if ((!G.target || !G.target.alive) && matchesFocus && (!G.autoFarm || autoHuntEligible(m, p))) {
             G.target = m; G.targetSource = 'retaliate';
           }
           if (p.hp <= 0) { playerDeath(); return; }
@@ -1598,7 +1779,7 @@ function walkableNearHome(m, rad = 6) {
 }
 function respawn(m) {
   const t = m.def.sizeTiles >= 2 ? (findChar('B') || { col: 2, row: 2 }) : walkableNearHome(m);
-  if (!t) return;
+  if (!t) { m.deadUntil = now() + 1000; return; }
   m.x = t.col * TS + TS / 2; m.y = t.row * TS + TS / 2;
   // Re-level at the new home-near position, clamped to the species habitat/range.
   if (m.def.sizeTiles < 2) {
@@ -1755,6 +1936,7 @@ function stopAutomationOnDeath() {
   G.path = null;
   G.manualIntent = null;
   G.keys = {};              // a held movement key must not carry through respawn
+  setAutoState('blocked', T('Automation stopped', 'ui'), T('Death canceled Hunt mode and active quest navigation.', 'ui'));
   updateFarmButton();
   return stopped;
 }
@@ -1925,8 +2107,11 @@ function taskAction(source, taskId) {
     if (bounty.kind === 'kill') {
       return { source, taskId, mode: 'hunt', monsterId: bounty.target, mapId: monsterMapId[bounty.target], label: bounty.targetName };
     }
-    const drop = itemDropSource(bounty.target);
-    return drop ? { source, taskId, mode: 'hunt', monsterId: drop.monsterId, mapId: drop.mapId, label: drop.mon } : null;
+    const monsterId = bountyMonsterId(bounty);
+    const mapId = monsterMapId[monsterId];
+    return monsterId && mapId
+      ? { source, taskId, mode: 'hunt', monsterId, mapId, label: monById[monsterId].name }
+      : null;
   }
   return null;
 }
@@ -1979,9 +2164,36 @@ function finishTaskGuide(restoreAutoFarm = true) {
   G.path = null;
   G.manualIntent = null;
   G.autoFarm = restoreAutoFarm && guide.resumeAutoFarm;
+  setAutoState(G.autoFarm ? 'search' : 'idle', G.autoFarm ? T('Searching', 'ui') : T('Automation ready', 'ui'),
+    G.autoFarm ? T('Finding the next safe encounter.', 'ui') : T('Track a task or enable Hunt.', 'ui'));
   updateFarmButton();
   if ($('#quest-tracker')) updateQuestTracker();
   refreshPanel('world');
+}
+
+// Reconcile a tracked task after its objective changes. Keeping the same guide
+// alive through hunt -> turn-in means one click can drive the whole objective;
+// an invalid or stale restored guide is dropped safely.
+function refreshTaskGuideAction({ continueNow = true } = {}) {
+  const guide = G.taskGuide;
+  if (!guide) return false;
+  const action = taskAction(guide.source, guide.taskId);
+  if (!action?.mapId) { finishTaskGuide(); return false; }
+  const changed = action.mode !== guide.mode || action.mapId !== guide.mapId
+    || action.monsterId !== guide.monsterId || action.npcId !== guide.npcId;
+  if (changed) {
+    G.taskGuide = { ...action, resumeAutoFarm: guide.resumeAutoFarm };
+    G.huntTargetId = null;
+    G.autoFarm = false;
+    G.target = null;
+    G.targetSource = null;
+    G.path = null;
+    G.manualIntent = null;
+  }
+  if (continueNow) continueTaskGuide();
+  updateFarmButton();
+  updateQuestTracker();
+  return true;
 }
 
 function continueTaskGuide() {
@@ -1996,9 +2208,11 @@ function continueTaskGuide() {
     if (!portal || !pathTo(portal.x * TS + TS / 2, portal.y * TS + TS / 2)) {
       const label = translateAny(guide.label, ['maps', 'npcs', 'monsters']);
       toast(T('No path to {label}.', 'ui').replace('{label}', label), 'bad');
-      finishTaskGuide();
+      finishTaskGuide(false);
       return;
     }
+    const destination = translateAny(guide.label, ['maps', 'npcs', 'monsters']);
+    setAutoState('route', T('Tracking route', 'ui'), T('Heading to {name}', 'ui').replace('{name}', destination));
     updateFarmButton();
     return;
   }
@@ -2008,6 +2222,7 @@ function continueTaskGuide() {
     G.autoFarm = true;
     updateFarmButton();
     const name = T(monById[guide.monsterId]?.name || guide.label, 'monsters');
+    setAutoState('search', T('Focused hunt', 'ui'), name);
     toast(T('Focused hunt: {name}.', 'ui').replace('{name}', name), 'good');
     return;
   }
@@ -2025,8 +2240,8 @@ function continueTaskGuide() {
     if (!npc || !pathTo(npc.x * TS + TS / 2, npc.y * TS + TS / 2)) {
       const label = translateAny(guide.label, ['npcs', 'maps', 'monsters']);
       toast(T('Could not reach {label}.', 'ui').replace('{label}', label), 'bad');
-      finishTaskGuide();
-    }
+      finishTaskGuide(false);
+    } else setAutoState('route', T('Tracking objective', 'ui'), T(npc.name, 'npcs'));
   }
 }
 
@@ -2292,7 +2507,7 @@ function guildKill(monId) {
   const guided = G.taskGuide?.source === 'guild' && G.activeGuilds.find(g => g.id === G.taskGuide.taskId);
   if (guided) {
     const ready = guided.kind === 'deliver' ? itemQty(guided.target) >= guided.count : guided.done;
-    if (ready) finishTaskGuide();
+    if (ready) refreshTaskGuideAction();
   }
   updateQuestTracker();
 }
@@ -3069,7 +3284,7 @@ function step(dt) {
     p.mp = clamp(p.mp + p.maxMp * 0.06 * dt, 0, p.maxMp);
   }
 
-  if (!G.manualIntent && G.huntTargetId && G.target && G.target.def.id !== G.huntTargetId) {
+  if (!G.manualIntent && G.huntTargetId && G.target && G.targetSource !== 'manual' && G.target.def.id !== G.huntTargetId) {
     G.target = null;
     G.targetSource = null;
     G.path = null;
@@ -3081,22 +3296,8 @@ function step(dt) {
   }
   if (!G.manualIntent && G.taskGuide && G.taskGuide.mode !== 'hunt' && !G.path && !G.target) continueTaskGuide();
 
-  // auto-farm: if idle, lock onto the nearest NON-boss monster and go
-  if (G.autoFarm && !G.manualIntent && !dlg && (!G.target || !G.target.alive)) {
-    const focusId = G.huntTargetId;
-    const candidates = G.monsters
-      .filter(m => autoHuntEligible(m, p)
-        && (focusId ? m.def.id === focusId : m.def.sizeTiles < 2)
-        && (focusId || dist(p.x, p.y, m.x, m.y) < 14 * TS))
-      .sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
-    for (const candidate of candidates) {
-      if (!pathTo(candidate.x, candidate.y)) continue;
-      G.target = candidate;
-      G.targetSource = 'hunt';
-      candidate.provoked = true;
-      break;
-    }
-  }
+  // One objective-aware acquisition path handles focused and free Hunt.
+  if (G.autoFarm && !G.manualIntent && !dlg && (!G.target || !G.target.alive)) acquireAutoTarget(p);
 
   // movement — WASD/arrows take priority and cancel any click-to-move
   const k = G.keys;
@@ -3113,12 +3314,21 @@ function step(dt) {
     const len = Math.hypot(dx, dy) || 1;
     faceToward(p, p.x + dx, p.y + dy);
     moveEntity(p, (dx / len) * spd, (dy / len) * spd, 12);
-  } else if (G.target && G.target.alive) {          // chase the clicked monster along a routed path
+  } else if (G.target && G.target.alive && !(p._autoHoldUntil > now())) { // chase unless a recovery zone asks us to hold
     const d = dist(p.x, p.y, G.target.x, G.target.y);
     if (d <= p.basicRange * TS + G.target.size / 2 - 4) { G.path = null; }  // in range → stop & auto-attack
     else {
-      if (!G.path || now() >= (p._repathAt || 0)) { pathTo(G.target.x, G.target.y); p._repathAt = now() + 400; }
-      if (!followPath(p, G.path, spd, 12)) G.path = null;
+      if (!G.path || now() >= (p._repathAt || 0)) {
+        const routed = pathTo(G.target.x, G.target.y);
+        p._repathAt = now() + 400;
+        if (!routed || !G.path) {
+          const abandoned = G.target;
+          abandoned._autoSkipUntil = now() + 3000;
+          G.target = null; G.targetSource = null; G.path = null;
+          if (G.autoFarm) setAutoState('search', T('Searching', 'ui'), T('Skipped unreachable {name}.', 'ui').replace('{name}', T(abandoned.def.name, 'monsters')));
+        }
+      }
+      if (G.target && !followPath(p, G.path, spd, 12)) G.path = null;
     }
   } else if (G.path) {                              // walking to a clicked point
     if (!followPath(p, G.path, spd, 12)) G.path = null;
@@ -3226,6 +3436,9 @@ function buildHud() {
       </div>
       <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div></div>
       <div class="quest-tracker" id="quest-tracker" tabindex="0" role="region" aria-label="${T('Active quests and bounties', 'ui')}"></div>
+      <button class="auto-status" id="auto-status" data-panel="automation" type="button" hidden aria-live="polite">
+        <span class="auto-status__icon" aria-hidden="true">◎</span><span class="auto-status__copy"><b></b><small></small></span><span class="auto-status__gear" aria-hidden="true">⚙</span>
+      </button>
       <div class="msg-log" id="msg-log"></div>
       <div class="hotbar-shell">
         <div id="momentum-pips" class="momentum-pips" title="${T('Damage skills build Momentum. Finishers consume it.', 'ui')}">
@@ -3243,6 +3456,7 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="quest">${T('Journal (Q)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
         ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
         <button class="btn btn--ghost" id="mute-btn">🔊</button>
@@ -3271,6 +3485,19 @@ function buildHud() {
     $('#hud-name').textContent = p.name + ' the ' + p.className;
   }
   updateFarmButton();
+  updateAutomationHud();
+}
+function updateAutomationHud() {
+  const el = $('#auto-status');
+  if (!el) return;
+  const state = G.autoState || { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
+  const icons = { idle: '◎', route: '➤', search: '⌖', encounter: '!', combat: '⚔', recover: '✚', waiting: '◷', blocked: '⚠' };
+  el.dataset.phase = state.phase;
+  el.hidden = !automationActive() && state.phase === 'idle';
+  el.querySelector('.auto-status__icon').textContent = icons[state.phase] || '◎';
+  el.querySelector('b').textContent = state.label;
+  el.querySelector('small').textContent = state.detail || '';
+  el.title = T('Open Automation Console', 'ui');
 }
 function updateFarmButton() {
   const b = $('#farm-btn'); if (!b) return;
@@ -3291,6 +3518,8 @@ function toggleFarm() {
   }
   G.huntTargetId = null;
   G.autoFarm = !G.autoFarm;
+  setAutoState(G.autoFarm ? 'search' : 'idle', G.autoFarm ? T('Searching', 'ui') : T('Automation ready', 'ui'),
+    G.autoFarm ? T('Finding the next safe encounter.', 'ui') : T('Track a task or enable Hunt.', 'ui'));
   updateFarmButton();
   const message = G.autoFarm
     ? T('Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.', 'ui').replace('{level}', autoHuntLevelCap(G.player))
@@ -3482,6 +3711,7 @@ function updateHud() {
     flowMomentum.querySelectorAll('.pip').forEach((pip, i) => { pip.classList.toggle('on', i < p.momentum); pip.classList.toggle('ready', ready); });
     const count = flowMomentum.querySelector('b'); if (count) count.textContent = `${p.momentum}/${TUNING.momentum.max}`;
   }
+  updateAutomationHud();
 }
 
 function updateQuestTracker() {
@@ -3579,7 +3809,7 @@ function togglePanel(id) {
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return { char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools' }[id]; }
+function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools' }[id], 'ui'); }
 
 const ADMIN_GROUPS = [
   ['🧍 Character', [
@@ -3995,10 +4225,34 @@ function worldChronicleHtml() {
   </section>`;
 }
 
+function automationPanelHtml(p = G.player) {
+  G.autoConfig = normaliseAutoConfig(G.autoConfig);
+  const cfg = G.autoConfig, state = G.autoState || {};
+  const focus = G.huntTargetId
+    ? T(monById[G.huntTargetId]?.name || G.huntTargetId, 'monsters')
+    : G.taskGuide ? translateAny(G.taskGuide.label, ['monsters', 'npcs', 'maps']) : T('Free Hunt', 'ui');
+  const toggle = (key, label, copy, glyph) => `<button class="auto-toggle${cfg[key] ? ' active' : ''}" data-auto-toggle="${key}" aria-pressed="${cfg[key]}">
+    <span class="auto-toggle__glyph">${glyph}</span><span><b>${T(label, 'ui')}</b><small>${T(copy, 'ui')}</small></span><em>${cfg[key] ? T('ON', 'ui') : T('OFF', 'ui')}</em></button>`;
+  const profiles = Object.entries(TUNING.automationProfiles).map(([id, profile]) => {
+    const label = id[0].toUpperCase() + id.slice(1);
+    return `<button class="auto-profile${cfg.profile === id ? ' active' : ''}" data-auto-profile="${id}" aria-pressed="${cfg.profile === id}"><b>${T(label, 'ui')}</b><small>${T('Heal skill {heal}% · HP potion {hp}% · MP potion {mp}%', 'ui')
+      .replace('{heal}', Math.round(profile.healSkillAt * 100)).replace('{hp}', Math.round(profile.hpPotionAt * 100)).replace('{mp}', Math.round(profile.mpPotionAt * 100))}</small></button>`;
+  }).join('');
+  return `<section class="automation-console">
+    <header class="automation-live" data-phase="${esc(state.phase || 'idle')}"><span>◎</span><div><small>${T('LIVE DECISION', 'ui')}</small><b>${esc(state.label || T('Automation ready', 'ui'))}</b><em>${esc(state.detail || '')}</em></div></header>
+    <div class="automation-objective"><span><small>${T('CURRENT OBJECTIVE', 'ui')}</small><b>${esc(focus)}</b></span><span><small>${T('SAFE HUNT LIMIT', 'ui')}</small><b>Lv ${autoHuntLevelCap(p)}</b></span></div>
+    <div class="automation-section"><h3>${T('Combat Decisions', 'ui')}</h3><p>${T('Tracking owns travel and target choice. Your clicks always take priority.', 'ui')}</p>
+      <div class="auto-toggle-grid">${toggle('skills', 'Smart Skills', 'Uses setup, detonators, finishers, buffs, and mana recovery.', '✦')}${toggle('heal', 'Auto Heal', 'Uses learned healing skills before emergency potions.', '✚')}${toggle('potions', 'Auto Potions', 'Chooses the smallest useful HP or MP recovery item.', '◇')}</div></div>
+    <div class="automation-section"><h3>${T('Recovery Profile', 'ui')}</h3><p>${T('Choose how early automation recovers. Potion cooldown is always respected.', 'ui')}</p><div class="auto-profile-grid">${profiles}</div></div>
+    <footer class="automation-foot">⚠ ${T('Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.', 'ui')}</footer>
+  </section>`;
+}
+
 function panelBody(id) {
   const p = G.player;
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
   if (id === 'world') return worldChronicleHtml();
+  if (id === 'automation') return automationPanelHtml(p);
   if (id === 'char') {
     const s = p.stats;
     const tiers = PROGRESSION.tiers[p.classId] || [];
@@ -4320,6 +4574,18 @@ function panelBody(id) {
 }
 
 function wirePanel(id, el) {
+  el.querySelectorAll('[data-auto-toggle]').forEach(b => b.onclick = () => {
+    const key = b.dataset.autoToggle;
+    if (!['skills', 'heal', 'potions'].includes(key)) return;
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, [key]: !G.autoConfig[key] });
+    saveGame();
+    refreshPanel('automation');
+  });
+  el.querySelectorAll('[data-auto-profile]').forEach(b => b.onclick = () => {
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, profile: b.dataset.autoProfile });
+    saveGame();
+    refreshPanel('automation');
+  });
   el.querySelectorAll('[data-task]').forEach(task => task.onclick = event => { event.stopPropagation(); activateTaskGuide(task.dataset.task, task.dataset.taskId); });
   el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { useItem(b.dataset.use); refreshPanel(id); });
   el.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => { equip(b.dataset.equip); refreshPanel(id); });
@@ -4837,6 +5103,8 @@ const extraCss = `
 .hotbar{gap:6px}
 .hotbar .skill-btn{width:46px;height:46px}
 .quest-tracker{position:fixed;top:160px;right:12px;width:190px;background:rgba(20,26,18,.82);border:1px solid var(--panel-border);border-radius:6px;padding:8px;font-size:11px;line-height:1.4}
+.auto-status{position:fixed;right:12px;bottom:96px;z-index:16;width:190px;display:grid;grid-template-columns:24px minmax(0,1fr) 18px;align-items:center;gap:6px;padding:7px;background:rgba(9,18,31,.94);border:1px solid #60738d;color:var(--text);font:inherit;text-align:left;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+.auto-status[hidden]{display:none}.auto-status:hover{border-color:#e6bd54}.auto-status__icon{display:grid;place-items:center;width:22px;height:22px;background:#172b49;border:1px solid #7890ad;color:#a9d0ff;font-weight:900}.auto-status__copy{min-width:0;display:flex;flex-direction:column}.auto-status__copy b{overflow:hidden;color:#e9edf3;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.auto-status__copy small{overflow:hidden;color:#91a1b5;font-size:8px;text-overflow:ellipsis;white-space:nowrap}.auto-status__gear{color:#718197;font-size:10px}.auto-status[data-phase="combat"],.auto-status[data-phase="encounter"]{border-color:#b85c5c}.auto-status[data-phase="recover"]{border-color:#62a97c}.auto-status[data-phase="route"]{border-color:#d2ad4e}.auto-status[data-phase="blocked"]{border-color:#e0795f}
 .task-link{display:block;width:100%;margin:0;padding:0;background:transparent;border:0;color:inherit;font:inherit;line-height:inherit;text-align:left;cursor:pointer}
 .task-link--compact{margin-top:4px;padding:3px 2px;border-top:1px solid rgba(95,191,122,.15)}
 .task-link:hover,.task-link.active{background:rgba(230,189,84,.1);outline:1px solid rgba(230,189,84,.35)}
@@ -5032,6 +5300,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 .hotkey-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;color:#8796a9;font-size:9px}
 @keyframes keyListen{50%{filter:brightness(1.35)}}
 .slot-picker .sp-sep{height:1px;margin:4px;background:#53657e}
+.automation-console{width:min(650px,82vw);display:grid;gap:10px}.automation-live{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;padding:10px;background:#0c192b;border:1px solid #72849a}.automation-live>span{display:grid;place-items:center;width:36px;height:36px;border:1px solid #d2ad4e;background:#203454;color:#f0d47d;font-size:20px}.automation-live>div{display:flex;min-width:0;flex-direction:column}.automation-live small,.automation-objective small{color:#8292a7;font-size:8px;font-weight:900;letter-spacing:1px}.automation-live b{color:#f2d07b;font:700 14px var(--font-head)}.automation-live em{color:#b7c2d2;font-size:10px;font-style:normal}.automation-objective{display:grid;grid-template-columns:2fr 1fr;gap:6px}.automation-objective>span{display:flex;flex-direction:column;padding:7px;background:#13243d;border:1px solid #50637d}.automation-objective b{color:#e7ecf3;font-size:11px}.automation-section{padding:9px;background:#101d32;border:1px solid #53657e}.automation-section h3{margin:0;color:#f0d47d;font:700 13px var(--font-head)}.automation-section p{margin:2px 0 8px;color:#96a5b8;font-size:9px}.auto-toggle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.auto-toggle{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:5px;padding:7px;background:#0b1525;border:1px solid #52647c;color:#8392a6;text-align:left;cursor:pointer}.auto-toggle.active{background:#173329;border-color:#70a980;color:#e7edf3}.auto-toggle__glyph{color:#f0d47d;font-size:16px;text-align:center}.auto-toggle span:nth-child(2){display:flex;min-width:0;flex-direction:column}.auto-toggle b{font-size:9px}.auto-toggle small{color:#8d9bad;font-size:7px;line-height:1.35}.auto-toggle em{color:#75859a;font-size:8px;font-style:normal;font-weight:900}.auto-toggle.active em{color:#92d0a2}.auto-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.auto-profile{display:flex;flex-direction:column;gap:2px;padding:7px;background:#0b1525;border:1px solid #52647c;color:#8998aa;text-align:left;cursor:pointer}.auto-profile.active{background:#26341c;border-color:#b1bd69;color:#f0e9c4}.auto-profile b{font-size:10px}.auto-profile small{font-size:7px;line-height:1.4}.automation-foot{padding:7px;border:1px solid #684b49;background:#291b21;color:#d3a7a3;font-size:8px;line-height:1.45}
 .dialogue__choices .btn{display:flex;align-items:center;justify-content:space-between}
 .dialogue__choices .btn kbd{margin-left:auto;padding:1px 6px;border:1px solid #9aa8b9;background:#080d14;color:#efd16f;font-size:9px;box-shadow:inset 0 -1px #000}
 @media(max-width:760px){
@@ -5045,11 +5314,13 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 #hud .mp-bar.empty .label{color:#ef9b9e}
 
 @media(max-width:680px){
+  .auto-status{top:auto;right:auto;bottom:130px;left:6px;width:min(250px,64vw)}
   #hud .hotbar-shell{width:96vw}.hotbar-shell .hotbar{max-width:calc(96vw - 38px);overflow-x:auto!important}.hotbar-shell .momentum-state{display:none}
   .skill-flow{width:82vw}.flow-grid{display:flex;flex-direction:column;gap:4px}.flow-arrow{height:12px;transform:rotate(90deg)}.flow-copy{min-height:0}.flow-legend span:last-child{margin-left:0}
   .hotkey-grid{grid-template-columns:1fr;min-width:78vw}
   .world-chronicle{width:86vw}.world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
   .gear-row{flex-direction:column}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
+  .automation-console{width:84vw}.auto-toggle-grid,.auto-profile-grid{grid-template-columns:1fr}.automation-objective{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){#hud .hotbar-shell .finisher-ready,.keycap.listening{animation:none}}
 `;
@@ -5090,7 +5361,7 @@ function saveGame() {
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
       quest: G.quest, pendingQuest: G.pendingQuest, killCounts: G.killCounts, won: G.won, autoFarm: G.autoFarm,
-      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide,
+      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig,
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
@@ -5139,7 +5410,7 @@ function resumeGame() {
   G.admin = p.name.trim().toLowerCase() === 'admin';
   const w = d.world;
   G.quest = w.quest || null; G.pendingQuest = w.pendingQuest || null; G.killCounts = w.killCounts || {}; G.won = !!w.won; G.autoFarm = !!w.autoFarm;
-  G.huntTargetId = w.huntTargetId || null; G.taskGuide = w.taskGuide || null;
+  G.huntTargetId = null; G.taskGuide = null; G.autoConfig = normaliseAutoConfig(w.autoConfig);
   // legacy saves flagged `won` at the Flame Dragon (old finale); if the story is still
   // running, clear it so the TRUE finale (Nullking) can still play its cutscene once
   if (G.won && (G.quest || G.pendingQuest)) G.won = false;
@@ -5152,6 +5423,20 @@ function resumeGame() {
       if (w.visited.includes(ZONE_ORDER[i])) G.guardiansSlain.add(zoneGuardian(ZONE_ORDER[i - 1]));
   G.visited = new Set(w.visited || []); G.talked = new Set(w.talked || []);
   G.storage = w.storage || []; G.achievements = new Set(w.achievements || []);
+  // Runtime targets and paths are never restored. Rebuild the persisted intent
+  // against the current quest/bounty data so removed or completed tasks cannot
+  // revive a stale route after loading.
+  if (w.taskGuide?.source) {
+    const action = taskAction(w.taskGuide.source, w.taskGuide.taskId);
+    if (action?.mapId) G.taskGuide = { ...action, resumeAutoFarm: !!w.taskGuide.resumeAutoFarm };
+    else G.autoFarm = false;
+  }
+  if (!G.taskGuide && G.autoFarm && w.huntTargetId && monById[w.huntTargetId]) G.huntTargetId = w.huntTargetId;
+  G.autoState = G.taskGuide
+    ? { phase: 'route', label: T('Tracking route', 'ui'), detail: translateAny(G.taskGuide.label, ['monsters', 'npcs', 'maps']) }
+    : G.autoFarm
+      ? { phase: 'search', label: T('Searching', 'ui'), detail: T('Finding the next safe encounter.', 'ui') }
+      : { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
   preloadSprites();
   $('#root').innerHTML = '';
   startRuntime();
@@ -5170,6 +5455,8 @@ function begin(classId, name) {
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
   G.won = false; G.autoFarm = false; G.huntTargetId = null; G.taskGuide = null; G.advance = null; G.quest = null; G.pendingQuest = null; G.killCounts = {};
+  G.autoConfig = normaliseAutoConfig(null);
+  G.autoState = { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
   G.visited = new Set(); G.talked = new Set();
   G.storage = []; G.achievements = new Set();
   G.activeGuilds = []; G.guildRankIdx = 0; G.guildPoints = 0; G.guardiansSlain = new Set(); refreshGuildBoard();
@@ -5252,7 +5539,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 
