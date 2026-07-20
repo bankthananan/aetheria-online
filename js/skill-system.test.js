@@ -138,7 +138,7 @@ assert.ok(!inventoryHtml.includes('data-assign-item="memory_prism"'), 'reset ite
 A.G.running = true;
 A.saveGame();
 const saved = JSON.parse(globalThis.localStorage.getItem('awo_save_v1'));
-assert.equal(saved.v, 3, 'reset system needs no save-version migration');
+assert.equal(saved.v, 4, 'reset items persist inside the branch-aware save schema');
 assert.ok(saved.player.inventory.some(slot => slot.itemId === 'memory_prism'), 'unused reset item persists in the normal inventory schema');
 assert.equal(saved.player.skillLevels.flame_burst, 1, 'cancelled build state persists normally');
 

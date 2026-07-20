@@ -136,6 +136,21 @@ export const PROGRESSION = {
     frostfire:      { maxLevel: 3, reqLevel: 32, reqTier: 1, reqSkill: { id: 'flame_burst', lvl: 2 } },
     venom_shot:     { maxLevel: 3, reqLevel: 14, reqSkill: { id: 'piercing_shot', lvl: 2 } },
     hammer_of_dawn: { maxLevel: 3, reqLevel: 50, reqTier: 2, reqSkill: { id: 'consecrate', lvl: 2 } },
+    // ---- exclusive second-job signatures: one clearly readable active per branch ----
+    rift_guard_break:    { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'rift_knight',     reqSkill: { id: 'guard_sigil', lvl: 2 } },
+    paradox_sever:       { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'rift_reaver',     reqSkill: { id: 'rift_slash', lvl: 3 } },
+    bladewind_cross:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'bladewind',       reqSkill: { id: 'blood_frenzy', lvl: 2 } },
+    crimson_gore:        { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'blood_marauder',  reqSkill: { id: 'reckless_hew', lvl: 3 } },
+    compiled_nova:       { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'rune_compiler',   reqSkill: { id: 'flame_burst', lvl: 2 } },
+    absolute_clause:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'frost_scribe',    reqSkill: { id: 'frost_chains', lvl: 2 } },
+    skyline_piercer:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'sky_piercer',     reqSkill: { id: 'piercing_shot', lvl: 3 } },
+    starhawk_volley:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'wild_warden',     reqSkill: { id: 'hunters_mark', lvl: 1 } },
+    seraphic_prayer:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'dawnguard',       reqSkill: { id: 'lay_on_hands', lvl: 2 } },
+    solar_brand:         { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'sunblade',        reqSkill: { id: 'smite', lvl: 3 } },
+    dragon_chain:        { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'ki_adept',        reqSkill: { id: 'palm_strike', lvl: 2 } },
+    adamant_wave:        { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'stone_disciple',  reqSkill: { id: 'iron_guard', lvl: 2 } },
+    tempest_convergence: { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'tempest_mage',    reqSkill: { id: 'gale', lvl: 2 } },
+    pyroclast_surge:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'pyroclast',       reqSkill: { id: 'ember', lvl: 2 } },
   },
 
   // Passive skills — invest skill points for permanent stat bonuses (RO-style).
@@ -167,6 +182,62 @@ export const PROGRESSION = {
     storm_focus:      { classId: 'elementalist', name: 'Storm Focus',    stat: 'atkPct',   per: 4, maxLevel: 10, reqLevel: 5,  desc: '+{v}% Magic ATK' },
     mana_well:        { classId: 'elementalist', name: 'Mana Well',      stat: 'mpPct',    per: 5, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Max MP' },
     tempest_soul:     { classId: 'elementalist', name: 'Tempest Soul',   stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Crit' },
+  },
+
+  // At Base Lv15 the first advancement becomes a permanent branch choice for
+  // this life. Tier requirements and trial objectives still come from `tiers`;
+  // these records only overlay the visible titles, raw bonuses, and exclusive
+  // signature. Default branches exactly preserve the pre-branch progression.
+  jobBranches: {
+    reborn_blade: {
+      defaultId: 'rift_knight',
+      choices: [
+        { id: 'rift_knight', label: 'Rift Knight', role: 'Vanguard', focus: 'Guard · Sunder · Control', color: '#78a7d8', tiers: { 1: { name: 'Rift Knight', bonus: { str: 4, vit: 4 } }, 2: { name: 'Voidcleaver Lord', bonus: { str: 8, vit: 8, dex: 3 } } }, signatureSkillId: 'rift_guard_break' },
+        { id: 'rift_reaver', label: 'Rift Reaver', role: 'Duelist', focus: 'Cleave · Detonate · Pressure', color: '#c57ee8', tiers: { 1: { name: 'Rift Reaver', bonus: { str: 5, agi: 3 } }, 2: { name: 'Paradox Blade', bonus: { str: 9, agi: 6, dex: 4 } } }, signatureSkillId: 'paradox_sever' },
+      ],
+    },
+    drifter: {
+      defaultId: 'bladewind',
+      choices: [
+        { id: 'bladewind', label: 'Bladewind Dancer', role: 'Skirmisher', focus: 'Speed · Area · Control', color: '#df777c', tiers: { 1: { name: 'Bladewind Dancer', bonus: { agi: 4, str: 4 } }, 2: { name: 'Tempest Reaper', bonus: { agi: 8, str: 6, luk: 3 } } }, signatureSkillId: 'bladewind_cross' },
+        { id: 'blood_marauder', label: 'Blood Marauder', role: 'Executioner', focus: 'Power · Sunder · Pursuit', color: '#c94655', tiers: { 1: { name: 'Blood Marauder', bonus: { str: 5, vit: 3 } }, 2: { name: 'Crimson Ravager', bonus: { str: 9, vit: 5, luk: 3 } } }, signatureSkillId: 'crimson_gore' },
+      ],
+    },
+    codeweaver: {
+      defaultId: 'rune_compiler',
+      choices: [
+        { id: 'rune_compiler', label: 'Rune Compiler', role: 'Artillery', focus: 'Burn · Detonate · Area', color: '#b98bea', tiers: { 1: { name: 'Rune Compiler', bonus: { int: 5, dex: 3 } }, 2: { name: 'Reality Debugger', bonus: { int: 10, dex: 4 } } }, signatureSkillId: 'compiled_nova' },
+        { id: 'frost_scribe', label: 'Frost Scribe', role: 'Controller', focus: 'Freeze · Slow · Survival', color: '#70bde8', tiers: { 1: { name: 'Frost Scribe', bonus: { int: 4, vit: 2, dex: 2 } }, 2: { name: 'Absolute Architect', bonus: { int: 8, vit: 4, dex: 2 } } }, signatureSkillId: 'absolute_clause' },
+      ],
+    },
+    far_shot: {
+      defaultId: 'sky_piercer',
+      choices: [
+        { id: 'sky_piercer', label: 'Sky Piercer', role: 'Sniper', focus: 'Range · Sunder · Precision', color: '#7fcf91', tiers: { 1: { name: 'Sky Piercer', bonus: { dex: 5, agi: 3 } }, 2: { name: 'Worldbane Sniper', bonus: { dex: 9, agi: 5 } } }, signatureSkillId: 'skyline_piercer' },
+        { id: 'wild_warden', label: 'Wild Warden', role: 'Hunter', focus: 'Volley · Slow · Fortune', color: '#b4d56f', tiers: { 1: { name: 'Wild Warden', bonus: { dex: 4, agi: 2, luk: 2 } }, 2: { name: 'Starhawk Warden', bonus: { dex: 7, agi: 4, luk: 3 } } }, signatureSkillId: 'starhawk_volley' },
+      ],
+    },
+    lightbringer: {
+      defaultId: 'dawnguard',
+      choices: [
+        { id: 'dawnguard', label: 'Dawnguard', role: 'Warden', focus: 'Guard · Heal · Endure', color: '#efd36f', tiers: { 1: { name: 'Dawnguard', bonus: { vit: 5, str: 3 } }, 2: { name: 'Seraph Warden', bonus: { vit: 8, str: 6, int: 4 } } }, signatureSkillId: 'seraphic_prayer' },
+        { id: 'sunblade', label: 'Sunblade', role: 'Justicar', focus: 'Smite · Burn · Judgment', color: '#f29b57', tiers: { 1: { name: 'Sunblade', bonus: { str: 5, int: 3 } }, 2: { name: 'Solar Justicar', bonus: { str: 9, int: 6, luk: 3 } } }, signatureSkillId: 'solar_brand' },
+      ],
+    },
+    iron_fist: {
+      defaultId: 'ki_adept',
+      choices: [
+        { id: 'ki_adept', label: 'Ki Adept', role: 'Combo Master', focus: 'Tempo · Stun · Detonate', color: '#e69b61', tiers: { 1: { name: 'Ki Adept', bonus: { str: 4, agi: 4 } }, 2: { name: 'Grandmaster', bonus: { str: 8, agi: 6, vit: 3 } } }, signatureSkillId: 'dragon_chain' },
+        { id: 'stone_disciple', label: 'Stone Disciple', role: 'Bulwark', focus: 'Guard · Shockwave · Control', color: '#b99a77', tiers: { 1: { name: 'Stone Disciple', bonus: { vit: 4, str: 2, dex: 2 } }, 2: { name: 'Adamant Sage', bonus: { vit: 8, str: 5, dex: 4 } } }, signatureSkillId: 'adamant_wave' },
+      ],
+    },
+    stormcaller: {
+      defaultId: 'tempest_mage',
+      choices: [
+        { id: 'tempest_mage', label: 'Tempest Mage', role: 'Storm Weaver', focus: 'Slow · Detonate · Area', color: '#70cddd', tiers: { 1: { name: 'Tempest Mage', bonus: { int: 4, dex: 3 } }, 2: { name: 'Archon of Storms', bonus: { int: 8, dex: 4, luk: 3 } } }, signatureSkillId: 'tempest_convergence' },
+        { id: 'pyroclast', label: 'Pyroclast', role: 'Firebrand', focus: 'Burn · Detonate · Power', color: '#ef7654', tiers: { 1: { name: 'Pyroclast', bonus: { int: 5, luk: 2 } }, 2: { name: 'Cinder Archon', bonus: { int: 9, luk: 4, vit: 2 } } }, signatureSkillId: 'pyroclast_surge' },
+      ],
+    },
   },
 
   // Class advancement tiers per design classId. Index 0 = starting job.

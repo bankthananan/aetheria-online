@@ -70,7 +70,7 @@ assert.equal(A.doRebirth(), false, 'rebirth must refuse below the level cap');
 assert.equal(p.rebirths, 0, 'refused rebirth must not count');
 
 // 2) At the cap: stage a developed character, then rebirth.
-p.level = A.DESIGN.levelCap; p.jobLevel = 50; p.tierIndex = 2;
+p.level = A.DESIGN.levelCap; p.jobLevel = 50; p.tierIndex = 2; p.jobBranchId = 'rift_knight';
 p.alloc.str = 40; p.statPoints = 7; p.skillPoints = 3;
 p.skillLevels.rift_slash = 5;
 p.zeny = 12345;
@@ -84,6 +84,7 @@ assert.equal(p.rebirths, 1);
 assert.equal(p.level, 1, 'level resets');
 assert.equal(p.jobLevel, 1, 'job level resets');
 assert.equal(p.tierIndex, 0, 'class tier resets');
+assert.equal(p.jobBranchId, null, 'second-job branch resets so the next life can choose again');
 assert.equal(p.alloc.str, 0, 'stat allocation resets');
 assert.ok(!p.skillLevels.rift_slash || p.skillLevels.rift_slash === 1, 'learned skill ranks reset to a fresh kit');
 assert.equal(p.zeny, 12345, 'zeny survives rebirth');

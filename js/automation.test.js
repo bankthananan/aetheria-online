@@ -142,7 +142,7 @@ A.G.running = true;
 A.saveGame();
 const saved = JSON.parse(globalThis.localStorage.getItem('awo_save_v1'));
 assert.deepEqual(saved.world.autoConfig, A.G.autoConfig, 'automation preferences persist in the compatible save schema');
-assert.equal(saved.v, 3, 'automation preferences require no save-version migration');
+assert.equal(saved.v, 4, 'automation preferences persist inside the branch-aware save schema');
 assert.equal(A.resumeGame(), true, 'automation save resumes through the live load path');
 assert.deepEqual(A.G.autoConfig, { skills: false, heal: true, potions: false, profile: 'cautious' },
   'automation preferences survive a full save/load round trip');

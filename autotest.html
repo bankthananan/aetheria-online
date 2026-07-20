@@ -70,9 +70,16 @@
               A.G.keys = { w: true }; A.G.player.hp = 0;
               A.playerDeath();
             }
+            if (params.get('jobchoice')) {        // complete the real Lv15 trial and show the permanent two-path choice
+              A.G.player.level = 15; A.G.player.jobLevel = 18; A.G.player.skillPoints = 8;
+              A.recompute(A.G.player, true); A.startAdvanceQuest(1);
+              A.G.advance.progress = A.G.advance.def.objective.count;
+              A.checkAdvance();
+            }
             if (params.get('career')) {          // stage a real class tier for skill-progression review
               const tier = Math.max(0, Math.min(2, +params.get('career') - 1));
-              while (A.G.player.tierIndex < tier) A.doPromote(A.G.player, A.G.player.tierIndex + 1);
+              const branch = A.PROGRESSION.jobBranches[A.G.player.classId]?.defaultId;
+              while (A.G.player.tierIndex < tier) A.doPromote(A.G.player, A.G.player.tierIndex + 1, branch);
               A.G.player.jobLevel = tier === 0 ? 15 : tier === 1 ? 24 : A.PROGRESSION.jobLevelCap;
               A.G.player.jobXp = 0; A.G.player.skillPoints = 20;
               const starter = Object.keys(A.G.player.skillLevels)[0];

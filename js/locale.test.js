@@ -107,6 +107,17 @@ Object.values(PROGRESSION.tiers).forEach(tList => {
   });
 });
 
+// Test 10a: Every second-job choice is understandable in both languages.
+Object.values(PROGRESSION.jobBranches).forEach(config => {
+  config.choices.forEach(branch => {
+    for (const tier of Object.values(branch.tiers)) {
+      assert.notEqual(T(tier.name, 'classes'), tier.name, `Missing translation for branch class name: ${tier.name}`);
+    }
+    assert.notEqual(T(branch.role, 'ui'), branch.role, `Missing translation for branch role: ${branch.role}`);
+    assert.notEqual(T(branch.focus, 'ui'), branch.focus, `Missing translation for branch focus: ${branch.focus}`);
+  });
+});
+
 // Test 10b: Every class-owned skill manual is fully localized, not just its skills.
 Object.values(PROGRESSION.skillBooks).forEach(book => {
   for (const field of ['title', 'focus', 'motto']) {

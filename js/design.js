@@ -90,6 +90,23 @@ export const DESIGN = {
   jobXpCurve: "Math.floor(52 * Math.pow(level, 1.85) + 20 * level)",
   levelCap: 80,
 
+  // Auditable budgets for the two-way second-job choice. Alternate branches
+  // redistribute, but never exceed, the raw stat points awarded by the legacy
+  // path. Signature actives trade single-target power for area/control/healing
+  // inside this narrow window and use only combat mechanics the engine knows.
+  jobBranchBalance: {
+    tierStatPointBudgets: {
+      reborn_blade: { 1: 8, 2: 19 }, drifter: { 1: 8, 2: 17 },
+      codeweaver: { 1: 8, 2: 14 }, far_shot: { 1: 8, 2: 14 },
+      lightbringer: { 1: 8, 2: 18 }, iron_fist: { 1: 8, 2: 17 },
+      stormcaller: { 1: 7, 2: 15 },
+    },
+    signature: {
+      reqTier: 1, reqJobLevel: 18, maxLevel: 3,
+      singleTargetPower: [2.1, 2.5], areaPower: [1.8, 2.1], healPower: [2.4, 2.4],
+    },
+  },
+
   // ---- central balance knobs (edit here, not scattered through the engine) ----
   tuning: {
     monsterLevelSpread: 2,     // normal mobs roll their base level + 0..spread (bosses fixed)
