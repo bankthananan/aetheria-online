@@ -358,6 +358,24 @@ function selfCheck() {
       }
       if (!signature || signature.classId !== CLASS_COMBAT[c.id]) errs.push(`${c.id}/${branch.id} signature skill is invalid`);
       if (!(node?.reqBranch === branch.id && node.reqTier === DESIGN.jobBranchBalance?.signature?.reqTier)) errs.push(`${c.id}/${branch.id} signature gate is invalid`);
+      // ---- branch identity: unique passive mechanic + illustrative combo + Tier-2 mastery trial ----
+      const mech = branch.mechanic, trigger = mech && COMBAT.skills.find(sk2 => sk2.id === mech.triggerSkillId);
+      if (!mech || !trigger || trigger.classId !== CLASS_COMBAT[c.id]) errs.push(`${c.id}/${branch.id} mechanic trigger skill is invalid`);
+      else if (!DESIGN.jobBranchBalance.mechanic[mech.kind]) errs.push(`${c.id}/${branch.id} mechanic kind '${mech.kind}' is unknown`);
+      else if (mech.kind === 'bonusBuff' && !['atk', 'def'].includes(mech.stat)) errs.push(`${c.id}/${branch.id} bonusBuff needs stat atk|def`);
+      else if (mech.kind === 'detonateAmp' && !(mech.statuses?.length && mech.statuses.every(st => ['stun', 'burn', 'slow', 'sunder'].includes(st)))) errs.push(`${c.id}/${branch.id} detonateAmp needs statuses from stun|burn|slow|sunder (never mark — it must persist)`);
+      else if (mech.kind === 'detonateAmp' && signature?.detonate && mech.statuses.includes(signature.detonate)) errs.push(`${c.id}/${branch.id} mechanic competes with its own signature's detonate (${signature.detonate})`);
+      else if (mech.kind === 'procCdr' && !COMBAT.skills.some(sk2 => sk2.id === mech.targetSkillId)) errs.push(`${c.id}/${branch.id} procCdr targets unknown skill ${mech.targetSkillId}`);
+      else if (mech.kind === 'extendStatus' && !COMBAT.statusEffects[trigger.effect]) errs.push(`${c.id}/${branch.id} extendStatus trigger applies no status`);
+      if (!(Array.isArray(branch.combo) && branch.combo.length >= 2 && branch.combo.length <= 4 && branch.combo.every(id => skillIds.has(id))))
+        errs.push(`${c.id}/${branch.id} combo must list 2-4 real skills`);
+      const mastery = branch.tiers?.[2]?.advance;
+      if (!mastery?.name || !mastery?.objective) errs.push(`${c.id}/${branch.id} is missing its Tier-2 mastery trial`);
+      else {
+        const o = mastery.objective;
+        if (o.type === 'kill' && !monById[o.target]) errs.push(`${c.id}/${branch.id} mastery trial kills unknown ${o.target}`);
+        if (o.type === 'collect' && !itemById[o.target]) errs.push(`${c.id}/${branch.id} mastery trial collects unknown ${o.target}`);
+      }
     }
   }
   // pixel sprites: art for each class, monster, and NPC role
@@ -570,11 +588,45 @@ function tierForPlayer(p, ti = p?.tierIndex || 0, allowDefault = (p?.tierIndex |
   const base = PROGRESSION.tiers[p?.classId]?.[ti] || null;
   if (!base || ti === 0) return base;
   const branch = jobBranchFor(p, allowDefault);
-  return branch?.tiers?.[ti] ? { ...base, ...branch.tiers[ti], advance: base.advance } : base;
+  return branch?.tiers?.[ti] ? { ...base, ...branch.tiers[ti], advance: branch.tiers[ti].advance || base.advance } : base;
 }
 function branchAllowsSkill(p, id) {
   const required = PROGRESSION.skillTree[id]?.reqBranch;
   return !required || required === p?.jobBranchId;
+}
+// ---- branch identity mechanics: one small dispatcher per kind, magnitudes from
+// DESIGN.jobBranchBalance.mechanic so every branch is tuned from one table. ----
+function branchMechanic(p) { return jobBranchFor(p, false)?.mechanic || null; }
+// pre-damage: consumes one of the target's allowed statuses for bonus damage (branch-gated detonate)
+function branchDetonateBonus(p, sk, t, dmg) {
+  const mech = branchMechanic(p);
+  if (!mech || mech.kind !== 'detonateAmp' || mech.triggerSkillId !== sk.id) return dmg;
+  const key = (mech.statuses || []).find(id => t.statuses?.[id]?.until > now());
+  if (!key) return dmg;
+  delete t.statuses[key];
+  return Math.round(dmg * (1 + DESIGN.jobBranchBalance.mechanic.detonateAmp.extraPct));
+}
+// per-target: extends the status the trigger skill just applied
+function extendBranchStatus(p, sk, target) {
+  const mech = branchMechanic(p);
+  if (!mech || mech.kind !== 'extendStatus' || mech.triggerSkillId !== sk.id) return;
+  const st = target?.statuses?.[sk.effect];
+  if (st) st.until += DESIGN.jobBranchBalance.mechanic.extendStatus.extraMs;
+}
+// once per cast/hit: heal / cooldown-reduce / bonus-buff kinds
+function procBranchMechanic(p, sk, { dmg = 0 } = {}) {
+  const mech = branchMechanic(p);
+  if (!mech || mech.triggerSkillId !== sk.id) return;
+  if (mech.kind === 'procHeal') {
+    const heal = Math.round(dmg * DESIGN.jobBranchBalance.mechanic.procHeal.pct);
+    if (heal > 0) { p.hp = clamp(p.hp + heal, 0, p.maxHp); floatText(p.x, p.y, '+' + heal, 'heal'); }
+  } else if (mech.kind === 'procCdr') {
+    const cur = p.skillCd[mech.targetSkillId] || 0;
+    p.skillCd[mech.targetSkillId] = Math.max(now(), cur - DESIGN.jobBranchBalance.mechanic.procCdr.ms);
+  } else if (mech.kind === 'bonusBuff') {
+    const cfg = DESIGN.jobBranchBalance.mechanic.bonusBuff;
+    p.buffs.push({ stat: mech.stat, mult: 1 + cfg.mult, until: now() + cfg.durationMs, sourceSkillId: 'branch:' + p.jobBranchId });
+  }
 }
 function normaliseJobBranch(p) {
   const cfg = jobBranchConfig(p?.classId);
@@ -747,12 +799,11 @@ function resetSkillPoints(p = G.player) {
 // When the hero hits a tier's level requirement, offer that tier's advancement quest
 // (promotion is earned by completing it, not automatic).
 function maybeStartAdvance(p) {
-  const tiers = PROGRESSION.tiers[p.classId] || [];
-  const next = tiers[p.tierIndex + 1];
+  const next = tierForPlayer(p, p.tierIndex + 1);   // branch-aware: picks up a chosen branch's own Tier-2 mastery trial
   if (next?.advance && !G.advance && p.level >= next.reqLevel) startAdvanceQuest(p.tierIndex + 1);
 }
 function startAdvanceQuest(ti) {
-  const q = PROGRESSION.tiers[G.player.classId][ti].advance;
+  const q = tierForPlayer(G.player, ti).advance;
   G.advance = { ti, def: q, progress: 0 };
   AUDIO.playSfx('levelup');
   toast(`✦ Job Change available: ${q.name}!`, 'good');
@@ -1715,6 +1766,7 @@ function castSkillById(id) {
     p.hp = clamp(p.hp + heal, 0, p.maxHp);
     spawnRing(p.x, p.y, TS * 1.3, '#7dff9a'); spawnCross(p.x, p.y - 6, '#d9ffe0'); floatText(p.x, p.y, '+' + heal, 'heal');
     toast(`${sk.name} — restored ${heal} HP!`, 'good');
+    procBranchMechanic(p, sk);
     return;
   }
   if (sk.type === 'buff') {
@@ -1732,19 +1784,21 @@ function castSkillById(id) {
     p.buffs.push({ stat: eff[0], mult, until: now() + 8000, sourceSkillId: sk.id });
     skillFx(sk, p.x, p.y);
     toast(`${sk.name} Lv${lvl} active!`, 'good');
+    procBranchMechanic(p, sk);
     return;
   }
   if (sk.type === 'aoe') {
     const cx = G.target ? G.target.x : p.x, cy = G.target ? G.target.y : p.y;
     skillFx(sk, cx, cy);
-    let hit = false;
+    let hit = false, lastDmg = 0;
     for (const m of G.monsters) if (m.alive && dist(cx, cy, m.x, m.y) <= sk.radius * TS + m.size / 2) {
       let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
       if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete m.statuses[sk.detonate]; }
       damageMonster(m, dmg, isCrit); applyStatus(m, sk.effect, lvl);
-      hit = true;
+      extendBranchStatus(p, sk, m);
+      hit = true; lastDmg = dmg;
     }
-    if (hit && !sk.finisher) gainMomentum(p);
+    if (hit) { if (!sk.finisher) gainMomentum(p); procBranchMechanic(p, sk, { dmg: lastDmg }); }
     return;
   }
   // melee / ranged single target
@@ -1762,7 +1816,9 @@ function castSkillById(id) {
   if (!rollHit(p.hit + 20, t.flee)) { floatText(t.x, t.y, 'miss', 'miss'); return; }
   let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance);
   if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete t.statuses[sk.detonate]; }
+  dmg = branchDetonateBonus(p, sk, t, dmg);
   damageMonster(t, dmg, isCrit); applyStatus(t, sk.effect, lvl);
+  procBranchMechanic(p, sk, { dmg });
   if (!sk.finisher) gainMomentum(p);
 }
 
@@ -4149,7 +4205,12 @@ function skillsPanelHtml(p) {
     <div class="ro-book-radar">${svgRadar(g)}</div></header>`;
   const resetNote = `<aside class="ro-reset-note"><span>↺</span><div><b>${T('RESET YOUR BUILD', 'ui')}</b><small>${T('Soul Ledger and Memory Prism are sold by Marla. Reset items preserve your level, gear, and rebirth bonuses.', 'ui')}</small></div></aside>`;
   const guide = `<details class="skill-guide"><summary>${T('COMBAT COMBO GUIDE', 'ui')} <small>${T('Build, setup, detonate, then finish.', 'ui')}</small></summary>${combatLoopHtml(p, actives)}</details>`;
-  return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}<div class="ro-job-grid">${lanes}</div>${resetNote}${guide}</div>`;
+  const branchIdentity = (p.jobBranchId && selectedBranch?.mechanic) ? `<section class="ro-branch-identity">
+    <header><small>${T('BRANCH IDENTITY', 'ui')}</small><b>${esc(T(selectedBranch.label, 'classes'))} · ${esc(T(selectedBranch.mechanic.name, 'ui'))}</b></header>
+    <p>${esc(T(selectedBranch.mechanic.desc, 'ui'))}</p>
+    <div class="ro-branch-combo"><small>${T('CORE COMBO', 'ui')}</small><div class="flow-skills">${selectedBranch.combo.map(id => COMBAT.skills.find(s => s.id === id)).filter(Boolean).map(s => skillFlowChip(s, p)).join('')}</div></div>
+  </section>` : '';
+  return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}${branchIdentity}<div class="ro-job-grid">${lanes}</div>${resetNote}${guide}</div>`;
 }
 
 // plain-language "what does it do" line for a skill at level L
@@ -5344,6 +5405,7 @@ const extraCss = `
 .ro-skill.locked{background:#0d1726;border-color:#465468}.ro-skill.locked .ro-skill-copy b{color:#a7b1be}.ro-skill.locked .ro-skill-icon{color:#8795a7}.ro-skill.ready{border-color:#71c47c;background:#173528;box-shadow:inset 0 0 0 1px rgba(113,196,124,.2),0 0 7px rgba(113,196,124,.22)}.ro-skill.ready .ro-skill-state{color:#9ee6a7;border-color:#71c47c}.ro-skill.owned{border-color:color-mix(in srgb,var(--book-accent) 72%,#798698);background:color-mix(in srgb,var(--book-deep) 68%,#17253a)}.ro-skill.maxed{border-color:#e3bd58;background:#392f1a}.ro-skill.maxed .ro-skill-state{color:#f0d47d;border-color:#8b7238}.ro-skill.tier-capped{border-color:#6fb0ef;background:#172b45}.ro-skill.can{cursor:pointer}.ro-skill.can:hover{filter:brightness(1.2);transform:translateY(-1px);outline:1px solid rgba(255,255,255,.2)}
 .ro-skill.is-builder{border-left-color:#6f9669}.ro-skill.is-setup{border-left-color:#638cc1}.ro-skill.is-detonator{border-left-color:#ad78cf}.ro-skill.is-finisher{border-left-color:#c65356}.ro-skill.is-passive{border-left-color:#9c72bd}.ro-skill[draggable="true"]{cursor:grab}.ro-skill[draggable="true"]:active{cursor:grabbing}
 .ro-reset-note{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 9px;border:1px solid #8b7238;background:#2a2417}.ro-reset-note>span{color:#f0d47d;font-size:22px}.ro-reset-note div{display:flex;flex-direction:column}.ro-reset-note b{color:#f0d47d;font-size:8px;letter-spacing:1px}.ro-reset-note small{color:#c4bda9;font-size:8px;line-height:1.35}
+.ro-branch-identity{margin:0 8px 8px;padding:8px 9px;border:1px solid var(--book-accent);background:color-mix(in srgb,var(--book-deep) 82%,#000)}.ro-branch-identity>header{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}.ro-branch-identity>header small{color:#9aa8bd;font-size:7px;letter-spacing:1px}.ro-branch-identity>header b{color:var(--book-accent);font-size:10px}.ro-branch-identity>p{margin:0 0 6px;color:#d6dee9;font-size:9px;line-height:1.4}.ro-branch-combo{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ro-branch-combo>small{color:#8997aa;font-size:7px;letter-spacing:.6px}
 .skill-guide{margin:0 8px 8px;border:1px solid #526178;background:#0b1628}.skill-guide>summary{padding:7px 9px;color:#efd16f;font-size:9px;font-weight:900;letter-spacing:.7px;cursor:pointer}.skill-guide>summary small{margin-left:8px;color:#8997aa;font-size:8px;font-weight:400;letter-spacing:0}.skill-guide .skill-flow{width:auto;margin:0;border-width:1px 0 0;box-shadow:none}
 /* skill hover tooltip */
 .sk-tip{position:fixed;z-index:60;max-width:264px;background:linear-gradient(180deg,#2f2716,#1a140c);

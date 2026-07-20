@@ -1,5 +1,7 @@
 // Second-job branch audit: equal budgets, earned choice, exclusive signatures,
-// old-save migration, persistence, and rebirth selection reset.
+// old-save migration, persistence, and rebirth selection reset. Also covers
+// Branch Identity & Mastery (2026-07-20): one unique passive mechanic per
+// branch, an illustrative combo, and a distinct Tier-2 mastery trial.
 import assert from 'node:assert/strict';
 
 let clock = 1000;
@@ -47,6 +49,7 @@ globalThis.Image = class {};
 globalThis.innerWidth = 1440;
 globalThis.innerHeight = 900;
 
+const { COMBAT } = await import('./combat.js');
 await import('./game.js');
 const A = globalThis.__AWO;
 assert.ok(A, 'game debug API loaded');
@@ -148,5 +151,124 @@ assert.equal(A.doRebirth(), true, 'max-level branch character can rebirth');
 assert.equal(A.G.player.jobBranchId, null, 'rebirth reopens the second-job choice');
 assert.equal(A.G.player.tierIndex, 0, 'rebirth resets the job tier');
 
+// ---- Branch Identity & Mastery: every branch owns one unique passive mechanic,
+// an illustrative core combo, and a distinct Tier-2 mastery trial. ----
+const allBranches = A.DESIGN.classes.flatMap(cls => A.PROGRESSION.jobBranches[cls.id].choices);
+assert.equal(allBranches.length, 14, 'all 14 branches are present');
+assert.equal(new Set(allBranches.map(b => b.mechanic.id)).size, 14, 'every branch mechanic has a unique id');
+for (const branch of allBranches) {
+  assert.ok(branch.mechanic?.kind && A.DESIGN.jobBranchBalance.mechanic[branch.mechanic.kind], `${branch.id} mechanic kind is wired to a balance entry`);
+  assert.ok(Array.isArray(branch.combo) && branch.combo.length >= 2 && branch.combo.length <= 4, `${branch.id} shows a 2-4 step core combo`);
+  assert.ok(branch.tiers[2].advance?.objective, `${branch.id} has a Tier-2 mastery trial`);
+}
+for (const cls of A.DESIGN.classes) {   // a class's two branches must not share the same trial objective
+  const [ba, bb] = A.PROGRESSION.jobBranches[cls.id].choices;
+  const oa = ba.tiers[2].advance.objective, ob = bb.tiers[2].advance.objective;
+  assert.ok(oa.target !== ob.target || oa.count !== ob.count, `${cls.id}: ${ba.id}/${bb.id} mastery trials are genuinely distinct, not just reflavored text`);
+}
+
+// ---- Functional coverage: one branch per mechanic kind actually fires at runtime. ----
+function freshMechTester(classId, branchId) {
+  const mp = A.makePlayer(classId, 'MechTester');
+  A.G.player = mp;
+  A.buildHud();
+  mp.level = 20; mp.jobLevel = 20; mp.tierIndex = 1; mp.jobBranchId = branchId;
+  A.recompute(mp, true);
+  A.loadMap('whispering_woods');
+  A.G.monsters.forEach(dead => { dead.alive = false; dead.x = dead.y = 20000; });
+  mp.hp = mp.maxHp; mp.mp = mp.maxMp; mp.skillCd = {};
+  return mp;
+}
+function spawnDummy(mp) {
+  const def = A.CONTENT.monsters.find(entry => entry.id === 'wolf');
+  const dummy = A.makeMonster(def, mp.x + 32, mp.y, mp.level);
+  dummy.maxHp = 99999; dummy.hp = 99999;
+  A.G.monsters.push(dummy);
+  A.G.target = dummy;
+  return dummy;
+}
+const realRandom = Math.random;
+const forceHitNoMiss = () => { Math.random = () => 0; };   // guarantees rollHit succeeds; heal/detonate checks don't care about crit
+
+// bonusBuff — rift_knight's Guard Charge: casting Guardian Sigil also grants a branch-tagged ATK buff.
+{
+  const mp = freshMechTester('reborn_blade', 'rift_knight');
+  mp.skillLevels.rift_slash = 2; mp.skillLevels.guard_sigil = 1;
+  A.castSkillById('guard_sigil');
+  const branchBuff = mp.buffs.find(b => b.sourceSkillId === 'branch:rift_knight');
+  assert.ok(branchBuff && branchBuff.stat === 'atk', 'rift_knight Guard Charge grants an ATK buff on Guardian Sigil');
+}
+
+// procHeal — blood_marauder's Crimson Thirst: Reckless Hew heals back a share of its damage.
+{
+  const mp = freshMechTester('drifter', 'blood_marauder');
+  mp.skillLevels.reckless_hew = 1;
+  spawnDummy(mp);
+  mp.hp = Math.floor(mp.maxHp * 0.5);
+  const before = mp.hp;
+  forceHitNoMiss();
+  A.castSkillById('reckless_hew');
+  Math.random = realRandom;
+  assert.ok(mp.hp > before, 'blood_marauder Crimson Thirst heals HP back on Reckless Hew');
+}
+
+// procCdr — bladewind's Windstep Fury: Whirlwind Reap shortens Blood Frenzy's cooldown.
+{
+  const mp = freshMechTester('drifter', 'bladewind');
+  mp.skillLevels.reckless_hew = 2; mp.skillLevels.blood_frenzy = 1; mp.skillLevels.whirl_reap = 1;
+  spawnDummy(mp);
+  mp.skillCd.blood_frenzy = clock + 14000;
+  A.castSkillById('whirl_reap');
+  assert.equal(mp.skillCd.blood_frenzy, clock + 14000 - A.DESIGN.jobBranchBalance.mechanic.procCdr.ms, 'bladewind Windstep Fury shaves Blood Frenzy\'s cooldown on a landed Whirlwind Reap');
+}
+
+// extendStatus — rune_compiler's Runaway Combustion: Flame Burst's own burn lasts longer.
+{
+  const mp = freshMechTester('codeweaver', 'rune_compiler');
+  mp.skillLevels.arcane_bolt = 2; mp.skillLevels.flame_burst = 1;
+  const dummy = spawnDummy(mp);
+  A.castSkillById('flame_burst');
+  const expectedUntil = clock + COMBAT.statusEffects.burn.durationMs + A.DESIGN.jobBranchBalance.mechanic.extendStatus.extraMs;
+  assert.equal(dummy.statuses.burn?.until, expectedUntil, 'rune_compiler Runaway Combustion extends Flame Burst\'s own burn duration');
+}
+
+// detonateAmp — rift_reaver's Paradox Edge: Rift Slash consumes a pre-existing Sunder for bonus damage.
+{
+  const mp = freshMechTester('reborn_blade', 'rift_reaver');
+  mp.skillLevels.rift_slash = 1;
+  const dummy = spawnDummy(mp);
+  dummy.statuses.sunder = { until: clock + 7000, defMult: 0.8 };
+  forceHitNoMiss();
+  A.castSkillById('rift_slash');
+  Math.random = realRandom;
+  assert.equal(dummy.statuses.sunder, undefined, 'rift_reaver Paradox Edge consumes the Sundered status when Rift Slash detonates it');
+}
+
+// The Tier-2 mastery trial must actually surface in-game (not just live in data):
+// startAdvanceQuest/maybeStartAdvance must resolve through the chosen branch, not
+// the shared base tier text.
+{
+  const mp = A.makePlayer('reborn_blade', 'TrialTester');
+  A.G.player = mp; A.G.advance = null;
+  A.buildHud();
+  mp.tierIndex = 1; mp.jobBranchId = 'rift_reaver'; mp.level = 40; mp.jobLevel = 24;
+  A.recompute(mp, true);
+  A.startAdvanceQuest(2);
+  assert.equal(A.G.advance.def.objective.target, 'rime_harpy', 'rift_reaver Lv40 trial targets Rime Harpies, not the shared frost_wolf text');
+  assert.equal(A.G.advance.def.objective.count, 3, 'rift_reaver Lv40 trial uses its own branch-specific count');
+  assert.notEqual(A.G.advance.def.name, A.PROGRESSION.tiers.reborn_blade[2].advance.name, 'the surfaced quest name is the branch trial, not the shared base one');
+
+  A.G.advance = null;
+  const other = A.makePlayer('reborn_blade', 'TrialTester2');
+  A.G.player = other;
+  other.tierIndex = 0; other.level = 39; other.jobLevel = 18;
+  A.recompute(other, true);
+  other.tierIndex = 1; other.jobBranchId = 'rift_knight'; other.level = 40;
+  A.recompute(other, true);
+  A.maybeStartAdvance(other);
+  assert.equal(A.G.advance?.def.objective.target, 'frost_wolf', 'rift_knight Lv40 auto-trigger resolves its own branch trial');
+  assert.equal(A.G.advance?.def.objective.count, 6, 'rift_knight Lv40 trial count matches its branch data, not the legacy default');
+}
+
 A.selfCheck();
-console.log('Second-job branch audit passed: 14 paths, equal budgets, exclusive signatures, migration, persistence, and rebirth reset.');
+console.log('Second-job branch audit passed: 14 paths, equal budgets, exclusive signatures, migration, persistence, rebirth reset, unique branch mechanics, combos, and mastery trials.');
