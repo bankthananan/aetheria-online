@@ -25,6 +25,8 @@ for (const group of spriteGroups) {
     const isFrameSet = !Array.isArray(entry);
     if (isFrameSet) {                                          // {idle/walk/attack:[frame,frame]} contract
       assert.deepEqual(Object.keys(entry).sort(), ['attack', 'idle', 'walk'], `${group}.${name} frame-set must have exactly idle/walk/attack`);
+      assert.equal(new Set(Object.values(entry).flat().map(frame => frame.join('\n'))).size, 6,
+        `${group}.${name} must provide six visually distinct frames`);
       for (const st of ['idle', 'walk', 'attack']) {
         const frames = entry[st];
         assert.equal(frames.length, 2, `${group}.${name}.${st} must have exactly 2 frames`);
@@ -33,6 +35,7 @@ for (const group of spriteGroups) {
           const h = f.length, w = Math.max(...f.map(row => row.length));
           assert.ok(h === h0 && w === w0, `${group}.${name}.${st} frame ${fi} dimension mismatch`);
           assert.ok(h <= 32 && w <= 32, `${group}.${name}.${st} frame ${fi} exceeds 32x32`);
+          assert.ok(f.some(row => row.includes('k')), `${group}.${name}.${st} frame ${fi} needs a hard outline`);
         });
       }
     }
@@ -63,7 +66,10 @@ for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'el
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
 }
 for (const role of ['shop', 'guild', 'quest', 'story']) assert.ok(PX.npc[role], `NPC role ${role} needs art`);
-for (const monster of CONTENT.monsters) assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
+for (const monster of CONTENT.monsters) {
+  assert.ok(PX.monster[monster.id], `monster ${monster.id} needs art`);
+  assert.ok(!Array.isArray(PX.monster[monster.id]), `monster ${monster.id} must use the final six-frame animation contract`);
+}
 
 const expandedMinimums = {
   town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],
@@ -153,15 +159,29 @@ function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-for (const key of ['bg', 'panelBg', 'panelBorder', 'textPrimary', 'textMuted', 'accent', 'accentAlt', 'hpRed', 'mpBlue']) {
+for (const key of ['bg', 'panelBg', 'panelBorder', 'textPrimary', 'textMuted', 'accent', 'accentAlt', 'hpRed', 'mpBlue', 'questPaper', 'questInk']) {
   assert.ok(HEX.test(THEME.palette[key]), `theme palette is missing ${key}`);
 }
 assert.ok(contrast(THEME.palette.textPrimary, THEME.palette.panelBg) >= 4.5, 'panel text contrast is below WCAG AA');
+assert.ok(contrast(THEME.palette.questInk, THEME.palette.questPaper) >= 7, 'quest parchment text contrast is below WCAG AAA');
 assert.ok(THEME.css.includes('.hud') && THEME.css.includes('.panel') && THEME.css.includes('.hotbar'), 'theme lost core HUD selectors');
+assert.ok(THEME.css.includes('.panel[data-kind="quest"] .panel__body'), 'quest journal lost its dedicated readable surface');
+assert.ok(THEME.css.includes('#hud .hp-bar .fill,#hud .mp-bar .fill{transition:none!important}'), 'numeric HP/MP bars must not visually lag their labels');
 const trackerCss = THEME.css.match(/#hud \.quest-tracker\{([^}]*)\}/)?.[1] || '';
 assert.match(trackerCss, /overflow-y:\s*auto/, 'HUD quest tracker must scroll when quests exceed its max height');
 assert.match(trackerCss, /overscroll-behavior:\s*contain/, 'HUD quest tracker must not pass wheel scrolling to the game page');
 assert.match(trackerCss, /touch-action:\s*pan-y/, 'HUD quest tracker must support touch scrolling');
+const trackerBlocks = [...THEME.css.matchAll(/#hud \.quest-tracker\{([^}]*)\}/g)].map(match => match[1]);
+const parchmentTrackerCss = trackerBlocks.find(block => block.includes('var(--paper-grain)')) || '';
+for (const token of ['--text:#3a2b19', '--text-muted:#69583b', '--accent-alt:#5d4016', '--success:#285a31']) {
+  assert.ok(parchmentTrackerCss.includes(token), `parchment quest tracker is missing readable local color ${token}`);
+}
+for (const [label, color] of [['text', '#3a2b19'], ['muted', '#69583b'], ['accent', '#5d4016'], ['success', '#285a31']]) {
+  assert.ok(contrast(color, '#e3d4ad') >= 4.5, `quest tracker ${label} ink contrast is below WCAG AA`);
+}
+assert.ok(THEME.css.includes('.bounty-level--danger'), 'over-level bounty warnings lost their dedicated danger style');
+assert.ok(THEME.css.includes('.btn--confirm'), 'two-step bounty revoke lost its visible confirmation state');
+assert.ok(contrast('#7b202c', '#f7edcf') >= 4.5, 'danger bounty level text contrast is below WCAG AA');
 assert.ok(!/letter-spacing:\s*-/.test(THEME.css), 'theme uses negative letter spacing');
 
 console.log('Art audit passed: sprites, maps, palette keys, HUD contracts, and contrast are valid.');

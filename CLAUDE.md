@@ -37,6 +37,7 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
 - Any assertion on player movement/facing must first park monsters (`G.monsters.forEach(m => { m.x = m.y = m.homeX = m.homeY = 2000; })`) — an adjacent spawn attacks, auto-retaliate re-faces the player, and the assertion flakes ~1 in 5.
 - Deliver-kind guild bounties (40% of rolls) don't complete via `guildKill` — tests that kill-loop a bounty must force `kind === 'kill'` first.
 - Never strict-equal floats that went through multiplication + rounding; use delta or range checks.
+- Freeze visual animation in screenshot assertions (`anim=<state>:<frame>` and `tilephase=<n>`); ambient monster/tile frames otherwise change with virtual time.
 
 ## Architecture of the active game
 

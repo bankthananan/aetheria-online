@@ -90,6 +90,7 @@
             }
             const anim = params.get('anim');           // e.g. anim=attack:3 or anim=walk:4:left — freeze LPC pose for a screenshot
             if (anim) { const [st, fr, dir] = anim.split(':'); A.G.debugAnim = { state: st, frame: +fr || 0, dir: dir || 'down' }; }
+            if (params.has('tilephase')) A.G.debugTilePhase = +params.get('tilephase') || 0; // deterministic ambient tile frame
             if (params.get('rare')) {                 // stage the roaming rare boss on the current map
               A.spawnRareBoss(A.G.mapId);
               const rb = A.G.monsters.find(m => m.def.rare && m.alive);
@@ -151,6 +152,14 @@
             if (params.get('deliver') && !A.G.activeGuilds.length) {  // force a delivery bounty, fully stocked
               let q; do { q = A.genGuildQuest(); } while (q.kind !== 'deliver');
               A.G.activeGuilds.push(q); A.addItem(q.target, q.count);
+            }
+            if (params.get('dangerbounty') && !window.__dangerBountyStaged) { // Lv3 vs deep-Woods Boar warning + board controls
+              window.__dangerBountyStaged = true;
+              A.G.player.level = 3; A.G.player.xp = 0; A.recompute(A.G.player, true); A.updateHud();
+              const boarBounty = id => ({ id, kind: 'kill', target: 'thornback_boar', targetName: 'Thornback Boar', sourceMonsterId: 'thornback_boar',
+                count: 8, progress: 2, difficulty: 'easy', pts: 3, mapName: 'Whispering Woods', reward: { exp: 480, zeny: 320 } });
+              A.G.activeGuilds = [boarBounty('visual-boar-active')];
+              A.G.guildBoard = [boarBounty('visual-boar-1'), boarBounty('visual-boar-2'), boarBounty('visual-boar-3')];
             }
             if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
             if (!document.getElementById('panel')) A.togglePanel(wantPanel);

@@ -105,6 +105,10 @@ export const DESIGN = {
     expGapMax: 1.50,           // ...and up to this much for fighting above your level
     dropLevelBias: 0.11,       // rarity bias added per monster level
     dropLuckBias: 0.012,       // rarity bias added per point of player LUK
+    shopStockMs: 300000,       // rolled trader gear stays stable for five minutes
+    shopRarityBiasPerRank: 0.18, // guild rank gradually improves rolled shop rarity
+    shopFeaturedRarityBias: 1.25, // featured rank gear gets a noticeably better roll
+    shopAffixMarkup: 0.12,     // each substat adds this fraction to a shop item's price
     zenyPerLevel: 3,           // ~this much zeny dropped per monster level
     combatGapFalloff: 0.15,    // player damage shrinks this much per monster-level above you...
     combatGapFloor: 0.12,      // ...to a floor — +6 and beyond is a wall, not a speed bump

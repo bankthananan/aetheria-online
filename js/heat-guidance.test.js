@@ -174,12 +174,60 @@ A.activateTaskGuide('story', 'q_briar');
 assert.equal(A.G.huntTargetId, 'thornback_boar', 'deep-Woods quest focuses Thornback Boars');
 assert.equal(A.G.autoFarm, true, 'deep-Woods quest starts focused hunting on arrival');
 
+// Bounty guidance uses the real habitat level band for kill and delivery work.
+assert.deepEqual(A.bountyLevelRange({ kind: 'kill', target: 'slime' }), [1, 5], 'Slime bounties recommend the entry band');
+assert.deepEqual(A.bountyLevelRange({ kind: 'kill', target: 'thornback_boar' }), [10, 15], 'Boar bounties warn about the deep-Woods band');
+assert.deepEqual(A.bountyLevelRange({ kind: 'deliver', target: 'wolf_pelt', sourceMonsterId: 'thornback_boar' }), [10, 15],
+  'delivery bounties use their rolled source monster band');
+assert.deepEqual(A.bountyLevelRange({ kind: 'deliver', target: 'wolf_pelt', dropFrom: 'Thornback Boar' }), [10, 15],
+  'legacy delivery bounties recover their source band by name');
+A.G.player.level = 3;
+const compactBoarWarning = A.bountyLevelHtml({ kind: 'kill', target: 'thornback_boar' }, true);
+assert.ok(compactBoarWarning.includes('Recommended Lv 10+'), 'compact tracker shows the Boar recommendation');
+assert.ok(compactBoarWarning.includes('Target Lv 10–15'), 'compact tracker shows the full Boar target band');
+assert.ok(compactBoarWarning.includes('bounty-level--danger'), 'compact tracker warns a Lv3 player about Boars');
+A.G.player.level = 80;
+
+// Refreshing the offer board changes all offers without touching accepted work.
+const protectedBounty = { id: 'guild-accepted-test', kind: 'kill', target: 'slime', targetName: 'Slime', count: 3,
+  progress: 1, difficulty: 'easy', pts: 3, reward: { exp: 30, zeny: 40 } };
+A.G.activeGuilds = [protectedBounty];
+A.refreshGuildBoard();
+const firstBoardIds = A.G.guildBoard.map(bounty => bounty.id);
+assert.equal(A.rerollGuildBoard(), true, 'guild board can be refreshed');
+assert.equal(A.G.guildBoard.length, 3, 'guild board refresh creates three offers');
+assert.ok(A.G.guildBoard.every(bounty => !firstBoardIds.includes(bounty.id)), 'guild board refresh replaces every old offer');
+assert.deepEqual(A.G.activeGuilds, [protectedBounty], 'guild board refresh leaves accepted bounties untouched');
+
+// Revoking an accepted guild bounty frees its slot, clears matching guidance,
+// grants nothing, and never consumes delivery materials or other inventory.
+// The visible action is deliberately two-step instead of using a browser popup.
+const revokedBounty = { id: 'guild-revoke-test', kind: 'kill', target: 'slime', targetName: 'Slime', count: 8,
+  progress: 5, difficulty: 'easy', pts: 3, reward: { exp: 80, zeny: 120 } };
+A.G.activeGuilds = [revokedBounty];
+A.G.taskGuide = { source: 'guild', taskId: revokedBounty.id, mode: 'hunt', monsterId: 'slime', mapId: 'whispering_woods', resumeAutoFarm: false };
+A.G.autoFarm = true; A.G.huntTargetId = 'slime';
+const zenyBeforeRevoke = A.G.player.zeny;
+const inventoryBeforeRevoke = JSON.stringify(A.G.player.inventory);
+assert.equal(A.requestGuildRevoke(revokedBounty.id), false, 'first revoke click only arms confirmation');
+assert.equal(A.G.activeGuilds.length, 1, 'armed revoke does not abandon the bounty');
+assert.equal(A.requestGuildRevoke(revokedBounty.id), true, 'second revoke click confirms the action');
+assert.equal(A.G.activeGuilds.length, 0, 'revoking frees the accepted bounty slot');
+assert.equal(A.G.taskGuide, null, 'revoking the focused bounty clears its guidance');
+assert.equal(A.G.autoFarm, false, 'revoking the focused bounty stops its Hunt mode');
+assert.equal(A.G.player.zeny, zenyBeforeRevoke, 'revoking grants no bounty reward');
+assert.equal(JSON.stringify(A.G.player.inventory), inventoryBeforeRevoke, 'revoking preserves inventory and delivery items');
+assert.equal(A.requestGuildRevoke(revokedBounty.id), false, 'requesting revoke for an absent bounty is a safe no-op');
+assert.equal(A.revokeGuild(revokedBounty.id), false, 'revoking an absent bounty is a safe no-op');
+
 setLanguage('th');
 for (const [key, category] of [
   ['Supplies for the Road', 'quests'], ['A Name on the Board', 'quests'],
   ['To Whispering Woods', 'maps'], ['Navigate to this task', 'ui'], ['Rewards: {items}', 'ui'],
   ['Auto-hunt ON — targets up to Lv {level}; stronger monsters are ignored.', 'ui'],
   ['Auto-hunt target limit: Lv {level}', 'ui'],
+  ['Recommended Lv {level}+', 'ui'], ['Target Lv {min}–{max}', 'ui'],
+  ['Too strong for your current level', 'ui'], ['Refresh Board', 'ui'], ['Confirm Revoke', 'ui'],
 ]) assert.notEqual(T(key, category), key, `${category}/${key} has a Thai translation`);
 
 console.log('Heat habitats, respawns, quest guidance, and Thai runtime labels passed.');

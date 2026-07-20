@@ -35,7 +35,7 @@ const DIFFICULTY = {
   hard:   { name: 'Hard',   color: '#e8963c', mult: 1.4, band: [13, 18] },
   elite:  { name: 'Elite',  color: '#e0574b', mult: 2.0, band: [18, 99] },
 };
-const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:${c.color}22;color:${c.color};border:1px solid ${c.color}66">${T(c.name, 'ui')}</span>`; };
+const diffBadge = d => { const c = DIFFICULTY[d] || DIFFICULTY.normal; return `<span class="difficulty-badge" style="--difficulty-color:${c.color};display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;border:1px solid var(--difficulty-color)">${T(c.name, 'ui')}</span>`; };
 // Adventurer's Guild rank ladder. Bounties award points by difficulty; ranking up
 // unlocks harder bounties (hard @ D-, elite @ B-), multiplies rewards, sweetens
 // loot rarity, and opens rank-gated shop stock (items with `rankReq`).
@@ -72,9 +72,12 @@ const translateAny = (key, categories) => {
 // each monster's home zone name (first map it spawns in) — for guild bounty location hints
 const monsterMapName = {};
 const monsterMapId = {};
+const monsterLevelRange = {};
 for (const map of Object.values(MAPS)) for (const sp of (map.spawns || [])) if (!(sp.monsterId in monsterMapName)) {
   monsterMapName[sp.monsterId] = map.name;
   monsterMapId[sp.monsterId] = map.id;
+  const fallbackLevel = monById[sp.monsterId]?.level || 1;
+  monsterLevelRange[sp.monsterId] = sp.levelRange ? [...sp.levelRange] : [fallbackLevel, fallbackLevel];
 }
 // which monster drops a material + where it lives (for delivery bounty hints)
 const itemDropSource = itemId => { for (const m of CONTENT.monsters) if (m.drops.some(d => d.itemId === itemId)) return { mon: m.name, monsterId: m.id, map: monsterMapName[m.id], mapId: monsterMapId[m.id] }; return null; };
@@ -160,7 +163,7 @@ function pickRarity(bias = 0) {
   return 'common';
 }
 function rollItem(itemId, bias = 0, forceRarity) {
-  const rarity = forceRarity || pickRarity(bias);
+  const rarity = RARITY[forceRarity] ? forceRarity : pickRarity(bias);
   const pool = [...AFFIXES], affixes = [];
   for (let i = 0; i < RARITY[rarity].affixes && pool.length; i++) {
     const a = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
@@ -171,14 +174,50 @@ function rollItem(itemId, bias = 0, forceRarity) {
 }
 // loot bias grows with the monster's rolled level, the hero's LUK, and guild rank.
 const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15;
-const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * RARITY[inst.rarity].mult * (1 + 0.05 * (inst.plus || 0))) : 0;
-const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * RARITY[inst.rarity].mult * (1 + 0.05 * (inst.plus || 0))) : 0;
+const itemRarity = inst => RARITY[inst?.rarity] || RARITY.common;
+const itemAffixes = inst => Array.isArray(inst?.affixes) ? inst.affixes : [];
+const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
+const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
 const instName = inst => (inst.plus ? `+${inst.plus} ` : '') + T(itemById[inst.itemId].name, 'items');
 function equippedAffixes(p) {
   const acc = { atkPct: 0, critPct: 0, hpFlat: 0, mpFlat: 0, defPct: 0, lifesteal: 0, hitFlat: 0, fleeFlat: 0 };
-  for (const s of EQUIP_SLOTS) { const inst = p.equip[s]; if (inst?.affixes) for (const a of inst.affixes) acc[a.stat] = (acc[a.stat] || 0) + a.value; }
+  for (const s of EQUIP_SLOTS) for (const a of itemAffixes(p.equip[s])) acc[a.stat] = (acc[a.stat] || 0) + a.value;
   return acc;
 }
+
+// Gear advice is intentionally class-shaped instead of pretending every build
+// wants the same scalar "gear score". The first three substats are the core
+// recommendation; the fourth is a useful secondary stat.
+const GEAR_AFFIX_UI = {
+  atkPct:    { name: 'ATK',       suffix: '%' },
+  critPct:   { name: 'Crit',      suffix: '%' },
+  hpFlat:    { name: 'Max HP',    suffix: '' },
+  mpFlat:    { name: 'Max MP',    suffix: '' },
+  defPct:    { name: 'DEF',       suffix: '%' },
+  lifesteal: { name: 'Lifesteal', suffix: '%' },
+  hitFlat:   { name: 'Hit',       suffix: '' },
+  fleeFlat:  { name: 'Flee',      suffix: '' },
+};
+const CLASS_GEAR_PRIORITIES = {
+  blade:       ['hpFlat', 'defPct', 'lifesteal', 'atkPct'],
+  berserker:   ['atkPct', 'critPct', 'lifesteal', 'fleeFlat'],
+  mage:        ['atkPct', 'mpFlat', 'critPct', 'hpFlat'],
+  ranger:      ['atkPct', 'critPct', 'hitFlat', 'fleeFlat'],
+  paladin:     ['hpFlat', 'defPct', 'lifesteal', 'atkPct'],
+  monk:        ['atkPct', 'critPct', 'lifesteal', 'hitFlat'],
+  elementalist:['atkPct', 'mpFlat', 'critPct', 'hpFlat'],
+};
+const gearPriorities = p => CLASS_GEAR_PRIORITIES[p?.combatClass] || ['atkPct', 'hpFlat', 'defPct', 'critPct'];
+const affixTotals = inst => {
+  const totals = {};
+  for (const a of itemAffixes(inst)) totals[a.stat] = (totals[a.stat] || 0) + (Number(a.value) || 0);
+  return totals;
+};
+const affixValueText = (stat, value, signed = true) => {
+  const ui = GEAR_AFFIX_UI[stat] || { name: stat, suffix: '' };
+  const sign = signed && value > 0 ? '+' : '';
+  return `${sign}${value}${ui.suffix} ${T(ui.name, 'ui')}`;
+};
 
 // =====================================================================
 // SELF-CHECK (ponytail: one runnable check — fail loud in console if data drifts)
@@ -305,7 +344,7 @@ function selfCheck() {
   for (const m of CONTENT.monsters) {
     const rows = PX.monster[m.id];
     if (!rows) { errs.push(`no monster pixel sprite for ${m.id}`); continue; }
-    if (Array.isArray(rows)) continue;                          // legacy single matrix — valid as-is
+    if (Array.isArray(rows)) { errs.push(`monster ${m.id} still uses a legacy single-frame sprite`); continue; }
     const states = Object.keys(rows);
     if (states.length !== 3 || !['idle', 'walk', 'attack'].every(st => rows[st])) {
       errs.push(`monster ${m.id} frame-set must have exactly idle/walk/attack`); continue;
@@ -403,6 +442,7 @@ const G = {
   talked: new Set(),    // map-NPC ids spoken to (talk objectives)
   guardiansSlain: new Set(),   // zone guardians defeated — gates guild bounty regions
   debugAnim: null,      // {state,frame,dir?} freeze override for LPC anim screenshots/tests
+  debugTilePhase: null, // deterministic ambient-tile phase for screenshots/tests
 };
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
@@ -706,6 +746,106 @@ function recompute(p, fill) {
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
   p.hp = clamp(p.hp, 0, p.maxHp);
   p.mp = clamp(p.mp, 0, p.maxMp);
+}
+
+// Compare the real character sheet before/after a swap. This catches effects
+// that raw item ATK/DEF cannot explain (percent affixes, HP/MP, hit, flee,
+// crit, lifesteal, and class-specific attack formulas).
+const GEAR_METRICS = [
+  { key: 'atkStat',    name: 'ATK',       suffix: '' },
+  { key: 'physDef',    name: 'DEF',       suffix: '' },
+  { key: 'maxHp',      name: 'Max HP',    suffix: '' },
+  { key: 'maxMp',      name: 'Max MP',    suffix: '' },
+  { key: 'hit',        name: 'Hit',       suffix: '' },
+  { key: 'flee',       name: 'Flee',      suffix: '' },
+  { key: 'critChance', name: 'Crit',      suffix: '%' },
+  { key: 'lifesteal',  name: 'Lifesteal', suffix: '%' },
+];
+function gearStatSnapshot(p, equip = p.equip) {
+  const copy = { ...p, equip: { ...equip }, buffs: [...(p.buffs || [])], stats: { ...(p.stats || {}) } };
+  recompute(copy, false);
+  return Object.fromEntries(GEAR_METRICS.map(metric => [metric.key, Number(copy[metric.key]) || 0]));
+}
+function compareEquipment(candidate, p = G.player) {
+  if (!candidate || !p || !isEquip(candidate.itemId)) return null;
+  const item = itemById[candidate.itemId], slot = itemSlot(item), current = p.equip[slot] || null;
+  const before = gearStatSnapshot(p), after = gearStatSnapshot(p, { ...p.equip, [slot]: candidate });
+  const metrics = GEAR_METRICS.map(metric => ({ ...metric, before: before[metric.key], after: after[metric.key], delta: after[metric.key] - before[metric.key] }))
+    .filter(metric => metric.delta !== 0);
+  const oldAffixes = affixTotals(current), newAffixes = affixTotals(candidate), priorities = gearPriorities(p);
+  const affixes = [...new Set([...Object.keys(newAffixes), ...Object.keys(oldAffixes)])]
+    .map(stat => {
+      const beforeValue = oldAffixes[stat] || 0, afterValue = newAffixes[stat] || 0, delta = afterValue - beforeValue;
+      const kind = beforeValue === 0 ? 'new' : afterValue === 0 ? 'removed' : delta > 0 ? 'improved' : 'reduced';
+      return { stat, before: beforeValue, after: afterValue, delta, kind, recommended: priorities.slice(0, 3).includes(stat), useful: priorities.includes(stat) };
+    }).filter(change => change.delta !== 0);
+  const gains = metrics.filter(metric => metric.delta > 0), losses = metrics.filter(metric => metric.delta < 0);
+  const coreLoss = affixes.some(change => change.recommended && change.delta < 0);
+  const primaryKeys = [item.atk ? 'atkStat' : null, item.def ? 'physDef' : null].filter(Boolean);
+  const primaryGain = metrics.some(metric => primaryKeys.includes(metric.key) && metric.delta > 0);
+  let verdict = 'same';
+  if (!current) verdict = 'empty';
+  else if (gains.length && !losses.length) verdict = 'upgrade';
+  else if (primaryGain && !coreLoss) verdict = 'upgrade';
+  else if (gains.length && losses.length) verdict = 'tradeoff';
+  else if (!gains.length && losses.length) verdict = 'keep';
+  return { candidate, current, item, slot, metrics, affixes, priorities, verdict };
+}
+const gearVerdictText = verdict => ({
+  empty: currentLang === 'th' ? 'แนะนำ · ช่องว่าง' : 'Suggested · fills empty slot',
+  upgrade: currentLang === 'th' ? 'แนะนำให้อัปเกรด' : 'Suggested upgrade',
+  tradeoff: currentLang === 'th' ? 'มีข้อแลกเปลี่ยน · ตรวจสอบโบนัส' : 'Trade-off · check bonuses',
+  keep: currentLang === 'th' ? 'แนะนำให้ใช้ของเดิม' : 'Keep equipped item',
+  same: currentLang === 'th' ? 'ผลรวมเท่ากัน' : 'No sheet change',
+}[verdict] || verdict);
+const gearVerdictIcon = verdict => ({ empty: '＋', upgrade: '▲', tradeoff: '◆', keep: '▼', same: '=' }[verdict] || '=');
+function itemMainStatsHtml(inst) {
+  const it = itemById[inst.itemId], out = [];
+  if (it.atk) out.push(`${T('ATK', 'ui')} <b>${effAtk(inst)}</b>`);
+  if (it.def) out.push(`${T('DEF', 'ui')} <b>${effDef(inst)}</b>`);
+  return out.join(' · ') || `<span style="color:var(--text-muted)">${T('no base stat', 'ui')}</span>`;
+}
+function itemAffixesHtml(inst, p = G.player) {
+  const priorities = gearPriorities(p);
+  if (!itemAffixes(inst).length) return `<span class="gear-bonus gear-bonus--muted">${T('No substats', 'ui')}</span>`;
+  return itemAffixes(inst).map(a => {
+    const core = priorities.slice(0, 3).includes(a.stat), useful = priorities.includes(a.stat);
+    return `<span class="gear-bonus${core ? ' gear-bonus--core' : useful ? ' gear-bonus--useful' : ''}">${core ? '★ ' : useful ? '• ' : ''}${esc(affixValueText(a.stat, a.value))}${core ? ` <i>${T('recommended', 'ui')}</i>` : ''}</span>`;
+  }).join('');
+}
+function gearComparisonHtml(inst, p = G.player) {
+  const comparison = compareEquipment(inst, p);
+  if (!comparison) return '';
+  const metricRows = comparison.metrics.map(metric => `<span class="gear-delta ${metric.delta > 0 ? 'gain' : 'loss'}">${metric.delta > 0 ? '▲ +' : '▼ '}${metric.delta}${metric.suffix} ${T(metric.name, 'ui')}</span>`).join('');
+  const affixRows = comparison.affixes.map(change => {
+    const ui = GEAR_AFFIX_UI[change.stat] || { name: change.stat, suffix: '' };
+    const flag = change.recommended ? ` <i>★ ${T('recommended', 'ui')}</i>` : change.useful ? ` <i>• ${T('useful', 'ui')}</i>` : '';
+    let text;
+    if (change.kind === 'new') text = `${T('NEW BONUS', 'ui')} · ${affixValueText(change.stat, change.after)}`;
+    else if (change.kind === 'removed') text = `${T('REMOVED', 'ui')} · ${affixValueText(change.stat, change.before)}`;
+    else text = `${change.kind === 'improved' ? T('IMPROVED', 'ui') : T('REDUCED', 'ui')} · ${T(ui.name, 'ui')} ${change.before}${ui.suffix} → ${change.after}${ui.suffix} (${change.delta > 0 ? '+' : ''}${change.delta}${ui.suffix})`;
+    return `<span class="gear-affix-change ${change.delta > 0 ? 'gain' : 'loss'}">${text}${flag}</span>`;
+  }).join('');
+  const current = comparison.current
+    ? `${T('vs equipped', 'ui')} <b>${esc(instName(comparison.current))}</b>`
+    : T('Nothing equipped in this slot.', 'ui');
+  return `<div class="gear-compare gear-compare--${comparison.verdict}">
+    <div class="gear-compare__head"><b>${gearVerdictIcon(comparison.verdict)} ${gearVerdictText(comparison.verdict)}</b><small>${current}</small></div>
+    ${metricRows ? `<div class="gear-deltas">${metricRows}</div>` : ''}
+    ${affixRows ? `<div class="gear-affix-changes">${affixRows}</div>` : `<div class="gear-affix-changes"><span class="gear-affix-change neutral">${T('No substat changes.', 'ui')}</span></div>`}
+  </div>`;
+}
+function gearBuildAdviceHtml(p) {
+  const priorities = gearPriorities(p);
+  return `<div class="gear-advice"><b>★ ${T('Suggested substats for', 'ui')} ${T(p.className, 'classes')}</b><span>${priorities.map((stat, i) => `<em class="${i < 3 ? 'core' : ''}">${i < 3 ? '★ ' : '• '}${T(GEAR_AFFIX_UI[stat].name, 'ui')}</em>`).join('')}</span><small>${T('Stars are core priorities; the dot is a useful secondary. Trade-offs are shown instead of hidden behind one gear score.', 'ui')}</small></div>`;
+}
+function equippedGearSummaryHtml(p) {
+  const totals = equippedAffixes(p);
+  const active = Object.entries(totals).filter(([, value]) => value > 0)
+    .map(([stat, value]) => `<span class="gear-bonus">${affixValueText(stat, value)}</span>`).join('');
+  const weaponAtk = effAtk(p.equip.weapon) + effAtk(p.equip.accessory);
+  const armorDef = ['head', 'body', 'hands', 'cloak', 'feet', 'accessory'].reduce((sum, slot) => sum + effDef(p.equip[slot]), 0);
+  return `<div class="gear-summary"><b>${T('Equipment contribution', 'ui')}</b><div>${T('Base gear', 'ui')}: +${weaponAtk} ${T('weapon ATK', 'ui')} · +${armorDef} ${T('armor DEF', 'ui')}</div><div class="gear-bonuses">${active || `<span class="gear-bonus gear-bonus--muted">${T('No active substats', 'ui')}</span>`}</div></div>`;
 }
 
 function addStack(itemId, qty = 1) {
@@ -1109,7 +1249,7 @@ function killMonster(m) {
   // drops (equipment rolls rarity + affixes, biased by monster level & your LUK)
   for (const d of m.def.drops) if (chance(d.chance)) {
     const got = addItem(d.itemId, 1, dropBias(m, p)), it = itemById[d.itemId];
-    if (got?.uid && got.rarity !== 'common') { toast(`✦ ${RARITY[got.rarity].name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${RARITY[got.rarity].name}] ${it.name}!`, 'good'); }
+    if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
   }
@@ -1584,6 +1724,21 @@ function playerDeath() {
 // =====================================================================
 const storyPhaseById = Object.fromEntries((CONTENT.storyPhases || []).map(phase => [phase.id, phase]));
 const storyPhaseFor = quest => storyPhaseById[quest?.phase] || null;
+// Main-story chapters provide a second route into better trader stock. The
+// thresholds align with the existing guild ladder: phase II reaches D-, phase
+// III C-, phase IV B-, phase V A-, and finishing the story reaches A+.
+// Trader S is reserved for the combined story-complete + Guild S capstone.
+const STORY_SHOP_RANK_BY_PHASE = [0, 0, 4, 7, 10, 13];
+const storyShopRankForQuest = quest => STORY_SHOP_RANK_BY_PHASE[quest?.phase || 1] || 0;
+function storyShopRankIdx() {
+  if (G.won) return GUILD_RANKS.length - 2; // story alone reaches A+; S is the combined capstone
+  return storyShopRankForQuest(storyFocusQuest());
+}
+function effectiveShopRankIdx() {
+  const guildRank = G.guildRankIdx || 0, maxRank = GUILD_RANKS.length - 1;
+  if (G.won && guildRank >= maxRank) return maxRank;
+  return Math.min(maxRank - 1, Math.max(guildRank, storyShopRankIdx()));
+}
 const storyPhaseLabel = quest => {
   const phase = storyPhaseFor(quest);
   if (!phase) return T('MAIN STORY', 'ui');
@@ -1843,9 +1998,18 @@ function completeQuest(q, { suppressDialogue = false } = {}) {
   if (q.objective.type === 'kill') G.killCounts[q.objective.target] = 0;
   if (G.taskGuide?.source === 'story' && G.taskGuide.taskId === q.id) finishTaskGuide();
   const next = nextQuestFor(q);
+  const oldStoryShopRank = storyShopRankForQuest(q);
+  const nextStoryShopRank = next ? storyShopRankForQuest(next) : oldStoryShopRank;
   const nextReady = next && G.player.level >= (next.minLevel || 1);
   G.quest = null;
   G.pendingQuest = next && !nextReady ? next.id : null;
+  if (nextStoryShopRank > oldStoryShopRank) {
+    const transitionRank = Math.min(GUILD_RANKS.length - 2, Math.max(G.guildRankIdx || 0, nextStoryShopRank));
+    rerollShop(transitionRank);
+    const rank = GUILD_RANKS[nextStoryShopRank];
+    const msg = T('Story milestone reached — trader stock advanced to Rank {rank} with better rarity.', 'ui').replace('{rank}', rank);
+    toast(`🛒 ${msg}`, 'good'); logMsg(`🛒 ${msg}`, 'good');
+  }
   updateQuestTracker();
   // one dialogue for the beat: this quest's outro + the next one's intro (the chain itself
   // never waits on the dialogue — a replaced dialogue must not strand the story)
@@ -1906,7 +2070,7 @@ function genGuildQuest() {
   const m = pool[Math.floor(Math.random() * pool.length)];
   const count = Math.round((5 + Math.floor(Math.random() * 11)) * (0.7 + mult * 0.3));
   const pts = Math.round(GUILD_TIER_PTS[monsterTier(m.level)] * DIFF_PTS_MULT[diff]);   // region tier × difficulty
-  const base = { id: 'g' + (++_uid), progress: 0, difficulty: diff, pts,
+  const base = { id: 'g' + (++_uid), progress: 0, difficulty: diff, pts, sourceMonsterId: m.id,
     reward: { exp: Math.floor(m.exp * count * 0.6 * mult * rankMult), zeny: Math.floor(m.level * count * 8 * mult * rankMult) } };
   const mapName = monsterMapName[m.id];   // where to hunt (or where the material drops)
   // 40% of bounties are DELIVERIES: bring N of a material the band's monsters drop (pays ×1.3)
@@ -1960,7 +2124,17 @@ function claimGuild(id) {
   finishGuild(g);
 }
 const guildTurnIn = claimGuild;   // legacy alias (tests, old callers)
-function refreshGuildBoard() { G.guildBoard = [genGuildQuest(), genGuildQuest(), genGuildQuest()]; }
+function refreshGuildBoard() {
+  G.guildBoard = [genGuildQuest(), genGuildQuest(), genGuildQuest()];
+  return G.guildBoard;
+}
+function rerollGuildBoard() {
+  refreshGuildBoard();
+  toast(T('Guild board refreshed. Accepted bounties were not changed.', 'ui'), 'good');
+  updateQuestTracker();
+  saveGame();
+  return true;
+}
 // location hint for a bounty (kill: where the mob lives · deliver: which mob drops it + where)
 // — falls back to a live lookup for legacy saves that predate the stored fields
 function bountyWhere(g) {
@@ -1971,6 +2145,30 @@ function bountyWhere(g) {
   }
   const map = g.mapName || monsterMapName[g.target];
   return map ? `📍 ${T(map, 'maps')}` : '';
+}
+// The recommended level comes from the target monster's real map spawn band,
+// including the material source for delivery bounties. Stored source ids keep
+// new delivery rolls exact; name/drop lookups preserve old saves.
+function bountyMonsterId(g) {
+  if (g.sourceMonsterId && monById[g.sourceMonsterId]) return g.sourceMonsterId;
+  if (g.kind === 'kill' && monById[g.target]) return g.target;
+  const namedSource = g.dropFrom && CONTENT.monsters.find(monster => monster.name === g.dropFrom);
+  return namedSource?.id || itemDropSource(g.target)?.monsterId || null;
+}
+function bountyLevelRange(g) {
+  const monsterId = bountyMonsterId(g);
+  if (!monsterId) return [1, 1];
+  const level = monById[monsterId]?.level || 1;
+  return [...(monsterLevelRange[monsterId] || [level, level])];
+}
+function bountyLevelHtml(g, compact = false) {
+  const [min, max] = bountyLevelRange(g);
+  const dangerous = G.player.level < min;
+  const recommendation = T('Recommended Lv {level}+', 'ui').replace('{level}', min);
+  const targetBand = T('Target Lv {min}–{max}', 'ui').replace('{min}', min).replace('{max}', max);
+  if (compact) return `<span class="bounty-level${dangerous ? ' bounty-level--danger' : ''}">${dangerous ? '⚠ ' : ''}${recommendation} · ${targetBand}</span>`;
+  const warning = dangerous ? ` · ${T('Too strong for your current level', 'ui')}` : '';
+  return `<span class="bounty-level${dangerous ? ' bounty-level--danger' : ''}">${dangerous ? '⚠ ' : ''}${recommendation} · ${targetBand}${warning}</span>`;
 }
 function acceptGuild(id) {
   if (G.activeGuilds.length >= GUILD_MAX_ACTIVE) {
@@ -1989,6 +2187,42 @@ function acceptGuild(id) {
     : `Guild task accepted: ${g.kind === 'deliver' ? `deliver ${g.count} ${g.targetName}` : `cull ${g.count} ${g.targetName}`} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE}).`;
   toast(msg, 'good');
   updateQuestTracker();
+}
+let pendingGuildRevoke = null;
+const guildRevokeArmed = id => pendingGuildRevoke?.id === id;
+function guildRevokeButton(g) {
+  const armed = guildRevokeArmed(g.id);
+  const label = armed ? T('Confirm Revoke', 'ui') : T('Revoke', 'ui');
+  const title = armed ? T('Click again to confirm bounty revoke', 'ui') : T('Revoke bounty', 'ui');
+  return `<button class="btn btn--danger${armed ? ' btn--confirm' : ''}" data-guildrevoke="${g.id}" title="${title}">${armed ? '⚠' : '✕'} ${label}</button>`;
+}
+function requestGuildRevoke(id) {
+  const g = G.activeGuilds.find(bounty => bounty.id === id);
+  if (!g) return false;
+  if (guildRevokeArmed(id)) {
+    pendingGuildRevoke = null;
+    return revokeGuild(id);
+  }
+  pendingGuildRevoke = { id };
+  const name = T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters');
+  toast(T('Revoke armed: click Confirm Revoke to abandon {name}. Delivery items stay in your bag.', 'ui').replace('{name}', name), 'sys');
+  refreshPanel('quest');
+  refreshPanel('guild');
+  return false;
+}
+function revokeGuild(id) {
+  const idx = G.activeGuilds.findIndex(g => g.id === id);
+  if (idx < 0) return false;
+  const [g] = G.activeGuilds.splice(idx, 1);
+  if (pendingGuildRevoke?.id === id) pendingGuildRevoke = null;
+  if (G.taskGuide?.source === 'guild' && G.taskGuide.taskId === g.id) finishTaskGuide();
+  const targetName = T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters');
+  const msg = T('Guild bounty revoked: {name}. No rewards were granted.', 'ui').replace('{name}', targetName);
+  toast(msg, 'sys');
+  logMsg(msg, 'sys');
+  updateQuestTracker();
+  saveGame();
+  return true;
 }
 function guildKill(monId) {
   // every accepted kill-bounty on this monster advances together; payout waits for the guild hall
@@ -2013,6 +2247,11 @@ function guildKill(monId) {
 function triggerVictory() {
   if (G.won) return;
   G.won = true;
+  rerollShop(effectiveShopRankIdx());
+  const shopMsg = (G.guildRankIdx || 0) >= GUILD_RANKS.length - 1
+    ? T('Main story and Guild Rank complete — Trader Rank S and the full catalog are unlocked.', 'ui')
+    : T('Main story complete — Story Rank A+ unlocked. Reach Guild Rank S to unlock the full Trader Rank S catalog.', 'ui');
+  logMsg(`🛒 ${shopMsg}`, 'good');
   setTimeout(() => runCutscene(CONTENT.story.victoryOutro, () => {
     G.running = true; last = now(); requestAnimationFrame(frame);   // resume — free-roam & farming continue
     toast(T('Victory! The world is yours to roam. Toggle auto-farm with F.', 'ui'), 'good');
@@ -2114,25 +2353,39 @@ function monsterAnim(m) {
 
 // ---- procedural 16×16 pixel tiles (deterministic, cached offscreen canvases) ----
 const tileCache = {};
+const TILE_PHASES = Object.freeze({ water: 4, grass: 2, tree: 2 });
+const TILE_PHASE_MS = Object.freeze({ water: 260, grass: 420, tree: 420 });
+const reducedMotionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+const prefersReducedMotion = () => !!reducedMotionQuery?.matches;
 const hash2 = (x, y) => { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); };
-function buildTile(type, col) {
-  if (col !== undefined) return tileCache[type];               // (col unused; per-type only)
-  if (tileCache[type]) return tileCache[type];
+function buildTile(type, phase = 0) {
+  const phases = TILE_PHASES[type] || 1;
+  phase = ((phase % phases) + phases) % phases;
+  const cacheKey = `${type}:${phase}`;
+  if (tileCache[cacheKey]) return tileCache[cacheKey];
   const N = 16, cvs = document.createElement('canvas'); cvs.width = N; cvs.height = N;
   const c = cvs.getContext('2d');
-  if (!c.fillRect) { tileCache[type] = cvs; return cvs; }      // headless-safe
+  if (!c?.fillRect) { tileCache[cacheKey] = cvs; return cvs; } // headless-safe
   const put = (x, y, hex, wd = 1, ht = 1) => { c.fillStyle = hex; c.fillRect(x, y, wd, ht); };
   const P = PAL;
   if (type === 'grass' || type === 'bush') {
     put(0, 0, P.f, N, N);
     // FF5-style: tonal clumps + scattered grass blades, not flat noise
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x, y); if (r > 0.90) put(x, y, P.j); else if (r < 0.14) put(x, y, P.F); }
-    [[3, 12], [4, 11], [8, 14], [12, 7], [13, 6], [6, 5], [10, 10]].forEach(([x, y]) => { put(x, y, P.j); put(x, y - 1, P.g); });  // upright blades w/ lit tips
+    const sway = type === 'grass' && phase === 1 ? 1 : 0;
+    [[3, 12], [4, 11], [8, 14], [12, 7], [13, 6], [6, 5], [10, 10]].forEach(([x, y], i) => {
+      const dx = i % 2 ? -sway : sway;
+      put(x + dx, y, P.j); put(x + dx, y - 1, P.g);
+    });
+    if (type === 'grass' && phase === 1) { put(2, 3, P.F); put(14, 12, P.j); put(9, 4, P.g); }
     if (type === 'bush') { c.fillStyle = P.G; c.beginPath(); c.arc(8, 10, 5, 0, 7); c.fill(); c.fillStyle = P.g; c.fillRect(6, 8, 2, 2); c.fillRect(10, 9, 2, 2); c.fillStyle = P.k; c.fillRect(3, 14, 10, 1); }
   } else if (type === 'water') {
     for (let y = 0; y < N; y++) put(0, y, (y % 4 < 2) ? P.v : P.V, N, 1);        // banded depth
-    for (let y = 1; y < N; y += 4) { put(2, y, P.C, 4, 1); put(9, y + 2, P.C, 4, 1); }   // ripple crests
-    put(3, 2, '#bfe3f5', 3, 1); put(10, 6, '#bfe3f5', 2, 1); put(5, 11, '#bfe3f5', 3, 1); // sun glints
+    const wave = (phase * 4) % N, counter = (12 - phase * 3 + N) % N;
+    for (let y = 1; y < N; y += 4) { put(wave, y, P.C, 4, 1); put(counter, y + 2, P.C, 4, 1); }
+    put((3 + phase * 2) % 13, 2, '#bfe3f5', 3, 1);
+    put((10 - phase * 2 + N) % 14, 6, '#bfe3f5', 2, 1);
+    put((5 + phase * 3) % 13, 11, '#bfe3f5', 3, 1); // moving sun glints
   } else if (type === 'road') {
     put(0, 0, '#81745e', N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 5, y + 9); if (r > 0.88) put(x, y, '#a09070'); else if (r < 0.08) put(x, y, '#655b4c'); }
@@ -2164,9 +2417,10 @@ function buildTile(type, col) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 1, y + 5); if (r > 0.82) put(x, y, '#ffd24d'); else if (r < 0.12) put(x, y, '#9e2f10'); }
   } else if (type === 'rock') {
     put(0, 0, '#6b5a4a', N, N);
-    c.fillStyle = '#57493c'; c.beginPath(); c.arc(8, 9, 6, 0, 7); c.fill();
-    c.fillStyle = '#7d6b58'; c.fillRect(5, 4, 3, 2); c.fillRect(10, 7, 2, 2);
-    c.fillStyle = PAL.k; c.fillRect(2, 14, 12, 1);
+    c.fillStyle = P.k; c.beginPath(); c.moveTo(2, 13); c.lineTo(3, 7); c.lineTo(6, 3); c.lineTo(11, 3); c.lineTo(14, 8); c.lineTo(13, 14); c.closePath(); c.fill();
+    c.fillStyle = '#57493c'; c.beginPath(); c.moveTo(3, 12); c.lineTo(4, 7); c.lineTo(7, 4); c.lineTo(11, 4); c.lineTo(13, 8); c.lineTo(12, 13); c.closePath(); c.fill();
+    c.fillStyle = '#7d6b58'; c.beginPath(); c.moveTo(4, 7); c.lineTo(7, 4); c.lineTo(10, 5); c.lineTo(8, 9); c.lineTo(4, 10); c.closePath(); c.fill();
+    put(6, 5, '#a58d72', 3, 1); put(9, 10, '#3e352f', 3, 2); put(3, 14, P.k, 10, 1);
   } else if (type === 'void') {
     put(0, 0, '#111a2c', N, N);   // blue-black celestial cathedral floor
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x + 2, y + 6); if (r > 0.96) put(x, y, '#f0d98b'); else if (r > 0.91) put(x, y, '#7891c2'); else if (r < 0.06) put(x, y, '#263653'); }
@@ -2178,12 +2432,13 @@ function buildTile(type, col) {
   } else if (type === 'tree') {
     put(0, 0, P.f, N, N);                                      // grass base
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (hash2(x, y) < 0.12) put(x, y, P.F); }
-    put(7, 11, P.N, 2, 4); put(7, 11, P.n, 1, 4);             // shaded trunk
-    c.fillStyle = P.G; c.beginPath(); c.arc(8, 7, 6.5, 0, 7); c.fill();          // canopy body
-    c.fillStyle = P.F; c.beginPath(); c.arc(10, 10, 3.2, 0, 7); c.fill();        // shadow side (SE)
-    c.fillStyle = P.g; c.beginPath(); c.arc(6, 5, 3, 0, 7); c.fill(); c.beginPath(); c.arc(10, 5, 2.4, 0, 7); c.fill();  // sunlit clumps (NW)
-    c.fillStyle = P.j; [[5, 4], [8, 3], [11, 5], [7, 7]].forEach(([x, y]) => c.fillRect(x, y, 1, 1));   // leaf speckle
-    c.strokeStyle = P.k; c.lineWidth = 1; c.beginPath(); c.arc(8, 7, 6.5, 0, 7); c.stroke();            // outline
+    put(6, 10, P.k, 4, 6); put(7, 10, P.N, 2, 5); put(7, 10, P.o, 1, 4);        // outlined trunk + root shadow
+    c.fillStyle = P.k; c.beginPath(); c.arc(5, 7, 4.8, 0, 7); c.arc(10, 6, 5.2, 0, 7); c.arc(9, 10, 5.1, 0, 7); c.fill();
+    c.fillStyle = P.G; c.beginPath(); c.arc(5, 7, 4, 0, 7); c.arc(10, 6, 4.4, 0, 7); c.arc(9, 10, 4.2, 0, 7); c.fill();
+    c.fillStyle = P.F; c.beginPath(); c.arc(11, 10, 2.8, 0, 7); c.fill();
+    c.fillStyle = P.g; c.beginPath(); c.arc(5, 5, 2.4, 0, 7); c.fill(); c.beginPath(); c.arc(9, 4, 2.1, 0, 7); c.fill();
+    const shimmer = phase === 1 ? 1 : 0;
+    c.fillStyle = P.j; [[4, 4], [8, 3], [11, 5], [6, 8]].forEach(([x, y], i) => c.fillRect(x + (i % 2 ? -shimmer : shimmer), y, 1, 1));
   } else if (type === 'cobble') {
     put(0, 0, '#5d6065', N, N);                                // cool mortar base
     const stones = [[1,1,4,3],[6,1,5,3],[12,1,3,3],[1,5,3,3],[5,5,4,3],[10,5,5,3],[1,9,5,3],[7,9,4,3],[12,9,3,3],[2,13,4,2],[7,13,5,2],[13,13,2,2]];
@@ -2194,41 +2449,47 @@ function buildTile(type, col) {
     c.beginPath(); c.moveTo(8, 0); c.lineTo(8, 16); c.moveTo(0, 8); c.lineTo(16, 8); c.stroke();
     put(0, 0, '#b1afa6', N, 1);
   } else if (type === 'roof') {
-    put(0, 0, '#3d4858', N, N);                                // northern slate
-    for (let y = 3; y < N; y += 4) { put(0, y, '#222b38', N, 1); put(0, y - 1, '#657286', N, 1); }
-    for (let y = 0; y < N; y += 4) for (let x = (y % 8 ? 4 : 0); x < N; x += 8) put(x, y, '#2a3443', 1, 3);
-    put(0, 0, '#8290a3', N, 1);
+    put(0, 0, '#303b4b', N, N);                                // outlined northern slate
+    put(0, 0, P.k, N, 1); put(0, 1, '#8290a3', N, 2);          // ridge cap
+    for (let y = 4; y < N; y += 4) {
+      put(0, y, '#18212d', N, 1); put(0, y + 1, '#657286', N, 1);
+      for (let x = (y % 8 ? 4 : 0); x < N; x += 8) put(x, y + 1, '#202b38', 1, 3);
+    }
+    put(2, 3, '#4d5b6e', 5, 1); put(10, 7, '#4d5b6e', 4, 1);
   } else if (type === 'hwall') {
-    put(0, 0, '#c4b48e', N, N);                                // lime plaster
-    put(0, 0, '#8e7a5d', N, 3);
-    for (const x of [0, 7, 15]) put(x, 3, '#3b2b22', 1, N - 3);
-    put(0, 8, '#3b2b22', N, 1); put(0, N - 1, '#3b2b22', N, 1);
+    put(0, 0, '#c4b48e', N, N);                                // plaster in a dark timber frame
+    put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    for (const x of [0, 7, 15]) { put(x, 3, P.k, 2, N - 3); put(x + 1, 3, '#6a452c', 1, N - 3); }
+    put(0, 8, P.k, N, 2); put(0, 9, '#6a452c', N, 1); put(0, N - 1, P.k, N, 1);
+    for (let i = 2; i < 7; i++) { put(i, i + 2, '#8e6b48'); put(14 - i, i + 2, '#8e6b48'); }
   } else if (type === 'door') {
-    put(0, 0, '#c4b48e', N, N); put(0, 0, '#8e7a5d', N, 3);
-    put(4, 3, '#2f211a', 8, 13);
-    put(5, 4, '#59402d', 6, 11); c.fillStyle = '#2f211a'; c.fillRect(8, 4, 1, 11); c.fillRect(5, 9, 6, 1);
-    put(9, 9, P.y, 1, 2);                                     // brass knob
+    put(0, 0, '#c4b48e', N, N); put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    put(3, 4, P.k, 10, 12); put(4, 4, '#59402d', 8, 12);
+    for (const x of [6, 9]) put(x, 5, '#7b5737', 1, 10);       // vertical oak boards
+    put(4, 8, '#2f211a', 8, 1); put(4, 13, '#2f211a', 8, 1);
+    put(10, 10, P.y, 1, 2); put(10, 10, '#fff2a6');            // brass knob
   } else if (type === 'window') {
-    put(0, 0, '#c4b48e', N, N); put(0, 0, '#8e7a5d', N, 3);
-    put(3, 4, '#2f211a', 10, 9);
-    put(4, 5, P.y, 8, 7);                                     // warm lamplight glow
-    c.fillStyle = P.N; c.fillRect(8, 5, 1, 7); c.fillRect(4, 8, 8, 1);          // muntins
-    put(3, 13, P.n, 10, 1);                                   // sill
+    put(0, 0, '#c4b48e', N, N); put(0, 0, P.k, N, 1); put(0, 1, '#8e7a5d', N, 2);
+    put(2, 3, '#7d643f', 12, 11); put(3, 4, P.k, 10, 9);
+    put(4, 5, '#e8a73f', 8, 7); put(5, 5, '#ffe39a', 5, 4);    // warm two-tone glow
+    put(8, 5, P.N, 1, 7); put(4, 8, P.N, 8, 1);               // cross muntin
+    put(2, 13, P.k, 12, 1); put(3, 14, P.n, 10, 1);           // outlined sill
   } else if (type === 'fence') {
     put(0, 0, P.f, N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (hash2(x, y) < 0.10) put(x, y, P.F); }
-    put(0, 6, P.n, N, 2); put(0, 10, P.n, N, 2);             // rails
-    for (const x of [2, 8, 14]) { put(x, 3, P.N, 2, 11); put(x, 3, P.o, 1, 11); }   // posts
+    put(0, 5, P.k, N, 4); put(0, 6, P.n, N, 2); put(0, 10, P.k, N, 3); put(0, 11, P.n, N, 1);
+    for (const x of [2, 8, 14]) { put(x - 1, 2, P.k, 4, 13); put(x, 3, P.N, 2, 11); put(x, 3, P.o, 1, 10); put(x, 2, P.k, 2, 1); }
   } else if (type === 'hedge') {
     put(0, 0, P.f, N, N);
-    c.fillStyle = P.G; c.fillRect(1, 2, 14, 12);            // boxy hedge body
-    c.fillStyle = P.g; for (let x = 2; x < 15; x += 3) for (let y = 3; y < 13; y += 3) if (hash2(x, y) > 0.4) put(x, y, P.g, 2, 2);
-    c.fillStyle = P.k; c.strokeStyle = P.k; c.lineWidth = 1; c.strokeRect(1.5, 2.5, 13, 11);
+    c.fillStyle = P.k; c.beginPath(); c.arc(4, 8, 4, 0, 7); c.arc(8, 6, 5, 0, 7); c.arc(12, 8, 4, 0, 7); c.fill();
+    c.fillStyle = P.G; c.beginPath(); c.arc(4, 8, 3.2, 0, 7); c.arc(8, 6, 4.2, 0, 7); c.arc(12, 8, 3.2, 0, 7); c.fill();
+    c.fillStyle = P.g; [[4,6],[7,4],[10,6],[6,9],[12,9]].forEach(([x,y]) => c.fillRect(x, y, 2, 2));
+    put(2, 12, P.k, 12, 2); put(3, 12, P.F, 10, 1);
   } else if (type === 'flowers') {
     put(0, 0, P.f, N, N);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = hash2(x, y); if (r > 0.92) put(x, y, P.j); else if (r < 0.10) put(x, y, P.F); }
     const buds = [[3,4,P.r],[11,3,P.p],[6,9,P.y],[13,11,P.x],[2,12,P.p],[9,13,P.r],[8,6,P.x]];
-    for (const [x,y,col] of buds) { put(x, y, col, 2, 2); put(x, y - 1, P.j, 1, 1); }   // blossom + stem tip
+    for (const [x,y,col] of buds) { put(x, y + 2, P.G, 1, 3); put(x - 1, y, P.k, 4, 3); put(x, y, col, 2, 2); put(x + 1, y, P.x); }
   } else if (type === 'fountain') {
     put(0, 0, '#8c8b85', N, N);                               // chapel-square base
     c.fillStyle = P.a; c.beginPath(); c.arc(8, 8, 7, 0, 7); c.fill();          // stone basin rim
@@ -2250,31 +2511,123 @@ function buildTile(type, col) {
     put(2, 0, P.o, 2, 2); put(12, 0, P.o, 2, 2);                  // raised portcullis wood
   } else if (type === 'lamp') {
     put(0, 0, '#5d6065', N, N);
-    put(7, 4, '#252930', 2, 10);
-    c.fillStyle = '#171a20'; c.fillRect(6, 3, 4, 4);
-    c.fillStyle = P.y; c.fillRect(7, 4, 2, 2); c.fillStyle = '#fff2c0'; c.fillRect(7, 4, 1, 1);  // warm flame
-    put(6, 13, P.N, 4, 1);                                    // base
+    put(4, 1, 'rgba(255,210,92,.18)', 8, 8); put(5, 2, 'rgba(255,210,92,.24)', 6, 6); // pixel glow halo
+    put(7, 6, '#252930', 2, 8); put(6, 13, P.k, 4, 2); put(7, 12, P.N, 2, 2);
+    put(5, 2, P.k, 6, 6); put(6, 3, '#81572d', 4, 4); put(7, 3, P.y, 2, 3); put(7, 3, '#fff2c0');
   } else if (type === 'stall') {
     put(0, 0, '#81745e', N, N);
+    put(0, 0, P.k, N, 1);
     for (let x = 0; x < N; x += 4) put(x, 1, '#842f3d', 2, 4); // oxblood guild awning
     for (let x = 2; x < N; x += 4) put(x, 1, '#d8cfb8', 2, 4);
-    put(0, 5, P.N, N, 1);                                     // awning trim
-    put(1, 8, P.n, N - 2, 5); put(1, 8, P.o, N - 2, 1);       // wooden counter
+    put(0, 5, P.k, N, 2); put(1, 5, P.N, N - 2, 1);            // outlined awning trim
+    put(0, 8, P.k, N, 6); put(1, 9, P.n, N - 2, 4); put(1, 9, P.o, N - 2, 1); // wooden counter
     put(3, 6, P.g, 2, 2); put(7, 6, P.r, 2, 2); put(11, 6, P.y, 2, 2);   // goods on display
   } else if (type === 'bridge') {
     for (let y = 0; y < N; y++) put(0, y, (y % 4 < 2) ? P.v : P.V, N, 1);   // water beneath
-    for (let x = 1; x < N; x += 3) put(x, 2, P.N, 2, 12);     // plank shadows
-    for (let x = 0; x < N; x += 3) put(x, 2, P.n, 2, 12);     // wooden planks
-    put(0, 1, P.o, N, 1); put(0, 14, P.o, N, 1);              // bridge rails
+    put(0, 1, P.k, N, 3); put(0, 13, P.k, N, 3);              // hard rail outline
+    put(0, 2, P.o, N, 1); put(0, 14, P.o, N, 1);
+    for (let x = 0; x < N; x += 3) { put(x, 4, P.k, 1, 9); put(x + 1, 4, P.n, 2, 9); put(x + 1, 4, P.o, 1, 9); }
   } else { // fallback flat
     put(0, 0, P.f, N, N);
   }
-  tileCache[type] = cvs; return cvs;
+  tileCache[cacheKey] = cvs; return cvs;
 }
 function drawTile(type, x, y) {
-  const cvs = buildTile(type);
+  const phase = G.debugTilePhase != null
+    ? G.debugTilePhase
+    : (prefersReducedMotion() ? 0 : Math.floor(now() / (TILE_PHASE_MS[type] || 1000)));
+  const cvs = buildTile(type, phase);
   if (!cvs.width) return false;
   ctx.drawImage(cvs, Math.floor(x), Math.floor(y), TS + 1, TS + 1);
+  return true;
+}
+
+// Small direct overdraws soften the most visible terrain seams without
+// obscuring the readable walk grid. Edge pixels stay inside the current tile.
+function drawTileEdges(type, col, row, x, y) {
+  const neighbors = [
+    { dc: 0, dr: -1, dir: 'top' }, { dc: 1, dr: 0, dir: 'right' },
+    { dc: 0, dr: 1, dir: 'bottom' }, { dc: -1, dr: 0, dir: 'left' },
+  ];
+  let drawn = 0;
+  const band = (dir, color, thickness = 2, dotted = false) => {
+    ctx.fillStyle = color;
+    const horizontal = dir === 'top' || dir === 'bottom';
+    const bx = dir === 'right' ? x + TS - thickness : x;
+    const by = dir === 'bottom' ? y + TS - thickness : y;
+    ctx.fillRect(Math.floor(bx), Math.floor(by), horizontal ? TS : thickness, horizontal ? thickness : TS);
+    if (dotted) {
+      ctx.fillStyle = '#dff2ff';
+      for (let p = 4; p < TS; p += 9) {
+        const dx = horizontal ? x + p : (dir === 'right' ? x + TS - 1 : x);
+        const dy = horizontal ? (dir === 'bottom' ? y + TS - 1 : y) : y + p;
+        ctx.fillRect(Math.floor(dx), Math.floor(dy), horizontal ? 3 : 1, horizontal ? 1 : 3);
+      }
+    }
+    drawn++;
+  };
+  for (const n of neighbors) {
+    const neighborInfo = G.legend[tileChar(col + n.dc, row + n.dr)];
+    const other = neighborInfo?.type;
+    if (!other || other === type) continue;
+    if (type === 'water' && other !== 'bridge') band(n.dir, '#e8dcae', 2, true);
+    else if (type === 'road' && (other === 'grass' || other === 'bush')) band(n.dir, '#3f7d3a', 2);
+    else if ((type === 'snow' && other === 'grass') || (type === 'grass' && other === 'snow')) band(n.dir, '#9eabbc', 1);
+    else if ((type === 'lava' && other === 'rock') || (type === 'rock' && other === 'lava')) band(n.dir, '#612817', 1);
+  }
+  return drawn;
+}
+
+// Cached procedural backdrop strips: two cloud bands share one canvas, then
+// mountains and treeline scroll at progressively faster parallax rates.
+const parallaxCache = {};
+function buildParallaxStrip(kind) {
+  if (parallaxCache[kind]) return parallaxCache[kind];
+  const sizes = { clouds: [512, 190], mountains: [512, 190], trees: [512, 130] };
+  const [w, h] = sizes[kind];
+  const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+  const c = cvs.getContext('2d');
+  if (!c?.fillRect) { parallaxCache[kind] = cvs; return cvs; }
+  c.clearRect(0, 0, w, h);
+  if (kind === 'clouds') {
+    const cloud = (x, y, scale, color) => {
+      c.fillStyle = color;
+      c.fillRect(x, y + 8 * scale, 42 * scale, 8 * scale);
+      c.fillRect(x + 8 * scale, y + 3 * scale, 24 * scale, 10 * scale);
+      c.fillRect(x + 16 * scale, y, 10 * scale, 8 * scale);
+    };
+    cloud(22, 26, 2, 'rgba(239,246,245,.38)'); cloud(286, 88, 1, 'rgba(231,241,239,.30)');
+    cloud(402, 22, 1, 'rgba(255,244,218,.30)'); cloud(156, 132, 1, 'rgba(226,238,236,.23)');
+  } else if (kind === 'mountains') {
+    c.fillStyle = '#263b4e'; c.beginPath(); c.moveTo(0, h); c.lineTo(0, 130); c.lineTo(78, 48); c.lineTo(130, 116); c.lineTo(218, 30); c.lineTo(306, 126); c.lineTo(394, 57); c.lineTo(512, 138); c.lineTo(512, h); c.closePath(); c.fill();
+    c.fillStyle = '#39536a'; c.beginPath(); c.moveTo(60, 132); c.lineTo(78, 48); c.lineTo(102, 105); c.lineTo(132, 116); c.lineTo(218, 30); c.lineTo(245, 94); c.lineTo(394, 57); c.lineTo(420, 92); c.lineTo(512, 140); c.lineTo(512, h); c.lineTo(0, h); c.closePath(); c.fill();
+    c.fillStyle = '#90a8b4'; [[72,55,18],[207,38,24],[385,65,18]].forEach(([x,y,w2]) => c.fillRect(x, y, w2, 5));
+  } else {
+    c.fillStyle = '#183426'; c.fillRect(0, 82, w, h - 82);
+    for (let x = 0; x < w; x += 18) {
+      const top = 25 + Math.floor(hash2(x, 41) * 42);
+      c.fillStyle = '#10291d'; c.fillRect(x + 7, top + 18, 4, h - top);
+      c.beginPath(); c.moveTo(x, top + 32); c.lineTo(x + 9, top); c.lineTo(x + 18, top + 32); c.closePath(); c.fill();
+      c.fillStyle = '#2b5335'; c.fillRect(x + 3, top + 24, 12, 5);
+    }
+  }
+  parallaxCache[kind] = cvs; return cvs;
+}
+function drawParallax(cx = 0, cy = 0) {
+  if (!ctx) return false;
+  const sky = ctx.createLinearGradient?.(0, 0, 0, CANVAS_H);
+  if (sky?.addColorStop) { sky.addColorStop(0, '#6989a3'); sky.addColorStop(0.55, '#9db7b5'); sky.addColorStop(1, '#d7c38f'); ctx.fillStyle = sky; }
+  else ctx.fillStyle = '#6989a3';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  const drawStrip = (kind, y, factor, drift = 0) => {
+    const strip = buildParallaxStrip(kind);
+    if (!strip?.width) return;
+    const offset = ((cx * factor + drift) % strip.width + strip.width) % strip.width;
+    for (let x = -offset; x < CANVAS_W; x += strip.width) ctx.drawImage(strip, Math.floor(x), Math.floor(y - cy * factor * 0.04));
+  };
+  drawStrip('clouds', 18, 0.10, prefersReducedMotion() ? 0 : now() / 40000 * 512);
+  drawStrip('mountains', CANVAS_H - 290, 0.25);
+  drawStrip('trees', CANVAS_H - 130, 0.50);
   return true;
 }
 function preloadSprites() {
@@ -2288,29 +2641,34 @@ function preloadSprites() {
   }
   ['grass', 'bush', 'water', 'road', 'floor', 'wall', 'tree', 'snow', 'ice', 'sand', 'lava', 'rock', 'void', 'voidrock',
    'cobble', 'plaza', 'roof', 'hwall', 'door', 'window', 'fence', 'hedge', 'flowers', 'fountain',
-   'townwall', 'gate', 'lamp', 'stall', 'bridge'].forEach(t => buildTile(t));
+   'townwall', 'gate', 'lamp', 'stall', 'bridge'].forEach(type => {
+     for (let phase = 0; phase < (TILE_PHASES[type] || 1); phase++) buildTile(type, phase);
+   });
+  ['clouds', 'mountains', 'trees'].forEach(buildParallaxStrip);
 }
 
 function render() {
   const p = G.player;
-  // camera
+  // camera — a narrow overscan reveals the parallax beyond authored map edges.
   const mapW = G.map.width * TS, mapH = G.map.height * TS;
-  G.cam.x = clamp(p.x - CANVAS_W / 2, 0, Math.max(0, mapW - CANVAS_W));
-  G.cam.y = clamp(p.y - CANVAS_H / 2, 0, Math.max(0, mapH - CANVAS_H));
+  const edgeReveal = TS * 2;
+  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal);
+  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal);
   const cx = G.cam.x, cy = G.cam.y;
 
   ctx.imageSmoothingEnabled = false;   // crisp pixel-art upscaling
-  ctx.fillStyle = THEME.palette.bg;
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  drawParallax(cx, cy);
 
   // tiles — pixel-art texture per legend type, flat-color fallback
   const col0 = Math.floor(cx / TS), row0 = Math.floor(cy / TS);
   for (let row = row0; row <= row0 + CANVAS_H / TS + 1; row++) {
     for (let col = col0; col <= col0 + CANVAS_W / TS + 1; col++) {
+      if (row < 0 || col < 0 || row >= G.map.height || col >= G.map.width) continue;
       const ch = tileChar(col, row), info = G.legend[ch];
       if (!info) continue;
       const x = col * TS - cx, y = row * TS - cy;
       if (!drawTile(info.type, x, y)) { ctx.fillStyle = info.color; ctx.fillRect(x, y, TS, TS); }
+      drawTileEdges(info.type, col, row, x, y);
       if (ch === 'P') { ctx.fillStyle = 'rgba(224,182,76,.30)'; ctx.fillRect(x, y, TS, TS); }
       else if (ch === 'B') { ctx.fillStyle = 'rgba(180,40,40,.30)'; ctx.fillRect(x, y, TS, TS); }
     }
@@ -3104,7 +3462,7 @@ function updateQuestTracker() {
         const prog = g.kind === 'deliver' ? Math.min(itemQty(g.target), g.count) : g.progress;
         const ready = g.kind === 'deliver' ? prog >= g.count : !!g.done;
         const targetName = T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters');
-        return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${targetName}: ${prog}/${g.count}${ready ? T(' — report to guild!', 'ui') : ''}</span></button>`;
+        return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${targetName}: ${prog}/${g.count}${ready ? T(' — report to guild!', 'ui') : ''}</span><br>${bountyLevelHtml(g, true)}</button>`;
       }).join('') + `</div>`;
   }
   el.innerHTML = html;
@@ -3236,14 +3594,15 @@ function adminAction(a) {
 // paper-doll: 7 equipment slots with icons; click a filled slot to unequip
 function paperDoll(p) {
   return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">` + EQUIP_SLOTS.map(slot => {
-    const inst = p.equip[slot], it = inst ? itemById[inst.itemId] : null, rc = inst ? RARITY[inst.rarity] : null;
+    const inst = p.equip[slot], it = inst ? itemById[inst.itemId] : null, rc = inst ? itemRarity(inst) : null;
     const icon = inst ? itemIconImg(inst.itemId, 26)
       : `<img src="${pxDataURL('item', SLOT_ICON[slot])}" width="26" height="26" style="image-rendering:pixelated;opacity:.22;flex:0 0 26px" alt="">`;
-    const stat = inst ? (it.atk ? `ATK ${effAtk(inst)}` : `DEF ${effDef(inst)}`) : 'empty';
-    return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="Unequip ${instName(inst)}"` : ''}>
+    const stat = inst ? itemMainStatsHtml(inst) : T('empty', 'ui');
+    const bonus = inst ? itemAffixesHtml(inst, p) : '';
+    return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="${T('Unequip', 'ui')} ${esc(instName(inst))}"` : ''}>
       ${icon}<div style="font-size:10px;line-height:1.25;overflow:hidden">
-        <span style="color:var(--text-muted)">${SLOT_LABEL[slot]}</span><br>
-        ${inst ? `<b style="color:${rc.color}">${instName(inst)}</b><br><span style="color:var(--text)">${stat}</span>` : `<span style="color:var(--text-muted)">${stat}</span>`}
+        <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
+        ${inst ? `<b style="color:${rc.color}">${esc(instName(inst))}</b> <small style="color:${rc.color}">◆${rc.name}</small><br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>` : `<span style="color:var(--text-muted)">${stat}</span>`}
       </div></div>`;
   }).join('') + `</div>`;
 }
@@ -3663,6 +4022,8 @@ function panelBody(id) {
         ${T('Max HP', 'ui')} ${p.maxHp} &nbsp; ${T('Max MP', 'ui')} ${p.maxMp}<br>
         ${T('ASPD', 'ui')} <b style="color:var(--text)">+${aspd}%</b> · ${T('Move', 'ui')} <b style="color:var(--text)">+${move}%</b>${p.rangeBonus ? ` · ${T('Reach', 'ui')} <b style="color:var(--text)">+${p.rangeBonus.toFixed(1)}</b> ${T('tiles', 'ui')}` : ''}<br>
         <div style="color:var(--accent-alt);margin:10px 0 6px">${T('Equipment', 'ui')}</div>
+        ${gearBuildAdviceHtml(p)}
+        ${equippedGearSummaryHtml(p)}
         ${paperDoll(p)}
         <div style="color:var(--accent-alt);margin:10px 0 6px">✦ ${T('Rebirth', 'ui')}${p.rebirths ? ` <b style="color:#c77dff">×${p.rebirths}</b>` : ''}</div>
         <div style="font-size:12px">${T('Each rebirth: +{s} all stats, +{p}% HP/MP — forever.', 'ui').replace('{s}', TUNING.rebirthStatBonus).replace('{p}', Math.round(TUNING.rebirthHpMpPct * 100))}</div>
@@ -3690,14 +4051,10 @@ function panelBody(id) {
     const rowHtml = e => {
       const it = itemById[e.itemId];
       if (e.uid) {   // rarity-rolled equipment instance — compare vs the item's slot
-        const rc = RARITY[e.rarity], slot = itemSlot(it), primary = it.atk ? 'ATK' : 'DEF';
-        const val = it.atk ? effAtk(e) : effDef(e), cur = p.equip[slot], curVal = cur ? (it.atk ? effAtk(cur) : effDef(cur)) : 0;
-        const dl = val - curVal;
-        const cmp = cur ? `<small style="color:${dl > 0 ? 'var(--success)' : dl < 0 ? 'var(--danger)' : 'var(--text-muted)'}"> (${dl > 0 ? '▲ +' + dl : dl < 0 ? '▼ ' + dl : '= ' + T('same', 'ui')} ${T('vs worn', 'ui')})</small>` : `<small style="color:var(--text-muted)"> (${T('slot empty', 'ui')})</small>`;
-        const affix = e.affixes.map(a => `<span style="color:var(--success)">${a.label}</span>`).join(' · ');
-        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgba(201,162,75,.12)">
-          <span>${itemIconImg(e.itemId)} <b style="color:${rc.color}">${instName(e)}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small> — ${T(primary, 'ui')} ${val}${cmp}<br>
-            <small>${affix || `<span style="color:var(--text-muted)">${T('no bonuses', 'ui')}</span>`}</small></span>
+        const rc = itemRarity(e), slot = itemSlot(it);
+        return `<div class="gear-row">
+          <div class="gear-row__copy">${itemIconImg(e.itemId)} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small> — ${itemMainStatsHtml(e)}
+            <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}</div>
           <button class="btn" data-equip="${e.uid}">${T('Equip', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
@@ -3724,7 +4081,7 @@ function panelBody(id) {
         : `<div class="q-card"><i>${T("Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.", 'ui')}</i></div>`;
     if (G.advance) {
       const a = G.advance, o = a.def.objective;
-      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:#e6a23c"><b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
+      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:var(--accent-alt)"><b style="color:var(--accent-alt)">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
         <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small></div>` + story;
     }
     const bStatus = g => {
@@ -3735,8 +4092,9 @@ function panelBody(id) {
     const active = G.activeGuilds.length
       ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
           <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
-          <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>
-          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small></div>`).join('')
+          <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br>
+          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small>
+          <div class="bounty-actions">${guildRevokeButton(g)}</div></div>`).join('')
       : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
     return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
       <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
@@ -3749,8 +4107,8 @@ function panelBody(id) {
         const ready = g.kind === 'deliver' ? itemQty(g.target) >= g.count : !!g.done;
         const prog = g.kind === 'deliver' ? (currentLang === 'th' ? `มีแล้ว ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `have ${Math.min(itemQty(g.target), g.count)}/${g.count}`) : `${g.progress}/${g.count}`;
         return `<div class="q-card" style="border-color:${ready ? 'var(--success)' : 'var(--panel-border)'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:#e6bd54">${g.pts || 0} pts</b></small></span>
-          <span style="display:flex;gap:5px"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button></span></div></div>`;
+          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:var(--accent-alt)">${g.pts || 0} pts</b></small></span>
+          <span class="bounty-actions"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button>${guildRevokeButton(g)}</span></div></div>`;
       }).join('') : '';
     let lockHint = '';
     for (let i = 1; i < ZONE_ORDER.length; i++) if (!G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) {
@@ -3765,22 +4123,24 @@ function panelBody(id) {
         : (slotsFree ? `${slotsFree} bounty slot${slotsFree > 1 ? 's' : ''} free — accept below:` : 'All bounty slots in use — finish one first.')
     }</div>`;
     const board = (G.guildBoard || []).map(bq => `<div class="q-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:#e6bd54">${bq.pts} guild pts</b></small></span>
+      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br>${bountyLevelHtml(bq)}<br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:var(--accent-alt)">${bq.pts} guild pts</b></small></span>
       <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button></div></div>`).join('');
+    const boardHead = `<div class="q-cat guild-board-head"><span>📋 ${T('Available Bounties', 'ui')}</span><button class="btn btn--ghost" data-guildrefresh="1">↻ ${T('Refresh Board', 'ui')}</button></div>`;
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
     const unlocks = ri < GUILD_HARD_AT ? (currentLang === 'th' ? `เควสต์ระดับยากเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_HARD_AT], 'ui')}` : `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}`) : ri < GUILD_ELITE_AT ? (currentLang === 'th' ? `เควสต์ระดับอีลิทเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_ELITE_AT], 'ui')}` : `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}`) : T('all bounty tiers unlocked', 'ui');
     const rankHead = `<div class="q-cat" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
       <span>🏅 <span style="font-size:12px;background:rgba(230,189,84,.15);border:1px solid #e6bd54;border-radius:9px;padding:1px 9px;color:#e6bd54">${currentLang === 'th' ? 'ยศ ' + T(GUILD_RANKS[ri], 'ui') : 'Rank ' + GUILD_RANKS[ri]}</span></span>
       <small style="color:var(--text-muted);font-weight:400">${atMax ? T('MAX rank', 'ui') : `${pts}/${guildPointsNeed(ri)} pts ${currentLang === 'th' ? 'เพื่อเลื่อนเป็น' : 'to'} ${T(GUILD_RANKS[ri + 1], 'ui')}`} · ${unlocks}</small></div>`;
-    return `${rankHead}<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${T("Points scale with the bounty's region (deeper zones pay far more) × its difficulty.", 'ui')}</div>${active}${acceptHint}${board}`;
+    return `${rankHead}<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${T("Points scale with the bounty's region (deeper zones pay far more) × its difficulty.", 'ui')}</div>${active}${acceptHint}${boardHead}${board}`;
   }
   if (id === 'shop') {
-    if (!G.shopRotation || now() - G.shopRotation.at > 300000) rerollShop();
-    const tab = G._shopTab || 'buy', rankIdx = G.guildRankIdx || 0;
+    if (!G.shopRotation?.stock || now() - G.shopRotation.at > TUNING.shopStockMs) rerollShop();
+    const tab = G._shopTab || 'buy', rankIdx = effectiveShopRankIdx();
+    const guildRankIdx = G.guildRankIdx || 0, storyRankIdx = storyShopRankIdx();
     
     const guildRankText = currentLang === 'th'
-      ? `ยศกิลด์ <b style="color:#e6bd54">${T(GUILD_RANKS[rankIdx], 'ui')}</b> · ปลดล็อกสินค้าพรีเมียม`
-      : `Guild Rank <b style="color:#e6bd54">${GUILD_RANKS[rankIdx]}</b> · unlocks premium stock`;
+      ? `ยศร้านค้า <b style="color:#e6bd54">${T(GUILD_RANKS[rankIdx], 'ui')}</b> · กิลด์ ${T(GUILD_RANKS[guildRankIdx], 'ui')} / เนื้อเรื่อง ${T(GUILD_RANKS[storyRankIdx], 'ui')}`
+      : `Trader Rank <b style="color:#e6bd54">${GUILD_RANKS[rankIdx]}</b> · Guild ${GUILD_RANKS[guildRankIdx]} / Story ${GUILD_RANKS[storyRankIdx]}`;
 
     const head = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <span style="color:var(--accent-alt)">💰 ${p.zeny} ${T('zeny', 'ui')}</span>
@@ -3791,7 +4151,8 @@ function panelBody(id) {
         <span class="bag-tab ${tab === 'enhance' ? 'on' : ''}" data-shoptab="enhance">${T('Enhance', 'ui')}</span>
         <span class="bag-tab ${tab === 'craft' ? 'on' : ''}" data-shoptab="craft">${T('Craft', 'ui')}</span>
         <span class="bag-tab ${tab === 'storage' ? 'on' : ''}" data-shoptab="storage">${T('Storage', 'ui')}</span>
-      </div>`;
+      </div>
+      ${tab === 'buy' ? `<div class="shop-rarity-note">✦ ${T('Rolled gear keeps its shown rarity and substats until stock rotates. Main-story chapters or Guild Rank can raise Trader Rank and improve rarity odds.', 'ui')}<br>🏆 ${T('Full catalog: finish the main story AND reach Guild Rank S to unlock Trader Rank S.', 'ui')}</div>${gearBuildAdviceHtml(p)}` : ''}`;
 
     if (tab === 'craft') {
       const have = id => p.inventory.find(e => !e.uid && e.itemId === id)?.qty || 0;
@@ -3833,29 +4194,42 @@ function panelBody(id) {
       const rowFor = itId => {
         const it = itemById[itId];
         const need = it.rankReq ? GUILD_RANKS.indexOf(it.rankReq) : -1, locked = need > rankIdx;
+        let inst = isEquip(itId) ? shopStockItem(itId) : null;
+        if (isEquip(itId) && !inst) {
+          inst = rollItem(itId, shopRollBias(itId));
+          G.shopRotation.stock.push(inst);
+        }
+        const price = inst ? shopPrice(inst) : it.value;
         const btn = locked
-          ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 ${currentLang === 'th' ? `ยศ ${T(it.rankReq, 'ui')}` : `Rank ${it.rankReq}`}</span>`
-          : `<button class="btn" data-buy="${it.id}">${T('Buy', 'ui')}</button>`;
-        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15);${locked ? 'opacity:.65' : ''}">
-          <span>${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${it.value}z${it.rankReq ? ` <small style="color:#e6bd54">[${currentLang === 'th' ? `ยศ ${T(it.rankReq, 'ui')}` : `Rank ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
-          ${btn}</div>`;
+          ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 ${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}</span>`
+          : `<button class="btn" data-buy="${inst?.uid || it.id}" ${p.zeny < price ? 'disabled' : ''}>${T('Buy', 'ui')} ${price}z</button>`;
+        if (!inst) return `<div class="gear-row ${locked ? 'locked' : ''}"><span class="gear-row__copy">${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${price}z${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${btn}</div>`;
+        const rc = itemRarity(inst), slot = itemSlot(it);
+        return `<div class="gear-row ${locked ? 'locked' : ''}">
+          <div class="gear-row__copy">${itemIconImg(it.id)} <b style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
+            <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>
+            <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
       };
-      const baseIds = G._shopItems || [];
+      const baseIds = (G._shopItems || []).filter(itId => !itemById[itId]?.rankReq);
       const grouped = {};
       for (const itId of baseIds) { const c = ITEM_CAT(itemById[itId]); (grouped[c] = grouped[c] || []).push(itId); }
       const rows = Object.keys(grouped).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
         .map(c => `<div class="bag-cat">${T(c, 'ui')} (${grouped[c].length})</div>${grouped[c].map(rowFor).join('')}`).join('');
-      const featuredIds = (G.shopRotation.ids || []).filter(itId => !baseIds.includes(itId));
-      const featured = `<div class="bag-cat">${T('⭐ Featured — rotates with rank & time', 'ui')}</div>` +
-        (featuredIds.length ? featuredIds.map(rowFor).join('') : `<small>${T('Rank up in the guild to unlock featured stock.', 'ui')}</small>`);
+      const featuredIds = G.shopRotation.ids || [];
+      const featuredLabel = G.shopRotation.fullCatalog
+        ? T('🏆 Trader S Master Catalog — all rank gear unlocked', 'ui')
+        : T('⭐ Featured rank gear — rotates with rank & time', 'ui');
+      const featured = `<div class="bag-cat">${featuredLabel}</div>` +
+        (featuredIds.length ? featuredIds.map(rowFor).join('') : `<small>${T('Advance the main story or raise Guild Rank to unlock rotating featured stock.', 'ui')}</small>`);
       return head + rows + featured;
     }
     
     // sell tab — everything except quest items, at half value (rarity-scaled for gear), grouped by category
     const sellRow = e => {
       const it = itemById[e.itemId], price = sellPrice(e);
+      const rc = e.uid ? itemRarity(e) : null;
       const label = e.uid
-        ? `<b style="color:${RARITY[e.rarity].color}">${instName(e)}</b> <small style="color:${RARITY[e.rarity].color}">◆${RARITY[e.rarity].name}</small>`
+        ? `<b style="color:${rc.color}">${instName(e)}</b> <small style="color:${rc.color}">◆${rc.name}</small>`
         : `<b>${T(it.name, 'items')}</b> ×${e.qty}`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
         <span>${itemIconImg(e.itemId)} ${label}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
@@ -3872,7 +4246,7 @@ function panelBody(id) {
     
     // enhance tab — equipped gear (with slot badges) first, then bag gear, each in its own section
     const enhRow = (inst, ref, slot) => {
-      const rc = RARITY[inst.rarity], plus = inst.plus || 0, cost = refineCost(inst);
+      const rc = itemRarity(inst), plus = inst.plus || 0, cost = refineCost(inst);
       const tier = refineTier(plus), frags = tierOwned(tier), haveFuel = frags >= REFINE_FRAGS || itemQty('blessed_ore') >= 1;
       const disabled = plus >= REFINE_MAX || !haveFuel || p.zeny < cost;
       const badge = slot ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(95,191,122,.15);color:var(--success);border:1px solid rgba(95,191,122,.5)">${T(SLOT_LABEL[slot], 'ui')}</span> ` : '';
@@ -3929,7 +4303,12 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-learn]').forEach(b => b.onclick = () => { learnSkill(b.dataset.learn); refreshPanel('skills'); });
   el.querySelectorAll('[data-passive]').forEach(b => b.onclick = () => { learnPassive(b.dataset.passive); refreshPanel('skills'); });
   el.querySelectorAll('[data-guild]').forEach(b => b.onclick = () => { acceptGuild(b.dataset.guild); refreshPanel(id); });
+  el.querySelectorAll('[data-guildrefresh]').forEach(b => b.onclick = () => rerollGuildBoard());
   el.querySelectorAll('[data-guildclaim]').forEach(b => b.onclick = () => { claimGuild(b.dataset.guildclaim); refreshPanel(id); });
+  el.querySelectorAll('[data-guildrevoke]').forEach(b => b.onclick = event => {
+    event.stopPropagation();
+    requestGuildRevoke(b.dataset.guildrevoke);
+  });
   el.querySelectorAll('[data-assign-item]').forEach(b => b.onclick = () => assignItemHotbar(b.dataset.assignItem));
   el.querySelectorAll('[data-assign-skill]').forEach(b => b.onclick = () => assignSkillHotbar(b.dataset.assignSkill));
   el.querySelectorAll('[data-rebind]').forEach(b => b.onclick = () => startHotkeyRebind(+b.dataset.rebind));
@@ -3996,28 +4375,65 @@ function equip(uid) {
   if (p.equip[slot]) p.inventory.push(p.equip[slot]);   // swap the old piece back to the bag
   p.equip[slot] = inst;
   recompute(p);
-  logMsg(`Equipped [${RARITY[inst.rarity].name}] ${instName(inst)}.`, 'good'); AUDIO.playSfx('menu');
+  logMsg(`Equipped [${itemRarity(inst).name}] ${instName(inst)}.`, 'good'); AUDIO.playSfx('menu');
 }
 function unequip(slot) {
   const p = G.player; if (!p.equip[slot]) return;
   p.inventory.push(p.equip[slot]); p.equip[slot] = null;
   recompute(p); AUDIO.playSfx('menu');
 }
-// rank-tagged items at/below the player's guild rank, rerolled into a 4-slot "Featured" shop pool
-function rerollShop() {
-  const rankIdx = G.guildRankIdx || 0;
+// Rank-tagged items at/below the player's guild rank feed a four-slot Featured
+// pool. Every equipment offer is a real rolled instance: its rarity, substats,
+// and price stay stable until the rotation changes, and the inspected item is
+// exactly the one delivered to the bag.
+const shopRollBias = (itemId, rankIdx = effectiveShopRankIdx()) => rankIdx * TUNING.shopRarityBiasPerRank
+  + ((G.shopRotation?.ids || []).includes(itemId) ? TUNING.shopFeaturedRarityBias : 0);
+const shopPrice = inst => {
+  const base = itemById[inst.itemId]?.value || 0;
+  const rolled = base * itemRarity(inst).mult * (1 + itemAffixes(inst).length * TUNING.shopAffixMarkup);
+  return Math.max(1, Math.ceil(rolled / 5) * 5);
+};
+const shopStockItem = itemId => (G.shopRotation?.stock || []).find(inst => inst.itemId === itemId) || null;
+function rerollShop(rankOverride) {
+  const rankIdx = rankOverride ?? effectiveShopRankIdx();
   const pool = CONTENT.items.filter(it => it.rankReq && GUILD_RANKS.indexOf(it.rankReq) <= rankIdx);
-  const picks = []; const p2 = [...pool];
-  while (picks.length < 4 && p2.length) picks.push(p2.splice(Math.floor(Math.random() * p2.length), 1)[0].id);
-  G.shopRotation = { ids: picks, at: now() };
+  const fullCatalog = rankIdx >= GUILD_RANKS.length - 1;
+  const picks = fullCatalog ? pool.map(item => item.id) : [];
+  const p2 = [...pool];
+  while (!fullCatalog && picks.length < 4 && p2.length) picks.push(p2.splice(Math.floor(Math.random() * p2.length), 1)[0].id);
+  // Rank-conditioned gear belongs to rotation, not the always-on shelves.
+  // Trader S turns that rotating shelf into the complete master catalog.
+  const baseIds = (G._shopItems || npcById.npc_shopkeeper?.shopItems || []).filter(itemId => !itemById[itemId]?.rankReq);
+  G.shopRotation = { ids: picks, stock: [], fullCatalog, at: now() };
+  const gearIds = [...new Set([...baseIds, ...picks])].filter(isEquip);
+  G.shopRotation.stock = gearIds.map(itemId => rollItem(itemId, shopRollBias(itemId, rankIdx)));
+  // A trader rotation should visibly teach rarity even if the random sample is
+  // unusually flat. Preserve randomness, but guarantee at least two tiers.
+  if (G.shopRotation.stock.length > 1 && new Set(G.shopRotation.stock.map(inst => inst.rarity)).size === 1) {
+    const firstTier = G.shopRotation.stock[0].rarity;
+    G.shopRotation.stock[1] = rollItem(G.shopRotation.stock[1].itemId, 0, firstTier === 'common' ? 'uncommon' : 'common');
+  }
+  return G.shopRotation;
 }
-function buy(itemId) {
+function buy(ref) {
+  const stock = (G.shopRotation?.stock || []).find(inst => String(inst.uid) === String(ref));
+  const itemId = stock?.itemId || ref;
   const it = itemById[itemId]; const p = G.player;
+  if (!it) return;
   const need = it.rankReq ? GUILD_RANKS.indexOf(it.rankReq) : -1;
-  if (need > (G.guildRankIdx || 0)) { toast(`The trader eyes you: "Guild Rank ${it.rankReq} first."`, 'bad'); return; }
-  if (p.zeny < it.value) { toast('Not enough zeny.', 'bad'); return; }
-  p.zeny -= it.value;
-  if (isEquip(itemId)) { const inst = rollItem(itemId, 0, 'common'); p.inventory.push(inst); logMsg(`Bought ${it.name}.`, 'good'); }
+  if (need > effectiveShopRankIdx()) { toast(`The trader eyes you: "Trader Rank ${it.rankReq} first."`, 'bad'); return; }
+  const price = stock ? shopPrice(stock) : it.value;
+  if (p.zeny < price) { toast('Not enough zeny.', 'bad'); return; }
+  p.zeny -= price;
+  if (isEquip(itemId)) {
+    const inst = stock || rollItem(itemId, 0, 'common');
+    p.inventory.push(inst);
+    if (stock) {
+      const idx = G.shopRotation.stock.indexOf(stock);
+      G.shopRotation.stock[idx] = rollItem(itemId, shopRollBias(itemId));
+    }
+    logMsg(`Bought [${itemRarity(inst).name}] ${it.name} for ${price}z.`, 'good');
+  }
   else { addStack(itemId); logMsg(`Bought ${it.name}.`, 'good'); }
   AUDIO.playSfx('pickup');
 }
@@ -4026,7 +4442,7 @@ function buy(itemId) {
 const sellPrice = e => {
   const value = itemById[e.itemId].value || 0;
   if (!e.uid) return Math.max(1, Math.floor(value * 0.5));
-  const rolled = value * 0.35 * RARITY[e.rarity].mult * (1 + 0.04 * (e.plus || 0));
+  const rolled = value * 0.35 * itemRarity(e).mult * (1 + 0.04 * (e.plus || 0));
   return Math.max(1, Math.min(Math.floor(value * 0.8), Math.floor(rolled)));
 };
 // refinement: +0..+9, safe (fail wastes the attempt, item never breaks/downgrades)
@@ -4065,7 +4481,7 @@ function sellItem(ref) {
     const idx = p.inventory.findIndex(e => e.uid === +ref); if (idx < 0) return;
     const e = p.inventory[idx], price = sellPrice(e);
     p.inventory.splice(idx, 1); p.zeny += price;
-    logMsg(`Sold [${RARITY[e.rarity].name}] ${itemById[e.itemId].name} (+${price}z).`, 'good');
+    logMsg(`Sold [${itemRarity(e).name}] ${itemById[e.itemId].name} (+${price}z).`, 'good');
   } else {                                                     // one from a stack by item id
     const e = p.inventory.find(s => s.itemId === ref && !s.uid); if (!e) return;
     const price = sellPrice(e);
@@ -4227,6 +4643,13 @@ function showSignIn() {
 }
 
 function showTitle() {
+  // Keep the procedural world backdrop visible beneath the DOM title card.
+  const titleCanvas = $('#game-canvas');
+  if (titleCanvas?.getContext) {
+    canvas = titleCanvas; ctx = canvas.getContext('2d');
+    Object.assign(canvas.style, { display: 'block', position: 'fixed', inset: '0', width: '100vw', height: '100vh', imageRendering: 'pixelated' });
+    drawParallax(0, 0);
+  }
   const profile = currentProfile();
   const cards = DESIGN.classes.map(c => {
     const cc = CLASS_COMBAT[c.id], url = pxDataURL('player', cc);
@@ -4374,6 +4797,18 @@ const extraCss = `
 .doll-slot{display:flex;align-items:center;gap:6px;padding:5px;border:1px solid var(--panel-border);border-radius:6px;background:rgba(0,0,0,.25)}
 .doll-slot[data-unequip]{cursor:pointer}
 .doll-slot[data-unequip]:hover{background:rgba(224,90,74,.18);border-color:var(--danger)}
+.gear-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid rgba(92,63,27,.2)}
+.gear-row.locked{opacity:.62}.gear-row>.btn{flex:0 0 auto}.gear-row__copy{display:block;min-width:0;flex:1;line-height:1.45}
+.rarity-badge{display:inline-block;padding:1px 5px;border:1px solid var(--rarity);color:var(--rarity);font-weight:800}
+.gear-bonuses{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.gear-bonuses--slot{gap:2px;margin-top:3px}
+.gear-bonus{display:inline-block;padding:1px 5px;border:1px solid #71809a;background:rgba(34,54,81,.1);color:#34465f;font-size:9px;line-height:1.35}
+.gear-bonus i{font-size:7px;font-style:normal}.gear-bonus--core{border-color:#94711f;background:rgba(206,166,63,.16);color:#66480c;font-weight:800}.gear-bonus--useful{border-color:#56724d;color:#34552e}.gear-bonus--muted{opacity:.62}
+.gear-advice{margin:0 0 7px;padding:7px 8px;border-left:3px solid #a47b27;background:rgba(183,144,57,.1);font-size:10px}.gear-advice>b,.gear-advice>small{display:block}.gear-advice>span{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}.gear-advice em{padding:1px 5px;border:1px solid #708067;color:#405a36;font-style:normal}.gear-advice em.core{border-color:#a47b27;color:#6d4c0c;font-weight:800}.gear-advice small{color:var(--text-muted);line-height:1.35}
+.gear-summary{margin-bottom:7px;padding:6px 8px;border:1px solid rgba(105,75,30,.3);background:rgba(255,250,224,.25);font-size:10px}.gear-summary>b{color:var(--accent-alt)}
+.gear-compare{margin-top:5px;padding:5px 7px;border-left:3px solid #7b6d55;background:rgba(91,75,48,.08);font-size:9px}.gear-compare--upgrade,.gear-compare--empty{border-left-color:#4f7a48;background:rgba(71,117,65,.1)}.gear-compare--tradeoff{border-left-color:#9a7422;background:rgba(177,129,30,.1)}.gear-compare--keep{border-left-color:#963741;background:rgba(150,55,65,.08)}
+.gear-compare__head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}.gear-compare__head small{color:var(--text-muted)}
+.gear-deltas,.gear-affix-changes{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}.gear-delta,.gear-affix-change{padding:1px 4px;border:1px solid currentColor}.gear-delta.gain,.gear-affix-change.gain{color:#315f36}.gear-delta.loss,.gear-affix-change.loss{color:#8a2f38}.gear-affix-change.neutral{color:var(--text-muted)}.gear-affix-change i{font-size:7px;font-style:normal;font-weight:800}
+.shop-rarity-note{margin-bottom:7px;padding:5px 7px;border:1px solid #987735;background:rgba(192,151,54,.11);color:#624817;font-size:10px;line-height:1.4}
 .bag-cat{color:var(--accent-alt);font-weight:700;margin:10px 0 4px;border-bottom:1px solid rgba(201,162,75,.3);padding-bottom:2px}
 .bag-tabs{display:flex;gap:4px;margin-bottom:8px}
 .bag-tab{font-size:11px;padding:3px 10px;cursor:pointer;border:1px solid var(--panel-border);border-radius:5px;color:var(--text-muted)}
@@ -4560,6 +4995,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
   .skill-flow{width:82vw}.flow-grid{display:flex;flex-direction:column;gap:4px}.flow-arrow{height:12px;transform:rotate(90deg)}.flow-copy{min-height:0}.flow-legend span:last-child{margin-left:0}
   .hotkey-grid{grid-template-columns:1fr;min-width:78vw}
   .world-chronicle{width:86vw}.world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
+  .gear-row{flex-direction:column}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
 }
 @media(prefers-reduced-motion:reduce){#hud .hotbar-shell .finisher-ready,.keycap.listening{animation:none}}
 `;
@@ -4615,9 +5051,9 @@ function syncRuntimeScale() {
   fx.style.transform = `translate(-50%,-50%) scale(${scale})`;
 }
 function startRuntime() {
-  canvas = $('#game-canvas'); canvas.style.display = 'block';
+  canvas = $('#game-canvas');
   canvas.classList.add('world-canvas');
-  canvas.style.cssText += ';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:pixelated';
+  Object.assign(canvas.style, { display: 'block', position: 'fixed', inset: 'auto', top: '50%', left: '50%', width: '', height: '', transform: 'translate(-50%,-50%)', imageRendering: 'pixelated' });
   ctx = canvas.getContext('2d');
   canvas.onclick = onCanvasClick;
   // overlay the FX layer exactly on top of the (centered) canvas so damage numbers land on target
@@ -4762,7 +5198,8 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, rollItem, addItem, effAtk, effDef, itemSlot, unequip, acceptGuild, guildKill, guildTurnIn, claimGuild, finishGuild, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
-    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck };
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
+    TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 
 boot();
