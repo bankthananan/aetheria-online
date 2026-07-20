@@ -86,6 +86,12 @@
               if (starter && A.PROGRESSION.skillTree[starter]?.tierCaps) A.G.player.skillLevels[starter] = 5;
               A.recompute(A.G.player); A.updateHud();
             }
+            if (params.get('joblv')) { A.G.player.jobLevel = +params.get('joblv'); A.recompute(A.G.player); A.updateHud(); }   // override career's fixed jobLevel, e.g. to reach into a Tier-2 node's reqLevel pre-promotion
+            if (params.get('preview')) {          // stage the reborn_blade Ascension-preview scenario (world_cleaver, reqTier:2)
+              A.G.player.skillLevels.aegis_rend = 2;
+              if (params.get('preview') === '2') A.learnSkill('world_cleaver');
+              A.recompute(A.G.player); A.updateHud();
+            }
             if (params.get('farm')) A.toggleFarm();
             if (params.get('automation')) {         // stable decision state for Automation Console/HUD review
               A.G.autoFarm = true;
@@ -93,6 +99,8 @@
               A.setAutoState('recover', 'Auto Heal', 'Sanctuary');
               A.updateHud();
             }
+            if (params.get('huntpin')) A.G.autoConfig = A.normaliseAutoConfig({ ...A.G.autoConfig, targetId: params.get('huntpin') });   // stage a player-pinned Hunt target
+            if (params.get('rank')) A.G.autoConfig = A.normaliseAutoConfig({ ...A.G.autoConfig, priority: params.get('rank').split(',') });   // stage Skill Priority, e.g. rank=piercing_shot,arrow_rain
             if (params.get('night')) A.G.dayPhaseOverride = +params.get('night') === 1 ? 0.7 : +params.get('night');   // force night (or any 0..1 phase)
             if (params.get('shoptab')) A.G._shopTab = params.get('shoptab');   // e.g. panel=shop&shoptab=storage
             if (params.get('stash')) { A.addItem('iron_sword', 1, 6); A.addItem('greater_potion', 5); A.depositItem(A.G.player.inventory.length - 1); }

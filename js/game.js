@@ -683,13 +683,33 @@ function skillRankGate(p, id) {
   }
   return { nextRank, reqTier, reqLevel: node.rankReqLevels?.[nextRank] || node.reqLevel || 1 };
 }
+// Ascension-style preview: a second-job (tierIndex 1) player may spend one skill
+// point on a single Tier-2 (reqTier 2) skill or passive before their mastery
+// trial clears, capped at rank 1. Only one such node may be held at a time —
+// the slot is derived from skillLevels (no extra save state needed): any node
+// gated above the player's current tier that already has a level IS the pick.
+function previewSlotUsedBy(p) {
+  const activeHit = Object.entries(PROGRESSION.skillTree).find(([id, n]) => (n.reqTier || 0) > p.tierIndex && skillLevel(p, id) > 0);
+  if (activeHit) return activeHit[0];
+  const passiveHit = Object.entries(PROGRESSION.passives).find(([id, pa]) => (pa.reqTier || 0) > p.tierIndex && skillLevel(p, id) > 0);
+  return passiveHit ? passiveHit[0] : null;
+}
+function canPreview(p, id, reqTier) {
+  if (p.tierIndex !== 1 || reqTier !== 2) return false;   // scoped to the Lv15→40 second-job plateau only
+  const used = previewSlotUsedBy(p);
+  return !used || used === id;
+}
+function previewSlotName(id) {
+  const s = COMBAT.skills.find(x => x.id === id);
+  return s ? T(s.name, 'skills') : T(PROGRESSION.passives[id]?.name || id, 'passives');
+}
 function canLearn(p, id) {
   const node = PROGRESSION.skillTree[id]; if (!node) return false;
   if (!branchAllowsSkill(p, id)) return false;
   if (skillLevel(p, id) >= node.maxLevel) return false;
   const gate = skillRankGate(p, id);
   if (p.skillPoints < 1 || (p.jobLevel || p.level) < gate.reqLevel) return false;
-  if (p.tierIndex < gate.reqTier) return false;
+  if (p.tierIndex < gate.reqTier && !(gate.nextRank === 1 && canPreview(p, id, gate.reqTier))) return false;
   if (node.reqSkill && skillLevel(p, node.reqSkill.id) < node.reqSkill.lvl) return false;
   return true;
 }
@@ -720,8 +740,9 @@ function passiveBonuses(p) {
 }
 function canLearnPassive(p, id) {
   const pa = PROGRESSION.passives[id]; if (!pa) return false;
-  return (p.skillLevels[id] || 0) < pa.maxLevel && p.skillPoints >= 1
-    && (p.jobLevel || p.level) >= pa.reqLevel && p.tierIndex >= (pa.reqTier || 0);
+  const lv = p.skillLevels[id] || 0, reqTier = pa.reqTier || 0;
+  if (lv >= pa.maxLevel || p.skillPoints < 1 || (p.jobLevel || p.level) < pa.reqLevel) return false;
+  return p.tierIndex >= reqTier || (lv === 0 && canPreview(p, id, reqTier));
 }
 function learnPassive(id) {
   const p = G.player; if (!canLearnPassive(p, id)) return;
@@ -1361,6 +1382,7 @@ function autoHuntEligible(m, p = G.player) {
 }
 
 const AUTO_DEFAULTS = Object.freeze({ skills: true, heal: true, potions: true, profile: 'balanced' });
+const AUTO_PRIORITY_SLOTS = 6;   // rotation depth shown in the Automation panel
 function normaliseAutoConfig(raw) {
   const cfg = raw && typeof raw === 'object' ? raw : {};
   const profile = TUNING.automationProfiles?.[cfg.profile] ? cfg.profile : AUTO_DEFAULTS.profile;
@@ -1369,6 +1391,8 @@ function normaliseAutoConfig(raw) {
     heal: cfg.heal !== false,
     potions: cfg.potions !== false,
     profile,
+    targetId: typeof cfg.targetId === 'string' ? cfg.targetId : null,   // player-pinned Hunt species; quest guides still override
+    priority: Array.isArray(cfg.priority) ? cfg.priority.filter(id => typeof id === 'string').slice(0, AUTO_PRIORITY_SLOTS) : [],
   };
 }
 const autoProfile = () => TUNING.automationProfiles[G.autoConfig?.profile] || TUNING.automationProfiles.balanced;
@@ -1436,13 +1460,31 @@ function skillTargetInRange(p, target, skill) {
   const reach = ((skill.type === 'melee' && skill.id !== 'savage_leap') ? skill.range : skill.range + (p.rangeBonus || 0)) * TS + target.size / 2;
   return dist(p.x, p.y, target.x, target.y) <= reach;
 }
+// A skill is eligible for auto-cast once ready, in range, and not eating into
+// the MP reserved for the player's own heal skill while HP is already low.
+function autoSkillEligible(p, target, skill, healingReserve) {
+  if (!branchAllowsSkill(p, skill.id) || skill.type === 'heal' || !autoSkillReady(p, skill) || !skillTargetInRange(p, target, skill)) return false;
+  if (skill.type !== 'buff' && !skill.finisher && Number.isFinite(healingReserve) && p.mp - skill.mpCost < healingReserve
+    && p.hp / Math.max(1, p.maxHp) <= autoProfile().healSkillAt + 0.15) return false;
+  return true;
+}
 function chooseAutoSkill(p = G.player, target = G.target) {
   if (!G.autoConfig.skills || !target?.alive) return null;
   const nearby = G.monsters.filter(monster => monster.alive && dist(target.x, target.y, monster.x, monster.y) <= 3 * TS + monster.size / 2).length;
   const mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 0;
+  const healingReserve = G.autoConfig.heal
+    ? Math.min(...skillsFor(p.combatClass).filter(candidate => branchAllowsSkill(p, candidate.id) && candidate.type === 'heal' && skillLevel(p, candidate.id) > 0).map(candidate => candidate.mpCost), Infinity)
+    : 0;
+  // Player-ranked rotation: cast the first ready+in-range skill from the priority
+  // list as-is, no scoring. Skills left off the list (or all unready) fall through
+  // to the heuristic below.
+  for (const skillId of G.autoConfig.priority || []) {
+    const skill = COMBAT.skills.find(s => s.id === skillId && s.classId === p.combatClass);
+    if (skill && autoSkillEligible(p, target, skill, healingReserve)) return skill;
+  }
   const candidates = [];
   for (const skill of skillsFor(p.combatClass)) {
-    if (!branchAllowsSkill(p, skill.id) || skill.type === 'heal' || !autoSkillReady(p, skill) || !skillTargetInRange(p, target, skill)) continue;
+    if (!autoSkillEligible(p, target, skill, healingReserve)) continue;
     let score = skill.power * 10 - skill.mpCost * 0.15;
     if (skill.type === 'buff') {
       if (skill.id === 'hunters_mark') {
@@ -1454,11 +1496,6 @@ function chooseAutoSkill(p = G.player, target = G.target) {
         score = 68;
       }
     } else {
-      const healingReserve = G.autoConfig.heal
-        ? Math.min(...skillsFor(p.combatClass).filter(candidate => branchAllowsSkill(p, candidate.id) && candidate.type === 'heal' && skillLevel(p, candidate.id) > 0).map(candidate => candidate.mpCost), Infinity)
-        : 0;
-      if (!skill.finisher && Number.isFinite(healingReserve) && p.mp - skill.mpCost < healingReserve
-        && p.hp / Math.max(1, p.maxHp) <= autoProfile().healSkillAt + 0.15) continue;
       const setupLive = skill.effect ? liveStatus(target, skill.effect) : null;
       const detonateLive = skill.detonate ? liveStatus(target, skill.detonate) : null;
       if (skill.detonate) score += detonateLive ? 115 : -45;
@@ -1513,7 +1550,7 @@ function autoRecoveryAction() {
 
 function acquireAutoTarget(p = G.player) {
   if (!G.autoFarm || G.manualIntent || dlg) return null;
-  const focusId = G.huntTargetId;
+  const focusId = G.huntTargetId || G.autoConfig?.targetId || null;   // quest guide always outranks a player pin
   const species = G.monsters.filter(monster => focusId ? monster.def.id === focusId : monster.def.sizeTiles < 2);
   const alive = species.filter(monster => monster.alive);
   const safeAlive = alive.filter(monster => autoHuntEligible(monster, p));
@@ -4159,7 +4196,9 @@ function skillsPanelHtml(p) {
     const id = isPassive ? pa.id : s.id;
     const lv = skillLevel(p, id), max = isPassive ? pa.maxLevel : (node?.maxLevel || 1);
     const learnable = isPassive ? canLearnPassive(p, id) : canLearn(p, id), maxed = lv >= max, clickable = learnable && !maxed;
-    const currentCap = isPassive ? max : skillCapForTier(node, p.tierIndex);
+    const reqTier = isPassive ? (pa.reqTier || 0) : (node?.reqTier || 0);
+    let currentCap = isPassive ? max : skillCapForTier(node, p.tierIndex);
+    if (p.tierIndex < reqTier) currentCap = Math.min(currentCap, 1);   // Ascension preview: rank 1 only pre-promotion
     const tierCapped = !maxed && lv >= currentCap;
     const state = maxed ? 'maxed' : tierCapped ? 'owned tier-capped' : lv > 0 ? 'owned' : clickable ? 'ready' : 'locked';
     const glyph = isPassive ? '◈' : (SKILL_GLYPH[s.type] || '✦');
@@ -4168,7 +4207,7 @@ function skillsPanelHtml(p) {
     const [role, roleClass] = isPassive ? [T('PASSIVE', 'ui'), 'passive'] : roleFor(s);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
     const req = isPassive
-      ? `${T('Job Lv', 'ui')} ${pa.reqLevel}${pa.reqTier ? ` · ${T('Job advancement required', 'ui')}` : ''}`
+      ? `${T('Job Lv', 'ui')} ${pa.reqLevel}${pa.reqTier && p.tierIndex < pa.reqTier ? ` · ${clickable || tierCapped ? T('Ascension preview', 'ui') : T('Job advancement required', 'ui')}` : ''}`
       : node.reqSkill
         ? `${T('Requires', 'ui')} ${esc(T((COMBAT.skills.find(x => x.id === node.reqSkill.id) || {}).name || node.reqSkill.id, 'skills'))} Lv ${node.reqSkill.lvl}${node.reqBranch ? ` · ${esc(T(jobBranchesFor(p.classId).find(branch => branch.id === node.reqBranch)?.tiers?.[1]?.name || node.reqBranch, 'classes'))}` : ''}`
         : T('Starter skill · granted free', 'ui');
@@ -4246,9 +4285,15 @@ function skillNodeTip(id, isPassive) {
     const lv = p.skillLevels[id] || 0, can = canLearnPassive(p, id);
     const nxt = lv < pa.maxLevel ? T(pa.desc, 'passives').replace('{v}', pa.per * (lv + 1)) : 'MAX';
     const needs = [];
-    if (p.tierIndex < (pa.reqTier || 0)) {
-      const tierName = tierForPlayer(p, pa.reqTier, true)?.name;
-      needs.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'classes') || `ระดับ ${pa.reqTier + 1}`}` : `advance to ${tierName || `Tier ${pa.reqTier + 1}`}`);
+    const previewable = lv === 0 && p.tierIndex < (pa.reqTier || 0) && canPreview(p, id, pa.reqTier);
+    if (p.tierIndex < (pa.reqTier || 0) && !previewable) {
+      const used = lv === 0 ? previewSlotUsedBy(p) : null;
+      if (used && used !== id) {
+        needs.push(currentLang === 'th' ? `ช่องพรีวิวถูกใช้โดย ${previewSlotName(used)}` : `preview slot used by ${previewSlotName(used)}`);
+      } else {
+        const tierName = tierForPlayer(p, pa.reqTier, true)?.name;
+        needs.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'classes') || `ระดับ ${pa.reqTier + 1}`}` : `advance to ${tierName || `Tier ${pa.reqTier + 1}`}`);
+      }
     }
     if (p.jobLevel < pa.reqLevel) {
       needs.push(currentLang === 'th' ? `เลเวลงาน ${pa.reqLevel}` : `Job Lv ${pa.reqLevel}`);
@@ -4257,7 +4302,10 @@ function skillNodeTip(id, isPassive) {
       needs.push(currentLang === 'th' ? `แต้มสกิล 1 แต้ม` : '1 skill point');
     }
     const need = needs.length ? `<div class="tip-gate">🔒 ${currentLang === 'th' ? 'ต้องการ' : 'Requires'}: ${needs.join(', ')}</div>` : '';
-    
+    const previewNote = (previewable || (lv > 0 && p.tierIndex < (pa.reqTier || 0)))
+      ? `<div class="tip-mastery">✦ ${currentLang === 'th' ? `พรีวิวสายอาชีพถัดไป — จำกัดเลเวล 1 จนกว่าจะเลื่อนขั้น` : `Ascension preview — capped at Rank 1 until you advance (one at a time)`}</div>`
+      : '';
+
     let hint = '';
     if (lv >= pa.maxLevel) {
       hint = `<div class="tip-hint" style="color:#e6bd54">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed'}</div>`;
@@ -4272,7 +4320,7 @@ function skillNodeTip(id, isPassive) {
     return `<div class="tip-name" style="color:#6fb0ef">${displayName} <small style="color:var(--text-muted)">· ${currentLang === 'th' ? 'ติดตัว' : 'passive'}</small></div>
       <div class="tip-eff">${currentLang === 'th' ? displayDesc : displayDescEn}</div>
       <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${pa.maxLevel}</b>${lv < pa.maxLevel ? ` · ${currentLang === 'th' ? 'ถัดไป' : 'next'}: <b>${nxt}</b>` : ''}</div>
-      <div class="tip-flav">${currentLang === 'th' ? 'เพิ่มโบนัสสถานะถาวร — ทำงานตลอดเวลา' : 'Permanent stat bonus — always on.'}</div>${need}${hint}`;
+      <div class="tip-flav">${currentLang === 'th' ? 'เพิ่มโบนัสสถานะถาวร — ทำงานตลอดเวลา' : 'Permanent stat bonus — always on.'}</div>${need}${previewNote}${hint}`;
   }
   const s = COMBAT.skills.find(x => x.id === id); if (!s) return '';
   const node = PROGRESSION.skillTree[id] || {}, lv = skillLevel(p, id), max = node.maxLevel || 1, L = lv || 1;
@@ -4295,9 +4343,15 @@ function skillNodeTip(id, isPassive) {
 
   const gates = [];
   const rankGate = skillRankGate(p, id);
-  if (rankGate && p.tierIndex < rankGate.reqTier) {
-    const tierName = tierForPlayer(p, rankGate.reqTier, true)?.name;
-    gates.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'classes') || `ระดับ ${rankGate.reqTier + 1}`}` : `advance to ${tierName || `Tier ${rankGate.reqTier + 1}`}`);
+  const previewable = rankGate && rankGate.nextRank === 1 && canPreview(p, id, rankGate.reqTier);
+  if (rankGate && p.tierIndex < rankGate.reqTier && !previewable) {
+    const used = rankGate.nextRank === 1 ? previewSlotUsedBy(p) : null;
+    if (used && used !== id) {
+      gates.push(currentLang === 'th' ? `ช่องพรีวิวถูกใช้โดย ${previewSlotName(used)}` : `preview slot used by ${previewSlotName(used)}`);
+    } else {
+      const tierName = tierForPlayer(p, rankGate.reqTier, true)?.name;
+      gates.push(currentLang === 'th' ? `เปลี่ยนอาชีพเป็น ${T(tierName, 'classes') || `ระดับ ${rankGate.reqTier + 1}`}` : `advance to ${tierName || `Tier ${rankGate.reqTier + 1}`}`);
+    }
   }
   if (node.reqBranch && !branchAllowsSkill(p, id)) {
     const required = jobBranchesFor(p.classId).find(branch => branch.id === node.reqBranch);
@@ -4330,6 +4384,8 @@ function skillNodeTip(id, isPassive) {
     } else {
       masteryHtml = `<div class="tip-mastery">First-job cap <b>Lv ${node.tierCaps[0]}</b> · second-job mastery <b>Lv ${node.tierCaps[0] + 1}–${node.maxLevel}</b>${lv >= node.tierCaps[0] && lv < node.maxLevel ? ` · next rank at Job ${rankGate?.reqLevel}` : ''}</div>`;
     }
+  } else if (previewable || (lv > 0 && rankGate && p.tierIndex < rankGate.reqTier)) {
+    masteryHtml = `<div class="tip-mastery">✦ ${currentLang === 'th' ? `พรีวิวสายอาชีพถัดไป — จำกัดเลเวล 1 จนกว่าจะเลื่อนขั้น` : `Ascension preview — capped at Rank 1 until you advance (one at a time)`}</div>`;
   }
 
   const displayEffect = currentLang === 'th' ? ({ bleed: 'เลือดออก', poison: 'ยาพิษ', freeze: 'แช่แข็ง', stun: 'มึนงง', slow: 'สโลว์', mark: 'มาร์ก' }[s.effect] || s.effect) : s.effect;
@@ -4425,7 +4481,9 @@ function automationPanelHtml(p = G.player) {
   const cfg = G.autoConfig, state = G.autoState || {};
   const focus = G.huntTargetId
     ? T(monById[G.huntTargetId]?.name || G.huntTargetId, 'monsters')
-    : G.taskGuide ? translateAny(G.taskGuide.label, ['monsters', 'npcs', 'maps']) : T('Free Hunt', 'ui');
+    : G.taskGuide ? translateAny(G.taskGuide.label, ['monsters', 'npcs', 'maps'])
+    : cfg.targetId ? `${T(monById[cfg.targetId]?.name || cfg.targetId, 'monsters')} (${T('pinned', 'ui')})`
+    : T('Free Hunt', 'ui');
   const toggle = (key, label, copy, glyph) => `<button class="auto-toggle${cfg[key] ? ' active' : ''}" data-auto-toggle="${key}" aria-pressed="${cfg[key]}">
     <span class="auto-toggle__glyph">${glyph}</span><span><b>${T(label, 'ui')}</b><small>${T(copy, 'ui')}</small></span><em>${cfg[key] ? T('ON', 'ui') : T('OFF', 'ui')}</em></button>`;
   const profiles = Object.entries(TUNING.automationProfiles).map(([id, profile]) => {
@@ -4433,11 +4491,37 @@ function automationPanelHtml(p = G.player) {
     return `<button class="auto-profile${cfg.profile === id ? ' active' : ''}" data-auto-profile="${id}" aria-pressed="${cfg.profile === id}"><b>${T(label, 'ui')}</b><small>${T('Heal skill {heal}% · HP potion {hp}% · MP potion {mp}%', 'ui')
       .replace('{heal}', Math.round(profile.healSkillAt * 100)).replace('{hp}', Math.round(profile.hpPotionAt * 100)).replace('{mp}', Math.round(profile.mpPotionAt * 100))}</small></button>`;
   }).join('');
+
+  // Target pin: any monster species currently present on this map, mirroring the
+  // same monsterId-focus mechanic quest guides already use (acquireAutoTarget).
+  const mapSpecies = [...new Map(G.monsters.map(m => [m.def.id, m])).values()];
+  const targetHtml = mapSpecies.length ? `<div class="auto-target-grid">
+      <button class="auto-target${!cfg.targetId ? ' active' : ''}" data-auto-target="free" aria-pressed="${!cfg.targetId}"><b>${T('Free Hunt', 'ui')}</b><small>${T('Any nearby monster', 'ui')}</small></button>
+      ${mapSpecies.map(m => `<button class="auto-target${cfg.targetId === m.def.id ? ' active' : ''}" data-auto-target="${esc(m.def.id)}" aria-pressed="${cfg.targetId === m.def.id}"><b>${esc(T(m.def.name, 'monsters'))}</b><small>Lv ${m.lvl}</small></button>`).join('')}
+    </div>` : `<small class="auto-empty">${T('No monsters present on this map to pin.', 'ui')}</small>`;
+
+  // Skill priority: a fixed rotation of drop slots (hotbar-style drag target) fed
+  // by the player's learned, non-heal actives; unranked skills keep using chooseAutoSkill's heuristic.
+  const rotationSkills = skillsFor(p.combatClass).filter(sk => branchAllowsSkill(p, sk.id) && sk.type !== 'heal' && skillLevel(p, sk.id) > 0);
+  const priority = cfg.priority.filter(id => rotationSkills.some(sk => sk.id === id));
+  const pool = rotationSkills.filter(sk => !priority.includes(sk.id));
+  const chip = sk => `<span class="auto-skill-chip" draggable="true" data-drag-skill="${sk.id}" data-add-priority="${sk.id}" title="${esc(T('Drag or click to rank', 'ui'))}">${SKILL_GLYPH[sk.type] || '✦'} ${esc(T(sk.name, 'skills'))}</span>`;
+  const slotHtml = Array.from({ length: AUTO_PRIORITY_SLOTS }, (_, i) => {
+    const sk = rotationSkills.find(s => s.id === priority[i]);
+    return `<div class="auto-slot${sk ? ' filled' : ''}" data-auto-slot="${i}"><span class="auto-slot__rank">${i + 1}</span>
+      ${sk ? `<span class="auto-slot__skill" draggable="true" data-drag-skill="${sk.id}">${SKILL_GLYPH[sk.type] || '✦'} ${esc(T(sk.name, 'skills'))}</span><button class="auto-slot__clear" data-auto-slot-clear="${i}">×</button>`
+        : `<span class="auto-slot__empty">${T('Drop a skill here', 'ui')}</span>`}</div>`;
+  }).join('');
+  const poolHtml = pool.length ? pool.map(chip).join('') : `<small class="auto-empty">${T('All learned skills are ranked.', 'ui')}</small>`;
+
   return `<section class="automation-console">
     <header class="automation-live" data-phase="${esc(state.phase || 'idle')}"><span>◎</span><div><small>${T('LIVE DECISION', 'ui')}</small><b>${esc(state.label || T('Automation ready', 'ui'))}</b><em>${esc(state.detail || '')}</em></div></header>
     <div class="automation-objective"><span><small>${T('CURRENT OBJECTIVE', 'ui')}</small><b>${esc(focus)}</b></span><span><small>${T('SAFE HUNT LIMIT', 'ui')}</small><b>Lv ${autoHuntLevelCap(p)}</b></span></div>
+    <div class="automation-section"><h3>${T('Hunt Target', 'ui')}</h3><p>${T('Pin the species Hunt should chase; quest guides briefly override it.', 'ui')}</p>${targetHtml}</div>
     <div class="automation-section"><h3>${T('Combat Decisions', 'ui')}</h3><p>${T('Tracking owns travel and target choice. Your clicks always take priority.', 'ui')}</p>
       <div class="auto-toggle-grid">${toggle('skills', 'Smart Skills', 'Uses setup, detonators, finishers, buffs, and mana recovery.', '✦')}${toggle('heal', 'Auto Heal', 'Uses learned healing skills before emergency potions.', '✚')}${toggle('potions', 'Auto Potions', 'Chooses the smallest useful HP or MP recovery item.', '◇')}</div></div>
+    <div class="automation-section"><h3>${T('Skill Priority', 'ui')}</h3><p>${T('Drag skills into rank order. Automation casts the top ready skill; unranked skills use its own judgment.', 'ui')}</p>
+      <div class="auto-slot-grid">${slotHtml}</div><div class="auto-skill-pool">${poolHtml}</div></div>
     <div class="automation-section"><h3>${T('Recovery Profile', 'ui')}</h3><p>${T('Choose how early automation recovers. Potion cooldown is always respected.', 'ui')}</p><div class="auto-profile-grid">${profiles}</div></div>
     <footer class="automation-foot">⚠ ${T('Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.', 'ui')}</footer>
   </section>`;
@@ -4785,6 +4869,42 @@ function wirePanel(id, el) {
     saveGame();
     refreshPanel('automation');
   });
+  el.querySelectorAll('[data-auto-target]').forEach(b => b.onclick = () => {
+    const target = b.dataset.autoTarget;
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, targetId: target === 'free' ? null : target });
+    saveGame();
+    refreshPanel('automation');
+  });
+  el.querySelectorAll('[data-add-priority]').forEach(b => b.onclick = () => {
+    const skillId = b.dataset.addPriority;
+    const priority = (G.autoConfig.priority || []).filter(existing => existing !== skillId);
+    if (priority.length < AUTO_PRIORITY_SLOTS) priority.push(skillId);
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, priority });
+    saveGame();
+    refreshPanel('automation');
+  });
+  el.querySelectorAll('[data-auto-slot-clear]').forEach(b => b.onclick = () => {
+    const priority = (G.autoConfig.priority || []).slice();
+    priority.splice(+b.dataset.autoSlotClear, 1);
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, priority });
+    saveGame();
+    refreshPanel('automation');
+  });
+  el.querySelectorAll('[data-auto-slot]').forEach(slotEl => {
+    slotEl.ondragover = e => { if (e.dataTransfer?.types?.includes('text/x-awo-skill')) { e.preventDefault(); slotEl.classList.add('drop-ready'); } };
+    slotEl.ondragleave = () => slotEl.classList.remove('drop-ready');
+    slotEl.ondrop = e => {
+      const skillId = e.dataTransfer?.getData('text/x-awo-skill');
+      slotEl.classList.remove('drop-ready');
+      if (!skillId) return;
+      e.preventDefault();
+      const priority = (G.autoConfig.priority || []).filter(existing => existing !== skillId);
+      priority.splice(+slotEl.dataset.autoSlot, 0, skillId);
+      G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, priority });
+      saveGame();
+      refreshPanel('automation');
+    };
+  });
   el.querySelectorAll('[data-task]').forEach(task => task.onclick = event => { event.stopPropagation(); activateTaskGuide(task.dataset.task, task.dataset.taskId); });
   el.querySelectorAll('[data-job-choice]').forEach(button => button.onclick = event => { event.stopPropagation(); showJobChoice(G.player); });
   el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { useItem(b.dataset.use); refreshPanel(id); });
@@ -4818,6 +4938,15 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
+  // drag-a-skill source: used by both the skills panel (→ hotbar) and the
+  // Automation panel (→ priority slot), so it's wired for every panel.
+  el.querySelectorAll('[data-drag-skill]').forEach(nd => {
+    nd.addEventListener('dragstart', e => {
+      e.dataTransfer?.setData('text/x-awo-skill', nd.dataset.dragSkill);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+      hideSkillTip();
+    });
+  });
   // skill-tree hover tooltips: describe what each node does, positioned beside it
   if (id === 'skills') {
     let tip = document.getElementById('sk-tip');
@@ -4835,13 +4964,6 @@ function wirePanel(id, el) {
       nd.addEventListener('mouseenter', show);
       nd.addEventListener('click', show);          // touch/click also reveals it
       nd.addEventListener('mouseleave', hideSkillTip);
-    });
-    el.querySelectorAll('[data-drag-skill]').forEach(nd => {
-      nd.addEventListener('dragstart', e => {
-        e.dataTransfer?.setData('text/x-awo-skill', nd.dataset.dragSkill);
-        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
-        hideSkillTip();
-      });
     });
   }
 }
@@ -5502,6 +5624,10 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 @keyframes keyListen{50%{filter:brightness(1.35)}}
 .slot-picker .sp-sep{height:1px;margin:4px;background:#53657e}
 .automation-console{width:min(650px,82vw);display:grid;gap:10px}.automation-live{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;align-items:center;padding:10px;background:#0c192b;border:1px solid #72849a}.automation-live>span{display:grid;place-items:center;width:36px;height:36px;border:1px solid #d2ad4e;background:#203454;color:#f0d47d;font-size:20px}.automation-live>div{display:flex;min-width:0;flex-direction:column}.automation-live small,.automation-objective small{color:#8292a7;font-size:8px;font-weight:900;letter-spacing:1px}.automation-live b{color:#f2d07b;font:700 14px var(--font-head)}.automation-live em{color:#b7c2d2;font-size:10px;font-style:normal}.automation-objective{display:grid;grid-template-columns:2fr 1fr;gap:6px}.automation-objective>span{display:flex;flex-direction:column;padding:7px;background:#13243d;border:1px solid #50637d}.automation-objective b{color:#e7ecf3;font-size:11px}.automation-section{padding:9px;background:#101d32;border:1px solid #53657e}.automation-section h3{margin:0;color:#f0d47d;font:700 13px var(--font-head)}.automation-section p{margin:2px 0 8px;color:#96a5b8;font-size:9px}.auto-toggle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.auto-toggle{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:5px;padding:7px;background:#0b1525;border:1px solid #52647c;color:#8392a6;text-align:left;cursor:pointer}.auto-toggle.active{background:#173329;border-color:#70a980;color:#e7edf3}.auto-toggle__glyph{color:#f0d47d;font-size:16px;text-align:center}.auto-toggle span:nth-child(2){display:flex;min-width:0;flex-direction:column}.auto-toggle b{font-size:9px}.auto-toggle small{color:#8d9bad;font-size:7px;line-height:1.35}.auto-toggle em{color:#75859a;font-size:8px;font-style:normal;font-weight:900}.auto-toggle.active em{color:#92d0a2}.auto-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.auto-profile{display:flex;flex-direction:column;gap:2px;padding:7px;background:#0b1525;border:1px solid #52647c;color:#8998aa;text-align:left;cursor:pointer}.auto-profile.active{background:#26341c;border-color:#b1bd69;color:#f0e9c4}.auto-profile b{font-size:10px}.auto-profile small{font-size:7px;line-height:1.4}.automation-foot{padding:7px;border:1px solid #684b49;background:#291b21;color:#d3a7a3;font-size:8px;line-height:1.45}
+.auto-target-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px}.auto-target{display:flex;flex-direction:column;gap:2px;padding:7px;background:#0b1525;border:1px solid #52647c;color:#8998aa;text-align:left;cursor:pointer}.auto-target.active{background:#20304f;border-color:#6fa9e6;color:#eaf1fb}.auto-target b{font-size:9px}.auto-target small{font-size:7px;color:#8d9bad}
+.auto-empty{display:block;padding:6px 2px;color:#75859a;font-size:8px;font-style:italic}
+.auto-slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px;margin-bottom:7px}.auto-slot{display:flex;align-items:center;gap:5px;padding:6px 7px;min-height:32px;background:#0b1525;border:1px dashed #4a5b73}.auto-slot.filled{border-style:solid;border-color:#c9a24b;background:#211b0f}.auto-slot.drop-ready{border-color:#efd16f;background:#2a2312}.auto-slot__rank{display:grid;place-items:center;width:16px;height:16px;border:1px solid #52647c;color:#8d9bad;font-size:8px;font-weight:900}.auto-slot.filled .auto-slot__rank{border-color:#c9a24b;color:#f0d47d}.auto-slot__skill{flex:1;min-width:0;overflow-wrap:anywhere;color:#e7ecf3;font-size:9px;cursor:grab}.auto-slot__empty{flex:1;color:#5c6c82;font-size:8px;font-style:italic}.auto-slot__clear{border:1px solid #684b49;background:#291b21;color:#d3a7a3;font-size:9px;line-height:1;cursor:pointer;padding:2px 5px}
+.auto-skill-pool{display:flex;flex-wrap:wrap;gap:5px}.auto-skill-chip{padding:4px 7px;background:#0b1525;border:1px solid #52647c;color:#c3cddb;font-size:9px;cursor:grab}.auto-skill-chip:hover{border-color:#efd16f;color:#f0e9c4}
 .dialogue__choices .btn{display:flex;align-items:center;justify-content:space-between}
 .dialogue__choices .btn kbd{margin-left:auto;padding:1px 6px;border:1px solid #9aa8b9;background:#080d14;color:#efd16f;font-size:9px;box-shadow:inset 0 -1px #000}
 .job-choice-overlay{position:fixed;inset:0;z-index:58;display:grid;place-items:center;padding:20px;background:rgba(5,9,16,.9);backdrop-filter:blur(2px)}
@@ -5527,7 +5653,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
   .hotkey-grid{grid-template-columns:1fr;min-width:78vw}
   .world-chronicle{width:86vw}.world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
   .gear-row{flex-direction:column}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
-  .automation-console{width:84vw}.auto-toggle-grid,.auto-profile-grid{grid-template-columns:1fr}.automation-objective{grid-template-columns:1fr}
+  .automation-console{width:84vw}.auto-toggle-grid,.auto-profile-grid,.auto-target-grid,.auto-slot-grid{grid-template-columns:1fr}.automation-objective{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){#hud .hotbar-shell .finisher-ready,.keycap.listening{animation:none}}
 `;
@@ -5752,7 +5878,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 
