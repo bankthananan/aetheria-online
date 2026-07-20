@@ -1173,7 +1173,6 @@ const monster = {
         ''),
     ],
   },
-
   gilded_ravager: monsterMotionSet(matrix(24, 24,
     '', '',
     '        kkYYkk',
@@ -1600,7 +1599,6 @@ const monster = {
         ''),
     ],
   },
-
   frost_revenant: monsterMotionSet(matrix(24, 24,
     '',
     '        kc c ck',
