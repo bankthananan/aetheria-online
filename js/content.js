@@ -139,6 +139,8 @@ export const CONTENT = {
     { id: "sharpening_stone", name: "Sharpening Stone", type: "potion", desc: "Hones your edge — +15% ATK for 60s.", buff: { stat: "atk", mult: 1.15, durationMs: 60000 }, value: 80, classReq: null },
     { id: "iron_tonic", name: "Iron Tonic", type: "potion", desc: "Skin like steel — +15% DEF for 60s.", buff: { stat: "def", mult: 1.15, durationMs: 60000 }, value: 80, classReq: null },
     { id: "teleport_scroll", name: "Teleport Scroll", type: "potion", desc: "Tears a rift straight back to town.", teleport: "town_awakening", value: 60, classReq: null },
+    { id: "soul_ledger", name: "Soul Ledger", type: "reset", desc: "Refunds every allocated stat point. Levels, gear, and permanent rebirth bonuses remain.", reset: "stats", value: 1200, classReq: null },
+    { id: "memory_prism", name: "Memory Prism", type: "reset", desc: "Refunds spent active and passive skill points. Your free starter skill remains at Lv1.", reset: "skills", value: 1600, classReq: null },
     { id: "blessed_ore", name: "Blessed Ore", type: "material", desc: "Star-touched ore the smiths crave for refinement.", value: 150, classReq: null },
 
     // ===== Rank-tier accessories =====
@@ -166,7 +168,7 @@ export const CONTENT = {
     { id: "npc_shopkeeper", name: "Marla the Trader", role: "shopkeeper",
       dialogue: ["Fresh gear for a fresh face? You've got the look of someone not from around here.",
                  "Coin talks, stranger. Browse all you like."],
-      shopItems: ["worn_dagger", "iron_sword", "cloth_tunic", "leather_vest", "iron_helm", "iron_gauntlets", "iron_boots", "warding_cloak", "power_ring", "minor_potion", "mid_potion", "greater_potion", "mana_potion", "mythril_sword", "mythril_plate", "frost_brand", "seraph_ward", "void_edge", "astral_plate", "mythril_gauntlets", "drakescale_boots", "aurora_cloak", "titan_grips", "astral_greaves", "voidweave_cloak", "sharpening_stone", "iron_tonic", "teleport_scroll", "blessed_ore"] },
+      shopItems: ["worn_dagger", "iron_sword", "cloth_tunic", "leather_vest", "iron_helm", "iron_gauntlets", "iron_boots", "warding_cloak", "power_ring", "minor_potion", "mid_potion", "greater_potion", "mana_potion", "mythril_sword", "mythril_plate", "frost_brand", "seraph_ward", "void_edge", "astral_plate", "mythril_gauntlets", "drakescale_boots", "aurora_cloak", "titan_grips", "astral_greaves", "voidweave_cloak", "sharpening_stone", "iron_tonic", "teleport_scroll", "soul_ledger", "memory_prism", "blessed_ore"] },
     { id: "npc_guide", name: "Elowen the Guide", role: "quest-giver",
       dialogue: ["Ah — you're awake. Do not panic. Yes, this is another world, and yes, I called you here.",
                  "I am Elowen, your Guide. This world needs someone unbound by its old fears. That is you.",

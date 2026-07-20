@@ -51,6 +51,7 @@
           ticks++;
           if (!setup) {
             setup = true;
+            if (params.get('lang')) A.setLanguage(params.get('lang'));
             const warp = params.get('map');
             if (warp) A.loadMap(warp, 2, 2);
             else if (params.get('boss')) A.loadMap('sunken_ruins', 3, 3);
@@ -164,7 +165,7 @@
             if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
             if (!document.getElementById('panel')) A.togglePanel(wantPanel);
             if (params.get('tip')) {                 // hover a skill node to reveal its tooltip
-              const nodes = document.querySelectorAll('#panel .sk-node[data-skill]');
+              const nodes = document.querySelectorAll('#panel .ro-skill[data-skill]');
               const nd = nodes[+params.get('tip') || 0];
               if (nd) nd.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
             } else {

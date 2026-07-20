@@ -83,8 +83,8 @@ for (const map of Object.values(MAPS)) for (const sp of (map.spawns || [])) if (
 const itemDropSource = itemId => { for (const m of CONTENT.monsters) if (m.drops.some(d => d.itemId === itemId)) return { mon: m.name, monsterId: m.id, map: monsterMapName[m.id], mapId: monsterMapId[m.id] }; return null; };
 const npcLocation = npcId => { for (const map of Object.values(MAPS)) { const npc = (map.npcs || []).find(n => n.id === npcId); if (npc) return { mapId: map.id, npc }; } return null; };
 // shared item-category grouping (inventory + shop buy/sell)
-const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : it.type === 'material' ? 'Materials' : 'Quest Items';
-const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Materials': 3, 'Quest Items': 4 };
+const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
+const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Reset Manuals': 3, 'Materials': 4, 'Quest Items': 5 };
 const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
 // item id -> pixel icon key (see pixelart.js PX.item)
 const ITEM_ICON = {
@@ -102,6 +102,7 @@ const ITEM_ICON = {
   void_edge: 'sword', astral_glaive: 'greatsword', astral_plate: 'plate', void_helm: 'helm',
   astral_signet: 'ring', celestial_draught: 'potblue', void_shard: 'gem', star_iron: 'gem', null_core: 'core',
   sharpening_stone: 'gem', iron_tonic: 'potblue', teleport_scroll: 'scroll', blessed_ore: 'core',
+  soul_ledger: 'scroll', memory_prism: 'gem',
   bronze_ring: 'ring', silver_amulet: 'ring', gold_ring: 'ring', star_pendant: 'ring', comet_ring: 'ring', transcendent_sigil: 'ring',
   steel_sword: 'sword', knight_plate: 'plate',
   mythril_gauntlets: 'gloves', drakescale_boots: 'boots', aurora_cloak: 'cloak',
@@ -320,6 +321,10 @@ function selfCheck() {
   if (!(PROGRESSION.skillScale > 0 && PROGRESSION.masteryScale > 0)) errs.push('progression skill scaling invalid');
   // progression: every skill has a tree node, prereqs point at real skills, each class has tiers
   const skillIds = new Set(COMBAT.skills.map(s2 => s2.id));
+  for (const cc of new Set(Object.values(CLASS_COMBAT))) {
+    const book = PROGRESSION.skillBooks?.[cc];
+    if (!(book?.title && book?.crest && book?.color && book?.deep && book?.focus && book?.motto)) errs.push(`class ${cc} missing skill-book identity`);
+  }
   for (const sk of COMBAT.skills) if (!PROGRESSION.skillTree[sk.id]) errs.push(`skill ${sk.id} missing tree node`);
   for (const [id, n] of Object.entries(PROGRESSION.skillTree)) {
     if (!skillIds.has(id)) errs.push(`tree node ${id} has no skill`);
@@ -616,6 +621,8 @@ function skillPointEntitlement(p) {
     + Math.max(0, Math.min(p.jobLevel || 1, PROGRESSION.jobLevelCap) - 1) * PROGRESSION.skillPointsPerLevel
     + Math.max(0, p.tierIndex || 0) * 2;
 }
+const statPointEntitlement = p => PROGRESSION.startStatPoints
+  + Math.max(0, Math.min(p.level || 1, DESIGN.levelCap) - 1) * PROGRESSION.statPointsPerLevel;
 function skillPointsSpent(p) {
   let spent = 0;
   for (const [id, raw] of Object.entries(p.skillLevels || {})) {
@@ -648,6 +655,31 @@ function spendStat(stat) {
   p.statPoints -= cost;
   recompute(p);
   AUDIO.playSfx('menu');
+}
+function resetStatPoints(p = G.player) {
+  if (!p || !Object.values(p.alloc || {}).some(value => value > 0)) return false;
+  p.alloc = { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 };
+  p.statPoints = statPointEntitlement(p);
+  recompute(p, false);
+  updateHud();
+  return true;
+}
+function resetSkillPoints(p = G.player) {
+  if (!p || skillPointsSpent(p) <= 0) return false;
+  const starter = skillsFor(p.combatClass).find(s => PROGRESSION.skillTree[s.id]?.reqSkill == null);
+  p.skillLevels = starter ? { [starter.id]: 1 } : {};
+  p.skillPoints = skillPointEntitlement(p);
+  p.skillCd = {};
+  p.momentum = 0;
+  p.hotbar = (p.hotbar || new Array(9).fill(null)).map(slot => slot?.type === 'skill' && slot.id !== starter?.id ? null : slot);
+  if (starter && !p.hotbar.some(slot => slot?.type === 'skill' && slot.id === starter.id)) {
+    const free = p.hotbar.findIndex(slot => !slot);
+    p.hotbar[free >= 0 ? free : 0] = { type: 'skill', id: starter.id };
+  }
+  recompute(p, false);
+  renderHotbar();
+  updateHud();
+  return true;
 }
 // When the hero hits a tier's level requirement, offer that tier's advancement quest
 // (promotion is earned by completing it, not automatic).
@@ -3628,10 +3660,10 @@ function paperDoll(p) {
   }).join('') + `</div>`;
 }
 
-// ---- Skill tree (Ragnarok-style graph) ----------------------------------
-// Nodes auto-lay out by dependency depth (row = length of the reqSkill chain),
-// so adding a skill needs no coordinates — just a combat.js entry + a skillTree
-// node. Connectors are drawn parent→child; passives sit in a band below.
+// ---- Class skill manual --------------------------------------------------
+// Skills stay data-driven, but are presented as three job chapters instead of
+// an auto-routed graph. Full names and written prerequisites remain readable in
+// both languages, even when a class has several branches.
 const STAT_LETTER = { str: 'S', agi: 'A', vit: 'V', int: 'I', dex: 'D', luk: 'L' };
 function recommendedBuild(growth) {
   return Object.entries(growth).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => STAT_LETTER[k]).join('');
@@ -3703,42 +3735,13 @@ function combatLoopHtml(p, actives) {
 }
 function skillsPanelHtml(p) {
   const cc = p.combatClass, tree = PROGRESSION.skillTree, actives = skillsFor(cc);
-  // node label: first word, unless shared with another skill (Arcane Bolt/Arcane Nova → Bolt/Nova)
-  const firsts = {};
-  for (const s of actives) { const f = s.name.split(' ')[0]; firsts[f] = (firsts[f] || 0) + 1; }
-  const shortName = n => { const w = n.split(' '); return (firsts[w[0]] > 1 && w[1]) ? w[1] : w[0]; };
-  const depth = id => { const n = tree[id]; return (n && n.reqSkill) ? depth(n.reqSkill.id) + 1 : 0; };
-  const rows = {};
-  for (const s of actives) { const r = depth(s.id); (rows[r] = rows[r] || []).push(s); }
-  const rowKeys = Object.keys(rows).map(Number).sort((a, b) => a - b);
-  for (const r of rowKeys) rows[r].sort((a, b) => ((tree[a.id]?.reqLevel || 0) - (tree[b.id]?.reqLevel || 0)) || a.name.localeCompare(b.name));
-  const maxLen = Math.max(...rowKeys.map(r => rows[r].length), 1);
-  const COLW = 96, ROWH = 92, NODE = 56, PADX = 30, PADY = 20;
-  const centerX = PADX + (maxLen - 1) / 2 * COLW + NODE / 2;
-  const place = {};
-  rowKeys.forEach((r, ri) => rows[r].forEach((s, ci) => {
-    const x = centerX + (ci - (rows[r].length - 1) / 2) * COLW - NODE / 2, y = PADY + ri * ROWH;
-    place[s.id] = { x, y, cx: x + NODE / 2, cy: y + NODE / 2, skill: s, node: tree[s.id] };
-  }));
-  const activeRows = rowKeys.length;
-  const passives = passivesFor(cc), pLen = passives.length;
-  const passY = PADY + activeRows * ROWH + 14;
-  const passPlace = passives.map((pa, ci) => {
-    const x = centerX + (ci - (pLen - 1) / 2) * COLW - NODE / 2;
-    return { x, y: passY, cx: x + NODE / 2, cy: passY + NODE / 2, pa };
-  });
-  const W = PADX * 2 + maxLen * COLW, H = passY + (pLen ? ROWH : 0) + 20;
-
-  let lines = '';
-  for (const s of actives) {
-    const n = tree[s.id]; if (!n?.reqSkill || !place[n.reqSkill.id]) continue;
-    const a = place[n.reqSkill.id], b = place[s.id], owned = skillLevel(p, s.id) > 0;
-    lines += `<line x1="${a.cx}" y1="${a.cy}" x2="${b.cx}" y2="${b.cy}" stroke="${owned ? '#6fcf7a' : '#5c5240'}" stroke-width="${owned ? 2.4 : 1.6}"/>`;
-    if (n.reqSkill.lvl > 1) lines += `<text x="${((a.cx + b.cx) / 2 + 7).toFixed(1)}" y="${((a.cy + b.cy) / 2).toFixed(1)}" fill="#8fbf6f" font-size="9">L${n.reqSkill.lvl}</text>`;
-  }
-
-  const nodeHtml = (o, isPassive) => {
-    const pa = o.pa, s = o.skill, node = o.node;
+  const passives = passivesFor(cc), book = PROGRESSION.skillBooks[cc];
+  const roleFor = s => s.finisher ? ['FINISH', 'finisher']
+    : s.detonate ? ['DETONATE', 'detonator']
+    : s.effect && isDamageSkill(s) ? ['SETUP', 'setup']
+    : isDamageSkill(s) ? ['BUILD', 'builder'] : ['UTILITY', 'utility'];
+  const cardHtml = (entry, isPassive = false) => {
+    const pa = isPassive ? entry : null, s = isPassive ? null : entry, node = isPassive ? pa : tree[s.id];
     const id = isPassive ? pa.id : s.id;
     const lv = skillLevel(p, id), max = isPassive ? pa.maxLevel : (node?.maxLevel || 1);
     const learnable = isPassive ? canLearnPassive(p, id) : canLearn(p, id), maxed = lv >= max, clickable = learnable && !maxed;
@@ -3748,36 +3751,45 @@ function skillsPanelHtml(p) {
     const glyph = isPassive ? '◈' : (SKILL_GLYPH[s.type] || '✦');
     const name = isPassive ? T(pa.name, 'passives') : T(s.name, 'skills');
     const attr = clickable ? (isPassive ? `data-passive="${id}"` : `data-learn="${id}"`) : '';
-    const mechanicClasses = isPassive ? 'is-passive' : `${s.finisher ? 'is-finisher ' : ''}${s.detonate ? 'is-detonator ' : ''}${s.effect && isDamageSkill(s) ? 'is-setup ' : ''}${isDamageSkill(s) && !s.finisher ? 'is-builder' : ''}`;
-    const tierBadge = isPassive ? (pa.reqTier || 0) : (node.reqTier || 0);
-    const badges = isPassive ? [{ t: `P${tierBadge + 1}`, c: 'passive' }] : [
-      { t: node.tierCaps ? 'I→II' : ['I', 'II', 'III'][tierBadge], c: `tier tier-${tierBadge}` },
-      isDamageSkill(s) && !s.finisher ? { t: '+M', c: 'build' } : null,
-      s.effect && isDamageSkill(s) ? { t: 'S', c: 'setup' } : null,
-      s.detonate ? { t: 'D', c: 'detonate' } : null,
-      s.finisher ? { t: 'F', c: 'finish' } : null,
-    ].filter(Boolean);
+    const [role, roleClass] = isPassive ? [T('PASSIVE', 'ui'), 'passive'] : roleFor(s);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
-    const displayName = currentLang === 'th'
-      ? (isPassive ? T(id, 'passives_short') : T(id, 'skills_short'))
-      : (isPassive ? name.split(' ')[0] : shortName(name));
-    return `<div class="sk-node ${state}${clickable ? ' can' : ''} ${mechanicClasses}" style="left:${o.x}px;top:${o.y}px" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}">
-      <span class="sk-ico">${glyph}</span><span class="sk-lv">${lv}/${max}</span><span class="sk-nm">${displayName}</span><span class="sk-tags">${badges.map(x => `<i class="${x.c}">${x.t}</i>`).join('')}</span></div>`;
+    const req = isPassive
+      ? `${T('Job Lv', 'ui')} ${pa.reqLevel}${pa.reqTier ? ` · ${T('Job advancement required', 'ui')}` : ''}`
+      : node.reqSkill
+        ? `${T('Requires', 'ui')} ${esc(T((COMBAT.skills.find(x => x.id === node.reqSkill.id) || {}).name || node.reqSkill.id, 'skills'))} Lv ${node.reqSkill.lvl}`
+        : T('Starter skill · granted free', 'ui');
+    const status = maxed ? T('MAXED', 'ui') : tierCapped ? T('MASTERY CAP', 'ui') : lv > 0 ? T('LEARNED', 'ui') : clickable ? T('LEARN +', 'ui') : T('LOCKED', 'ui');
+    return `<div class="ro-skill ${state}${clickable ? ' can' : ''} is-${roleClass}" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}">
+      <span class="ro-skill-icon">${glyph}<i>${lv}/${max}</i></span>
+      <span class="ro-skill-copy"><b>${esc(name)}</b><small>${req}</small><em>${isPassive ? esc(T(pa.desc, 'passives').replace('{v}', pa.per * Math.max(1, lv))) : `${T('Job Lv', 'ui')} ${node.reqLevel} · ${T(role, 'ui')}`}</em></span>
+      <span class="ro-skill-state">${status}</span></div>`;
   };
-  const activeNodes = Object.values(place).map(o => nodeHtml(o, false)).join('');
-  const passiveNodes = passPlace.map(o => nodeHtml(o, true)).join('');
-  const band = pLen ? `<div class="sk-band" style="top:${passY - 16}px">○ Passive Skills</div>` : '';
-  const graph = `<div class="sk-graph" style="width:${W}px;height:${H}px">
-    <svg class="sk-lines" width="${W}" height="${H}">${lines}</svg>${activeNodes}${band}${passiveNodes}</div>`;
+
+  const tiers = PROGRESSION.tiers[p.classId] || [];
+  const stageLabels = [T('FIRST JOB', 'ui'), T('SECOND JOB', 'ui'), T('ADVANCED JOB', 'ui')];
+  const lanes = [0, 1, 2].map(tier => {
+    const activeSet = actives.filter(s => (tree[s.id]?.reqTier || 0) === tier)
+      .sort((a, b) => (tree[a.id].reqLevel - tree[b.id].reqLevel) || a.name.localeCompare(b.name));
+    const passiveSet = passives.filter(pa => (pa.reqTier || 0) === tier)
+      .sort((a, b) => (a.reqLevel - b.reqLevel) || a.name.localeCompare(b.name));
+    const unlocked = p.tierIndex >= tier;
+    return `<section class="ro-job-lane${unlocked ? ' unlocked' : ' locked-job'}" data-tier="${tier}">
+      <header><span>0${tier + 1}</span><div><small>${stageLabels[tier]}</small><b>${esc(T(tiers[tier]?.name || stageLabels[tier], 'classes'))}</b></div><i>${unlocked ? T('UNLOCKED', 'ui') : T('PROMOTION REQUIRED', 'ui')}</i></header>
+      <div class="ro-lane-label">◆ ${T('ACTIVE SKILLS', 'ui')}</div>
+      <div class="ro-skill-list">${activeSet.map(s => cardHtml(s)).join('') || `<small class="ro-empty">${T('No active skills in this chapter.', 'ui')}</small>`}</div>
+      <div class="ro-lane-label passive">◈ ${T('PASSIVE MASTERIES', 'ui')}</div>
+      <div class="ro-skill-list passive-list">${passiveSet.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries in this chapter.', 'ui')}</small>`}</div>
+    </section>`;
+  }).join('');
   const g = p._cls.statGrowthPerLevel;
-  const header = `<div class="sk-head">
-    <div><div style="color:var(--accent-alt);font-weight:700;font-size:15px">${p.className}</div>
-      <div style="font-size:12px;color:var(--text-muted)">Job Lv <b style="color:#6fb0ef">${p.jobLevel}/${PROGRESSION.jobLevelCap}</b> · Skill points: <b style="color:var(--success)">${p.skillPoints}</b></div>
-      <div class="sk-career"><span>First Job · ranks 1–5</span><b>→</b><span>Second Job · mastery 6–10</span><b>→</b><span>Advanced · Job 40–50</span></div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Recommended: <b style="color:#c77dff;letter-spacing:2px">${recommendedBuild(g)}</b>
-      <br>◆ active · ◈ passive · <span style="color:#6fcf7a">green = learnable</span></div></div>
-    <div class="sk-radar">${svgRadar(g)}</div></div>`;
-  return `${combatLoopHtml(p, actives)}${header}<div class="sk-scroll">${graph}</div>`;
+  const header = `<header class="ro-book-head"><div class="ro-crest">${book.crest}</div><div class="ro-book-title">
+      <small>${T('CLASS SKILL MANUAL', 'ui')} · ${esc(T(p.className, 'classes'))}</small><h3>${esc(T(book.title, 'ui'))}</h3>
+      <b>${esc(T(book.focus, 'ui'))}</b><p>${esc(T(book.motto, 'ui'))}</p></div>
+    <div class="ro-book-stats"><strong>${p.skillPoints}<small>${T('SKILL POINTS', 'ui')}</small></strong><span>${T('Job Lv', 'ui')} ${p.jobLevel}/${PROGRESSION.jobLevelCap}</span><span>${T('Recommended build:', 'ui')} <b>${recommendedBuild(g)}</b></span></div>
+    <div class="ro-book-radar">${svgRadar(g)}</div></header>`;
+  const resetNote = `<aside class="ro-reset-note"><span>↺</span><div><b>${T('RESET YOUR BUILD', 'ui')}</b><small>${T('Soul Ledger and Memory Prism are sold by Marla. Reset items preserve your level, gear, and rebirth bonuses.', 'ui')}</small></div></aside>`;
+  const guide = `<details class="skill-guide"><summary>${T('COMBAT COMBO GUIDE', 'ui')} <small>${T('Build, setup, detonate, then finish.', 'ui')}</small></summary>${combatLoopHtml(p, actives)}</details>`;
+  return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}<div class="ro-job-grid">${lanes}</div>${resetNote}${guide}</div>`;
 }
 
 // plain-language "what does it do" line for a skill at level L
@@ -4061,7 +4073,7 @@ function panelBody(id) {
     if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div><i>${T('Bag is empty.', 'ui')}</i>`;
     const tab = G._bagTab || 'all';
     const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
-    const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory'].includes(it.type)) || (tab === 'use' && it.type === 'potion') || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
+    const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory'].includes(it.type)) || (tab === 'use' && ['potion', 'reset'].includes(it.type)) || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
     const cat = ITEM_CAT, ORDER = ITEM_CAT_ORDER;
     const rarRank = e => e.uid ? RARITY_ORDER.indexOf(e.rarity) : -1;
     const groups = {};
@@ -4079,7 +4091,8 @@ function panelBody(id) {
           <button class="btn" data-equip="${e.uid}">${T('Equip', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
-        ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>` : '';
+        ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>`
+        : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>` : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
         <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${act}</div>`;
     };
@@ -4344,7 +4357,7 @@ function wirePanel(id, el) {
     let tip = document.getElementById('sk-tip');
     if (!tip) { tip = document.createElement('div'); tip.id = 'sk-tip'; tip.className = 'sk-tip'; document.body.appendChild(tip); }
     tip.style.display = 'none';
-    el.querySelectorAll('.sk-node[data-skill]').forEach(nd => {
+    el.querySelectorAll('.ro-skill[data-skill]').forEach(nd => {
       const show = () => {
         tip.innerHTML = skillNodeTip(nd.dataset.skill, nd.dataset.kind === 'passive');
         tip.style.display = 'block'; tip.style.left = '-9999px'; tip.style.top = '0px';
@@ -4375,18 +4388,41 @@ function refreshPanel(id) {
 }
 
 function useItem(itemId) {
-  const it = itemById[itemId]; if (itemQty(itemId) <= 0) return;
+  const it = itemById[itemId]; if (itemQty(itemId) <= 0) return false;
   const p = G.player;
+  if (it.reset) {
+    const hasSpent = it.reset === 'stats'
+      ? Object.values(p.alloc || {}).some(value => value > 0)
+      : skillPointsSpent(p) > 0;
+    if (!hasSpent) {
+      logMsg(T(it.reset === 'stats' ? 'No allocated stat points to reset.' : 'No spent skill points to reset.', 'ui'), 'sys');
+      return false;
+    }
+    const question = T(it.reset === 'stats'
+      ? 'Use Soul Ledger? Every allocated stat point will be refunded.'
+      : 'Use Memory Prism? All spent active and passive skill points will be refunded.', 'ui');
+    if (typeof confirm === 'function' && !confirm(question)) return false;
+    const reset = it.reset === 'stats' ? resetStatPoints(p) : resetSkillPoints(p);
+    if (!reset) return false;
+    removeItem(itemId);
+    AUDIO.playSfx('levelup');
+    logMsg(T(it.reset === 'stats'
+      ? 'Soul Ledger used — all stat points refunded.'
+      : 'Memory Prism used — all skill points refunded.', 'ui'), 'good');
+    saveGame();
+    return true;
+  }
   // shared potion cooldown: unlimited chug-rate made every level wall face-tankable
   if (it.hpRestore || it.mpRestore) {
-    if (now() < (p.potionCdUntil || 0)) { logMsg('Catch your breath — potion not ready.', 'sys'); return; }
+    if (now() < (p.potionCdUntil || 0)) { logMsg('Catch your breath — potion not ready.', 'sys'); return false; }
     p.potionCdUntil = now() + TUNING.potionCdMs;
   }
   if (it.hpRestore) { p.hp = clamp(p.hp + it.hpRestore, 0, p.maxHp); }
   if (it.mpRestore) { p.mp = clamp(p.mp + it.mpRestore, 0, p.maxMp); }
   if (it.buff) { p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult, until: now() + it.buff.durationMs }); toast(`${it.name} — ${it.buff.stat.toUpperCase()} up!`, 'good'); }
-  if (it.teleport) { removeItem(itemId); AUDIO.playSfx('menu'); loadMap(it.teleport); logMsg('The scroll crumbles — town swims into view.', 'sys'); return; }
+  if (it.teleport) { removeItem(itemId); AUDIO.playSfx('menu'); loadMap(it.teleport); logMsg('The scroll crumbles — town swims into view.', 'sys'); return true; }
   removeItem(itemId); AUDIO.playSfx('pickup'); logMsg(`Used ${it.name}.`, 'good');
+  return true;
 }
 function equip(uid) {
   const p = G.player, u = +uid, idx = p.inventory.findIndex(e => e.uid === u);
@@ -4880,30 +4916,28 @@ const extraCss = `
 .world-link{position:relative;height:24px;margin-left:30px;border-left:2px dotted #46566d}.world-link i{position:absolute;left:-4px;top:10px;width:6px;height:6px;background:#46566d;transform:rotate(45deg)}
 .world-link span{position:absolute;left:10px;top:7px;color:#596a80;font-size:7px;letter-spacing:.8px}.world-link.known{border-left-style:solid;border-color:#a98742}.world-link.known i{background:#d5b85d}.world-link.known span{color:#a98742}
 .world-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 9px;border-top:1px solid #405675;color:#718197;font-size:8px}.world-foot span:last-child{margin-left:auto}
-/* skill tree graph */
-.sk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:4px}
-.sk-career{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:6px;font-size:9px;color:#9eabc0}
-.sk-career span{padding:2px 5px;border:1px solid #53647b;background:#101b2d}.sk-career b{color:#d5b85d}
-.sk-radar{flex:0 0 112px}
-.sk-scroll{overflow:auto;max-width:86vw;max-height:60vh;border-top:1px solid rgba(201,162,75,.25);padding-top:6px}
-.sk-graph{position:relative;margin:0 auto}
-.sk-lines{position:absolute;left:0;top:0;pointer-events:none}
-.sk-node{position:absolute;width:56px;height:56px;border-radius:11px;display:flex;align-items:center;justify-content:center;
-  border:2px solid #5c5240;background:#241c11;box-shadow:0 2px 6px rgba(0,0,0,.45)}
-.sk-node .sk-ico{font-size:23px;line-height:1}
-.sk-node .sk-lv{position:absolute;bottom:-3px;right:1px;font-size:10px;font-weight:700;color:#e8dfc8;background:rgba(0,0,0,.72);padding:0 4px;border-radius:5px}
-.sk-node .sk-nm{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap}
-.sk-node.locked{opacity:.5;filter:grayscale(.75)}
-.sk-node.owned{border-color:#c9a24b;background:linear-gradient(180deg,#3a2f18,#241c11)}
-.sk-node.tier-capped{border-color:#6fb0ef;background:linear-gradient(180deg,#24364d,#172338);box-shadow:0 0 8px rgba(111,176,239,.28)}
-.sk-node.owned.can{border-color:#8fbf6f}
-.sk-node.maxed{border-color:#e6bd54;background:linear-gradient(180deg,#4a3c1d,#2a2113);box-shadow:0 0 9px rgba(230,189,84,.5)}
-.sk-node.can{cursor:pointer}
-.sk-node.ready{border-color:#6fcf7a;box-shadow:0 0 8px rgba(111,207,122,.6);animation:skpulse 1.5s ease-in-out infinite}
-.sk-node.can:hover{background:#2e3a22;transform:scale(1.06)}
-@keyframes skpulse{0%,100%{box-shadow:0 0 6px rgba(111,207,122,.4)}50%{box-shadow:0 0 13px rgba(111,207,122,.95)}}
-.sk-band{position:absolute;left:2px;font-size:11px;color:#6fb0ef;font-weight:700}
-.sk-node.can:hover{outline:2px solid rgba(255,255,255,.25)}
+/* RO-style class skill manual: three job chapters, full labels, no crossing lines. */
+.panel[data-kind="skills"]{width:min(940px,94vw);max-width:94vw}
+.panel[data-kind="skills"] .panel__body{padding:8px;background:#0a111d}
+.ro-skill-book{color:#dce4ec;background:linear-gradient(160deg,var(--book-deep),#0a111d 38%,#111b2b);border:1px solid color-mix(in srgb,var(--book-accent) 58%,#4b5665);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.ro-book-head{display:grid;grid-template-columns:58px minmax(0,1fr) 134px 92px;align-items:center;gap:10px;padding:11px 12px;border-bottom:2px solid var(--book-accent);background:linear-gradient(90deg,color-mix(in srgb,var(--book-deep) 88%,#000),rgba(8,13,20,.76))}
+.ro-crest{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border:2px solid var(--book-accent);background:var(--book-deep);color:var(--book-accent);font:32px/1 var(--font-head);box-shadow:inset 0 0 0 3px rgba(0,0,0,.28),0 0 12px color-mix(in srgb,var(--book-accent) 24%,transparent);transform:rotate(2deg)}
+.ro-book-title{min-width:0}.ro-book-title small{color:#8e9caf;font-size:8px;font-weight:900;letter-spacing:1.5px}.ro-book-title h3{margin:2px 0;color:var(--book-accent);font:700 20px/1.1 var(--font-head);letter-spacing:.3px}.ro-book-title b{color:#e8edf3;font-size:10px;letter-spacing:.6px}.ro-book-title p{margin:3px 0 0;color:#a6b1bf;font-size:9px;font-style:italic;line-height:1.35}
+.ro-book-stats{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border:1px solid #526178;background:rgba(4,8,14,.62);font-size:8px;color:#aeb9c8}.ro-book-stats strong{display:flex;align-items:center;gap:7px;color:var(--book-accent);font:700 24px/1 var(--font-head)}.ro-book-stats strong small{color:#e4e9ef;font:800 7px/1.2 var(--font-ui);letter-spacing:1px}.ro-book-stats span b{color:#d7a6f1;letter-spacing:1px}.ro-book-radar{width:92px;overflow:hidden}.ro-book-radar svg{width:92px;height:88px}
+.ro-job-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:8px}
+.ro-job-lane{min-width:0;border:1px solid #526178;background:rgba(11,21,37,.88);box-shadow:inset 0 3px 0 color-mix(in srgb,var(--book-accent) 76%,#fff)}
+.ro-job-lane>header{display:grid;grid-template-columns:25px minmax(0,1fr);align-items:center;gap:5px;min-height:46px;padding:6px 7px;border-bottom:1px solid #526178;background:linear-gradient(90deg,color-mix(in srgb,var(--book-deep) 82%,#101827),#142238)}
+.ro-job-lane>header>span{grid-row:1/3;color:var(--book-accent);font:700 20px/1 var(--font-head)}.ro-job-lane>header div{display:flex;flex-direction:column;min-width:0}.ro-job-lane>header small{color:#8997aa;font-size:7px;font-weight:900;letter-spacing:1px}.ro-job-lane>header b{overflow-wrap:anywhere;color:#eef2f6;font-size:10px;line-height:1.2}.ro-job-lane>header>i{grid-column:2;color:#9dc19f;font-size:7px;font-style:normal;font-weight:800;letter-spacing:.6px}.ro-job-lane.locked-job>header>i{color:#d3987f}
+.ro-lane-label{margin:7px 6px 4px;color:var(--book-accent);font-size:7px;font-weight:900;letter-spacing:1px}.ro-lane-label.passive{margin-top:9px;padding-top:7px;border-top:1px dashed #53657e;color:#d7a6f1}
+.ro-skill-list{display:grid;gap:4px;padding:0 5px}.ro-skill-list.passive-list{padding-bottom:6px}.ro-empty{padding:8px;color:#718197;font-size:8px;font-style:italic}
+.ro-skill{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:6px;min-height:56px;padding:5px 5px 5px 4px;border:1px solid #53657e;border-left:3px solid #63758d;background:#101d32;box-shadow:1px 1px 0 rgba(0,0,0,.48);transition:filter .12s,transform .12s,border-color .12s}
+.ro-skill-icon{position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #718197;background:#080d14;color:#d8e0e9;font-size:18px}.ro-skill-icon i{position:absolute;right:-3px;bottom:-4px;min-width:21px;padding:1px 3px;border:1px solid #53657e;background:#080d14;color:#cbd4de;font:700 7px/1.2 var(--font-ui);font-style:normal;text-align:center}
+.ro-skill-copy{display:flex;flex-direction:column;min-width:0;padding-right:2px}.ro-skill-copy b{overflow-wrap:anywhere;color:#e8edf3;font-size:10px;line-height:1.2}.ro-skill-copy small{margin-top:2px;color:#94a2b4;font-size:7px;line-height:1.3}.ro-skill-copy em{margin-top:3px;color:#8fc5e8;font-size:7px;font-style:normal;font-weight:800;letter-spacing:.25px}
+.ro-skill-state{grid-column:1/-1;justify-self:end;margin-top:-2px;padding:1px 4px;border:1px solid #53657e;background:#080d14;color:#9ba8b8;font-size:6px;font-weight:900;letter-spacing:.7px}
+.ro-skill.locked{background:#0d1726;border-color:#465468}.ro-skill.locked .ro-skill-copy b{color:#a7b1be}.ro-skill.locked .ro-skill-icon{color:#8795a7}.ro-skill.ready{border-color:#71c47c;background:#173528;box-shadow:inset 0 0 0 1px rgba(113,196,124,.2),0 0 7px rgba(113,196,124,.22)}.ro-skill.ready .ro-skill-state{color:#9ee6a7;border-color:#71c47c}.ro-skill.owned{border-color:color-mix(in srgb,var(--book-accent) 72%,#798698);background:color-mix(in srgb,var(--book-deep) 68%,#17253a)}.ro-skill.maxed{border-color:#e3bd58;background:#392f1a}.ro-skill.maxed .ro-skill-state{color:#f0d47d;border-color:#8b7238}.ro-skill.tier-capped{border-color:#6fb0ef;background:#172b45}.ro-skill.can{cursor:pointer}.ro-skill.can:hover{filter:brightness(1.2);transform:translateY(-1px);outline:1px solid rgba(255,255,255,.2)}
+.ro-skill.is-builder{border-left-color:#6f9669}.ro-skill.is-setup{border-left-color:#638cc1}.ro-skill.is-detonator{border-left-color:#ad78cf}.ro-skill.is-finisher{border-left-color:#c65356}.ro-skill.is-passive{border-left-color:#9c72bd}.ro-skill[draggable="true"]{cursor:grab}.ro-skill[draggable="true"]:active{cursor:grabbing}
+.ro-reset-note{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 9px;border:1px solid #8b7238;background:#2a2417}.ro-reset-note>span{color:#f0d47d;font-size:22px}.ro-reset-note div{display:flex;flex-direction:column}.ro-reset-note b{color:#f0d47d;font-size:8px;letter-spacing:1px}.ro-reset-note small{color:#c4bda9;font-size:8px;line-height:1.35}
+.skill-guide{margin:0 8px 8px;border:1px solid #526178;background:#0b1628}.skill-guide>summary{padding:7px 9px;color:#efd16f;font-size:9px;font-weight:900;letter-spacing:.7px;cursor:pointer}.skill-guide>summary small{margin-left:8px;color:#8997aa;font-size:8px;font-weight:400;letter-spacing:0}.skill-guide .skill-flow{width:auto;margin:0;border-width:1px 0 0;box-shadow:none}
 /* skill hover tooltip */
 .sk-tip{position:fixed;z-index:60;max-width:264px;background:linear-gradient(180deg,#2f2716,#1a140c);
   border:1px solid var(--panel-border);border-radius:8px;padding:9px 11px;box-shadow:0 6px 22px rgba(0,0,0,.65);
@@ -4984,13 +5018,6 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 .flow-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;color:#95a3b5;font-size:8px}
 .flow-legend span:last-child{margin-left:auto}.legend-box{display:inline-block;width:8px;height:8px;margin-right:3px;background:#60718a}.legend-box.builder{background:#6f9669}.legend-box.setup{background:#638cc1}.legend-box.detonate{background:#ad78cf}.legend-box.finisher{background:#c65356}
 
-.panel .sk-node.is-builder{border-left-color:#6f9669}.panel .sk-node.is-setup{border-bottom-color:#638cc1}.panel .sk-node.is-detonator{border-right-color:#ad78cf}.panel .sk-node.is-finisher{border-top-color:#c65356}
-.sk-node[draggable="true"]{cursor:grab}.sk-node[draggable="true"]:active{cursor:grabbing}
-.sk-tags{position:absolute;left:2px;top:2px;display:flex;gap:1px;z-index:2}
-.sk-tags i{min-width:11px;height:10px;padding:0 2px;background:#080d14;border:1px solid #68778b;color:#b8c3d2;font:700 7px/8px var(--font-ui);font-style:normal;text-align:center}
-.sk-tags i.tier{color:#f0d47d;border-color:#8b7238}.sk-tags i.tier-1{color:#8fc5e8;border-color:#567da5}.sk-tags i.tier-2{color:#d7a6f1;border-color:#8c5ba7}
-.sk-tags i.build{color:#9dc19f;border-color:#6f9669}.sk-tags i.setup{color:#9fc3ea;border-color:#638cc1}.sk-tags i.detonate{color:#d7a6f1;border-color:#ad78cf}.sk-tags i.finish{color:#ef9b9e;border-color:#c65356}
-.sk-node .sk-lv{z-index:3}
 .tip-mechanics{display:grid;gap:3px;margin:6px 0;padding:6px;background:#0b1628;border:1px solid #53657e}
 .tip-mechanic{display:inline-block;min-width:58px;margin-right:4px;padding:1px 4px;border:1px solid currentColor;font-size:8px;font-weight:800;text-align:center;text-transform:uppercase}
 .tip-mechanic.build{color:#9dc19f}.tip-mechanic.setup{color:#9fc3ea}.tip-mechanic.detonate{color:#d7a6f1}.tip-mechanic.finish{color:#ef9b9e}
@@ -5007,6 +5034,12 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 .slot-picker .sp-sep{height:1px;margin:4px;background:#53657e}
 .dialogue__choices .btn{display:flex;align-items:center;justify-content:space-between}
 .dialogue__choices .btn kbd{margin-left:auto;padding:1px 6px;border:1px solid #9aa8b9;background:#080d14;color:#efd16f;font-size:9px;box-shadow:inset 0 -1px #000}
+@media(max-width:760px){
+  .panel[data-kind="skills"]{width:calc(100vw - 16px);max-width:calc(100vw - 16px)}
+  .ro-book-head{grid-template-columns:48px minmax(0,1fr);padding:8px}.ro-crest{width:42px;height:42px;font-size:25px}.ro-book-stats{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr}.ro-book-stats strong{font-size:18px}.ro-book-radar{display:none}
+  .ro-job-grid{grid-template-columns:1fr}.ro-skill{grid-template-columns:40px minmax(0,1fr) auto}.ro-skill-state{grid-column:3;grid-row:1;align-self:end;margin:0}.ro-skill-copy b{font-size:11px}.ro-skill-copy small,.ro-skill-copy em{font-size:8px}
+  .skill-guide>summary small{display:block;margin:2px 0 0}.flow-grid{grid-template-columns:1fr}.flow-arrow{height:14px;transform:rotate(90deg)}.flow-copy{min-height:0}.flow-head{align-items:flex-start;flex-wrap:wrap}.flow-head>div:first-child{flex-basis:100%}
+}
 #hud .mp-bar .fill{background:linear-gradient(90deg,#315f9d,#5b91d2);transition:width .16s linear}
 #hud .mp-bar.low .fill{background:linear-gradient(90deg,#6e3f86,#a666b8)}
 #hud .mp-bar.empty .label{color:#ef9b9e}
@@ -5219,7 +5252,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
 

@@ -107,6 +107,13 @@ Object.values(PROGRESSION.tiers).forEach(tList => {
   });
 });
 
+// Test 10b: Every class-owned skill manual is fully localized, not just its skills.
+Object.values(PROGRESSION.skillBooks).forEach(book => {
+  for (const field of ['title', 'focus', 'motto']) {
+    assert.notEqual(T(book[field], 'ui'), book[field], `Missing translation for skill manual ${field}: ${book[field]}`);
+  }
+});
+
 // Test 11: Check Story Phases
 CONTENT.storyPhases.forEach(sp => {
   assert.notEqual(T(sp.name, 'storyPhases'), sp.name, `Missing translation for story phase name: ${sp.name}`);
@@ -177,6 +184,13 @@ for (const key of [
   'Story milestone reached — trader stock advanced to Rank {rank} with better rarity.',
   'Main story and Guild Rank complete — Trader Rank S and the full catalog are unlocked.',
   'Main story complete — Story Rank A+ unlocked. Reach Guild Rank S to unlock the full Trader Rank S catalog.',
+  'Reset Manuals', 'No allocated stat points to reset.', 'No spent skill points to reset.',
+  'Use Soul Ledger? Every allocated stat point will be refunded.',
+  'Use Memory Prism? All spent active and passive skill points will be refunded.',
+  'Soul Ledger used — all stat points refunded.', 'Memory Prism used — all skill points refunded.',
+  'CLASS SKILL MANUAL', 'FIRST JOB', 'SECOND JOB', 'ADVANCED JOB',
+  'ACTIVE SKILLS', 'PASSIVE MASTERIES', 'RESET YOUR BUILD', 'COMBAT COMBO GUIDE',
+  'Soul Ledger and Memory Prism are sold by Marla. Reset items preserve your level, gear, and rebirth bonuses.',
 ]) assert.notEqual(T(key, 'ui'), key, `Missing translation for runtime guidance: ${key}`);
 
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

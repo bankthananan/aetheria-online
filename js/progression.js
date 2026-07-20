@@ -9,6 +9,40 @@ export const PROGRESSION = {
   skillScale: 0.15,         // ranks 2-5: +15% power each
   masteryScale: 0.08,       // second-job mastery ranks 6-10: +8% power each
 
+  // Class-owned skill-manual identity. The tree renderer combines this visual
+  // language with the real skill/prerequisite data below, so every calling has
+  // its own RO-style job book without duplicating combat rules in the UI.
+  skillBooks: {
+    blade: {
+      title: 'Rift Vanguard Manual', crest: '✦', color: '#78a7d8', deep: '#172c46',
+      focus: 'Guard · Sunder · Counter', motto: 'Break their formation. Become the wall they cannot cross.',
+    },
+    berserker: {
+      title: 'Tempest Reaper Arts', crest: '☄', color: '#df777c', deep: '#482026',
+      focus: 'Fury · Chase · Execute', motto: 'Momentum is mercy denied: close the gap and end it.',
+    },
+    mage: {
+      title: 'Runic Grimoire', crest: '⌘', color: '#b98bea', deep: '#33234d',
+      focus: 'Burn · Freeze · Detonate', motto: 'Prepare the equation, then erase everything inside it.',
+    },
+    ranger: {
+      title: 'Sky Piercer Fieldbook', crest: '➶', color: '#7fcf91', deep: '#193b2a',
+      focus: 'Mark · Control · Volley', motto: 'Choose the distance, expose the weakness, never miss.',
+    },
+    paladin: {
+      title: 'Dawnlit Testament', crest: '✚', color: '#efd36f', deep: '#4b3a18',
+      focus: 'Smite · Heal · Ward', motto: 'Stand where the light is needed and make that ground sacred.',
+    },
+    monk: {
+      title: 'Way of the Iron Fist', crest: '◉', color: '#e69b61', deep: '#44291b',
+      focus: 'Ki · Stun · Combo', motto: 'A measured strike opens the path to a decisive one.',
+    },
+    elementalist: {
+      title: 'Tempest Codex', crest: 'ϟ', color: '#70cddd', deep: '#173943',
+      focus: 'Weave · Shock · Cataclysm', motto: 'Layer the storm until thunder has nowhere else to go.',
+    },
+  },
+
   // Skill tree nodes keyed by skillId (ids are unique across classes).
   // reqSkill gates a node behind another node reaching a level → a real tree.
   skillTree: {
