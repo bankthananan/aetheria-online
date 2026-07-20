@@ -98,7 +98,9 @@ export const DESIGN = {
     monsterStatPerLevel: 0.06, // hp/atk/def scale per level rolled above the base
     monsterAtkMult: 1.8,       // global monster ATK scale (content atk values predate armor slots/affixes)
     monsterHpMult: 1.35,       // normal foes: brisk 4-8 second fights with an active skill rotation
-    bossHpMult: 2.4,           // guardians last long enough to use slams, enrage, and potion pressure
+    monsterHpLevelGrowth: 0.23, // normal HP gains this × sqrt(level-1), keeping ranked skills from one-shotting
+    monsterDefLevelGrowth: 0.08,// normal DEF gains this × sqrt(level-1), so upgraded gear still meets resistance
+    bossHpMult: 3.2,           // guardians outlast normal foes and reliably show slams, enrage, and potion pressure
     monsterExpMult: 1.15,      // roughly 22-25 even-level kills per base level before quest rewards
     expGapFalloff: 0.10,       // exp shrinks this much per player-level above the monster
     expGapMin: 0.10,           // ...but never below this fraction (trash still gives a crumb)
@@ -128,7 +130,11 @@ export const DESIGN = {
     dayCycleMs: 600000,        // one full day/night cycle (render tint only — no gameplay effect)
     rebirthStatBonus: 5,       // permanent +this to every base stat per rebirth (NG+)
     rebirthHpMpPct: 0.10,      // permanent +this fraction of max HP/MP per rebirth
-    rebirthMonsterMult: 0.15,  // NG+ bite: monsters gain +this hp/atk/def per rebirth...
+    rebirthMonsterAtkMult: 0.15,// NG+ danger: monster damage rises without turning every hit lethal
+    rebirthMonsterDefMult: 0.30,// retained gear must still cut through tougher rebirth armor
+    rebirthMonsterHpMult: 0.45, // every completed cycle adds lasting monster durability
+    rebirthGearHpPerAtk: 0.032, // retained usable gear ATK adds early-run monster HP pressure...
+    rebirthGearHpCap: 4.5,      // ...capped and faded to zero as the hero approaches Base Lv 80
     rebirthMonsterExp: 0.10,   // ...and pay +this much more EXP per rebirth to match
     potionCdMs: 1500,          // shared restore-potion cooldown — spam must not out-heal a fight you shouldn't win
     agiAtkSpeed: 0.004,        // AGI: each point shaves this fraction off attack delay (cap 45%)

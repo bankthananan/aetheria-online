@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/equipment.test.js",
+    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/equipment.test.js && node js/rebirth.test.js && node js/monster-system.test.js",
     "test:balance": "node js/balance.test.js",
     "test:art": "node js/art.test.js",
     "test:audio": "node js/audio.test.js",
     "test:locale": "node js/locale.test.js",
     "test:heat": "node js/heat-guidance.test.js",
-    "test:equipment": "node js/equipment.test.js"
+    "test:equipment": "node js/equipment.test.js",
+    "test:rebirth": "node js/rebirth.test.js",
+    "test:monsters": "node js/monster-system.test.js"
   },
   "devDependencies": {
     "vite": "^4.4.5"

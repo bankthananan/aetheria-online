@@ -401,7 +401,7 @@ export const L10N = {
       "Rebirth": "การเกิดใหม่",
       "Rebirth now": "เกิดใหม่ตอนนี้",
       "Each rebirth: +{s} all stats, +{p}% HP/MP — forever.": "การเกิดใหม่แต่ละครั้ง: ค่าสถานะทั้งหมด +{s}, HP/MP สูงสุด +{p}% — ถาวรตลอดไป",
-      "The world bites back: monsters gain +{m}% power and pay +{x}% EXP per rebirth.": "โลกก็โหดขึ้นเช่นกัน: มอนสเตอร์แข็งแกร่งขึ้น +{m}% และให้ EXP เพิ่ม +{x}% ต่อการเกิดใหม่หนึ่งครั้ง",
+      "The world bites back: each rebirth gives monsters +{h}% HP, +{d}% DEF, and +{a}% ATK. Retained attack gear adds early-run HP that fades by max level; EXP rises +{x}%.": "โลกก็โหดขึ้นเช่นกัน: การเกิดใหม่แต่ละครั้งทำให้มอนสเตอร์มี HP +{h}%, DEF +{d}% และ ATK +{a}% อุปกรณ์โจมตีที่เก็บไว้จะเพิ่ม HP ของมอนสเตอร์ช่วงต้นเกมและค่อย ๆ ลดลงจนถึงเลเวลสูงสุด ส่วน EXP เพิ่มขึ้น +{x}%",
       "Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.": "รีเซ็ตเลเวล อาชีพ สกิล และแต้มค่าสถานะ แต่ยังคงอุปกรณ์ เซนี ยศกิลด์ และโลกทั้งใบไว้",
       "Unlocks at Base Lv {lvl}.": "ปลดล็อกเมื่อเลเวลพื้นฐานถึง {lvl}",
       "Rebirth {n} — the world begins again, but your soul remembers.": "การเกิดใหม่ครั้งที่ {n} — โลกเริ่มต้นใหม่อีกครั้ง แต่วิญญาณของเธอยังจดจำทุกสิ่ง",

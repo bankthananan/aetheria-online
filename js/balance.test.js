@@ -23,6 +23,8 @@ const skill = id => COMBAT.skills.find(entry => entry.id === id);
 const weaponAt = level => level < 5 ? 0 : level < 10 ? 4 : level < 16 ? 10
   : level < 25 ? 14 : level < 35 ? 22 : level < 48 ? 30
     : level < 61 ? 47 : level < 74 ? 56 : 66;
+const accessoryAt = level => level < 10 ? 0 : level < 25 ? 6 : level < 35 ? 8
+  : level < 48 ? 10 : level < 74 ? 12 : 14;
 
 function statsAt(cls, level) {
   const stats = {};
@@ -41,11 +43,60 @@ function classAttack(cls, level) {
   return F.physAtk(scope);
 }
 
-function monsterStats(monster) {
+function progressedAttack(cls, level, { rebirths = 0, retainedGear = false } = {}) {
+  const stats = statsAt(cls, level);
+  for (const stat of Object.keys(stats)) stats[stat] += rebirths * DESIGN.tuning.rebirthStatBonus;
+  const combatClass = CLASS_COMBAT[cls.id];
+  const primary = MAGIC.has(combatClass) ? 'int' : combatClass === 'ranger' ? 'dex' : 'str';
+  let points = PROGRESSION.startStatPoints + PROGRESSION.statPointsPerLevel * (level - 1);
+  while (points >= 1 + Math.floor(stats[primary] / DESIGN.tuning.statCostEvery)) {
+    points -= 1 + Math.floor(stats[primary] / DESIGN.tuning.statCostEvery);
+    stats[primary]++;
+  }
+  const weaponAtk = retainedGear
+    ? Math.round((66 + 14) * RARITY.legendary.mult)
+    : weaponAt(level) + accessoryAt(level);
+  const scope = { ...stats, level, weaponAtk };
+  if (MAGIC.has(combatClass)) return F.magicAtk(scope);
+  if (combatClass === 'ranger') return F.rangedAtk(scope);
+  return F.physAtk(scope);
+}
+
+function starterFor(cls) {
+  return COMBAT.skills.find(entry => entry.classId === CLASS_COMBAT[cls.id]
+    && PROGRESSION.skillTree[entry.id]?.reqSkill == null);
+}
+
+function starterRankAt(level, starter) {
+  let rank = Math.min(5, level);
+  for (let next = 6; next <= PROGRESSION.skillTree[starter.id].maxLevel; next++) {
+    if (level >= (PROGRESSION.skillTree[starter.id].rankReqLevels?.[next] ?? Infinity)) rank = next;
+  }
+  return rank;
+}
+
+const skillRankScale = rank => 1
+  + PROGRESSION.skillScale * Math.min(Math.max(rank - 1, 0), 4)
+  + PROGRESSION.masteryScale * Math.max(rank - 5, 0);
+
+function monsterStats(monster, level = monster.level, { rebirths = 0, retainedGearAtk = 0 } = {}) {
+  const scale = 1 + (level - monster.level) * DESIGN.tuning.monsterStatPerLevel;
+  const durabilityScale = Math.max(1, scale);
+  const normal = monster.sizeTiles < 2;
+  const levelRoot = Math.sqrt(Math.max(0, Math.max(level, monster.level) - 1));
+  const levelHpMult = normal ? 1 + levelRoot * DESIGN.tuning.monsterHpLevelGrowth : 1;
+  const levelDefMult = normal ? 1 + levelRoot * DESIGN.tuning.monsterDefLevelGrowth : 1;
+  const progress = Math.max(0, Math.min(1, (level - 1) / (DESIGN.levelCap - 1)));
+  const gearHp = rebirths
+    ? Math.min(DESIGN.tuning.rebirthGearHpCap, retainedGearAtk * DESIGN.tuning.rebirthGearHpPerAtk) * (1 - progress)
+    : 0;
+  const rebirthHpMult = 1 + rebirths * DESIGN.tuning.rebirthMonsterHpMult + gearHp;
+  const rebirthDefMult = 1 + rebirths * DESIGN.tuning.rebirthMonsterDefMult;
   const bossMult = monster.sizeTiles >= 2 ? DESIGN.tuning.bossHpMult : 1;
   return {
-    hp: Math.round(monster.hp * DESIGN.tuning.monsterHpMult * bossMult),
-    exp: Math.round(monster.exp * DESIGN.tuning.monsterExpMult),
+    hp: Math.round(monster.hp * durabilityScale * DESIGN.tuning.monsterHpMult * levelHpMult * bossMult * rebirthHpMult),
+    dv: Math.round(monster.def * durabilityScale * levelDefMult * rebirthDefMult),
+    exp: Math.round(monster.exp * scale * DESIGN.tuning.monsterExpMult * (1 + rebirths * DESIGN.tuning.rebirthMonsterExp)),
   };
 }
 
@@ -60,21 +111,64 @@ const ranger = DESIGN.classes.find(cls => cls.id === 'far_shot');
 assert.ok(classAttack(storm, 40) > F.physAtk({ ...statsAt(storm, 40), weaponAtk: weaponAt(40) }), 'Stormcaller must scale from INT');
 assert.ok(classAttack(ranger, 40) > F.physAtk({ ...statsAt(ranger, 40), weaponAtk: weaponAt(40) }), 'Far Shot must scale primarily from DEX');
 
-// At-level normal fights are brisk; bosses survive long enough to show mechanics.
+// Real at-level builds include focused stat spending, shop gear, and the starter
+// skill's available rank. Normal enemies must resist one-shots throughout the
+// journey; guardians use their separate, longer encounter multiplier.
 for (const monster of CONTENT.monsters) {
-  const { hp, exp } = monsterStats(monster);
-  const averageAttack = DESIGN.classes.reduce((sum, cls) => sum + classAttack(cls, monster.level), 0) / DESIGN.classes.length;
-  const basicHits = hp / Math.max(1, averageAttack - monster.def);
-  const starterCasts = hp / Math.max(1, averageAttack * 2 - monster.def);
+  const { hp, dv, exp } = monsterStats(monster);
   if (monster.sizeTiles < 2) {
-    assert.ok(basicHits >= 4.5 && basicHits <= 8, `${monster.id} basic-hit target drifted: ${basicHits.toFixed(1)}`);
-    assert.ok(starterCasts >= 2 && starterCasts <= 4, `${monster.id} skill-cast target drifted: ${starterCasts.toFixed(1)}`);
+    for (const cls of DESIGN.classes) {
+      const attack = progressedAttack(cls, monster.level);
+      const starter = starterFor(cls);
+      const power = starter.power * skillRankScale(starterRankAt(monster.level, starter));
+      const basicHits = Math.ceil(hp / Math.max(1, attack - dv));
+      const starterCasts = Math.ceil(hp / Math.max(1, attack * power - dv));
+      assert.ok(basicHits >= 4 && basicHits <= 17, `${monster.id}/${cls.id} basic-hit target drifted: ${basicHits}`);
+      assert.ok(starterCasts >= 2 && starterCasts <= 4, `${monster.id}/${cls.id} starter one-shot or sponge: ${starterCasts}`);
+    }
     const killsForLevel = xpForNext(Math.min(monster.level, 79)) / exp;
     assert.ok(killsForLevel >= 20 && killsForLevel <= 31, `${monster.id} XP pace drifted: ${killsForLevel.toFixed(1)} kills`);
   } else {
-    assert.ok(starterCasts >= 15 && starterCasts <= 25, `${monster.id} boss duration drifted: ${starterCasts.toFixed(1)} casts`);
+    const averageAttack = DESIGN.classes.reduce((sum, cls) => sum + classAttack(cls, monster.level), 0) / DESIGN.classes.length;
+    const starterCasts = hp / Math.max(1, averageAttack * 2 - dv);
+    assert.ok(starterCasts >= 20 && starterCasts <= 34, `${monster.id} guardian duration drifted: ${starterCasts.toFixed(1)} casts`);
   }
 }
+
+// The reported breakpoints stay explicit: opening Slimes take about three
+// starter casts, and even a low-rolled Wolf cannot be one-shot by a focused
+// level-10 build with its rank-5 starter skill.
+const slime = CONTENT.monsters.find(monster => monster.id === 'slime');
+const openingSlime = monsterStats(slime, 1);
+const wolf = CONTENT.monsters.find(monster => monster.id === 'wolf');
+const lowWolf = monsterStats(wolf, 8);
+for (const cls of DESIGN.classes) {
+  const starter = starterFor(cls);
+  const openingDamage = progressedAttack(cls, 1) * starter.power - openingSlime.dv;
+  assert.ok(Math.ceil(openingSlime.hp / openingDamage) >= 3, `${cls.id} clears the opening Slime too quickly`);
+  const wolfPower = starter.power * skillRankScale(starterRankAt(10, starter));
+  const wolfDamage = progressedAttack(cls, 10) * wolfPower - lowWolf.dv;
+  assert.ok(wolfDamage < lowWolf.hp, `${cls.id} can one-shot a low-rolled Wolf at level 10`);
+}
+
+// Rebirth keeps endgame gear. Physical/ranged characters therefore add a
+// temporary gear-pressure HP component, while magic characters receive only
+// the base rebirth scaling because weapon ATK does not feed their formula.
+const retainedGearAtk = Math.round((66 + 14) * RARITY.legendary.mult);
+for (const cls of DESIGN.classes) {
+  const usesWeaponAtk = !MAGIC.has(CLASS_COMBAT[cls.id]);
+  const rebornSlime = monsterStats(slime, 1, { rebirths: 1, retainedGearAtk: usesWeaponAtk ? retainedGearAtk : 0 });
+  const attack = progressedAttack(cls, 1, { rebirths: 1, retainedGear: true });
+  const starter = starterFor(cls);
+  const basicHits = Math.ceil(rebornSlime.hp / Math.max(1, attack - rebornSlime.dv));
+  const starterCasts = Math.ceil(rebornSlime.hp / Math.max(1, attack * starter.power - rebornSlime.dv));
+  assert.ok(basicHits >= 4 && basicHits <= 6, `${cls.id} rebirth opening basic-hit pace drifted: ${basicHits}`);
+  assert.ok(starterCasts >= 2 && starterCasts <= 3, `${cls.id} rebirth opening skill pace drifted: ${starterCasts}`);
+}
+assert.ok(
+  monsterStats(slime, 1, { rebirths: 2, retainedGearAtk }).hp > monsterStats(slime, 1, { rebirths: 1, retainedGearAtk }).hp,
+  'each additional rebirth must continue raising monster HP',
+);
 
 // The Base track reaches 80 while the RO-style Job track stops at 50.
 let earnedXp = 0;
@@ -171,8 +265,8 @@ for (const quest of CONTENT.quests) {
     assert.ok(sources.length, `${quest.id} item ${quest.objective.target} has no spawned drop source`);
     assert.ok(sources.some(({ spawn, map }) => {
       const [lo, hi] = spawn.levelRange || map.band || [monsterById[spawn.monsterId].level, monsterById[spawn.monsterId].level];
-      return quest.minLevel >= lo && quest.minLevel <= hi;
-    }), `${quest.id} unlock level misses every source of ${quest.objective.target}`);
+      return quest.minLevel <= hi && quest.minLevel + DESIGN.tuning.autoHuntMaxLevelGap >= lo;
+    }), `${quest.id} unlock level cannot safely reach any source of ${quest.objective.target}`);
   }
 }
 

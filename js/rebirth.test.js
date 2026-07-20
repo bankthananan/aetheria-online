@@ -111,15 +111,20 @@ assert.equal(A.doRebirth(), true);
 assert.equal(p2.rebirths, 2);
 assert.equal(p2.stats.str, freshStr + 2 * T.rebirthStatBonus, 'bonuses stack per rebirth');
 
-// 6) NG+ hardcore: the world toughens with each rebirth and pays more EXP.
+// 6) NG+ hardcore: HP/DEF/ATK scale independently. Retained usable weapon
+// ATK adds early-run HP pressure that fades as monster level approaches 80.
 const slimeDef = A.CONTENT.monsters.find(m => m.id === 'slime');
 const ng2 = A.monsterStatsFor(slimeDef, slimeDef.level);
 p2.rebirths = 0;
 const ng0 = A.monsterStatsFor(slimeDef, slimeDef.level);
 p2.rebirths = 2;
 const near = (a, b) => Math.abs(a - b) <= 1;   // engine rounds once; recomputing here rounds twice
-assert.ok(near(ng2.hp, ng0.hp * (1 + 2 * T.rebirthMonsterMult)), 'monster HP scales per rebirth');
-assert.ok(near(ng2.atk, ng0.atk * (1 + 2 * T.rebirthMonsterMult)), 'monster ATK scales per rebirth');
+const retainedAtk = A.effAtk(p2.equip.weapon) + A.effAtk(p2.equip.accessory);
+const levelProgress = (slimeDef.level - 1) / (A.DESIGN.levelCap - 1);
+const retainedGearHp = Math.min(T.rebirthGearHpCap, retainedAtk * T.rebirthGearHpPerAtk) * (1 - levelProgress);
+assert.ok(near(ng2.hp, ng0.hp * (1 + 2 * T.rebirthMonsterHpMult + retainedGearHp)), 'monster HP scales with rebirths and retained attack gear');
+assert.ok(near(ng2.dv, ng0.dv * (1 + 2 * T.rebirthMonsterDefMult)), 'monster DEF scales per rebirth');
+assert.ok(near(ng2.atk, ng0.atk * (1 + 2 * T.rebirthMonsterAtkMult)), 'monster ATK scales per rebirth');
 assert.ok(ng2.exp > ng0.exp, 'harder monsters pay more EXP');
 
 console.log('Rebirth audit passed: cap gate, clean reset, kept wealth/world, stacking permanent bonuses, persistence.');

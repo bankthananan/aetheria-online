@@ -371,7 +371,7 @@ function selfCheck() {
   }
   for (const k of new Set(Object.values(SLOT_ICON))) if (!PX.item[k]) errs.push(`missing slot icon '${k}'`);
   // tuning knobs + quest difficulty tiers must be present/valid
-  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','bossHpMult','monsterExpMult','expGapFalloff','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','autoHuntMaxLevelGap','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery','rareBossEveryMs','dayCycleMs','rebirthStatBonus','rebirthHpMpPct','rebirthMonsterMult','rebirthMonsterExp'])
+  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','monsterHpLevelGrowth','monsterDefLevelGrowth','bossHpMult','monsterExpMult','expGapFalloff','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','autoHuntMaxLevelGap','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery','rareBossEveryMs','dayCycleMs','rebirthStatBonus','rebirthHpMpPct','rebirthMonsterAtkMult','rebirthMonsterDefMult','rebirthMonsterHpMult','rebirthGearHpPerAtk','rebirthGearHpCap','rebirthMonsterExp'])
     if (!Number.isFinite(TUNING?.[k])) errs.push(`tuning.${k} missing/non-numeric`);
   for (const k of ['max','finisherMin','perHit','decayMs','powerPerPoint','detonateBonus'])
     if (!Number.isFinite(TUNING?.momentum?.[k])) errs.push(`tuning.momentum.${k} missing/non-numeric`);
@@ -1080,14 +1080,35 @@ function rollMonsterLevel(def) {
 // level → concrete combat stats for a definition (shared by spawn and respawn)
 function monsterStatsFor(def, lvl) {
   const scale = 1 + (lvl - def.level) * TUNING.monsterStatPerLevel;
-  // NG+ hardcore: the whole world toughens with every rebirth, and pays more EXP for it
+  // Normal monsters gain an absolute-level durability curve in addition to the
+  // rolled-level delta. HP/DEF never fall below the species' authored baseline:
+  // a low-rolled wolf may hit less hard, but it does not become a paper wolf.
+  // Guardians stay on their already-long dedicated boss multiplier.
+  const normal = def.sizeTiles < 2;
+  const durabilityScale = Math.max(1, scale);
+  const durabilityLevel = Math.max(lvl, def.level);
+  const levelRoot = Math.sqrt(Math.max(0, durabilityLevel - 1));
+  const levelHpMult = normal ? 1 + levelRoot * TUNING.monsterHpLevelGrowth : 1;
+  const levelDefMult = normal ? 1 + levelRoot * TUNING.monsterDefLevelGrowth : 1;
+
+  // NG+ separates damage, armor, and health. Retained physical/ranged gear is
+  // converted into extra early-run HP pressure, then fades to zero at the cap;
+  // magic classes do not pay for weapon ATK that their damage formula cannot use.
   const rb = G.player?.rebirths || 0;
-  const rbMult = 1 + rb * TUNING.rebirthMonsterMult;
-  const atk = Math.round(def.atk * scale * TUNING.monsterAtkMult * rbMult);
+  const levelProgress = clamp((lvl - 1) / Math.max(1, DESIGN.levelCap - 1), 0, 1);
+  const retainedAtk = rb && G.player && !MAGIC.has(G.player.combatClass)
+    ? effAtk(G.player.equip?.weapon) + effAtk(G.player.equip?.accessory) : 0;
+  const retainedGearHp = rb
+    ? Math.min(TUNING.rebirthGearHpCap, retainedAtk * TUNING.rebirthGearHpPerAtk) * (1 - levelProgress)
+    : 0;
+  const rbAtkMult = 1 + rb * TUNING.rebirthMonsterAtkMult;
+  const rbDefMult = 1 + rb * TUNING.rebirthMonsterDefMult;
+  const rbHpMult = 1 + rb * TUNING.rebirthMonsterHpMult + retainedGearHp;
+  const atk = Math.round(def.atk * scale * TUNING.monsterAtkMult * rbAtkMult);
   const bossMult = def.sizeTiles >= 2 ? TUNING.bossHpMult : 1;
-  return { lvl, atk, atkBase: atk, dv: Math.round(def.def * scale * rbMult),
+  return { lvl, atk, atkBase: atk, dv: Math.round(def.def * durabilityScale * levelDefMult * rbDefMult),
     exp: Math.round(def.exp * scale * TUNING.monsterExpMult * (1 + rb * TUNING.rebirthMonsterExp)),
-    hp: Math.round(def.hp * scale * TUNING.monsterHpMult * bossMult * rbMult),
+    hp: Math.round(def.hp * durabilityScale * TUNING.monsterHpMult * levelHpMult * bossMult * rbHpMult),
     flee: 30 + lvl * 1.5, hit: 85 + lvl * 2.5 };
 }
 // HEAT MAP: shortest walkable-path depth selects the habitat; level interpolation
@@ -4027,7 +4048,7 @@ function panelBody(id) {
         ${paperDoll(p)}
         <div style="color:var(--accent-alt);margin:10px 0 6px">✦ ${T('Rebirth', 'ui')}${p.rebirths ? ` <b style="color:#c77dff">×${p.rebirths}</b>` : ''}</div>
         <div style="font-size:12px">${T('Each rebirth: +{s} all stats, +{p}% HP/MP — forever.', 'ui').replace('{s}', TUNING.rebirthStatBonus).replace('{p}', Math.round(TUNING.rebirthHpMpPct * 100))}</div>
-        <div style="font-size:12px;color:#e2695f">${T('The world bites back: monsters gain +{m}% power and pay +{x}% EXP per rebirth.', 'ui').replace('{m}', Math.round(TUNING.rebirthMonsterMult * 100)).replace('{x}', Math.round(TUNING.rebirthMonsterExp * 100))}</div>
+        <div style="font-size:12px;color:#e2695f">${T('The world bites back: each rebirth gives monsters +{h}% HP, +{d}% DEF, and +{a}% ATK. Retained attack gear adds early-run HP that fades by max level; EXP rises +{x}%.', 'ui').replace('{h}', Math.round(TUNING.rebirthMonsterHpMult * 100)).replace('{d}', Math.round(TUNING.rebirthMonsterDefMult * 100)).replace('{a}', Math.round(TUNING.rebirthMonsterAtkMult * 100)).replace('{x}', Math.round(TUNING.rebirthMonsterExp * 100))}</div>
         ${p.level >= DESIGN.levelCap
           ? `<button class="btn" data-rebirth="1" style="margin-top:6px">✦ ${T('Rebirth now', 'ui')}</button>
              <div style="font-size:11px;color:#e2695f;margin-top:4px">${T('Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.', 'ui')}</div>`

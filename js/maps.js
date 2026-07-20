@@ -250,7 +250,7 @@ export const MAPS = {
     spawns: [
       { monsterId: 'slime', count: 14, depth: [0.00, 0.30], levelRange: [1, 5] },
       { monsterId: 'goblin', count: 11, depth: [0.15, 0.55], levelRange: [3, 8] },
-      { monsterId: 'wolf', count: 10, depth: [0.38, 0.76], levelRange: [5, 11] },
+      { monsterId: 'wolf', count: 10, depth: [0.38, 0.76], levelRange: [8, 11] },
       { monsterId: 'thornback_boar', count: 8, depth: [0.68, 1.00], levelRange: [10, 15] },
       { monsterId: 'elderwood_treant', count: 1 },   // zone guardian
     ],
