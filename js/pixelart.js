@@ -1904,4 +1904,17 @@ const item = {
     '', '', '', '', ''),
 };
 
+// Regional annex species inherit proven six-frame silhouettes, then receive
+// their own palette-authored frame data so each remains visually identifiable.
+const recolorMonster = (source, remap) => Object.fromEntries(Object.entries(source).map(([state, frames]) => [
+  state, frames.map(frame => frame.map(row => [...row].map(ch => remap[ch] || ch).join(''))),
+]));
+for (const [id, base, remap] of [
+  ['mossback_beetle', 'slime', { l: 'g', c: 'j', z: 'G' }],
+  ['ruin_crawler', 'goblin', { g: 'a', G: 'A', n: 'I' }],
+  ['tundra_lurker', 'frost_wolf', { l: 'c', z: 'u', m: 'b' }],
+  ['ashwing', 'rime_harpy', { l: 'r', c: 'O', z: 'R' }],
+  ['constellation_mite', 'void_wisp', { p: 'u', q: 'U', c: 'x' }],
+]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
+
 export const PX = { player, playerWalk, npc, monster, item };

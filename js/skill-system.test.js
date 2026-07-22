@@ -66,9 +66,22 @@ for (const classId of classIds) {
   assert.ok(html.includes(book.title) && html.includes(`--book-accent:${book.color}`), `${classId} renders its own visual manual`);
   assert.equal((html.match(/class="ro-job-lane/g) || []).length, 3, `${classId} manual has three job chapters`);
   for (const skill of ownSkills) assert.ok(html.includes(`data-skill="${skill.id}"`), `${classId} includes ${skill.id}`);
-  assert.ok(!html.includes('sk-graph') && !html.includes('sk-lines'), `${classId} manual has no crossing connector graph`);
+  assert.ok(html.includes('class="ro-skill-graph"'), `${classId} manual renders the dependency graph`);
+  assert.ok(html.includes('class="ro-skill-lines"') && html.includes('aria-hidden="true"'), `${classId} graph includes a decorative native SVG layer`);
 }
 assert.equal(bookTitles.size, classIds.length, 'all seven classes have distinct manuals');
+
+const finalBlade = A.makePlayer('reborn_blade', 'FinalGraph');
+finalBlade.tierIndex = 2;
+finalBlade.jobBranchId = A.PROGRESSION.jobBranches.reborn_blade.defaultId;
+finalBlade.advancedJobId = 'voidcleaver_lord';
+finalBlade.className = 'Voidcleaver Lord';
+finalBlade.jobLevel = 50;
+A.recompute(finalBlade, true);
+const finalHtml = A.skillsPanelHtml(finalBlade);
+assert.ok(finalHtml.includes('data-advanced-job="voidcleaver_lord"') && finalHtml.includes('data-advanced-job="aegis_paragon"'), 'both final-job branches remain visible');
+assert.ok(finalHtml.includes('data-skill="world_cleaver"') && finalHtml.includes('data-skill="aegis_wall"'), 'selected and rejected exclusive skills both remain in the graph');
+assert.ok(finalHtml.includes('ro-third-branch incompatible') && finalHtml.includes('locked incompatible'), 'rejected final-job nodes are visibly sealed');
 
 // Thai uses full translated skill labels rather than clipped shorthand.
 setLanguage('th');
@@ -138,7 +151,7 @@ assert.ok(!inventoryHtml.includes('data-assign-item="memory_prism"'), 'reset ite
 A.G.running = true;
 A.saveGame();
 const saved = JSON.parse(globalThis.localStorage.getItem('awo_save_v1'));
-assert.equal(saved.v, 4, 'reset items persist inside the branch-aware save schema');
+assert.equal(saved.v, 5, 'reset items persist inside the branch-aware save schema');
 assert.ok(saved.player.inventory.some(slot => slot.itemId === 'memory_prism'), 'unused reset item persists in the normal inventory schema');
 assert.equal(saved.player.skillLevels.flame_burst, 1, 'cancelled build state persists normally');
 

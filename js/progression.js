@@ -5,7 +5,8 @@ export const PROGRESSION = {
   skillPointsPerLevel: 1,
   startStatPoints: 5,
   startSkillPoints: 1,
-  jobLevelCap: 50,          // RO-style finite job track: builds must make real choices
+  jobLevelCap: 50,          // absolute save/UI ceiling
+  jobLevelCaps: [15, 40, 50], // active cap per tierIndex: base job 15, second job 40, third job 50
   skillScale: 0.15,         // ranks 2-5: +15% power each
   masteryScale: 0.08,       // second-job mastery ranks 6-10: +8% power each
 
@@ -64,19 +65,19 @@ export const PROGRESSION = {
     arrow_rain:   { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'hunters_mark', lvl: 1 } },
     // ---- advanced skills: only learnable AFTER the matching class advancement (reqTier) ----
     aegis_rend:    { maxLevel: 3, reqLevel: 18, reqTier: 1, reqSkill: { id: 'rift_slash', lvl: 3 } },
-    world_cleaver: { maxLevel: 3, reqLevel: 40, reqTier: 2, reqSkill: { id: 'aegis_rend', lvl: 2 } },
+    world_cleaver: { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'voidcleaver_lord', reqSkill: { id: 'aegis_rend', lvl: 2 } },
     rampage:       { maxLevel: 3, reqLevel: 18, reqTier: 1, reqSkill: { id: 'reckless_hew', lvl: 3 } },
-    apocalypse:    { maxLevel: 3, reqLevel: 40, reqTier: 2, reqSkill: { id: 'rampage', lvl: 2 } },
+    apocalypse:    { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'tempest_reaper', reqSkill: { id: 'rampage', lvl: 2 } },
     meteor:        { maxLevel: 3, reqLevel: 18, reqTier: 1, reqSkill: { id: 'flame_burst', lvl: 2 } },
-    arcane_nova:   { maxLevel: 3, reqLevel: 40, reqTier: 2, reqSkill: { id: 'meteor', lvl: 2 } },
+    arcane_nova:   { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'reality_debugger', reqSkill: { id: 'meteor', lvl: 2 } },
     rapid_volley:  { maxLevel: 3, reqLevel: 18, reqTier: 1, reqSkill: { id: 'piercing_shot', lvl: 3 } },
-    star_fall:     { maxLevel: 3, reqLevel: 40, reqTier: 2, reqSkill: { id: 'rapid_volley', lvl: 2 } },
+    star_fall:     { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'worldbane_sniper', reqSkill: { id: 'rapid_volley', lvl: 2 } },
     // Lightbringer / Paladin line
     smite:         { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
     lay_on_hands:  { maxLevel: 3, reqLevel: 3,  reqSkill: { id: 'smite', lvl: 1 } },
     consecrate:    { maxLevel: 3, reqLevel: 6,  reqSkill: { id: 'smite', lvl: 2 } },
     holy_shield:   { maxLevel: 3, reqLevel: 18, reqTier: 1, reqSkill: { id: 'consecrate', lvl: 2 } },
-    dawnbreaker:   { maxLevel: 3, reqLevel: 40, reqTier: 2, reqSkill: { id: 'holy_shield', lvl: 2 } },
+    dawnbreaker:   { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'seraph_warden', reqSkill: { id: 'holy_shield', lvl: 2 } },
     // ---- tree-filler branches (auto-positioned by dependency depth) ----
     // blade
     sunder:          { maxLevel: 5, reqLevel: 7,  reqSkill: { id: 'rift_slash', lvl: 3 } },
@@ -107,7 +108,7 @@ export const PROGRESSION = {
     blessing:        { maxLevel: 3, reqLevel: 12, reqSkill: { id: 'smite', lvl: 3 } },
     sanctuary:       { maxLevel: 3, reqLevel: 22, reqTier: 1, reqSkill: { id: 'lay_on_hands', lvl: 2 } },
     judgment_lance:  { maxLevel: 3, reqLevel: 24, reqTier: 1, reqSkill: { id: 'righteous_strike', lvl: 2 } },
-    divine_wrath:    { maxLevel: 3, reqLevel: 45, reqTier: 2, reqSkill: { id: 'righteous_strike', lvl: 3 } },
+    divine_wrath:    { maxLevel: 3, reqLevel: 45, reqTier: 2, reqAdvancedJob: 'solar_justicar', reqSkill: { id: 'righteous_strike', lvl: 3 } },
     // ---- Iron Fist (monk) ----
     jab:            { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
     iron_guard:     { maxLevel: 3, reqLevel: 3,  reqSkill: { id: 'jab', lvl: 2 } },
@@ -151,6 +152,31 @@ export const PROGRESSION = {
     adamant_wave:        { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'stone_disciple',  reqSkill: { id: 'iron_guard', lvl: 2 } },
     tempest_convergence: { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'tempest_mage',    reqSkill: { id: 'gale', lvl: 2 } },
     pyroclast_surge:     { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'pyroclast',       reqSkill: { id: 'ember', lvl: 2 } },
+    // ---- Advanced Job (Tier-2) depth pass: 3 new actives per base class ----
+    rift_cataclysm:     { maxLevel: 3, reqLevel: 42, reqTier: 2, reqAdvancedJob: 'voidcleaver_lord', reqSkill: { id: 'quake', lvl: 2 } },
+    colossus_break:     { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'titan_slam', lvl: 2 } },
+    aegis_wall:         { maxLevel: 3, reqLevel: 46, reqTier: 2, reqAdvancedJob: 'aegis_paragon', reqSkill: { id: 'shield_bash', lvl: 2 } },
+    endless_slaughter:  { maxLevel: 3, reqLevel: 42, reqTier: 2, reqAdvancedJob: 'tempest_reaper', reqSkill: { id: 'cleaving_storm', lvl: 2 } },
+    death_sentence:     { maxLevel: 3, reqLevel: 44, reqTier: 2, reqAdvancedJob: 'crimson_sovereign', reqSkill: { id: 'decapitate', lvl: 2 } },
+    relentless_pursuit: { maxLevel: 3, reqLevel: 46, reqTier: 2, reqSkill: { id: 'chain_hook', lvl: 2 } },
+    overload:           { maxLevel: 3, reqLevel: 42, reqTier: 2, reqSkill: { id: 'chain_lightning', lvl: 2 } },
+    prism_cascade:      { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'prismatic_ray', lvl: 2 } },
+    aegis_of_frost:     { maxLevel: 3, reqLevel: 46, reqTier: 2, reqAdvancedJob: 'absolute_architect', reqSkill: { id: 'mana_shield', lvl: 2 } },
+    devastating_volley: { maxLevel: 3, reqLevel: 42, reqTier: 2, reqSkill: { id: 'explosive_arrow', lvl: 2 } },
+    perfect_shot:       { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'falcon_strike', lvl: 2 } },
+    hawks_focus:        { maxLevel: 3, reqLevel: 46, reqTier: 2, reqAdvancedJob: 'starhawk_warden', reqSkill: { id: 'armor_piercer', lvl: 2 } },
+    wrath_of_dawn:      { maxLevel: 3, reqLevel: 42, reqTier: 2, reqAdvancedJob: 'solar_justicar', reqSkill: { id: 'judgment_lance', lvl: 2 } },
+    sacred_ground:      { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'sanctuary', lvl: 2 } },
+    radiant_aegis:      { maxLevel: 3, reqLevel: 46, reqTier: 2, reqSkill: { id: 'blessing', lvl: 2 } },
+    thousand_palms:     { maxLevel: 3, reqLevel: 42, reqTier: 2, reqSkill: { id: 'hundred_fists', lvl: 2 } },
+    meridian_strike:    { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'chi_burst', lvl: 2 } },
+    zen_state:          { maxLevel: 3, reqLevel: 46, reqTier: 2, reqAdvancedJob: 'adamant_sage', reqSkill: { id: 'ki_barrier', lvl: 2 } },
+    world_ender:        { maxLevel: 3, reqLevel: 42, reqTier: 2, reqAdvancedJob: 'cinder_archon', reqSkill: { id: 'inferno', lvl: 2 } },
+    seismic_shock:      { maxLevel: 3, reqLevel: 44, reqTier: 2, reqSkill: { id: 'stone_spike', lvl: 2 } },
+    storm_sovereign:    { maxLevel: 3, reqLevel: 46, reqTier: 2, reqSkill: { id: 'storm_ward', lvl: 2 } },
+    // Remaining original finishers become the default final-job exclusives.
+    dragon_kick:        { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'grandmaster', reqSkill: { id: 'rising_dragon', lvl: 2 } },
+    cataclysm:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'archon_of_storms', reqSkill: { id: 'thunderstrike', lvl: 2 } },
   },
 
   // Passive skills — invest skill points for permanent stat bonuses (RO-style).
@@ -167,21 +193,29 @@ export const PROGRESSION = {
     faith:         { classId: 'paladin',   name: 'Faith',         stat: 'defPct',  per: 4, maxLevel: 10, reqLevel: 5, desc: '+{v}% DEF' },
     // ---- extra passives to round out each class's tree ----
     parry:            { classId: 'blade',     name: 'Parry',            stat: 'fleeFlat', per: 3, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v} Flee' },
-    bulwark_mastery:  { classId: 'blade',     name: 'Bulwark Mastery',  stat: 'defPct',   per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% DEF' },
+    bulwark_mastery:  { classId: 'blade',     name: 'Bulwark Mastery',  stat: 'defPct',   per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'voidcleaver_lord', desc: '+{v}% DEF' },
     frenzy_mastery:   { classId: 'berserker', name: 'Frenzy Mastery',   stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% ATK' },
-    bloodfury:        { classId: 'berserker', name: 'Bloodfury',        stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Crit' },
+    bloodfury:        { classId: 'berserker', name: 'Bloodfury',        stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'tempest_reaper', desc: '+{v}% Crit' },
     arcane_intellect: { classId: 'mage',      name: 'Arcane Intellect', stat: 'mpPct',    per: 5, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Max MP' },
-    elemental_focus:  { classId: 'mage',      name: 'Elemental Focus',  stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Magic ATK' },
+    elemental_focus:  { classId: 'mage',      name: 'Elemental Focus',  stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'reality_debugger', desc: '+{v}% Magic ATK' },
     eagle_eye:        { classId: 'ranger',    name: 'Eagle Eye',        stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Crit' },
-    swift_wind:       { classId: 'ranger',    name: 'Swift Wind',       stat: 'fleeFlat', per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v} Flee' },
+    swift_wind:       { classId: 'ranger',    name: 'Swift Wind',       stat: 'fleeFlat', per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'worldbane_sniper', desc: '+{v} Flee' },
     zeal:             { classId: 'paladin',   name: 'Zeal',             stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% ATK' },
-    holy_vigor:       { classId: 'paladin',   name: 'Holy Vigor',       stat: 'mpPct',    per: 5, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Max MP' },
+    holy_vigor:       { classId: 'paladin',   name: 'Holy Vigor',       stat: 'mpPct',    per: 5, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'seraph_warden', desc: '+{v}% Max MP' },
     fist_mastery:     { classId: 'monk',        name: 'Fist Mastery',    stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 5,  desc: '+{v}% ATK' },
     flowing_ki:       { classId: 'monk',        name: 'Flowing Ki',      stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Crit' },
-    inner_calm:       { classId: 'monk',        name: 'Inner Calm',      stat: 'hpPct',    per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Max HP' },
+    inner_calm:       { classId: 'monk',        name: 'Inner Calm',      stat: 'hpPct',    per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'grandmaster', desc: '+{v}% Max HP' },
     storm_focus:      { classId: 'elementalist', name: 'Storm Focus',    stat: 'atkPct',   per: 4, maxLevel: 10, reqLevel: 5,  desc: '+{v}% Magic ATK' },
     mana_well:        { classId: 'elementalist', name: 'Mana Well',      stat: 'mpPct',    per: 5, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Max MP' },
-    tempest_soul:     { classId: 'elementalist', name: 'Tempest Soul',   stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, desc: '+{v}% Crit' },
+    tempest_soul:     { classId: 'elementalist', name: 'Tempest Soul',   stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'archon_of_storms', desc: '+{v}% Crit' },
+    // ---- Advanced Job (Tier-2) depth pass: 1 new passive per base class, filling a stat gap ----
+    riposte_mastery:  { classId: 'blade',        name: 'Riposte Mastery', stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'aegis_paragon', desc: '+{v}% Crit' },
+    undying_fury:     { classId: 'berserker',    name: 'Undying Fury',    stat: 'hpPct',    per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'crimson_sovereign', desc: '+{v}% Max HP' },
+    arcane_precision: { classId: 'mage',         name: 'Arcane Precision',stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'absolute_architect', desc: '+{v}% Crit' },
+    marksmans_edge:   { classId: 'ranger',       name: "Marksman's Edge", stat: 'atkPct',   per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'starhawk_warden', desc: '+{v}% ATK' },
+    holy_fervor:      { classId: 'paladin',      name: 'Holy Fervor',     stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'solar_justicar', desc: '+{v}% Crit' },
+    flowing_step:     { classId: 'monk',         name: 'Flowing Step',    stat: 'fleeFlat', per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'adamant_sage', desc: '+{v} Flee' },
+    tempest_vigor:    { classId: 'elementalist', name: 'Tempest Vigor',   stat: 'hpPct',    per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'cinder_archon', desc: '+{v}% Max HP' },
   },
 
   // At Base Lv15 the first advancement becomes a permanent branch choice for
@@ -326,6 +360,39 @@ export const PROGRESSION = {
           combo: ['ember', 'pyroclast_surge'] },
       ],
     },
+  },
+
+  // Two third-job choices per base class. Independent of second-job branch.
+  // Default maps legacy fixed advanced title to a specific third job for save migration.
+  advancedJobs: {
+    reborn_blade: { defaultId: 'voidcleaver_lord', choices: [
+      { id: 'voidcleaver_lord', name: 'Voidcleaver Lord', role: 'Destroyer', focus: 'Cleave · Rupture · Finish', color: '#c57ee8', bonus: { str: 8, vit: 8, dex: 3 } },
+      { id: 'aegis_paragon', name: 'Aegis Paragon', role: 'Fortress', focus: 'Guard · Control · Endure', color: '#78a7d8', bonus: { str: 5, vit: 10, dex: 4 } },
+    ] },
+    drifter: { defaultId: 'tempest_reaper', choices: [
+      { id: 'tempest_reaper', name: 'Tempest Reaper', role: 'Reaper', focus: 'Area · Speed · Pursuit', color: '#df777c', bonus: { agi: 8, str: 6, luk: 3 } },
+      { id: 'crimson_sovereign', name: 'Crimson Sovereign', role: 'Executioner', focus: 'Power · Sustain · Execute', color: '#c94655', bonus: { str: 9, vit: 5, luk: 3 } },
+    ] },
+    codeweaver: { defaultId: 'reality_debugger', choices: [
+      { id: 'reality_debugger', name: 'Reality Debugger', role: 'Artillery', focus: 'Burn · Detonate · Area', color: '#b98bea', bonus: { int: 10, dex: 4 } },
+      { id: 'absolute_architect', name: 'Absolute Architect', role: 'Controller', focus: 'Freeze · Ward · Survival', color: '#70bde8', bonus: { int: 8, vit: 4, dex: 2 } },
+    ] },
+    far_shot: { defaultId: 'worldbane_sniper', choices: [
+      { id: 'worldbane_sniper', name: 'Worldbane Sniper', role: 'Deadeye', focus: 'Range · Precision · Finish', color: '#7fcf91', bonus: { dex: 9, agi: 5 } },
+      { id: 'starhawk_warden', name: 'Starhawk Warden', role: 'Hunter', focus: 'Volley · Control · Fortune', color: '#b4d56f', bonus: { dex: 7, agi: 4, luk: 3 } },
+    ] },
+    lightbringer: { defaultId: 'seraph_warden', choices: [
+      { id: 'seraph_warden', name: 'Seraph Warden', role: 'Guardian', focus: 'Heal · Ward · Endure', color: '#efd36f', bonus: { vit: 8, str: 6, int: 4 } },
+      { id: 'solar_justicar', name: 'Solar Justicar', role: 'Judge', focus: 'Smite · Burn · Finish', color: '#f29b57', bonus: { str: 9, int: 6, luk: 3 } },
+    ] },
+    iron_fist: { defaultId: 'grandmaster', choices: [
+      { id: 'grandmaster', name: 'Grandmaster', role: 'Combo Master', focus: 'Tempo · Stun · Detonate', color: '#e69b61', bonus: { str: 8, agi: 6, vit: 3 } },
+      { id: 'adamant_sage', name: 'Adamant Sage', role: 'Bulwark', focus: 'Guard · Shockwave · Control', color: '#b99a77', bonus: { vit: 8, str: 5, dex: 4 } },
+    ] },
+    stormcaller: { defaultId: 'archon_of_storms', choices: [
+      { id: 'archon_of_storms', name: 'Archon of Storms', role: 'Storm Weaver', focus: 'Slow · Shock · Area', color: '#70cddd', bonus: { int: 8, dex: 4, luk: 3 } },
+      { id: 'cinder_archon', name: 'Cinder Archon', role: 'Firebrand', focus: 'Burn · Sustain · Finish', color: '#ef7654', bonus: { int: 9, luk: 4, vit: 2 } },
+    ] },
   },
 
   // Class advancement tiers per design classId. Index 0 = starting job.

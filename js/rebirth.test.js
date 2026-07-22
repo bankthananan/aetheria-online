@@ -74,7 +74,8 @@ p.level = A.DESIGN.levelCap; p.jobLevel = 50; p.tierIndex = 2; p.jobBranchId = '
 p.alloc.str = 40; p.statPoints = 7; p.skillPoints = 3;
 p.skillLevels.rift_slash = 5;
 p.zeny = 12345;
-const sword = A.addItem('iron_sword', 1, 6);
+const sword = A.rollItem('iron_sword', 0, 'common');
+p.inventory.push(sword);
 A.equip(sword.uid);
 A.G.guildRankIdx = 6; A.G.guardiansSlain.add('elderwood_treant');
 A.recompute(p, true);

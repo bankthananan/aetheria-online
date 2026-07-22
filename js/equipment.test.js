@@ -90,6 +90,23 @@ assert.ok(statusHtml.includes('Lifesteal'), 'paper doll exposes equipped substat
 const inventoryHtml = A.panelBody('inv');
 assert.ok(inventoryHtml.includes('NEW BONUS') && inventoryHtml.includes('REMOVED'), 'inventory uses gained/removed substat comparison');
 
+// All equipment paths share base-class compatibility; promotions never alter it.
+const lockedSword = A.rollItem('training_greatsword', 0, 'common');
+p.inventory.push(lockedSword);
+const weaponBeforeLockedEquip = p.equip.weapon;
+assert.equal(A.canUseItem(p, 'training_greatsword'), false, 'Far Shot cannot use sword-family gear');
+A.equip(lockedSword.uid);
+assert.equal(p.equip.weapon, weaponBeforeLockedEquip, 'incompatible equip does not mutate the equipped slot');
+assert.ok(p.inventory.some(item => item.uid === lockedSword.uid), 'incompatible gear remains in inventory');
+assert.ok(A.panelBody('inv').includes('Reborn Blade, Lightbringer'), 'locked inventory gear shows required base classes');
+const bow = A.rollItem('hunter_bow', 0, 'common');
+p.inventory.push(bow);
+assert.equal(A.canUseItem(p, bow), true, 'Far Shot can use bow-family gear');
+A.equip(bow.uid);
+assert.equal(p.equip.weapon.uid, bow.uid, 'compatible family weapon equips normally');
+p.tierIndex = 2; p.advancedJobId = 'worldbane_sniper'; p.className = 'Worldbane Sniper';
+assert.equal(A.canUseItem(p, bow), true, 'promotion keeps base-class equipment compatibility');
+
 // Trader stock is rolled once per rotation, visibly varied, and buying by uid
 // delivers the exact inspected instance before replacing the offer.
 A.G._shopItems = ['iron_sword', 'hero_blade', 'leather_vest', 'guardian_plate', 'minor_potion'];

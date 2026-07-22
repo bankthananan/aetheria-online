@@ -77,7 +77,24 @@ for (const classId of classIds) {
     assert.equal(defaultBranch.tiers[ti].name, A.PROGRESSION.tiers[classId][ti].name, `${classId} keeps its legacy title`);
     assert.deepEqual(defaultBranch.tiers[ti].bonus, A.PROGRESSION.tiers[classId][ti].bonus, `${classId} keeps its legacy bonuses`);
   }
+  const advanced = A.PROGRESSION.advancedJobs[classId];
+  assert.equal(advanced.choices.length, 2, `${classId} has exactly two independent third-job choices`);
+  assert.ok(advanced.choices.some(job => job.id === advanced.defaultId), `${classId} has a valid third-job migration default`);
+  assert.equal(new Set(advanced.choices.map(job => job.id)).size, 2, `${classId} third-job ids are unique`);
 }
+assert.deepEqual(A.PROGRESSION.jobLevelCaps, [15, 40, 50], 'career Job caps are fixed at 15/40/50');
+
+const capped = A.makePlayer('reborn_blade', 'CapTester');
+A.G.player = capped;
+capped.jobLevel = 15; capped.jobXp = 99;
+A.gainXp(A.jobXpForNext(15) * 2);
+assert.equal(capped.jobLevel, 15, 'base jobs cannot earn second-job levels early');
+assert.equal(capped.jobXp, 0, 'base-cap XP is discarded rather than banked');
+capped.tierIndex = 1; capped.jobBranchId = A.PROGRESSION.jobBranches.reborn_blade.defaultId;
+capped.jobLevel = 40; capped.jobXp = 99;
+A.gainXp(A.jobXpForNext(40) * 2);
+assert.equal(capped.jobLevel, 40, 'second jobs cannot earn third-job levels early');
+assert.equal(capped.jobXp, 0, 'second-job cap also discards XP');
 
 const p = A.makePlayer('reborn_blade', 'BranchTester');
 A.G.player = p;
@@ -115,9 +132,20 @@ const otherNode = A.PROGRESSION.skillTree[rejected.signatureSkillId];
 p.skillLevels[otherNode.reqSkill.id] = otherNode.reqSkill.lvl;
 assert.equal(A.canLearn(p, rejected.signatureSkillId), false, 'other branch signature stays locked');
 
-assert.equal(A.doPromote(p, 2), true, 'selected path advances at Lv40');
-assert.equal(p.jobBranchId, selected.id, 'Lv40 keeps the selected branch');
-assert.equal(p.className, selected.tiers[2].name, 'Lv40 uses the branch advanced title');
+p.level = 40; p.jobLevel = 40;
+A.startAdvanceQuest(2);
+A.G.advance.progress = A.G.advance.def.objective.count;
+A.checkAdvance();
+assert.equal(p.tierIndex, 1, 'completed mastery trial waits for an explicit third-job choice');
+assert.equal(A.G.advance.choiceReady, true, 'third-job choice becomes ready');
+const finalChoices = A.advancedJobsFor(p.classId);
+const selectedFinal = finalChoices[1];
+const pointsBeforeFinal = p.skillPoints;
+assert.equal(A.chooseAdvancedJob(selectedFinal.id, p), true, 'either final job can be chosen independently of the second job');
+assert.equal(p.jobBranchId, selected.id, 'third-job choice keeps the selected second job');
+assert.equal(p.advancedJobId, selectedFinal.id);
+assert.equal(p.className, selectedFinal.name, 'Lv40 uses the explicitly selected third-job title');
+assert.equal(p.skillPoints, pointsBeforeFinal + 2, 'third-job promotion grants points once');
 
 // Malformed saves cannot retain or hotkey a signature from the other path.
 p.skillLevels[rejected.signatureSkillId] = 3;
@@ -141,7 +169,7 @@ assert.equal(premature.jobBranchId, null, 'a malformed Tier-0 save cannot bypass
 A.G.player = p; A.G.running = true; A.G.visited.add('town_awakening');
 A.saveGame();
 const raw = JSON.parse(globalThis.localStorage.getItem('awo_save_v1'));
-assert.equal(raw.v, 4, 'new branch save schema is versioned');
+assert.equal(raw.v, 5, 'new branch save schema is versioned');
 assert.equal(raw.player.jobBranchId, selected.id, 'branch id is persisted');
 A.G.player = null;
 assert.equal(A.resumeGame(), true, 'branch save resumes');

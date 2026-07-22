@@ -123,6 +123,36 @@ export const COMBAT = {
     { id: "adamant_wave",        reqBranch: "stone_disciple", classId: "monk",        name: "Adamant Wave",        flavor: "Rooted breath rolls outward as a stunning wall of force.", mpCost: 19, cooldownMs: 7500, type: "aoe",    power: 1.8, range: 1, radius: 2, hotkey: "6", effect: "stun" },
     { id: "tempest_convergence", reqBranch: "tempest_mage",   classId: "elementalist", name: "Tempest Convergence", flavor: "Fold every dragging current into the eye of the storm.",   mpCost: 23, cooldownMs: 8000, type: "aoe",    power: 2.0, range: 5, radius: 2, hotkey: "6", effect: "slow", detonate: "slow" },
     { id: "pyroclast_surge",     reqBranch: "pyroclast",      classId: "elementalist", name: "Pyroclast Surge",     flavor: "A rolling eruption consumes one blaze and begins another.",mpCost: 24, cooldownMs: 8000, type: "aoe", power: 2.1, range: 5, radius: 2, hotkey: "6", effect: "burn", detonate: "burn" },
+
+    // ===== Advanced Job (Tier-2) depth pass — 3 new actives per base class =====
+    // blade
+    { id: "rift_cataclysm",   classId: "blade",     name: "Rift Cataclysm",   flavor: "Every guard you've held collapses into one shattering blast.",   mpCost: 32, cooldownMs: 12000, type: "aoe",    power: 2.9, range: 1, radius: 3, hotkey: "6", effect: "stun", detonate: "stun", finisher: true },
+    { id: "colossus_break",   classId: "blade",     name: "Colossus Break",   flavor: "A single strike heavy enough to end a duel before it starts.",   mpCost: 26, cooldownMs: 7000,  type: "melee",  power: 3.1, range: 1, radius: 0, hotkey: "6", effect: "sunder", finisher: true },
+    { id: "aegis_wall",       classId: "blade",     name: "Aegis Wall",       flavor: "Root yourself as an immovable bulwark the whole line can hide behind.", mpCost: 18, cooldownMs: 16000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // berserker
+    { id: "endless_slaughter",classId: "berserker", name: "Endless Slaughter",flavor: "The whirlwind never stops until everything nearby has fallen.", mpCost: 30, cooldownMs: 11000, type: "aoe",    power: 2.9, range: 1, radius: 3, hotkey: "6", effect: null, finisher: true },
+    { id: "death_sentence",   classId: "berserker", name: "Death Sentence",   flavor: "No warning, no mercy — the killing stroke lands before they can flee.", mpCost: 24, cooldownMs: 6000, type: "melee", power: 3.2, range: 1, radius: 0, hotkey: "6", effect: null, finisher: true },
+    { id: "relentless_pursuit",classId: "berserker",name: "Relentless Pursuit",flavor: "The chase becomes instinct; nothing outruns this fury.",        mpCost: 16, cooldownMs: 15000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // mage
+    { id: "overload",         classId: "mage",      name: "Overload",         flavor: "Every chained bolt discharges at once in one blinding surge.", mpCost: 34, cooldownMs: 12000, type: "aoe",    power: 2.9, range: 5, radius: 3, hotkey: "6", effect: null, detonate: "slow", finisher: true },
+    { id: "prism_cascade",    classId: "mage",      name: "Prism Cascade",    flavor: "A single ray splits into a hundred killing colours.",           mpCost: 28, cooldownMs: 7000,  type: "ranged", power: 3.0, range: 7, radius: 0, hotkey: "6", effect: null, finisher: true },
+    { id: "aegis_of_frost",   classId: "mage",      name: "Aegis of Frost",   flavor: "Raw mana crystallizes into armor no blade can bite.",          mpCost: 20, cooldownMs: 16000, type: "buff",   power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // ranger
+    { id: "devastating_volley",classId: "ranger",   name: "Devastating Volley",flavor: "The whole quiver empties into one scorching hailstorm.",       mpCost: 32, cooldownMs: 12000, type: "aoe",    power: 2.9, range: 6, radius: 3, hotkey: "6", effect: "burn", finisher: true },
+    { id: "perfect_shot",     classId: "ranger",    name: "Perfect Shot",     flavor: "One breath, one arrow, one certainty.",                        mpCost: 26, cooldownMs: 6000,  type: "ranged", power: 3.2, range: 9, radius: 0, hotkey: "6", effect: null, finisher: true },
+    { id: "hawks_focus",      classId: "ranger",    name: "Hawk's Focus",     flavor: "See the seam in every guard before the shot is loosed.",       mpCost: 18, cooldownMs: 15000, type: "buff",   power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // paladin
+    { id: "wrath_of_dawn",    classId: "paladin",   name: "Wrath of Dawn",    flavor: "Judgment Lance becomes a spear of pure sunrise.",              mpCost: 26, cooldownMs: 6500,  type: "ranged", power: 3.0, range: 7, radius: 0, hotkey: "6", effect: "burn", finisher: true },
+    { id: "sacred_ground",    classId: "paladin",   name: "Sacred Ground",    flavor: "The circle widens; even the fallen feel its warmth.",          mpCost: 28, cooldownMs: 11000, type: "heal",   power: 3.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    { id: "radiant_aegis",    classId: "paladin",   name: "Radiant Aegis",    flavor: "Every blessing you've ever cast converges into one lasting light.", mpCost: 20, cooldownMs: 16000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // monk
+    { id: "thousand_palms",   classId: "monk",      name: "Thousand Palms",   flavor: "Every strike the body has ever learned, thrown in one breath.", mpCost: 30, cooldownMs: 10000, type: "aoe",    power: 2.9, range: 1, radius: 2, hotkey: "6", effect: null, finisher: true },
+    { id: "meridian_strike",  classId: "monk",      name: "Meridian Strike",  flavor: "One perfect strike along every pressure point at once.",       mpCost: 24, cooldownMs: 6500,  type: "ranged", power: 3.0, range: 6, radius: 0, hotkey: "6", effect: null, finisher: true },
+    { id: "zen_state",        classId: "monk",      name: "Zen State",        flavor: "Breath and body align; nothing can break your center.",        mpCost: 18, cooldownMs: 15000, type: "buff",   power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // elementalist
+    { id: "world_ender",      classId: "elementalist", name: "World Ender",   flavor: "The firestorm outgrows the battlefield that summoned it.",     mpCost: 34, cooldownMs: 13000, type: "aoe",    power: 3.0, range: 5, radius: 3, hotkey: "6", effect: "burn", detonate: "burn", finisher: true },
+    { id: "seismic_shock",    classId: "elementalist", name: "Seismic Shock", flavor: "Stone splits and lightning follows the crack.",                mpCost: 26, cooldownMs: 6500,  type: "ranged", power: 3.0, range: 6, radius: 0, hotkey: "6", effect: "stun", finisher: true },
+    { id: "storm_sovereign",  classId: "elementalist", name: "Storm Sovereign",flavor: "Command the charged air itself to shield you.",                mpCost: 20, cooldownMs: 16000, type: "buff",   power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
   ],
 
   statusEffects: {

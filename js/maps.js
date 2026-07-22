@@ -251,7 +251,8 @@ export const MAPS = {
       { monsterId: 'slime', count: 14, depth: [0.00, 0.30], levelRange: [1, 5] },
       { monsterId: 'goblin', count: 11, depth: [0.15, 0.55], levelRange: [3, 8] },
       { monsterId: 'wolf', count: 10, depth: [0.38, 0.76], levelRange: [8, 11] },
-      { monsterId: 'thornback_boar', count: 8, depth: [0.68, 1.00], levelRange: [10, 15] },
+      { monsterId: 'thornback_boar', count: 7, depth: [0.68, 1.00], levelRange: [10, 15] },
+      { monsterId: 'mossback_beetle', count: 1, depth: [0.78, 0.90], levelRange: [5, 8] },
       { monsterId: 'elderwood_treant', count: 1 },   // zone guardian
     ],
     npcs: [
@@ -309,7 +310,8 @@ export const MAPS = {
     spawns: [
       { monsterId: 'mire_leech', count: 8, depth: [0.00, 0.35], levelRange: [16, 20] },
       { monsterId: 'shade', count: 16, depth: [0.18, 0.62], levelRange: [18, 24] },
-      { monsterId: 'drowned_acolyte', count: 7, depth: [0.55, 0.92], levelRange: [24, 28] },
+      { monsterId: 'drowned_acolyte', count: 6, depth: [0.55, 0.92], levelRange: [24, 28] },
+      { monsterId: 'ruin_crawler', count: 1, depth: [0.93, 0.98], levelRange: [20, 24] },
       { monsterId: 'ruin_golem', count: 1 }, // mini-boss, marked 'B' at ~18,24
     ],
     npcs: [
@@ -334,7 +336,8 @@ export const MAPS = {
     spawns: [
       { monsterId: 'frost_wolf', count: 16, depth: [0.00, 0.40], levelRange: [31, 35] },
       { monsterId: 'ice_wraith', count: 12, depth: [0.30, 0.72], levelRange: [35, 40] },
-      { monsterId: 'rime_harpy', count: 8, depth: [0.62, 0.94], levelRange: [40, 44] },
+      { monsterId: 'rime_harpy', count: 7, depth: [0.62, 0.94], levelRange: [40, 44] },
+      { monsterId: 'tundra_lurker', count: 1, depth: [0.95, 0.99], levelRange: [38, 41] },
       { monsterId: 'frost_revenant', count: 1 },   // zone guardian
     ],
     npcs: [
@@ -359,7 +362,8 @@ export const MAPS = {
     spawns: [
       { monsterId: 'ember_imp', count: 14, depth: [0.00, 0.40], levelRange: [46, 51] },
       { monsterId: 'sand_stalker', count: 12, depth: [0.32, 0.73], levelRange: [51, 56] },
-      { monsterId: 'magma_beetle', count: 8, depth: [0.64, 0.95], levelRange: [55, 59] },
+      { monsterId: 'magma_beetle', count: 7, depth: [0.64, 0.95], levelRange: [55, 59] },
+      { monsterId: 'ashwing', count: 1, depth: [0.96, 0.99], levelRange: [52, 55] },
       { monsterId: 'flame_dragon', count: 1 },
     ],
     npcs: [
@@ -385,7 +389,8 @@ export const MAPS = {
       { monsterId: 'void_wisp', count: 13, depth: [0.00, 0.32], levelRange: [61, 66] },
       { monsterId: 'star_reaver', count: 11, depth: [0.22, 0.52], levelRange: [66, 71] },
       { monsterId: 'astral_knight', count: 9, depth: [0.45, 0.72], levelRange: [71, 75] },
-      { monsterId: 'rift_manta', count: 8, depth: [0.65, 0.96], levelRange: [75, 79] },
+      { monsterId: 'rift_manta', count: 7, depth: [0.65, 0.96], levelRange: [75, 79] },
+      { monsterId: 'constellation_mite', count: 1, depth: [0.66, 0.74], levelRange: [69, 72] },
       { monsterId: 'nullking', count: 1 },
     ],
     npcs: [

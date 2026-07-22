@@ -89,6 +89,12 @@ const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
 // item id -> pixel icon key (see pixelart.js PX.item)
 const ITEM_ICON = {
   worn_dagger: 'dagger', iron_sword: 'sword', hero_blade: 'greatsword',
+  training_greatsword: 'greatsword', scrap_scythe: 'dagger', hunter_bow: 'sword',
+  apprentice_staff: 'sword', leather_knuckles: 'gloves', novice_mace: 'sword',
+  mythril_greatsword: 'greatsword', crimson_scythe: 'dagger', frost_bow: 'sword',
+  rune_staff: 'sword', dragon_claws: 'gloves', dawn_mace: 'sword',
+  astral_greatsword: 'greatsword', void_scythe: 'dagger', starhawk_bow: 'sword',
+  astral_staff: 'sword', star_knuckles: 'gloves', seraph_mace: 'sword',
   cloth_tunic: 'tunic', leather_vest: 'vest', guardian_plate: 'plate',
   minor_potion: 'potred', mid_potion: 'potred', mana_potion: 'potblue',
   slime_gel: 'gem', goblin_ear: 'gem', wolf_pelt: 'gem', wolf_fang: 'gem', shade_dust: 'gem', golem_core: 'core',
@@ -257,6 +263,27 @@ function selfCheck() {
       if (map.band && guard && guard.level > map.band[1]) errs.push(`map ${map.id} guardian above band ceiling`);
     }
   }
+  if (!Array.isArray(PROGRESSION.jobLevelCaps) || PROGRESSION.jobLevelCaps.join(',') !== '15,40,50')
+    errs.push('job level caps must be exactly 15 < 40 < 50');
+  for (const c of DESIGN.classes) {
+    const cfg = advancedJobConfig(c.id);
+    if (!cfg || cfg.choices?.length !== 2) errs.push(`class ${c.id} must have exactly two third-job choices`);
+    else {
+      const ids = cfg.choices.map(job => job.id);
+      if (new Set(ids).size !== 2 || !ids.includes(cfg.defaultId)) errs.push(`class ${c.id} third-job IDs/default invalid`);
+      for (const job of cfg.choices) {
+        for (const [id, node] of Object.entries(PROGRESSION.skillTree))
+          if (node.reqAdvancedJob === job.id && !COMBAT.skills.some(skill => skill.id === id)) errs.push(`${id} gates unknown skill`);
+        for (const [id, passive] of Object.entries(PROGRESSION.passives || {}))
+          if (passive.reqAdvancedJob === job.id && !passive.name) errs.push(`${id} has invalid exclusive passive`);
+      }
+    }
+    const usableWeapons = CONTENT.items.filter(it => it.type === 'weapon' && (!it.classReq || it.classReq.includes(c.id)));
+    if (!usableWeapons.some(it => (it.gearLevel || 1) <= 10) || !usableWeapons.some(it => (it.gearLevel || 1) >= 30) || !usableWeapons.some(it => (it.gearLevel || 1) >= 60))
+      errs.push(`class ${c.id} lacks usable early/mid/late weapon progression`);
+  }
+  for (const item of CONTENT.items) if (Array.isArray(item.classReq) && (!item.classReq.length || item.classReq.some(id => !DESIGN.classes.some(c => c.id === id))))
+    errs.push(`item ${item.id} has invalid classReq`);
   for (const m of CONTENT.monsters)
     for (const d of m.drops) if (!itemById[d.itemId]) errs.push(`monster ${m.id} drops unknown ${d.itemId}`);
   for (const q of CONTENT.quests) {
@@ -504,7 +531,7 @@ function makePlayer(classId, name) {
   const tiers = PROGRESSION.tiers[classId] || [{ name: cls.name }];
   const p = {
     classId, combatClass: CLASS_COMBAT[classId], name: name || 'Hero',
-    className: tiers[0].name, tierIndex: 0, jobBranchId: null, level: 1, xp: 0,
+    className: tiers[0].name, tierIndex: 0, jobBranchId: null, advancedJobId: null, level: 1, xp: 0,
     jobLevel: 1, jobXp: 0,     // finite RO-style job track; every level through the cap grants 1 point
     rebirths: 0,               // NG+ count — permanent stat/HP/MP bonuses scale with it
     zeny: 50,
@@ -587,12 +614,70 @@ function jobBranchFor(p, allowDefault = (p?.tierIndex || 0) > 0) {
 function tierForPlayer(p, ti = p?.tierIndex || 0, allowDefault = (p?.tierIndex || 0) >= ti) {
   const base = PROGRESSION.tiers[p?.classId]?.[ti] || null;
   if (!base || ti === 0) return base;
+  if (ti === 2) {
+    const advanced = advancedJobFor(p, allowDefault);
+    if (advanced) return { ...base, ...advanced, name: advanced.name };
+    const branch = jobBranchFor(p, false);
+    return branch?.tiers?.[2] ? { ...base, ...branch.tiers[2] } : base;
+  }
   const branch = jobBranchFor(p, allowDefault);
   return branch?.tiers?.[ti] ? { ...base, ...branch.tiers[ti], advance: branch.tiers[ti].advance || base.advance } : base;
+}
+
+// ---- Third-job (advanced job) helpers — independent of second-job branch. ----
+const advancedJobsFor = classId => PROGRESSION.advancedJobs?.[classId]?.choices || [];
+const advancedJobConfig = classId => PROGRESSION.advancedJobs?.[classId] || null;
+function advancedJobFor(p, allowDefault = (p?.tierIndex || 0) >= 2) {
+  const cfg = advancedJobConfig(p?.classId);
+  if (!cfg) return null;
+  const selected = cfg.choices.find(job => job.id === p.advancedJobId);
+  return selected || (allowDefault ? cfg.choices.find(job => job.id === cfg.defaultId) || cfg.choices[0] : null);
+}
+function activeJobLevelCap(p) {
+  const caps = PROGRESSION.jobLevelCaps;
+  return caps[Math.max(0, Math.min(p?.tierIndex || 0, caps.length - 1))];
+}
+function chooseAdvancedJob(advancedJobId, p = G.player) {
+  const cfg = advancedJobConfig(p?.classId);
+  if (!cfg) return false;
+  const job = cfg.choices.find(j => j.id === advancedJobId);
+  if (!job || p.tierIndex !== 1 || p.advancedJobId) return false;
+  if (!G.advance || G.advance.ti !== 2 || advanceProgress() < G.advance.def.objective.count) return false;
+  p.advancedJobId = job.id;
+  p.tierIndex = 2;
+  p.className = job.name;
+  p.skillPoints += PROGRESSION.skillPointsPerLevel * 2; // promotion skill-point bonus
+  if (G.taskGuide?.source === 'advance') finishTaskGuide();
+  G.advance = null;
+  recompute(p, true);
+  const chooser = typeof document !== 'undefined' ? document.getElementById('job-choice') : null;
+  if (chooser?.remove) chooser.remove();
+  G.jobChoiceOpen = false;
+  updateQuestTracker(); updateHud(); renderHotbar(); refreshPanel('char'); refreshPanel('skills'); refreshPanel('quest'); saveGame();
+  return true;
+}
+function normaliseAdvancedJob(p) {
+  const cfg = advancedJobConfig(p?.classId);
+  if (!cfg) { p.advancedJobId = null; return p; }
+  if ((p.tierIndex || 0) < 2) { p.advancedJobId = null; return p; }
+  const valid = cfg.choices.find(job => job.id === p.advancedJobId);
+  if (!valid) {
+    const byTitle = cfg.choices.find(job => job.name === p.className);
+    p.advancedJobId = (byTitle || cfg.choices.find(job => job.id === cfg.defaultId) || cfg.choices[0]).id;
+  }
+  return p;
 }
 function branchAllowsSkill(p, id) {
   const required = PROGRESSION.skillTree[id]?.reqBranch;
   return !required || required === p?.jobBranchId;
+}
+function advancedJobAllowsSkill(p, id) {
+  const required = PROGRESSION.skillTree[id]?.reqAdvancedJob;
+  return !required || required === p?.advancedJobId;
+}
+function advancedJobAllowsPassive(p, id) {
+  const required = PROGRESSION.passives[id]?.reqAdvancedJob;
+  return !required || required === p?.advancedJobId;
 }
 // ---- branch identity mechanics: one small dispatcher per kind, magnitudes from
 // DESIGN.jobBranchBalance.mechanic so every branch is tuned from one table. ----
@@ -637,8 +722,8 @@ function normaliseJobBranch(p) {
     const named = cfg.choices.find(branch => Object.values(branch.tiers || {}).some(tier => tier.name === p.className));
     p.jobBranchId = (named || cfg.choices.find(branch => branch.id === cfg.defaultId) || cfg.choices[0])?.id || null;
   }
-  const tier = tierForPlayer(p);
-  if (tier?.name) p.className = tier.name;
+  const tier = tierForPlayer(p, 1);
+  if ((p.tierIndex || 0) === 1 && tier?.name) p.className = tier.name;
   for (const [id, node] of Object.entries(PROGRESSION.skillTree)) {
     if (!node.reqBranch || branchAllowsSkill(p, id)) continue;
     delete p.skillLevels?.[id];
@@ -706,6 +791,7 @@ function previewSlotName(id) {
 function canLearn(p, id) {
   const node = PROGRESSION.skillTree[id]; if (!node) return false;
   if (!branchAllowsSkill(p, id)) return false;
+  if (!advancedJobAllowsSkill(p, id)) return false;
   if (skillLevel(p, id) >= node.maxLevel) return false;
   const gate = skillRankGate(p, id);
   if (p.skillPoints < 1 || (p.jobLevel || p.level) < gate.reqLevel) return false;
@@ -740,6 +826,7 @@ function passiveBonuses(p) {
 }
 function canLearnPassive(p, id) {
   const pa = PROGRESSION.passives[id]; if (!pa) return false;
+  if (!advancedJobAllowsPassive(p, id)) return false;
   const lv = p.skillLevels[id] || 0, reqTier = pa.reqTier || 0;
   if (lv >= pa.maxLevel || p.skillPoints < 1 || (p.jobLevel || p.level) < pa.reqLevel) return false;
   return p.tierIndex >= reqTier || (lv === 0 && canPreview(p, id, reqTier));
@@ -770,7 +857,7 @@ function skillPointsSpent(p) {
 }
 function normalisePlayerProgression(p) {
   p.jobLevel = Math.min(Math.max(Math.floor(Number(p.jobLevel) || 1), 1), PROGRESSION.jobLevelCap);
-  p.jobXp = p.jobLevel >= PROGRESSION.jobLevelCap ? 0 : Math.max(0, Number(p.jobXp) || 0);
+  p.jobXp = p.jobLevel >= activeJobLevelCap(p) ? 0 : Math.max(0, Number(p.jobXp) || 0);
   p.skillLevels = p.skillLevels && typeof p.skillLevels === 'object' ? p.skillLevels : {};
   for (const [id, raw] of Object.entries(p.skillLevels)) {
     const max = PROGRESSION.skillTree[id]?.maxLevel || PROGRESSION.passives[id]?.maxLevel;
@@ -778,6 +865,23 @@ function normalisePlayerProgression(p) {
     else p.skillLevels[id] = Math.min(Math.max(Math.floor(Number(raw) || 0), 0), max);
   }
   normaliseJobBranch(p);
+  normaliseAdvancedJob(p);
+  if ((p.tierIndex || 0) >= 2) {
+    const finalTier = tierForPlayer(p, 2);
+    if (finalTier?.name) p.className = finalTier.name;
+  }
+  // Third-job-exclusive ranks from legacy or malformed saves are refunded
+  // instead of silently deleting earned points.
+  for (const [id, raw] of Object.entries(p.skillLevels)) {
+    const required = PROGRESSION.skillTree[id]?.reqAdvancedJob || PROGRESSION.passives[id]?.reqAdvancedJob;
+    if (required && required !== p.advancedJobId) {
+      const refund = Math.max(0, Math.floor(Number(raw) || 0));
+      if (refund) p.skillPoints = (p.skillPoints || 0) + refund;
+      delete p.skillLevels[id];
+      if (Array.isArray(p.hotbar)) p.hotbar = p.hotbar.map(slot => slot?.type === 'skill' && slot.id === id ? null : slot);
+      if (p.skillCd) delete p.skillCd[id];
+    }
+  }
   const unspentBudget = Math.max(0, skillPointEntitlement(p) - skillPointsSpent(p));
   p.skillPoints = Math.min(Math.max(Math.floor(Number(p.skillPoints) || 0), 0), unspentBudget);
   return p;
@@ -884,6 +988,18 @@ function checkAdvance() {
     updateQuestTracker();
     return;
   }
+  if (G.advance.ti === 2 && !G.player.advancedJobId) {
+    if (!G.advance.choiceReady) {
+      G.advance.choiceReady = true;
+      if (G.taskGuide?.source === 'advance') finishTaskGuide();
+      AUDIO.playSfx('levelup');
+      toast(`✦ Trial complete — choose your third job!`, 'good');
+      logMsg(`✦ Your calling now branches into final paths. Choose one path; rebirth is the only way to choose again.`, 'good');
+    }
+    showAdvancedJobChoice(G.player);
+    updateQuestTracker();
+    return;
+  }
   doPromote(G.player, G.advance.ti);
 }
 function chooseJobBranch(branchId, p = G.player) {
@@ -892,34 +1008,71 @@ function chooseJobBranch(branchId, p = G.player) {
   if (!G.advance || G.advance.ti !== 1 || advanceProgress() < G.advance.def.objective.count) return false;
   return doPromote(p, 1, branchId);
 }
+function advancedJobChoicePanelHtml(p) {
+  const cfg = advancedJobConfig(p?.classId);
+  if (!cfg) return '';
+  const cards = cfg.choices.map((job, index) => {
+    return `<button class="job-choice-card" data-advanced-job="${esc(job.id)}" style="--path-color:${job.color || '#e6bd54'}">
+      <span class="job-choice-no">0${index + 1}</span><small>${T(job.role || 'THIRD JOB', 'ui')}</small>
+      <b>${esc(T(job.name, 'classes'))}</b>
+      <em>${esc(T(job.focus || '', 'ui'))}</em>
+      <span class="job-choice-stats">${esc(statBonusText(job.bonus))}</span>
+      <span class="job-choice-pick">${T('CHOOSE THIS PATH', 'ui')}</span>
+    </button>`;
+  }).join('');
+  return `<section class="job-choice-shell"><header><small>${T('TRIAL COMPLETE · THIRD JOB', 'ui')}</small><h2>${T('Choose your final evolution', 'ui')}</h2><p>${T('This choice is permanent until rebirth. Both paths use the same total promotion stat budget.', 'ui')}</p></header><div class="job-choice-grid">${cards}</div></section>`;
+}
+function showAdvancedJobChoice(p = G.player) {
+  if (!p || typeof document === 'undefined' || typeof HTMLElement === 'undefined') return false;
+  let box = document.getElementById('job-choice');
+  if (box) { box.remove(); }
+  box = document.createElement('div');
+  box.id = 'job-choice'; box.className = 'job-choice-overlay';
+  box.innerHTML = advancedJobChoicePanelHtml(p);
+  box.querySelectorAll('[data-advanced-job]').forEach(button => button.onclick = () => {
+    chooseAdvancedJob(button.dataset.advancedJob, p);
+    if (box) box.remove();
+    G.jobChoiceOpen = false;
+  });
+  ($('#overlays') || document.body).appendChild(box);
+  G.jobChoiceOpen = true;
+  return true;
+}
 function doPromote(p, ti, branchId = p.jobBranchId) {
-  if (!p || ti !== p.tierIndex + 1) return false;
-  if (ti === 1) {
+  const t = PROGRESSION.tiers[p.classId];
+  if (!t || ti < 0 || ti >= t.length) return false;
+  if (ti === 1 && branchId) {
     const branch = jobBranchesFor(p.classId).find(choice => choice.id === branchId);
     if (!branch) { showJobChoice(p); return false; }
     p.jobBranchId = branch.id;
-  } else normaliseJobBranch(p);
-  const tier = tierForPlayer(p, ti);
-  if (!tier) return false;
-  p.tierIndex = ti;
-  p.className = tier.name;
-  p.skillPoints += 2;                              // advancement grants points for the new tree
-  recompute(p, true);
-  if (G.taskGuide?.source === 'advance') finishTaskGuide();
+    p.tierIndex = 1;
+    p.className = branch.tiers[1].name;
+    p.skillPoints += PROGRESSION.skillPointsPerLevel * 2; // promotion skill-point bonus
+    recompute(p, true);
+    toast(T('Advanced calling unlocked! Specialization bonus applied.', 'ui'), 'good');
+    logMsg(`✦ Promoted to Tier 1: [${branch.role}] ${branch.tiers[1].name}. Specialization bonus applied.`, 'good');
+    AUDIO.playSfx('levelup');
+  } else if (ti === 2) {
+    // Stage Tier-2 base advance or choices. If advancedJobId is set, promote directly.
+    if (!p.advancedJobId && G.advance?.ti === 2) {
+      if (advanceProgress() < G.advance.def.objective.count) return false;
+      showAdvancedJobChoice(p);
+      return false;
+    }
+    const job = advancedJobFor(p, true);
+    p.advancedJobId = job.id;
+    p.tierIndex = 2;
+    p.className = job.name;
+    p.skillPoints += PROGRESSION.skillPointsPerLevel * 2; // promotion skill-point bonus
+    recompute(p, true);
+    toast(T('Advanced calling unlocked! Evolution bonus applied.', 'ui'), 'good');
+    logMsg(`✦ Promoted to Tier 2: [${job.role}] ${job.name}. Evolution bonus applied.`, 'good');
+    AUDIO.playSfx('levelup');
+  }
   G.advance = null;
-  AUDIO.playSfx('levelup');
-  const mastery = ti === 1 ? ' First-job signature skills can now grow beyond Lv5.' : '';
-  toast(`✦ CLASS ADVANCEMENT — you are now a ${p.className}! New skills unlocked.${mastery}`, 'good');
-  logMsg(`✦ Advanced to ${p.className}! Open Skills (K) — a new tier of the tree is available.${mastery}`, 'good');
-  if ($('#hud-name')) $('#hud-name').textContent = p.name + ' the ' + p.className;
-  const chooser = typeof document !== 'undefined' ? document.getElementById('job-choice') : null;
-  if (chooser?.remove) chooser.remove();
-  G.jobChoiceOpen = false;
-  updateQuestTracker();
-  saveGame();
+  updateHud(); renderHotbar(); refreshPanel('char'); refreshPanel('skills'); refreshPanel('quest'); saveGame();
   return true;
 }
-
 function equippedItem(p, slot) { return p.equip[slot] ? itemById[p.equip[slot].itemId] : null; }
 
 function buffMult(p, stat) {
@@ -1115,20 +1268,21 @@ function gainXp(amount) {
     }
     if (p.level >= DESIGN.levelCap) p.xp = 0;
   }
-  // ---- job level (skill points, capped at 50) ----
-  if (p.jobLevel < PROGRESSION.jobLevelCap) {
+  // ---- job level (skill points, capped by current career stage) ----
+  const jobCap = activeJobLevelCap(p);
+  if (p.jobLevel < jobCap) {
     p.jobXp += amount;
-    while (p.jobLevel < PROGRESSION.jobLevelCap && p.jobXp >= jobXpForNext(p.jobLevel)) {
+    while (p.jobLevel < jobCap && p.jobXp >= jobXpForNext(p.jobLevel)) {
       p.jobXp -= jobXpForNext(p.jobLevel);
       p.jobLevel++;
       p.skillPoints += PROGRESSION.skillPointsPerLevel;
       AUDIO.playSfx('levelup');
       toast(T('Job level up! Job Lv {level}/{cap} — +{points} skill point.', 'ui')
-        .replace('{level}', p.jobLevel).replace('{cap}', PROGRESSION.jobLevelCap)
+        .replace('{level}', p.jobLevel).replace('{cap}', jobCap)
         .replace('{points}', PROGRESSION.skillPointsPerLevel), 'good');
     }
-    if (p.jobLevel >= PROGRESSION.jobLevelCap) p.jobXp = 0;
-  }
+    if (p.jobLevel >= jobCap) p.jobXp = 0;
+  } else p.jobXp = 0;
   // A held story chapter opens the moment its Base Level requirement is met.
   maybeStartPendingQuest();
 }
@@ -1161,8 +1315,19 @@ function spawnTileFor(spawn, nurseryOnly = false, used = new Set()) {
     const depth = heatDepthAt(G.heatField, tile.col, tile.row);
     return depth != null && depth >= minDepth && depth <= (nurseryOnly ? nurseryMax : maxDepth);
   };
-  return randomWalkableTile(tile => inHabitat(tile) && !used.has(`${tile.col},${tile.row}`), false)
-    || randomWalkableTile(inHabitat, false);
+  const candidates = (G.spawnTiles || []).filter(tile => inHabitat(tile) && !used.has(`${tile.col},${tile.row}`));
+  if (!candidates.length) return randomWalkableTile(inHabitat, false);
+  // Deterministic farthest-point sampling: preserve habitat and nursery rules,
+  // but spread successive placements away from already occupied tiles.
+  const occupied = [...used].map(key => key.split(',').map(Number));
+  const hash = tile => ((tile.col * 73856093) ^ (tile.row * 19349663) ^ ((spawn.monsterId.length + 11) * 83492791)) >>> 0;
+  candidates.sort((a, b) => {
+    const distance = tile => occupied.length
+      ? Math.min(...occupied.map(([c, r]) => (tile.col - c) ** 2 + (tile.row - r) ** 2))
+      : 0;
+    return (distance(b) - distance(a)) || (hash(a) - hash(b));
+  });
+  return candidates[0];
 }
 function findChar(ch) {
   for (let row = 0; row < G.map.height; row++) {
@@ -3665,7 +3830,7 @@ function buildHud() {
         <button class="hotbar-config" id="hotbar-config" title="${T('Customize action keys', 'ui')}" aria-label="${T('Customize action keys', 'ui')}">⌨</button>
       </div>
       <div class="bar xp-bar"><div class="fill" id="xp-fill"></div></div>
-      <div class="bar job-bar" title="${T('Job XP (1 skill point per level · cap {cap})', 'ui').replace('{cap}', PROGRESSION.jobLevelCap)}"><div class="fill" id="job-fill"></div></div>
+      <div class="bar job-bar" title="${T('Job XP (1 skill point per level · cap {cap})', 'ui').replace('{cap}', activeJobLevelCap(p))}"><div class="fill" id="job-fill"></div></div>
       <div class="hud-menu">
         <button class="btn btn--ghost" data-panel="char">${T('Status (C)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="inv">${T('Satchel (I)', 'ui')}</button>
@@ -3866,14 +4031,14 @@ function updateHud() {
   const p = G.player;
   $('#hud-level').textContent = p.level;
   $('#hud-zeny').textContent = p.zeny;
-  if ($('#hud-job')) $('#hud-job').textContent = `${T('Job Lv', 'ui')} ${p.jobLevel}/${PROGRESSION.jobLevelCap}`;
+  if ($('#hud-job')) $('#hud-job').textContent = `${T('Job Lv', 'ui')} ${p.jobLevel}/${activeJobLevelCap(p)}`;
   const safeRatio = (value, max) => Number.isFinite(value) && Number.isFinite(max) && max > 0 ? clamp(value / max, 0, 1) : 0;
   const hpRatio = safeRatio(p.hp, p.maxHp), mpRatio = safeRatio(p.mp, p.maxMp);
   $('#hp-fill').style.width = (100 * hpRatio) + '%';
   $('#mp-fill').style.width = (100 * mpRatio) + '%';
   const need = p.level >= DESIGN.levelCap ? 1 : xpForNext(p.level);
   $('#xp-fill').style.width = (100 * p.xp / need) + '%';
-  if ($('#job-fill')) $('#job-fill').style.width = (p.jobLevel >= PROGRESSION.jobLevelCap ? 100 : 100 * p.jobXp / jobXpForNext(p.jobLevel)) + '%';
+  if ($('#job-fill')) $('#job-fill').style.width = (p.jobLevel >= activeJobLevelCap(p) ? 100 : 100 * p.jobXp / jobXpForNext(p.jobLevel)) + '%';
   $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}`;
   $('#mp-label').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
   const hpBar = document.querySelector('.hp-bar'), mpBar = document.querySelector('.mp-bar');
@@ -3937,8 +4102,9 @@ function updateQuestTracker() {
   const typeName = (t) => { if (currentLang === 'th') { return { kill: 'กำจัด', collect: 'รวบรวม', explore: 'สำรวจ', talk: 'คุยกับ' }[t] || t; } return t; };
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
+    const finalChoice = a.ti === 2;
     html += a.choiceReady
-      ? `<button class="task-link job-choice-ready" data-job-choice="1" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)"><b style="color:#f0d47d">✦ ${T('Choose Second Job', 'ui')}</b><br><span>${T('Your trial is complete. Choose one permanent specialization.', 'ui')}</span></button>`
+      ? `<button class="task-link job-choice-ready" ${finalChoice ? 'data-advanced-job-choice="1"' : 'data-job-choice="1"'} style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)"><b style="color:#f0d47d">✦ ${T(finalChoice ? 'Choose Third Job' : 'Choose Second Job', 'ui')}</b><br><span>${T('Your trial is complete. Choose one permanent specialization.', 'ui')}</span></button>`
       : `<button class="task-link${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)">
         <b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b><br>${T(a.def.desc, 'quests')}<br>
         <span style="color:${done ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(o.type)} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</span></button>`;
@@ -4054,8 +4220,8 @@ const ADMIN_GROUPS = [
 ];
 function adminAction(a) {
   const p = G.player;
-  if (a === 'lvl5') { for (let i = 0; i < 5; i++) { if (p.level < DESIGN.levelCap) { p.level++; p.statPoints += PROGRESSION.statPointsPerLevel; } if (p.jobLevel < PROGRESSION.jobLevelCap) { p.jobLevel++; p.skillPoints += PROGRESSION.skillPointsPerLevel; } } recompute(p, true); maybeStartAdvance(p); maybeStartPendingQuest(); }
-  else if (a === 'job5') { const gained = Math.min(5, PROGRESSION.jobLevelCap - p.jobLevel); p.jobLevel += gained; p.skillPoints += gained; if (p.jobLevel >= PROGRESSION.jobLevelCap) p.jobXp = 0; toast(`Job Lv ${p.jobLevel}/${PROGRESSION.jobLevelCap} (+${gained} skill points).`, 'good'); }
+  if (a === 'lvl5') { for (let i = 0; i < 5; i++) { if (p.level < DESIGN.levelCap) { p.level++; p.statPoints += PROGRESSION.statPointsPerLevel; } if (p.jobLevel < activeJobLevelCap(p)) { p.jobLevel++; p.skillPoints += PROGRESSION.skillPointsPerLevel; } } recompute(p, true); maybeStartAdvance(p); maybeStartPendingQuest(); }
+  else if (a === 'job5') { const gained = Math.min(5, activeJobLevelCap(p) - p.jobLevel); p.jobLevel += gained; p.skillPoints += gained; if (p.jobLevel >= activeJobLevelCap(p)) p.jobXp = 0; toast(`Job Lv ${p.jobLevel}/${activeJobLevelCap(p)} (+${gained} skill points).`, 'good'); }
   else if (a === 'zeny') p.zeny += 5000;
   else if (a === 'points') { p.statPoints += 10; p.skillPoints += 10; }
   else if (a === 'heal') { p.hp = p.maxHp; p.mp = p.maxMp; }
@@ -4064,7 +4230,7 @@ function adminAction(a) {
   else if (a === 'legw') { p.inventory.push(rollItem('hero_blade', 0, 'legendary')); logMsg('Spawned Legendary Otherworld Blade.', 'good'); }
   else if (a === 'lega') { p.inventory.push(rollItem('guardian_plate', 0, 'legendary')); logMsg('Spawned Legendary Guardian Plate.', 'good'); }
   else if (a === 'potions') { addStack('minor_potion', 10); addStack('mid_potion', 10); addStack('mana_potion', 10); addStack('greater_potion', 10); }
-  else if (a === 'frags') { for (const id of [...REFINE_FRAG, 'blessed_ore']) addStack(id, 20); logMsg('+20 Wolf Fang / Shade Dust / Star Iron / Blessed Ore.', 'good'); }
+  else if (a === 'frags') { for (const id of [...REFINE_FRAG, 'blessed_ore']) addStack(id, 20); logMsg('+20 Beast Fang / Shade Dust / Star Iron / Blessed Ore.', 'good'); }
   else if (a === 'refineworn') { for (const slot of EQUIP_SLOTS) if (p.equip[slot]) p.equip[slot].plus = 9; recompute(p); toast('All worn gear refined to +9.', 'good'); }
   else if (a === 'promote') { const t = PROGRESSION.tiers[p.classId]; if (p.tierIndex + 1 < t.length) doPromote(p, p.tierIndex + 1, p.jobBranchId || jobBranchConfig(p.classId)?.defaultId); else toast('Already max tier.', 'sys'); }
   else if (a === 'skipquest') { const q = questById[G.quest]; if (q) { if (q.objective.type === 'collect') addStack(q.objective.target, q.objective.count); completeQuest(q); } else toast('No active story quest.', 'sys'); }
@@ -4185,7 +4351,9 @@ function combatLoopHtml(p, actives) {
 }
 function skillsPanelHtml(p) {
   const cc = p.combatClass, tree = PROGRESSION.skillTree;
-  const actives = skillsFor(cc).filter(skill => !tree[skill.id]?.reqBranch || !p.jobBranchId || branchAllowsSkill(p, skill.id));
+  // Keep every class skill visible; rejected branch/final-job nodes are sealed
+  // in place so players can understand what the unchosen path contains.
+  const actives = skillsFor(cc);
   const passives = passivesFor(cc), book = PROGRESSION.skillBooks[cc];
   const roleFor = s => s.finisher ? ['FINISH', 'finisher']
     : s.detonate ? ['DETONATE', 'detonator']
@@ -4196,30 +4364,37 @@ function skillsPanelHtml(p) {
     const id = isPassive ? pa.id : s.id;
     const lv = skillLevel(p, id), max = isPassive ? pa.maxLevel : (node?.maxLevel || 1);
     const learnable = isPassive ? canLearnPassive(p, id) : canLearn(p, id), maxed = lv >= max, clickable = learnable && !maxed;
+    const incompatible = isPassive
+      ? !!pa.reqAdvancedJob && pa.reqAdvancedJob !== p.advancedJobId
+      : (!!node.reqBranch && !!p.jobBranchId && !branchAllowsSkill(p, id)) || (!!node.reqAdvancedJob && !!p.advancedJobId && !advancedJobAllowsSkill(p, id));
     const reqTier = isPassive ? (pa.reqTier || 0) : (node?.reqTier || 0);
     let currentCap = isPassive ? max : skillCapForTier(node, p.tierIndex);
     if (p.tierIndex < reqTier) currentCap = Math.min(currentCap, 1);   // Ascension preview: rank 1 only pre-promotion
     const tierCapped = !maxed && lv >= currentCap;
-    const state = maxed ? 'maxed' : tierCapped ? 'owned tier-capped' : lv > 0 ? 'owned' : clickable ? 'ready' : 'locked';
+    const state = incompatible ? 'locked incompatible' : maxed ? 'maxed' : tierCapped ? 'owned tier-capped' : lv > 0 ? 'owned' : clickable ? 'ready' : 'locked';
     const glyph = isPassive ? '◈' : (SKILL_GLYPH[s.type] || '✦');
     const name = isPassive ? T(pa.name, 'passives') : T(s.name, 'skills');
     const attr = clickable ? (isPassive ? `data-passive="${id}"` : `data-learn="${id}"`) : '';
     const [role, roleClass] = isPassive ? [T('PASSIVE', 'ui'), 'passive'] : roleFor(s);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
-    const req = isPassive
+    const req = incompatible
+      ? (pa?.reqAdvancedJob || node?.reqAdvancedJob ? `${T('Exclusive to', 'ui')} ${esc(T((advancedJobsFor(p.classId).find(job => job.id === (pa?.reqAdvancedJob || node?.reqAdvancedJob))?.name || (pa?.reqAdvancedJob || node?.reqAdvancedJob)), 'classes'))}` : T('Incompatible job path', 'ui'))
+      : isPassive
       ? `${T('Job Lv', 'ui')} ${pa.reqLevel}${pa.reqTier && p.tierIndex < pa.reqTier ? ` · ${clickable || tierCapped ? T('Ascension preview', 'ui') : T('Job advancement required', 'ui')}` : ''}`
       : node.reqSkill
         ? `${T('Requires', 'ui')} ${esc(T((COMBAT.skills.find(x => x.id === node.reqSkill.id) || {}).name || node.reqSkill.id, 'skills'))} Lv ${node.reqSkill.lvl}${node.reqBranch ? ` · ${esc(T(jobBranchesFor(p.classId).find(branch => branch.id === node.reqBranch)?.tiers?.[1]?.name || node.reqBranch, 'classes'))}` : ''}`
         : T('Starter skill · granted free', 'ui');
-    const status = maxed ? T('MAXED', 'ui') : tierCapped ? T('MASTERY CAP', 'ui') : lv > 0 ? T('LEARNED', 'ui') : clickable ? T('LEARN +', 'ui') : T('LOCKED', 'ui');
-    return `<div class="ro-skill ${state}${clickable ? ' can' : ''} is-${roleClass}" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}">
+    const status = incompatible ? T('INCOMPATIBLE', 'ui') : maxed ? T('MAXED', 'ui') : tierCapped ? T('MASTERY CAP', 'ui') : lv > 0 ? T('LEARNED', 'ui') : clickable ? T('LEARN +', 'ui') : T('LOCKED', 'ui');
+    return `<button type="button" class="ro-skill ${state}${clickable ? ' can' : ''} is-${roleClass}" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}" data-tier="${reqTier}">
       <span class="ro-skill-icon">${glyph}<i>${lv}/${max}</i></span>
       <span class="ro-skill-copy"><b>${esc(name)}</b><small>${req}</small><em>${isPassive ? esc(T(pa.desc, 'passives').replace('{v}', pa.per * Math.max(1, lv))) : `${T('Job Lv', 'ui')} ${node.reqLevel} · ${T(role, 'ui')}`}</em></span>
-      <span class="ro-skill-state">${status}</span></div>`;
+      <span class="ro-skill-state">${status}</span></button>`;
   };
 
   const selectedBranch = jobBranchFor(p, false);
+  const selectedAdvancedJob = advancedJobFor(p, false);
   const stageLabels = [T('FIRST JOB', 'ui'), T('SECOND JOB', 'ui'), T('ADVANCED JOB', 'ui')];
+
   const lanes = [0, 1, 2].map(tier => {
     const activeSet = actives.filter(s => (tree[s.id]?.reqTier || 0) === tier)
       .sort((a, b) => (tree[a.id].reqLevel - tree[b.id].reqLevel) || a.name.localeCompare(b.name));
@@ -4227,20 +4402,57 @@ function skillsPanelHtml(p) {
       .sort((a, b) => (a.reqLevel - b.reqLevel) || a.name.localeCompare(b.name));
     const unlocked = p.tierIndex >= tier;
     const tierName = tier === 0 ? PROGRESSION.tiers[p.classId]?.[0]?.name
-      : selectedBranch?.tiers?.[tier]?.name || (tier === 1 ? T('Choose at Lv 15', 'ui') : T('Advanced path', 'ui'));
-    return `<section class="ro-job-lane${unlocked ? ' unlocked' : ' locked-job'}" data-tier="${tier}">
-      <header><span>0${tier + 1}</span><div><small>${stageLabels[tier]}</small><b>${esc(T(tierName || stageLabels[tier], 'classes'))}</b></div><i>${unlocked ? T('UNLOCKED', 'ui') : T('PROMOTION REQUIRED', 'ui')}</i></header>
+      : tier === 1 ? selectedBranch?.tiers?.[1]?.name || T('Choose at Lv 15', 'ui')
+      : selectedAdvancedJob?.name || T('Choose at Lv 40', 'ui');
+
+    let contentHtml = '';
+    if (tier === 2) {
+      // Branch layout for Tier 3
+      const defaultJob = advancedJobsFor(p.classId)[0];
+      const altJob = advancedJobsFor(p.classId)[1];
+      const isDefault = p.advancedJobId === defaultJob?.id;
+      const isAlt = p.advancedJobId === altJob?.id;
+
+      const actDefault = activeSet.filter(s => tree[s.id]?.reqAdvancedJob === defaultJob?.id || (!tree[s.id]?.reqAdvancedJob && (!p.advancedJobId || isDefault)));
+      const actAlt = activeSet.filter(s => tree[s.id]?.reqAdvancedJob === altJob?.id || (!tree[s.id]?.reqAdvancedJob && (!p.advancedJobId || isAlt)));
+      const passDefault = passiveSet.filter(pa => pa.reqAdvancedJob === defaultJob?.id || (!pa.reqAdvancedJob && (!p.advancedJobId || isDefault)));
+      const passAlt = passiveSet.filter(pa => pa.reqAdvancedJob === altJob?.id || (!pa.reqAdvancedJob && (!p.advancedJobId || isAlt)));
+
+      contentHtml = `<div class="ro-third-branches">
+        <div class="ro-third-branch${isAlt ? ' incompatible' : ''}" data-advanced-job="${defaultJob?.id || ''}">
+          <div class="ro-branch-label">${esc(T(defaultJob?.name || '', 'classes'))}</div>
+          <div class="ro-lane-label">◆ ${T('ACTIVE SKILLS', 'ui')}</div>
+          <div class="ro-skill-list">${actDefault.map(s => cardHtml(s)).join('') || `<small class="ro-empty">${T('No active skills.', 'ui')}</small>`}</div>
+          <div class="ro-lane-label passive">◈ ${T('PASSIVE MASTERIES', 'ui')}</div>
+          <div class="ro-skill-list passive-list">${passDefault.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries.', 'ui')}</small>`}</div>
+        </div>
+        <div class="ro-third-branch${isDefault ? ' incompatible' : ''}" data-advanced-job="${altJob?.id || ''}">
+          <div class="ro-branch-label">${esc(T(altJob?.name || '', 'classes'))}</div>
+          <div class="ro-lane-label">◆ ${T('ACTIVE SKILLS', 'ui')}</div>
+          <div class="ro-skill-list">${actAlt.map(s => cardHtml(s)).join('') || `<small class="ro-empty">${T('No active skills.', 'ui')}</small>`}</div>
+          <div class="ro-lane-label passive">◈ ${T('PASSIVE MASTERIES', 'ui')}</div>
+          <div class="ro-skill-list passive-list">${passAlt.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries.', 'ui')}</small>`}</div>
+        </div>
+      </div>`;
+    } else {
+      contentHtml = `
       <div class="ro-lane-label">◆ ${T('ACTIVE SKILLS', 'ui')}</div>
       <div class="ro-skill-list">${activeSet.map(s => cardHtml(s)).join('') || `<small class="ro-empty">${T('No active skills in this chapter.', 'ui')}</small>`}</div>
       <div class="ro-lane-label passive">◈ ${T('PASSIVE MASTERIES', 'ui')}</div>
-      <div class="ro-skill-list passive-list">${passiveSet.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries in this chapter.', 'ui')}</small>`}</div>
+      <div class="ro-skill-list passive-list">${passiveSet.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries in this chapter.', 'ui')}</small>`}</div>`;
+    }
+
+    return `<section class="ro-job-lane${unlocked ? ' unlocked' : ' locked-job'}" data-tier="${tier}">
+      <header><span>0${tier + 1}</span><div><small>${stageLabels[tier]}</small><b>${esc(T(tierName || stageLabels[tier], 'classes'))}</b></div><i>${unlocked ? T('UNLOCKED', 'ui') : T('PROMOTION REQUIRED', 'ui')}</i></header>
+      ${contentHtml}
     </section>`;
   }).join('');
+
   const g = p._cls.statGrowthPerLevel;
   const header = `<header class="ro-book-head"><div class="ro-crest">${book.crest}</div><div class="ro-book-title">
       <small>${T('CLASS SKILL MANUAL', 'ui')} · ${esc(T(p.className, 'classes'))}</small><h3>${esc(T(book.title, 'ui'))}</h3>
       <b>${esc(T(book.focus, 'ui'))}</b><p>${esc(T(book.motto, 'ui'))}</p></div>
-    <div class="ro-book-stats"><strong>${p.skillPoints}<small>${T('SKILL POINTS', 'ui')}</small></strong><span>${T('Job Lv', 'ui')} ${p.jobLevel}/${PROGRESSION.jobLevelCap}</span><span>${T('Recommended build:', 'ui')} <b>${recommendedBuild(g)}</b></span></div>
+    <div class="ro-book-stats"><strong>${p.skillPoints}<small>${T('SKILL POINTS', 'ui')}</small></strong><span>${T('Job Lv', 'ui')} ${p.jobLevel}/${activeJobLevelCap(p)}</span><span>${T('Recommended build:', 'ui')} <b>${recommendedBuild(g)}</b></span></div>
     <div class="ro-book-radar">${svgRadar(g)}</div></header>`;
   const resetNote = `<aside class="ro-reset-note"><span>↺</span><div><b>${T('RESET YOUR BUILD', 'ui')}</b><small>${T('Soul Ledger and Memory Prism are sold by Marla. Reset items preserve your level, gear, and rebirth bonuses.', 'ui')}</small></div></aside>`;
   const guide = `<details class="skill-guide"><summary>${T('COMBAT COMBO GUIDE', 'ui')} <small>${T('Build, setup, detonate, then finish.', 'ui')}</small></summary>${combatLoopHtml(p, actives)}</details>`;
@@ -4249,7 +4461,15 @@ function skillsPanelHtml(p) {
     <p>${esc(T(selectedBranch.mechanic.desc, 'ui'))}</p>
     <div class="ro-branch-combo"><small>${T('CORE COMBO', 'ui')}</small><div class="flow-skills">${selectedBranch.combo.map(id => COMBAT.skills.find(s => s.id === id)).filter(Boolean).map(s => skillFlowChip(s, p)).join('')}</div></div>
   </section>` : '';
-  return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}${branchIdentity}<div class="ro-job-grid">${lanes}</div>${resetNote}${guide}</div>`;
+
+  return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}${branchIdentity}
+    <div class="ro-skill-graph-wrap">
+      <div class="ro-skill-graph" id="skill-graph">
+        <svg class="ro-skill-lines" id="skill-lines" aria-hidden="true"></svg>
+        ${lanes}
+      </div>
+    </div>
+    ${resetNote}${guide}</div>`;
 }
 
 // plain-language "what does it do" line for a skill at level L
@@ -4579,7 +4799,7 @@ function panelBody(id) {
           ${tierText}<br>
           ${branch ? `<span style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))} · ${esc(T(branch.focus, 'ui'))}</span><br>` : ''}
           ${T('Level', 'ui')} <b style="color:var(--text)">${p.level}</b>/${DESIGN.levelCap} &nbsp; XP ${Math.floor(p.xp)}/${p.level >= DESIGN.levelCap ? 'MAX' : xpForNext(p.level)}<br>
-          ${T('Job Lv', 'ui')} <b style="color:#6fb0ef">${p.jobLevel}/${PROGRESSION.jobLevelCap}</b> &nbsp; Job XP ${p.jobLevel >= PROGRESSION.jobLevelCap ? 'MAX' : `${Math.floor(p.jobXp)}/${jobXpForNext(p.jobLevel)}`}
+          ${T('Job Lv', 'ui')} <b style="color:#6fb0ef">${p.jobLevel}/${activeJobLevelCap(p)}</b> &nbsp; Job XP ${p.jobLevel >= activeJobLevelCap(p) ? 'MAX' : `${Math.floor(p.jobXp)}/${jobXpForNext(p.jobLevel)}`}
         </div>
         <div style="font-size:12px;margin-bottom:6px;color:var(--text-muted)">${T('Recommended build:', 'ui')} <b style="color:#c77dff;letter-spacing:2px">${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
         <div style="color:var(--accent-alt);margin-bottom:6px">${T('Unspent stat points:', 'ui')} <b>${p.statPoints}</b> <small style="color:var(--text-muted)">· ${T('higher stats cost more per +', 'ui')}</small></div>
@@ -4622,10 +4842,12 @@ function panelBody(id) {
       const it = itemById[e.itemId];
       if (e.uid) {   // rarity-rolled equipment instance — compare vs the item's slot
         const rc = itemRarity(e), slot = itemSlot(it);
+        const usable = canUseItem(p, it);
+        const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         return `<div class="gear-row">
           <div class="gear-row__copy">${itemIconImg(e.itemId)} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small> — ${itemMainStatsHtml(e)}
-            <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}</div>
-          <button class="btn" data-equip="${e.uid}">${T('Equip', 'ui')}</button></div>`;
+            ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}</div>
+          <button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
         ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>`
@@ -4653,7 +4875,7 @@ function panelBody(id) {
     if (G.advance) {
       const a = G.advance, o = a.def.objective;
       story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:var(--accent-alt)"><b style="color:var(--accent-alt)">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
-        <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small>${a.choiceReady ? `<br><button class="btn job-choice-open" data-job-choice="1">✦ ${T('Choose Second Job', 'ui')}</button>` : ''}</div>` + story;
+        <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small>${a.choiceReady ? `<br><button class="btn job-choice-open" ${a.ti === 2 ? 'data-advanced-job-choice="1"' : 'data-job-choice="1"'}>✦ ${T(a.ti === 2 ? 'Choose Third Job' : 'Choose Second Job', 'ui')}</button>` : ''}</div>` + story;
     }
     const bStatus = g => {
       if (g.kind === 'deliver') { const have = Math.min(itemQty(g.target), g.count);
@@ -4664,7 +4886,7 @@ function panelBody(id) {
       ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
           <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
           <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br>
-          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} pts</small>
+          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} ${T('pts', 'ui')}</small>
           <div class="bounty-actions">${guildRevokeButton(g)}</div></div>`).join('')
       : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
     return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
@@ -4678,7 +4900,7 @@ function panelBody(id) {
         const ready = g.kind === 'deliver' ? itemQty(g.target) >= g.count : !!g.done;
         const prog = g.kind === 'deliver' ? (currentLang === 'th' ? `มีแล้ว ${Math.min(itemQty(g.target), g.count)}/${g.count}` : `have ${Math.min(itemQty(g.target), g.count)}/${g.count}`) : `${g.progress}/${g.count}`;
         return `<div class="q-card" style="border-color:${ready ? 'var(--success)' : 'var(--panel-border)'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:var(--accent-alt)">${g.pts || 0} pts</b></small></span>
+          <span>${g.kind === 'deliver' ? '📦' : '⚔'} <b>${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ×${g.count} ${diffBadge(g.difficulty)}<br><small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br><small style="color:var(--text-muted)">${prog} · ${g.reward.exp} XP, ${g.reward.zeny} Zeny, <b style="color:var(--accent-alt)">${g.pts || 0} ${T('pts', 'ui')}</b></small></span>
           <span class="bounty-actions"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button>${guildRevokeButton(g)}</span></div></div>`;
       }).join('') : '';
     let lockHint = '';
@@ -4694,7 +4916,7 @@ function panelBody(id) {
         : (slotsFree ? `${slotsFree} bounty slot${slotsFree > 1 ? 's' : ''} free — accept below:` : 'All bounty slots in use — finish one first.')
     }</div>`;
     const board = (G.guildBoard || []).map(bq => `<div class="q-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br>${bountyLevelHtml(bq)}<br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:var(--accent-alt)">${bq.pts} guild pts</b></small></span>
+      <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br>${bountyLevelHtml(bq)}<br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:var(--accent-alt)">${bq.pts} ${T('guild pts', 'ui')}</b></small></span>
       <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button></div></div>`).join('');
     const boardHead = `<div class="q-cat guild-board-head"><span>📋 ${T('Available Bounties', 'ui')}</span><button class="btn btn--ghost" data-guildrefresh="1">↻ ${T('Refresh Board', 'ui')}</button></div>`;
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
@@ -4771,6 +4993,7 @@ function panelBody(id) {
           G.shopRotation.stock.push(inst);
         }
         const price = inst ? shopPrice(inst) : it.value;
+        const requirement = it.classReq ? `<small class="gear-requirement${canUseItem(p, it) ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         const btn = locked
           ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 ${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}</span>`
           : `<button class="btn" data-buy="${inst?.uid || it.id}" ${p.zeny < price ? 'disabled' : ''}>${T('Buy', 'ui')} ${price}z</button>`;
@@ -4778,7 +5001,7 @@ function panelBody(id) {
         const rc = itemRarity(inst), slot = itemSlot(it);
         return `<div class="gear-row ${locked ? 'locked' : ''}">
           <div class="gear-row__copy">${itemIconImg(it.id)} <b style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
-            <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>
+            <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${requirement}
             <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
       };
       const baseIds = (G._shopItems || []).filter(itId => !itemById[itId]?.rankReq);
@@ -4839,14 +5062,14 @@ function panelBody(id) {
       (bagRows || `<small style="color:var(--text-muted)">${T('No spare equipment in the bag.', 'ui')}</small>`);
       
     const refineFuelText = currentLang === 'th'
-      ? `🔨 เชื้อเพลิงตีบวก: <b>เขี้ยวหมาป่า (Wolf Fang)</b> สำหรับ +0–2 · <b>ผงเงา (Shade Dust)</b> สำหรับ +3–5 · <b>แร่ดารา (Star Iron)</b> สำหรับ +6–8 (ใช้ ${REFINE_FRAGS} ชิ้นต่อครั้ง) — หรือใช้ Blessed Ore 1 ชิ้นแทนได้ (คุณมีอยู่ ${itemQty('blessed_ore')} ชิ้น)`
-      : `🔨 Refining fuel: <b>Wolf Fang</b> for +0–2 · <b>Shade Dust</b> for +3–5 · <b>Star Iron</b> for +6–8 (${REFINE_FRAGS} per attempt) — or 1× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).`;
+      ? `🔨 เชื้อเพลิงตีบวก: <b>เขี้ยวสัตว์ป่า (Beast Fang)</b> สำหรับ +0–2 · <b>ผงเงา (Shade Dust)</b> สำหรับ +3–5 · <b>แร่ดารา (Star Iron)</b> สำหรับ +6–8 (ใช้ ${REFINE_FRAGS} ชิ้นต่อครั้ง) — หรือใช้ Blessed Ore 1 ชิ้นแทนได้ (คุณมีอยู่ ${itemQty('blessed_ore')} ชิ้น)`
+      : `🔨 Refining fuel: <b>Beast Fang</b> for +0–2 · <b>Shade Dust</b> for +3–5 · <b>Star Iron</b> for +6–8 (${REFINE_FRAGS} per attempt) — or 1× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).`;
       
     return head + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">${refineFuelText}</div>` + enhBody;
   }
   if (id === 'admin') {
     const status = `<div style="color:#ffd24d;margin-bottom:8px;font-size:12px;line-height:1.6">
-      God mode: <b>${p.godMode ? 'ON 🛡' : 'off'}</b> · Lv <b>${p.level}</b>/${DESIGN.levelCap} · Job <b>${p.jobLevel}</b>/${PROGRESSION.jobLevelCap} · ${p.className}<br>
+      God mode: <b>${p.godMode ? 'ON 🛡' : 'off'}</b> · Lv <b>${p.level}</b>/${DESIGN.levelCap} · Job <b>${p.jobLevel}</b>/${activeJobLevelCap(p)} · ${p.className}<br>
       💰${p.zeny} · 🏅 Rank ${GUILD_RANKS[G.guildRankIdx || 0]} (${G.guildPoints || 0} pts) · 🗺 ${G.map.name} · ${G.monsters.filter(m => m.alive).length} mobs alive</div>`;
     return status + ADMIN_GROUPS.map(([title, btns]) =>
       `<div class="q-cat" style="font-size:12px;margin:8px 0 4px">${title}</div>
@@ -4907,6 +5130,7 @@ function wirePanel(id, el) {
   });
   el.querySelectorAll('[data-task]').forEach(task => task.onclick = event => { event.stopPropagation(); activateTaskGuide(task.dataset.task, task.dataset.taskId); });
   el.querySelectorAll('[data-job-choice]').forEach(button => button.onclick = event => { event.stopPropagation(); showJobChoice(G.player); });
+  el.querySelectorAll('[data-advanced-job-choice]').forEach(button => button.onclick = event => { event.stopPropagation(); showAdvancedJobChoice(G.player); });
   el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { useItem(b.dataset.use); refreshPanel(id); });
   el.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => { equip(b.dataset.equip); refreshPanel(id); });
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { buy(b.dataset.buy); refreshPanel('shop'); });
@@ -4965,7 +5189,80 @@ function wirePanel(id, el) {
       nd.addEventListener('click', show);          // touch/click also reveals it
       nd.addEventListener('mouseleave', hideSkillTip);
     });
+    // Draw SVG dependency lines
+    setTimeout(() => renderSkillGraphLines(el), 0);
   }
+}
+
+// Debounced resize drawing
+let resizeTimer = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => {
+    const el = document.getElementById('panel');
+    if (el && el.dataset.kind === 'skills') {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => renderSkillGraphLines(el), 60);
+    }
+  });
+}
+
+function renderSkillGraphLines(root = document) {
+  const svg = root.querySelector('#skill-lines');
+  const graph = root.querySelector('#skill-graph');
+  if (!svg || !graph) return;
+  svg.innerHTML = '';
+  const rGraph = graph.getBoundingClientRect();
+  const nodes = root.querySelectorAll('.ro-skill[data-skill]');
+  const nodeMap = new Map();
+  nodes.forEach(nd => nodeMap.set(nd.dataset.skill, nd));
+
+  const p = G.player;
+  const tree = PROGRESSION.skillTree;
+
+  nodes.forEach(child => {
+    const cid = child.dataset.skill;
+    const kind = child.dataset.kind;
+    if (kind !== 'active') return; // passive nodes have no graphic lines
+    const node = tree[cid];
+    if (!node || !node.reqSkill) return;
+    const parent = nodeMap.get(node.reqSkill.id);
+    if (!parent) return;
+
+    const rP = parent.getBoundingClientRect();
+    const rC = child.getBoundingClientRect();
+
+    // calculate coords relative to graph container
+    const x1 = rP.left + rP.width - rGraph.left;
+    const y1 = rP.top + rP.height / 2 - rGraph.top;
+    const x2 = rC.left - rGraph.left;
+    const y2 = rC.top + rC.height / 2 - rGraph.top;
+
+    // determine path state based on learnable/preview/owned states
+    let state = 'locked';
+    const clv = skillLevel(p, cid);
+    const plv = skillLevel(p, node.reqSkill.id);
+    const cIncompat = child.classList.contains('locked') && (
+      (node.reqBranch && !branchAllowsSkill(p, cid)) ||
+      (node.reqAdvancedJob && !advancedJobAllowsSkill(p, cid))
+    );
+
+    if (cIncompat) {
+      state = 'incompatible';
+    } else if (clv > 0) {
+      if (p.tierIndex < (node.reqTier || 0)) state = 'preview';
+      else state = 'learned';
+    } else if (plv >= node.reqSkill.lvl && canLearn(p, cid)) {
+      const gate = skillRankGate(p, cid);
+      if (p.tierIndex < gate.reqTier) state = 'preview';
+      else state = 'ready';
+    }
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const mid = x1 + (x2 - x1) * 0.5;
+    path.setAttribute('d', `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('class', `ro-skill-line ${state}`);
+    svg.appendChild(path);
+  });
 }
 function refreshPanel(id) {
   const el = $('#panel');
@@ -5012,10 +5309,23 @@ function useItem(itemId) {
   removeItem(itemId); AUDIO.playSfx('pickup'); logMsg(`Used ${it.name}.`, 'good');
   return true;
 }
+function canUseItem(p, itemOrId) {
+  const item = typeof itemOrId === 'string' ? itemById[itemOrId] : itemOrId;
+  return !!item && (!item.classReq || item.classReq.includes(p.classId));
+}
+function itemClassRequirementText(item) {
+  if (!item.classReq) return T('All classes', 'ui');
+  return item.classReq.map(id => T(DESIGN.classes.find(cls => cls.id === id)?.name || id, 'classes')).join(', ');
+}
 function equip(uid) {
   const p = G.player, u = +uid, idx = p.inventory.findIndex(e => e.uid === u);
   if (idx < 0) return;
   const inst = p.inventory[idx], item = itemById[inst.itemId], slot = itemSlot(item);
+  if (!canUseItem(p, item)) {
+    logMsg(currentLang === 'th' ? `ไม่สามารถสวมใส่: เฉพาะอาชีพ ${itemClassRequirementText(item)}` : `Cannot equip: only for ${itemClassRequirementText(item)}`, 'bad');
+    AUDIO.playSfx('menu');
+    return;
+  }
   p.inventory.splice(idx, 1);
   if (p.equip[slot]) p.inventory.push(p.equip[slot]);   // swap the old piece back to the bag
   p.equip[slot] = inst;
@@ -5446,6 +5756,7 @@ const extraCss = `
 .doll-slot[data-unequip]:hover{background:rgba(224,90,74,.18);border-color:var(--danger)}
 .gear-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid rgba(92,63,27,.2)}
 .gear-row.locked{opacity:.62}.gear-row>.btn{flex:0 0 auto}.gear-row__copy{display:block;min-width:0;flex:1;line-height:1.45}
+.gear-requirement{display:block;margin-top:3px;color:#9dc19f}.gear-requirement.locked{color:#e49a8b;font-weight:800}
 .rarity-badge{display:inline-block;padding:1px 5px;border:1px solid var(--rarity);color:var(--rarity);font-weight:800}
 .gear-bonuses{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.gear-bonuses--slot{gap:2px;margin-top:3px}
 .gear-bonus{display:inline-block;padding:1px 5px;border:1px solid #71809a;background:rgba(34,54,81,.1);color:#34465f;font-size:9px;line-height:1.35}
@@ -5687,8 +5998,8 @@ function deleteSave() { const ls = storage(); try { ls && ls.removeItem(saveKey(
 function saveGame() {
   const ls = storage(); if (!ls || !G.player || !G.running) return;   // only persist a live run
   const p = G.player;
-  const data = { v: 4,
-    player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId,
+  const data = { v: 5,
+    player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId, advancedJobId: p.advancedJobId,
       level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, zeny: p.zeny, hp: p.hp, mp: p.mp,
       alloc: p.alloc, statPoints: p.statPoints, skillPoints: p.skillPoints, skillLevels: p.skillLevels,
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
@@ -5726,7 +6037,7 @@ function resumeGame() {
   G.jobChoiceOpen = false;
   AUDIO.init();
   const sp = d.player, p = makePlayer(sp.classId, sp.name);
-  Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, level: sp.level, xp: sp.xp,
+  Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, advancedJobId: sp.advancedJobId || null, level: sp.level, xp: sp.xp,
     jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0,
     zeny: sp.zeny, alloc: sp.alloc, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
     skillLevels: sp.skillLevels || p.skillLevels, equip: sp.equip || p.equip, inventory: sp.inventory || p.inventory,
@@ -5749,10 +6060,11 @@ function resumeGame() {
   // running, clear it so the TRUE finale (Nullking) can still play its cutscene once
   if (G.won && (G.quest || G.pendingQuest)) G.won = false;
   G.advance = w.advance || null; G.guildBoard = (w.guildBoard && w.guildBoard.length) ? w.guildBoard : (refreshGuildBoard(), G.guildBoard);
-  // A v3 save could have captured the final trial kill before its promotion
-  // callback. Preserve the earned completion, but never choose a branch for it.
-  if (G.advance?.ti === 1 && !p.jobBranchId
-    && advanceProgress() >= G.advance.def.objective.count) G.advance.choiceReady = true;
+  // A legacy save may have captured a completed trial before its choice callback.
+  // Preserve completion for either career choice, but never choose on its behalf.
+  const pendingCareerChoice = G.advance?.ti === 1 ? !p.jobBranchId
+    : G.advance?.ti === 2 ? !p.advancedJobId : false;
+  if (pendingCareerChoice && advanceProgress() >= G.advance.def.objective.count) G.advance.choiceReady = true;
   G.activeGuilds = w.activeGuilds || (w.activeGuild ? [w.activeGuild] : []);   // legacy single-bounty saves
   G.guildRankIdx = w.guildRankIdx || 0; G.guildPoints = w.guildPoints || 0;
   G.guardiansSlain = new Set(w.guardiansSlain || []);
@@ -5781,7 +6093,10 @@ function resumeGame() {
   loadMap(w.mapId || 'town_awakening', w.col, w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
-  if (G.advance?.choiceReady) showJobChoice(p);
+  if (G.advance?.choiceReady) {
+    if (G.advance.ti === 2) showAdvancedJobChoice(p);
+    else showJobChoice(p);
+  }
   updateFarmButton();
   G.running = true; last = now(); requestAnimationFrame(frame);
   toast(T('Welcome back, {name} — Lv {level} {class}.', 'ui')
@@ -5880,6 +6195,8 @@ function boot() {
 if (typeof window !== 'undefined')
   window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
-    TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip };
+    TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
+    advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
+    canUseItem, itemClassRequirementText };
 
 boot();

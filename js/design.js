@@ -101,6 +101,10 @@ export const DESIGN = {
       lightbringer: { 1: 8, 2: 18 }, iron_fist: { 1: 8, 2: 17 },
       stormcaller: { 1: 7, 2: 15 },
     },
+    thirdJobStatPointBudgets: {
+      reborn_blade: 19, drifter: 17, codeweaver: 14, far_shot: 14,
+      lightbringer: 18, iron_fist: 17, stormcaller: 15,
+    },
     signature: {
       reqTier: 1, reqJobLevel: 18, maxLevel: 3,
       singleTargetPower: [2.1, 2.5], areaPower: [1.8, 2.1], healPower: [2.4, 2.4],
