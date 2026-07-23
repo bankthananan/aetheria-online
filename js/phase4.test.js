@@ -167,5 +167,31 @@ assert.equal(G.highContrast, true, 'resumeGame restores G.highContrast from the 
 assert.ok(hcClasses.has('hc-mode'), 'resumeGame re-applies the hc-mode body class');
 console.log('✓ Task 4.2c | highContrast round-trips through saveGame/resumeGame');
 
+// ---- Task 4.4: class-aware weapon drops ----
+{
+  const { classWeaponFor, canUseItem } = A;
+  const farShot = makePlayer('far_shot', 'Archer');
+  // hero_blade (sword, gearLevel 25) re-rolls to the archer weapon nearest that tier
+  const sub = classWeaponFor(farShot, 'hero_blade');
+  assert.ok(canUseItem(farShot, sub), 'substituted weapon is usable by the archer');
+  assert.equal(sub, 'frost_bow', 'gearLevel 25 sword maps to the closest bow tier (35)');
+  // endgame sword maps to the endgame bow
+  assert.equal(classWeaponFor(farShot, 'astral_glaive'), 'starhawk_bow', 'gearLevel 80 sword maps to the top bow');
+  // classless and non-weapon drops pass through untouched
+  assert.equal(classWeaponFor(farShot, 'worn_dagger'), 'worn_dagger', 'classless weapon unchanged');
+  assert.equal(classWeaponFor(farShot, 'minor_potion'), 'minor_potion', 'non-weapon unchanged');
+  // a hero who can already wield the drop keeps it
+  const blade = makePlayer('reborn_blade', 'Knight');
+  assert.equal(classWeaponFor(blade, 'hero_blade'), 'hero_blade', 'sword class keeps sword drops');
+  // every dropping class-locked weapon maps to something usable for every class
+  const dropWeapons = ['hero_blade', 'mythril_sword', 'frost_brand', 'dawn_edge', 'void_edge', 'astral_glaive'];
+  for (const cls of DESIGN.classes) {
+    const hero = makePlayer(cls.id, 'T');
+    for (const wid of dropWeapons)
+      assert.ok(canUseItem(hero, classWeaponFor(hero, wid)), `${cls.id} gets a usable substitute for ${wid}`);
+  }
+  console.log('✓ Task 4.4 | Class-aware weapon drop substitution verified');
+}
+
 console.log('=== PHASE 4 TEST SUITE PASSED ===');
 process.exit(0); // music sequencer interval keeps the loop alive otherwise

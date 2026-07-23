@@ -2083,7 +2083,8 @@ function killMonster(m) {
   if (zeny > 0) { p.zeny += zeny; }
   // drops (equipment rolls rarity + affixes, biased by monster level & your LUK)
   for (const d of m.def.drops) if (chance(d.chance)) {
-    const got = addItem(d.itemId, 1, dropBias(m, p)), it = itemById[d.itemId];
+    const dropId = classWeaponFor(p, d.itemId);
+    const got = addItem(dropId, 1, dropBias(m, p)), it = itemById[dropId];
     if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
@@ -2121,6 +2122,20 @@ function killMonster(m) {
     spawnRiftWave();
     toast(`✦ Celestial Rift — Floor ${G.rift.floor}! Best: ${G.rift.best}`, 'good');
   }
+}
+
+// A weapon drop the hero can't wield re-rolls to the closest-tier weapon of
+// their own class — drop tables are sword-heavy, but every class should see
+// usable weapon drops from the same monsters. Non-weapons pass through as-is.
+function classWeaponFor(p, itemId) {
+  const it = itemById[itemId];
+  if (!it || it.type !== 'weapon' || canUseItem(p, it)) return itemId;
+  const own = CONTENT.items.filter(w => w.type === 'weapon' && w.classReq?.includes(p.classId));
+  if (!own.length) return itemId;
+  own.sort((a, b) =>
+    Math.abs((a.gearLevel || 0) - (it.gearLevel || 0)) - Math.abs((b.gearLevel || 0) - (it.gearLevel || 0))
+    || Math.abs(a.atk - it.atk) - Math.abs(b.atk - it.atk));
+  return own[0].id;
 }
 
 function applyStatus(m, effect, skillLvl = 1) {
@@ -6877,7 +6892,7 @@ if (typeof window !== 'undefined')
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
-    canUseItem, itemClassRequirementText, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
+    canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
     monsterElement, skillElement, elementMult, applyCrossCombo, applyStatus,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
