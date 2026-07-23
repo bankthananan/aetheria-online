@@ -962,7 +962,7 @@ function showJobChoice(p = G.player) {
   box = document.createElement('div');
   box.id = 'job-choice'; box.className = 'job-choice-overlay';
   box.innerHTML = jobChoicePanelHtml(p);
-  box.querySelectorAll('[data-job-branch]').forEach(button => button.onclick = () => chooseJobBranch(button.dataset.jobBranch, p));
+  box.querySelectorAll('[data-job-branch]').forEach(button => button.onclick = () => { chooseJobBranch(button.dataset.jobBranch, p); if (box) box.remove(); G.jobChoiceOpen = false; });
   ($('#overlays') || document.body).appendChild(box);
   G.jobChoiceOpen = true;
   return true;
@@ -1724,7 +1724,7 @@ function acquireAutoTarget(p = G.player) {
   const candidates = (local.length ? local : eligible)
     .sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
   for (const candidate of candidates) {
-    if (!pathTo(candidate.x, candidate.y)) continue;
+    if (!pathTo(candidate.x, candidate.y)) { candidate._autoSkipUntil = now() + 3000; continue; }
     G.target = candidate;
     G.targetSource = 'hunt';
     candidate.provoked = true;
@@ -1899,7 +1899,7 @@ function applyStatus(m, effect, skillLvl = 1) {
     : def.tickDamage;
   const status = { until: now() + def.durationMs, nextTick: now() + 1000, tickDamage };
   if (def.damageTaken) status.damageTaken = def.damageTaken + (def.perLevel || 0) * (skillLvl - 1);
-  if (def.defReduction) status.defMult = 1 - def.defReduction - (def.perLevel || 0) * (skillLvl - 1);
+  if (def.defReduction) status.defMult = Math.max(0, 1 - def.defReduction - (def.perLevel || 0) * (skillLvl - 1));
   m.statuses[effect] = status;
 }
 
@@ -1935,7 +1935,7 @@ function castSkillById(id) {
 
   const targetsInRange = () => {
     const t = G.target;
-    if (sk.type === 'heal' || (sk.type === 'buff' && sk.id !== 'hunters_mark')) return true;
+    if (sk.type === 'heal' || (sk.type === 'buff' && sk.id !== 'hunters_mark') || sk.type === 'aoe') return true;
     if (!t || !t.alive) { logMsg('No target.', 'sys'); return false; }
     const reach = ((sk.type === 'melee' && sk.id !== 'savage_leap') ? sk.range : sk.range + (p.rangeBonus || 0)) * TS + t.size / 2;   // INT extends ranged/magic
     if (dist(p.x, p.y, t.x, t.y) > reach) { logMsg('Target out of range.', 'sys'); return false; }
@@ -2020,6 +2020,7 @@ function castSkillById(id) {
   if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete t.statuses[sk.detonate]; }
   dmg = branchDetonateBonus(p, sk, t, dmg);
   damageMonster(t, dmg, isCrit); applyStatus(t, sk.effect, lvl);
+  extendBranchStatus(p, sk, t);
   procBranchMechanic(p, sk, { dmg });
   if (!sk.finisher) gainMomentum(p);
 }
@@ -2201,7 +2202,7 @@ function doRebirth() {
   if (p.level < DESIGN.levelCap) return false;
   const fresh = makePlayer(p.classId, p.name);   // canonical starting progression for this class
   p.rebirths = (p.rebirths || 0) + 1;
-  Object.assign(p, { level: 1, xp: 0, jobLevel: 1, jobXp: 0, tierIndex: 0, jobBranchId: null, className: fresh.className,
+  Object.assign(p, { level: 1, xp: 0, jobLevel: 1, jobXp: 0, tierIndex: 0, jobBranchId: null, advancedJobId: null, className: fresh.className,
     alloc: fresh.alloc, statPoints: fresh.statPoints, skillPoints: fresh.skillPoints,
     skillLevels: fresh.skillLevels, hotbar: fresh.hotbar, momentum: 0, skillCd: {}, buffs: [] });
   G.advance = null;   // the class-advancement trials will re-offer at their level gates
@@ -3457,7 +3458,7 @@ function drawPlayer(p, cx, cy) {
     const moving = p.moving, group = (moving && Math.floor(now() / 140) % 2 === 1) ? 'playerWalk' : 'player';
     const bob = moving ? -Math.abs(Math.sin(now() / 90)) * 2 : 0;
     if (!drawPx(group, p.combatClass, px, py + bob, 36, p.facing.x < 0)) {
-      const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0' }[p.combatClass];
+      const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0', monk: '#d4a359', elementalist: '#9d7be0' }[p.combatClass];
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px, py, 13, 0, 7); ctx.fill();
     }
   }
@@ -3766,6 +3767,7 @@ function handlePortals() {
 // =====================================================================
 const fxLayer = () => $('#fx-layer');
 function floatText(worldX, worldY, text, kind) {
+  const layer = fxLayer(); if (!layer) return;
   const el = document.createElement('div');
   el.className = 'dmg-float' + (kind === 'crit' ? ' dmg-float--crit' : kind === 'heal' ? ' dmg-float--heal' : '');
   if (kind === 'enemy') el.style.color = COMBAT.damageText.enemyColor;
@@ -3775,7 +3777,7 @@ function floatText(worldX, worldY, text, kind) {
   el.textContent = kind === 'crit' ? text + '!' : text;
   el.style.left = (worldX - G.cam.x) + 'px';
   el.style.top = (worldY - G.cam.y - 20) + 'px';
-  fxLayer().appendChild(el);
+  layer.appendChild(el);
   setTimeout(() => el.remove(), 850);
 }
 
@@ -5273,7 +5275,8 @@ function refreshPanel(id) {
 }
 
 function useItem(itemId) {
-  const it = itemById[itemId]; if (itemQty(itemId) <= 0) return false;
+  const it = itemById[itemId]; if (!it || itemQty(itemId) <= 0) return false;
+  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport) { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
   if (it.reset) {
     const hasSpent = it.reset === 'stats'
@@ -5358,7 +5361,7 @@ function rerollShop(rankOverride) {
   while (!fullCatalog && picks.length < 4 && p2.length) picks.push(p2.splice(Math.floor(Math.random() * p2.length), 1)[0].id);
   // Rank-conditioned gear belongs to rotation, not the always-on shelves.
   // Trader S turns that rotating shelf into the complete master catalog.
-  const baseIds = (G._shopItems || npcById.npc_shopkeeper?.shopItems || []).filter(itemId => !itemById[itemId]?.rankReq);
+  const baseIds = (G._shopItems || npcById.merchant?.shopItems || npcById.npc_shopkeeper?.shopItems || []).filter(itemId => !itemById[itemId]?.rankReq);
   G.shopRotation = { ids: picks, stock: [], fullCatalog, at: now() };
   const gearIds = [...new Set([...baseIds, ...picks])].filter(isEquip);
   G.shopRotation.stock = gearIds.map(itemId => rollItem(itemId, shopRollBias(itemId, rankIdx)));
@@ -5432,6 +5435,8 @@ function refineItem(ref) {
 }
 function sellItem(ref) {
   const p = G.player;
+  const itemId = /^\d+$/.test(ref) ? p.inventory.find(e => e.uid === +ref)?.itemId : ref;
+  if (itemById[itemId]?.type === 'quest') { toast('Quest items cannot be sold.', 'bad'); return; }
   if (/^\d+$/.test(ref)) {                                     // equipment instance by uid
     const idx = p.inventory.findIndex(e => e.uid === +ref); if (idx < 0) return;
     const e = p.inventory[idx], price = sellPrice(e);
@@ -6039,8 +6044,8 @@ function resumeGame() {
   const sp = d.player, p = makePlayer(sp.classId, sp.name);
   Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, advancedJobId: sp.advancedJobId || null, level: sp.level, xp: sp.xp,
     jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0,
-    zeny: sp.zeny, alloc: sp.alloc, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
-    skillLevels: sp.skillLevels || p.skillLevels, equip: sp.equip || p.equip, inventory: sp.inventory || p.inventory,
+    zeny: sp.zeny, alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0, ...(sp.alloc || {}) }, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
+    skillLevels: sp.skillLevels || p.skillLevels, equip: { ...p.equip, ...(sp.equip || {}) }, inventory: sp.inventory || p.inventory,
     hotbar: Array.isArray(sp.hotbar) ? sp.hotbar.slice(0, 9) : p.hotbar,
     hotkeys: normaliseHotkeys(sp.hotkeys) });
   normalisePlayerProgression(p); // migrate old uncapped-job saves without deleting learned ranks
@@ -6049,6 +6054,12 @@ function resumeGame() {
   let maxUid = 0; const scan = e => { if (e && e.uid > maxUid) maxUid = e.uid; };
   Object.values(sp.equip || {}).forEach(scan); (sp.inventory || []).forEach(scan);
   (d.world?.storage || []).forEach(scan);   // stored gear carries uids too
+  const scanBounty = g => {
+    const m = g?.id?.match(/^g(\d+)$/);
+    if (m) maxUid = Math.max(maxUid, parseInt(m[1], 10));
+  };
+  (d.world?.guildBoard || []).forEach(scanBounty);
+  (d.world?.activeGuilds || []).forEach(scanBounty);
   _uid = maxUid;
   G.player = p; recompute(p, false);
   p.hp = clamp(sp.hp ?? p.maxHp, 1, p.maxHp); p.mp = clamp(sp.mp ?? p.maxMp, 0, p.maxMp);
@@ -6196,7 +6207,7 @@ if (typeof window !== 'undefined')
   window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
-    advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
+    advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText };
 
 boot();

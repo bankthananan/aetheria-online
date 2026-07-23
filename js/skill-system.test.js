@@ -141,7 +141,7 @@ globalThis.confirm = () => true;
 
 // Both manuals are permanently sold, appear in Use, and cannot be assigned to
 // a combat hotkey. Their stack data uses the existing save schema unchanged.
-A.G._shopItems = A.CONTENT.npcs.find(npc => npc.id === 'npc_shopkeeper').shopItems;
+A.G._shopItems = A.CONTENT.npcs.find(npc => npc.id === 'merchant' || npc.id === 'npc_shopkeeper').shopItems;
 p.zeny = 999999;
 const shopHtml = A.panelBody('shop');
 assert.ok(shopHtml.includes('Soul Ledger') && shopHtml.includes('Memory Prism'), 'Marla sells both reset items');

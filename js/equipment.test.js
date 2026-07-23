@@ -135,7 +135,7 @@ A.G.quest = phaseThree.id; A.G.guildRankIdx = 0; A.G.won = false;
 assert.equal(A.GUILD_RANKS[A.storyShopRankIdx()], 'C-', 'phase III grants Story Rank C-');
 assert.equal(A.GUILD_RANKS[A.effectiveShopRankIdx()], 'C-', 'story rank raises effective trader stock');
 assert.ok(A.shopRollBias('iron_sword') > openingRarityBias, 'later story chapters deterministically improve rarity bias');
-A.G._shopItems = A.CONTENT.npcs.find(npc => npc.id === 'npc_shopkeeper').shopItems;
+A.G._shopItems = A.CONTENT.npcs.find(npc => npc.id === 'merchant' || npc.id === 'npc_shopkeeper').shopItems;
 const phaseRotation = A.rerollShop();
 assert.ok(phaseRotation.ids.length <= 4, 'rank-conditioned gear stays on a four-item rotation before Trader S');
 assert.ok(phaseRotation.ids.every(itemId => A.GUILD_RANKS.indexOf(A.CONTENT.items.find(item => item.id === itemId).rankReq) <= A.effectiveShopRankIdx()), 'rotation never offers gear above effective Trader Rank');

@@ -72,7 +72,7 @@ export function buildHeatField(map) {
   if (!map?.band) return null;
   let boss = null;
   for (let row = 0; row < map.height && !boss; row++) {
-    const col = map.tiles[row].indexOf('B');
+    const col = map.tiles[row]?.indexOf('B') ?? -1;
     if (col >= 0) boss = { col, row };
   }
   if (!boss) return null;

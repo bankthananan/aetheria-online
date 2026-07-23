@@ -164,7 +164,7 @@ export const CONTENT = {
     { id: "void_edge", name: "Void Edge", type: "weapon", desc: "A blade that cuts the space between things.", atk: 56, value: 7000, classReq: ["reborn_blade", "lightbringer"], rankReq: "B", gearLevel: 70 },
     { id: "astral_glaive", name: "Astral Glaive", type: "weapon", desc: "Forged from a fallen star; it weighs nothing and ends everything.", atk: 66, value: 12000, classReq: ["reborn_blade", "lightbringer"], gearLevel: 80 },
     { id: "astral_plate", name: "Astral Plate", type: "armor", desc: "Woven starlight, hard as fate.", def: 34, value: 9000, classReq: ["reborn_blade", "lightbringer"], rankReq: "B" },
-    { id: "void_helm", name: "Void Helm", type: "armor", slot: "head", desc: "A crown of the rift's own dark.", def: 20, value: 6000, classReq: ["reborn_blade", "lightbringer"] },
+    { id: "void_helm", name: "Void Helm", type: "armor", slot: "head", desc: "A crown of the rift's own dark.", def: 20, value: 6000, classReq: null },
     { id: "astral_signet", name: "Astral Signet", type: "accessory", slot: "accessory", desc: "A ring that remembers the shape of stars.", atk: 12, value: 5000, classReq: null },
     { id: "celestial_draught", name: "Celestial Draught", type: "potion", desc: "Starlight in a vial — restores body and mind fully.", hpRestore: 900, mpRestore: 400, value: 700, classReq: null },
     { id: "void_shard", name: "Void Shard", type: "material", desc: "A splinter of nothing. It hurts to look at.", value: 120, classReq: null },
@@ -192,8 +192,8 @@ export const CONTENT = {
     { id: "knight_plate", name: "Knight's Plate", type: "armor", desc: "Ceremonial armor still fit for a real fight.", def: 18, value: 1100, classReq: ["reborn_blade", "lightbringer"], rankReq: "D-" },
 
     // ===== Mid/late hands-feet-cloak (these slots had no upgrade past the iron set) =====
-    { id: "mythril_gauntlets", name: "Mythril Gauntlets", type: "armor", slot: "hands", desc: "Featherlight mesh that punches like plate.", def: 12, value: 900, classReq: ["reborn_blade", "lightbringer"] },
-    { id: "drakescale_boots", name: "Drakescale Boots", type: "armor", slot: "feet", desc: "Soled with caldera hide — hot sand feels like grass.", def: 12, value: 900, classReq: ["drifter", "far_shot", "iron_fist"] },
+    { id: "mythril_gauntlets", name: "Mythril Gauntlets", type: "armor", slot: "hands", desc: "Featherlight mesh that punches like plate.", def: 12, value: 900, classReq: null },
+    { id: "drakescale_boots", name: "Drakescale Boots", type: "armor", slot: "feet", desc: "Soled with caldera hide — hot sand feels like grass.", def: 12, value: 900, classReq: null },
     { id: "aurora_cloak", name: "Aurora Cloak", type: "armor", slot: "cloak", desc: "Woven from the tundra's night sky.", def: 11, value: 1000, classReq: null, rankReq: "D-" },
     { id: "titan_grips", name: "Titan Grips", type: "armor", slot: "hands", desc: "Gauntlets of a rift sentinel, still humming with starlight.", def: 18, value: 3500, classReq: ["reborn_blade", "lightbringer"], rankReq: "B-" },
     { id: "astral_greaves", name: "Astral Greaves", type: "armor", slot: "feet", desc: "Each step rings like a struck bell in the void.", def: 18, value: 3500, classReq: ["reborn_blade", "lightbringer"], rankReq: "B-" },
@@ -201,7 +201,7 @@ export const CONTENT = {
   ],
 
   npcs: [
-    { id: "npc_shopkeeper", name: "Marla the Trader", role: "shopkeeper",
+    { id: "merchant", name: "Marla the Trader", role: "shopkeeper",
       dialogue: ["Fresh gear for a fresh face? You've got the look of someone not from around here.",
                  "Coin talks, stranger. Browse all you like."],
       shopItems: ["worn_dagger", "iron_sword", "cloth_tunic", "leather_vest", "iron_helm", "iron_gauntlets", "iron_boots", "warding_cloak", "power_ring", "minor_potion", "mid_potion", "greater_potion", "mana_potion", "mythril_sword", "mythril_plate", "frost_brand", "seraph_ward", "void_edge", "astral_plate", "mythril_gauntlets", "drakescale_boots", "aurora_cloak", "titan_grips", "astral_greaves", "voidweave_cloak", "sharpening_stone", "iron_tonic", "teleport_scroll", "soul_ledger", "memory_prism", "blessed_ore"] },
