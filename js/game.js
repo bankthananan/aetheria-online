@@ -482,6 +482,7 @@ const G = {
   spawnTiles: [],
   cam: { x: 0, y: 0 },
   keys: {},
+  audioVolumes: { master: 1.0, music: 0.8, sfx: 1.0 },
   target: null,
   targetSource: null,   // hunt | retaliate | manual; preserves deliberate high-level challenges
   effects: [],          // transient attack/spell visuals
@@ -1393,6 +1394,35 @@ function followPath(e, path, speed, rad) {
   return true;
 }
 
+let bgBufferCanvas = null;
+
+function renderBgBuffer() {
+  if (typeof document === 'undefined') return;
+  if (!bgBufferCanvas) bgBufferCanvas = document.createElement('canvas');
+  bgBufferCanvas.width = G.map.width * TS;
+  bgBufferCanvas.height = G.map.height * TS;
+  const bgCtx = bgBufferCanvas.getContext('2d');
+  if (!bgCtx) return;
+  bgCtx.imageSmoothingEnabled = false;
+  bgCtx.clearRect(0, 0, bgBufferCanvas.width, bgBufferCanvas.height);
+  for (let r = 0; r < G.map.height; r++) {
+    for (let c = 0; c < G.map.width; c++) {
+      const ch = tileChar(c, r);
+      const info = G.legend[ch];
+      if (!info) continue;
+      const isAnim = (TILE_PHASES[info.type] || 1) > 1;
+      if (!isAnim) {
+        const tx = c * TS, ty = r * TS;
+        if (!drawTile(info.type, tx, ty, bgCtx)) {
+          bgCtx.fillStyle = info.color;
+          bgCtx.fillRect(tx, ty, TS, TS);
+        }
+        drawTileEdges(info.type, c, r, tx, ty, bgCtx);
+      }
+    }
+  }
+}
+
 function loadMap(mapId, spawnX, spawnY) {
   const map = MAPS[mapId];
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
@@ -1453,6 +1483,7 @@ function loadMap(mapId, spawnX, spawnY) {
 
   if (!G.guildBoard || !G.guildBoard.length) refreshGuildBoard();
   AUDIO.playMusic(MAP_MUSIC[mapId] || 'whispering_woods');
+  renderBgBuffer();
   const firstVisit = !G.visited.has(mapId);
   logMsg(T(map.ambient, 'maps'), 'sys');
   showZoneBanner(map, firstVisit);
@@ -3182,36 +3213,36 @@ function buildTile(type, phase = 0) {
   }
   tileCache[cacheKey] = cvs; return cvs;
 }
-function drawTile(type, x, y) {
+function drawTile(type, x, y, targetCtx = ctx) {
   const phase = G.debugTilePhase != null
     ? G.debugTilePhase
     : (prefersReducedMotion() ? 0 : Math.floor(now() / (TILE_PHASE_MS[type] || 1000)));
   const cvs = buildTile(type, phase);
   if (!cvs.width) return false;
-  ctx.drawImage(cvs, Math.floor(x), Math.floor(y), TS + 1, TS + 1);
+  targetCtx.drawImage(cvs, Math.floor(x), Math.floor(y), TS + 1, TS + 1);
   return true;
 }
 
 // Small direct overdraws soften the most visible terrain seams without
 // obscuring the readable walk grid. Edge pixels stay inside the current tile.
-function drawTileEdges(type, col, row, x, y) {
+function drawTileEdges(type, col, row, x, y, targetCtx = ctx) {
   const neighbors = [
     { dc: 0, dr: -1, dir: 'top' }, { dc: 1, dr: 0, dir: 'right' },
     { dc: 0, dr: 1, dir: 'bottom' }, { dc: -1, dr: 0, dir: 'left' },
   ];
   let drawn = 0;
   const band = (dir, color, thickness = 2, dotted = false) => {
-    ctx.fillStyle = color;
+    targetCtx.fillStyle = color;
     const horizontal = dir === 'top' || dir === 'bottom';
     const bx = dir === 'right' ? x + TS - thickness : x;
     const by = dir === 'bottom' ? y + TS - thickness : y;
-    ctx.fillRect(Math.floor(bx), Math.floor(by), horizontal ? TS : thickness, horizontal ? thickness : TS);
+    targetCtx.fillRect(Math.floor(bx), Math.floor(by), horizontal ? TS : thickness, horizontal ? thickness : TS);
     if (dotted) {
-      ctx.fillStyle = '#dff2ff';
+      targetCtx.fillStyle = '#dff2ff';
       for (let p = 4; p < TS; p += 9) {
         const dx = horizontal ? x + p : (dir === 'right' ? x + TS - 1 : x);
         const dy = horizontal ? (dir === 'bottom' ? y + TS - 1 : y) : y + p;
-        ctx.fillRect(Math.floor(dx), Math.floor(dy), horizontal ? 3 : 1, horizontal ? 1 : 3);
+        targetCtx.fillRect(Math.floor(dx), Math.floor(dy), horizontal ? 3 : 1, horizontal ? 1 : 3);
       }
     }
     drawn++;
@@ -3309,18 +3340,33 @@ function render() {
   ctx.imageSmoothingEnabled = false;   // crisp pixel-art upscaling
   drawParallax(cx, cy);
 
-  // tiles — pixel-art texture per legend type, flat-color fallback
+  // static tilemap offscreen buffer blit
+  if (bgBufferCanvas) {
+    const sx = Math.max(0, cx), sy = Math.max(0, cy);
+    const sxEnd = Math.min(bgBufferCanvas.width, cx + CANVAS_W);
+    const syEnd = Math.min(bgBufferCanvas.height, cy + CANVAS_H);
+    const sw = Math.max(0, sxEnd - sx), sh = Math.max(0, syEnd - sy);
+    if (sw > 0 && sh > 0) {
+      const dx = sx - cx, dy = sy - cy;
+      ctx.drawImage(bgBufferCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
+    }
+  }
+
+  // tiles — animated tiles, portal pads ('P') and boss markers ('B')
   const col0 = Math.floor(cx / TS), row0 = Math.floor(cy / TS);
   for (let row = row0; row <= row0 + CANVAS_H / TS + 1; row++) {
     for (let col = col0; col <= col0 + CANVAS_W / TS + 1; col++) {
       if (row < 0 || col < 0 || row >= G.map.height || col >= G.map.width) continue;
       const ch = tileChar(col, row), info = G.legend[ch];
       if (!info) continue;
-      const x = col * TS - cx, y = row * TS - cy;
-      if (!drawTile(info.type, x, y)) { ctx.fillStyle = info.color; ctx.fillRect(x, y, TS, TS); }
-      drawTileEdges(info.type, col, row, x, y);
-      if (ch === 'P') { ctx.fillStyle = 'rgba(224,182,76,.30)'; ctx.fillRect(x, y, TS, TS); }
-      else if (ch === 'B') { ctx.fillStyle = 'rgba(180,40,40,.30)'; ctx.fillRect(x, y, TS, TS); }
+      const isAnim = (TILE_PHASES[info.type] || 1) > 1;
+      if (isAnim || ch === 'P' || ch === 'B') {
+        const x = col * TS - cx, y = row * TS - cy;
+        if (!drawTile(info.type, x, y)) { ctx.fillStyle = info.color; ctx.fillRect(x, y, TS, TS); }
+        drawTileEdges(info.type, col, row, x, y);
+        if (ch === 'P') { ctx.fillStyle = 'rgba(224,182,76,.30)'; ctx.fillRect(x, y, TS, TS); }
+        else if (ch === 'B') { ctx.fillStyle = 'rgba(180,40,40,.30)'; ctx.fillRect(x, y, TS, TS); }
+      }
     }
   }
 
@@ -3683,6 +3729,13 @@ function step(dt) {
   if (G.autoFarm && !G.manualIntent && !dlg && (!G.target || !G.target.alive)) acquireAutoTarget(p);
 
   // movement — WASD/arrows take priority and cancel any click-to-move
+  if (touchJoystickState.active) {
+    const dz = 0.25;
+    G.keys['a'] = touchJoystickState.normX < -dz;
+    G.keys['d'] = touchJoystickState.normX > dz;
+    G.keys['w'] = touchJoystickState.normY < -dz;
+    G.keys['s'] = touchJoystickState.normY > dz;
+  }
   const k = G.keys;
   let dx = 0, dy = 0;
   if (k['a'] || k['arrowleft']) dx -= 1;
@@ -3804,6 +3857,135 @@ function showZoneBanner(map, firstVisit) {
   setTimeout(() => el.classList.add('leaving'), 2100);
   setTimeout(() => el.remove(), 2700);
 }
+let touchJoystickState = { active: false, touchId: null, startX: 0, startY: 0, normX: 0, normY: 0 };
+
+function isTouchDevice() {
+  return typeof window !== 'undefined' && (
+    'ontouchstart' in window ||
+    (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
+  );
+}
+
+function updateJoystickVector(cx, cy, knobEl) {
+  const dx = cx - touchJoystickState.startX;
+  const dy = cy - touchJoystickState.startY;
+  const distVal = Math.hypot(dx, dy);
+  const maxRadius = 45;
+  const clamped = Math.min(distVal, maxRadius);
+  const angle = Math.atan2(dy, dx);
+  const knobX = Math.cos(angle) * clamped;
+  const knobY = Math.sin(angle) * clamped;
+  if (knobEl) knobEl.style.transform = `translate(${knobX}px, ${knobY}px)`;
+  touchJoystickState.normX = distVal > 5 ? Math.cos(angle) : 0;
+  touchJoystickState.normY = distVal > 5 ? Math.sin(angle) : 0;
+}
+
+function initTouchControls() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  let container = document.getElementById('touch-controls');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'touch-controls';
+    container.className = 'touch-controls';
+    container.style.display = 'none';
+    container.innerHTML = `
+      <div class="touch-joystick">
+        <div class="touch-joystick-base">
+          <div class="touch-joystick-knob"></div>
+        </div>
+      </div>
+      <div class="touch-action-buttons">
+        <button class="touch-action-btn touch-btn-s1" data-action="s1">S1</button>
+        <button class="touch-action-btn touch-btn-s2" data-action="s2">S2</button>
+        <button class="touch-action-btn touch-btn-s3" data-action="s3">S3</button>
+        <button class="touch-action-btn touch-btn-s4" data-action="s4">S4</button>
+        <button class="touch-action-btn touch-btn-dodge" data-action="dodge">Dodge</button>
+        <button class="touch-action-btn touch-btn-atk" data-action="attack">ATK</button>
+      </div>
+    `;
+    const target = document.getElementById('overlays') || document.body;
+    target.appendChild(container);
+  }
+
+  if (!isTouchDevice()) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+
+  const joystickEl = container.querySelector('.touch-joystick');
+  const knobEl = container.querySelector('.touch-joystick-knob');
+
+  if (joystickEl && knobEl) {
+    const handleStart = e => {
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      const rect = joystickEl.getBoundingClientRect();
+      touchJoystickState.active = true;
+      touchJoystickState.touchId = touch.identifier;
+      touchJoystickState.startX = rect.left + rect.width / 2;
+      touchJoystickState.startY = rect.top + rect.height / 2;
+      updateJoystickVector(touch.clientX, touch.clientY, knobEl);
+    };
+    const handleMove = e => {
+      if (!touchJoystickState.active) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === touchJoystickState.touchId) {
+          e.preventDefault();
+          updateJoystickVector(touch.clientX, touch.clientY, knobEl);
+          break;
+        }
+      }
+    };
+    const handleEnd = e => {
+      if (!touchJoystickState.active) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === touchJoystickState.touchId) {
+          touchJoystickState.active = false;
+          touchJoystickState.touchId = null;
+          touchJoystickState.normX = 0;
+          touchJoystickState.normY = 0;
+          knobEl.style.transform = 'translate(0px, 0px)';
+          G.keys['a'] = false;
+          G.keys['d'] = false;
+          G.keys['w'] = false;
+          G.keys['s'] = false;
+          break;
+        }
+      }
+    };
+
+    joystickEl.addEventListener('touchstart', handleStart, { passive: false });
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('touchcancel', handleEnd);
+  }
+
+  container.querySelectorAll('.touch-action-btn').forEach(btn => {
+    const act = btn.dataset.action;
+    const trigger = e => {
+      e.preventDefault();
+      AUDIO.playSfx('menu');
+      if (act === 'attack') playerBasicAttack();
+      else if (act === 's1') useHotbarSlot(0);
+      else if (act === 's2') useHotbarSlot(1);
+      else if (act === 's3') useHotbarSlot(2);
+      else if (act === 's4') useHotbarSlot(3);
+      else if (act === 'dodge') {
+        if (!castSkillById('dodge') && !castSkillById('dash')) {
+          const p = G.player;
+          if (p) {
+            const dirX = p.facingLeft ? -1 : 1;
+            moveEntity(p, dirX * TS * 1.5, 0, 12);
+          }
+        }
+      }
+    };
+    btn.addEventListener('touchstart', trigger, { passive: false });
+    btn.addEventListener('click', trigger);
+  });
+}
 
 // =====================================================================
 // HUD
@@ -3841,12 +4023,14 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
         ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
         <button class="btn btn--ghost" id="mute-btn">🔊</button>
       </div>
     </div>`;
   renderHotbar();
+  initTouchControls();
   $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => togglePanel(b.dataset.panel));
   $('#mute-btn').onclick = e => { G.muted = !G.muted; AUDIO.setMuted(G.muted); e.target.textContent = G.muted ? '🔇' : '🔊'; };
   $('#farm-btn').onclick = () => toggleFarm();
@@ -4194,10 +4378,33 @@ function togglePanel(id) {
   el.innerHTML = `<div class="panel__head">${panelTitle(id)}<button class="panel__close">✕</button></div><div class="panel__body">${panelBody(id)}</div>`;
   $('#overlays').appendChild(el);
   el.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); el.remove(); };
+
+  // Task 1.4: Focus trap cycling inside .panel elements
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      const focusables = Array.from(el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(item => !item.disabled && item.offsetWidth > 0);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+
+  const closeBtn = el.querySelector('.panel__close');
+  if (closeBtn && typeof closeBtn.focus === 'function') {
+    closeBtn.focus();
+  }
+
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools' }[id], 'ui'); }
+function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio' }[id], 'ui'); }
 
 const ADMIN_GROUPS = [
   ['🧍 Character', [
@@ -4751,6 +4958,24 @@ function automationPanelHtml(p = G.player) {
 
 function panelBody(id) {
   const p = G.player;
+  if (id === 'settings') {
+    const v = G.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
+    return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
+      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d)">🔊 Volume Controls</div>
+      <div class="setting-row">
+        <span>Master Volume (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
+        <input type="range" id="vol-master" min="0" max="1" step="0.05" value="${v.master}" style="width:140px">
+      </div>
+      <div class="setting-row">
+        <span>Music Volume (<b id="vol-music-val">${Math.round(v.music * 100)}%</b>)</span>
+        <input type="range" id="vol-music" min="0" max="1" step="0.05" value="${v.music}" style="width:140px">
+      </div>
+      <div class="setting-row">
+        <span>SFX Volume (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
+        <input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${v.sfx}" style="width:140px">
+      </div>
+    </div>`;
+  }
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
   if (id === 'world') return worldChronicleHtml();
   if (id === 'automation') return automationPanelHtml(p);
@@ -5082,6 +5307,29 @@ function panelBody(id) {
 }
 
 function wirePanel(id, el) {
+  if (id === 'settings') {
+    const masterEl = el.querySelector('#vol-master');
+    const musicEl = el.querySelector('#vol-music');
+    const sfxEl = el.querySelector('#vol-sfx');
+    const update = () => {
+      G.audioVolumes = {
+        master: masterEl ? parseFloat(masterEl.value) : 1.0,
+        music: musicEl ? parseFloat(musicEl.value) : 0.8,
+        sfx: sfxEl ? parseFloat(sfxEl.value) : 1.0,
+      };
+      const mVal = el.querySelector('#vol-master-val');
+      const muVal = el.querySelector('#vol-music-val');
+      const sfVal = el.querySelector('#vol-sfx-val');
+      if (mVal) mVal.textContent = `${Math.round(G.audioVolumes.master * 100)}%`;
+      if (muVal) muVal.textContent = `${Math.round(G.audioVolumes.music * 100)}%`;
+      if (sfVal) sfVal.textContent = `${Math.round(G.audioVolumes.sfx * 100)}%`;
+      AUDIO.setVolumes(G.audioVolumes);
+      saveGame();
+    };
+    if (masterEl) masterEl.oninput = update;
+    if (musicEl) musicEl.oninput = update;
+    if (sfxEl) sfxEl.oninput = update;
+  }
   el.querySelectorAll('[data-auto-toggle]').forEach(b => b.onclick = () => {
     const key = b.dataset.autoToggle;
     if (!['skills', 'heal', 'potions'].includes(key)) return;
@@ -6010,7 +6258,7 @@ function saveGame() {
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
       quest: G.quest, pendingQuest: G.pendingQuest, killCounts: G.killCounts, won: G.won, autoFarm: G.autoFarm,
-      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig,
+      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig, audioVolumes: G.audioVolumes,
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
@@ -6065,6 +6313,8 @@ function resumeGame() {
   p.hp = clamp(sp.hp ?? p.maxHp, 1, p.maxHp); p.mp = clamp(sp.mp ?? p.maxMp, 0, p.maxMp);
   G.admin = p.name.trim().toLowerCase() === 'admin';
   const w = d.world;
+  G.audioVolumes = w.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
+  AUDIO.setVolumes(G.audioVolumes);
   G.quest = w.quest || null; G.pendingQuest = w.pendingQuest || null; G.killCounts = w.killCounts || {}; G.won = !!w.won; G.autoFarm = !!w.autoFarm;
   G.huntTargetId = null; G.taskGuide = null; G.autoConfig = normaliseAutoConfig(w.autoConfig);
   // legacy saves flagged `won` at the Flame Dragon (old finale); if the story is still
@@ -6187,7 +6437,20 @@ window.addEventListener('keydown', e => {
   else if (key === 'k') togglePanel('skills');
   else if (key === 'm') togglePanel('world');
   else if (key === 'q') togglePanel('quest');
-  else if (key === 'escape') { hideSkillTip(); cancelHotkeyRebind(false); const p = $('#panel'); if (p) p.remove(); if (dlg) { dlg.remove(); dlg = null; } }
+  else if (key === 'escape') {
+    hideSkillTip();
+    cancelHotkeyRebind(false);
+    const openModals = Array.from(document.querySelectorAll('.panel, .dialogue, .slot-picker'));
+    if (openModals.length > 0) {
+      const topmost = openModals[openModals.length - 1];
+      if (topmost.classList.contains('dialogue')) {
+        topmost.remove();
+        dlg = null;
+      } else {
+        topmost.remove();
+      }
+    }
+  }
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
@@ -6208,6 +6471,6 @@ if (typeof window !== 'undefined')
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
-    canUseItem, itemClassRequirementText };
+    canUseItem, itemClassRequirementText, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice };
 
 boot();

@@ -18,6 +18,21 @@
   <div id="root"></div>
   <canvas id="game-canvas" width="832" height="576" style="display:none"></canvas>
   <div id="hud"></div>
+  <div id="touch-controls" class="touch-controls" style="display:none">
+    <div class="touch-joystick">
+      <div class="touch-joystick-base">
+        <div class="touch-joystick-knob"></div>
+      </div>
+    </div>
+    <div class="touch-action-buttons">
+      <button class="touch-action-btn touch-btn-s1" data-action="s1">S1</button>
+      <button class="touch-action-btn touch-btn-s2" data-action="s2">S2</button>
+      <button class="touch-action-btn touch-btn-s3" data-action="s3">S3</button>
+      <button class="touch-action-btn touch-btn-s4" data-action="s4">S4</button>
+      <button class="touch-action-btn touch-btn-dodge" data-action="dodge">Dodge</button>
+      <button class="touch-action-btn touch-btn-atk" data-action="attack">ATK</button>
+    </div>
+  </div>
   <div id="overlays"></div>
   <div id="fx-layer"></div>
   <script type="module" src="./js/game.js?v=1.0.5"></script>

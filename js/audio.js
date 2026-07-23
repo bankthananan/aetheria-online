@@ -59,20 +59,28 @@ const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battl
 const AC = window.AudioContext || window.webkitAudioContext;
 
 let ctx = null;
-let master = null;      // master gain (mute lives here)
-let musicGain = null;   // music bus, used for crossfade
+let masterGain = null;   // master gain (mute lives here)
+let musicGain = null;    // music gain bus
+let sfxGain = null;      // sfx gain bus
 let muted = false;
+let volumes = { master: 1.0, music: 0.8, sfx: 1.0 };
 let loop = null;        // { theme, step, timer, gain, stop() }
 
 function init() {
   if (ctx || !AC) return ctx;
   ctx = new AC();
-  master = ctx.createGain();
-  master.gain.value = muted ? 0 : 0.9;
-  master.connect(ctx.destination);
+  masterGain = ctx.createGain();
+  masterGain.gain.value = muted ? 0 : volumes.master;
+  masterGain.connect(ctx.destination);
+
   musicGain = ctx.createGain();
-  musicGain.gain.value = 0.5;
-  musicGain.connect(master);
+  musicGain.gain.value = volumes.music;
+  musicGain.connect(masterGain);
+
+  sfxGain = ctx.createGain();
+  sfxGain.gain.value = volumes.sfx;
+  sfxGain.connect(masterGain);
+
   return ctx;
 }
 
@@ -128,7 +136,7 @@ function playMusic(themeId) {
   const bus = ctx.createGain();
   bus.gain.value = old ? 0 : 1;
   if (old) bus.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.4);
-  bus.connect(musicGain);
+  bus.connect(musicGain || masterGain);
 
   const spb = 60 / theme.bpm;      // seconds per beat (8th note)
   const cur = { theme: resolvedId, gain: bus, step: 0, retired: false };
@@ -175,7 +183,7 @@ function noise(t, dur, peak, hz) {
   bp.frequency.value = hz || 1200;
   g.gain.setValueAtTime(peak, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(bp).connect(g).connect(master);
+  src.connect(bp).connect(g).connect(sfxGain || masterGain);
   src.start(t);
   src.stop(t + dur);
 }
@@ -189,7 +197,7 @@ function beep(t, f0, f1, dur, wave, peak) {
   o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
   g.gain.setValueAtTime(peak, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g).connect(master);
+  o.connect(g).connect(sfxGain || masterGain);
   o.start(t);
   o.stop(t + dur + 0.02);
 }
@@ -215,7 +223,34 @@ function playSfx(sfxId) {
 
 function setMuted(bool) {
   muted = !!bool;
-  if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, ctx.currentTime, 0.02);
+  if (masterGain && ctx) {
+    const t = ctx.currentTime || 0;
+    const val = muted ? 0 : volumes.master;
+    if (masterGain.gain.setTargetAtTime) masterGain.gain.setTargetAtTime(val, t, 0.02);
+    else masterGain.gain.value = val;
+  }
 }
 
-export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, currentMusicTheme: () => loop?.theme || null };
+function setVolumes(v = {}) {
+  if (v.master !== undefined) volumes.master = v.master;
+  if (v.music !== undefined) volumes.music = v.music;
+  if (v.sfx !== undefined) volumes.sfx = v.sfx;
+
+  if (!ctx) return;
+  const t = ctx.currentTime || 0;
+  if (v.master !== undefined && masterGain?.gain) {
+    const val = muted ? 0 : volumes.master;
+    if (masterGain.gain.setTargetAtTime) masterGain.gain.setTargetAtTime(val, t, 0.02);
+    else masterGain.gain.value = val;
+  }
+  if (v.music !== undefined && musicGain?.gain) {
+    if (musicGain.gain.setTargetAtTime) musicGain.gain.setTargetAtTime(volumes.music, t, 0.02);
+    else musicGain.gain.value = volumes.music;
+  }
+  if (v.sfx !== undefined && sfxGain?.gain) {
+    if (sfxGain.gain.setTargetAtTime) sfxGain.gain.setTargetAtTime(volumes.sfx, t, 0.02);
+    else sfxGain.gain.value = volumes.sfx;
+  }
+}
+
+export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, setVolumes, currentMusicTheme: () => loop?.theme || null };

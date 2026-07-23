@@ -411,5 +411,21 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
   .bar > .fill,.skill-btn,.btn{transition:none}
   .msg-log .line,.toast,.dmg-float{animation-duration:.01ms}
 }
+
+/* Touch Controls & Virtual Joystick */
+.touch-controls{position:fixed;inset:0;pointer-events:none;z-index:25;display:flex;justify-content:space-between;align-items:flex-end;padding:20px}
+.touch-controls > *{pointer-events:auto}
+.touch-joystick{position:absolute;bottom:24px;left:20px;width:110px;height:110px;border-radius:50%;background:rgba(23,17,12,.65);border:2px solid var(--gold);box-shadow:inset 0 0 10px rgba(0,0,0,.8),0 4px 8px rgba(0,0,0,.6);touch-action:none;display:flex;align-items:center;justify-content:center}
+.touch-joystick-base{position:relative;width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.touch-joystick-knob{position:absolute;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,var(--gold-bright) 0%,var(--gold-deep) 100%);border:2px solid var(--gold);box-shadow:0 2px 6px rgba(0,0,0,.7);transform:translate(0px,0px);will-change:transform}
+.touch-action-buttons{position:absolute;bottom:24px;right:20px;display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,48px);gap:8px;touch-action:none}
+.touch-action-btn{width:48px;height:48px;border-radius:50%;background:var(--wood-grain),linear-gradient(135deg,#5d3d21,#241308);border:2px solid var(--gold);color:var(--gold-bright);font-family:var(--font-ui);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:2px 3px 6px rgba(0,0,0,.6);user-select:none;-webkit-user-select:none;cursor:pointer}
+.touch-action-btn:active{transform:scale(.92);background:var(--gold-deep);color:#fff}
+.touch-action-btn.touch-btn-atk{grid-column:3;grid-row:2;background:linear-gradient(135deg,#963741,#5d1f27);border-color:#f2a0a5;width:56px;height:56px;font-size:12px;margin-top:-4px;margin-left:-4px}
+.touch-action-btn.touch-btn-dodge{grid-column:2;grid-row:2;background:linear-gradient(135deg,#3f6048,#19291c);border-color:#a9c278}
+
+/* Settings Sliders */
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(120,90,50,.3)}
+.setting-row input[type="range"]{accent-color:var(--gold-bright);cursor:pointer}
 `,
 };

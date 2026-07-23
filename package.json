@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/automation.test.js && node js/equipment.test.js && node js/rebirth.test.js && node js/monster-system.test.js && node js/skill-system.test.js && node js/job-branch.test.js",
+    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/automation.test.js && node js/equipment.test.js && node js/rebirth.test.js && node js/monster-system.test.js && node js/skill-system.test.js && node js/job-branch.test.js && node js/phase1.test.js",
     "test:balance": "node js/balance.test.js",
     "test:art": "node js/art.test.js",
     "test:audio": "node js/audio.test.js",
@@ -18,7 +18,8 @@
     "test:rebirth": "node js/rebirth.test.js",
     "test:monsters": "node js/monster-system.test.js",
     "test:skills": "node js/skill-system.test.js",
-    "test:branches": "node js/job-branch.test.js"
+    "test:branches": "node js/job-branch.test.js",
+    "test:phase1": "node js/phase1.test.js"
   },
   "devDependencies": {
     "vite": "^4.4.5"
