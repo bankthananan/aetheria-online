@@ -194,6 +194,27 @@ function noise(t, dur, peak, hz) {
   src.stop(t + dur);
 }
 
+// dual-operator FM voice: modulator osc → modGain → carrier.frequency,
+// carrier → amp gain (exponential decay like beep()) → sfxGain.
+function fmTone(carrierFreq, modRatio, modIndex, t, dur, peak) {
+  if (!ctx) return;
+  const carrier = ctx.createOscillator();
+  const mod = ctx.createOscillator();
+  const modGain = ctx.createGain();
+  const amp = ctx.createGain();
+  carrier.type = 'sine';
+  carrier.frequency.value = carrierFreq;
+  mod.type = 'sine';
+  mod.frequency.value = carrierFreq * modRatio;
+  modGain.gain.value = carrierFreq * modIndex;
+  mod.connect(modGain).connect(carrier.frequency);
+  amp.gain.setValueAtTime(peak, t);
+  amp.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  carrier.connect(amp).connect(sfxGain || masterGain);
+  mod.start(t); carrier.start(t);
+  mod.stop(t + dur + 0.02); carrier.stop(t + dur + 0.02);
+}
+
 // pitch sweep beep
 function beep(t, f0, f1, dur, wave, peak) {
   const o = ctx.createOscillator();
@@ -208,11 +229,12 @@ function beep(t, f0, f1, dur, wave, peak) {
   o.stop(t + dur + 0.02);
 }
 
-const SFX = {
+export const SFX = {
   attack:     (t) => beep(t, 320, 120, 0.12, 'square', 0.3),
-  hit:        (t) => { beep(t, 180, 60, 0.1, 'sawtooth', 0.3); noise(t, 0.08, 0.25, 900); },
+  hit:        (t) => { fmTone(180, 3.5, 6, t, 0.09, 0.32); noise(t, 0.08, 0.25, 900); },
   skill:      (t) => { beep(t, 400, 1100, 0.22, 'triangle', 0.25); beep(t + 0.05, 600, 1400, 0.2, 'square', 0.15); },
-  levelup:    (t) => [523, 659, 784, 1047].forEach((f, i) => beep(t + i * 0.11, f, f, 0.16, 'square', 0.25)),
+  levelup:    (t) => [523, 659, 784, 1047].forEach((f, i) => fmTone(f, 1, 3, t + i * 0.11, 0.18, 0.28)),
+  parry:      (t) => fmTone(880, 2, 8, t, 0.4, 0.3),
   pickup:     (t) => { beep(t, 784, 784, 0.07, 'square', 0.22); beep(t + 0.07, 1175, 1175, 0.1, 'square', 0.22); },
   menu:       (t) => beep(t, 660, 660, 0.05, 'square', 0.18),
   playerHurt: (t) => { beep(t, 300, 90, 0.28, 'sawtooth', 0.3); noise(t, 0.18, 0.2, 500); },

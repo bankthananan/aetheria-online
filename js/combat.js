@@ -187,4 +187,12 @@ export const COMBAT = {
     enemyColor:  "#ffffff", // white — damage to player
     healColor:   "#5bff7a", // green — heals
   },
+  // Settings > Accessibility > High Contrast: swaps the crit/heal hues so red-green
+  // colorblind conditions don't read a crit and a heal as the same color.
+  damageTextHC: {
+    playerColor: "#ffe14d",
+    critColor:   "#ff9d3c", // orange
+    enemyColor:  "#ffffff",
+    healColor:   "#6ec6ff", // sky blue, distinct from the orange crit
+  },
 };

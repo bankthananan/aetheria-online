@@ -441,5 +441,14 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
 .macro-builder input{width:52px}
 .macro-json{margin-top:8px;font-size:11px}
 .macro-json textarea{width:100%;background:#12120d;color:#cfe3a8;border:1px solid rgba(120,90,50,.5);font-family:monospace;font-size:10px;margin:6px 0}
+
+/* High-contrast / colorblind mode (Settings > Accessibility) */
+body.hc-mode .hp-bar .fill,body.hc-mode #hud .hp-bar .fill{background:#ff9d3c}
+body.hc-mode .mp-bar .fill,body.hc-mode #hud .mp-bar .fill{background:#6ec6ff}
+body.hc-mode .stamina-bar > .fill,body.hc-mode #hud .stamina-bar > .fill{background:#e8ffd8}
+body.hc-mode .bar{border-width:2px;border-color:#fff}
+body.hc-mode #hud .bar{border-width:3px}
+body.hc-mode .msg-log .line{color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
+body.hc-mode .toast{color:#fff;border-color:#fff}
 `,
 };

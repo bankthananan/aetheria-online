@@ -196,6 +196,10 @@
             }
             if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
             if (!document.getElementById('panel')) A.togglePanel(wantPanel);
+            if (params.get('hc')) {           // panel=settings&hc=1 — drive the real checkbox + change event, not just the flag
+              const cb = document.querySelector('#panel #hc-toggle');
+              if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+            }
             if (params.get('scrollpanel')) {         // e.g. panel=automation&scrollpanel=9999 → bottom of panel
               const pane = document.getElementById('panel');   // .panel is the overflow:auto scroller
               if (pane) pane.scrollTop = +params.get('scrollpanel');

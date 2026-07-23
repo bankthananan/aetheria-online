@@ -570,9 +570,11 @@ const G = {
   cam: { x: 0, y: 0 },
   keys: {},
   audioVolumes: { master: 1.0, music: 0.8, sfx: 1.0 },
+  highContrast: false,  // Settings > Accessibility: hc-mode body class + high-contrast damage palette
   target: null,
   targetSource: null,   // hunt | retaliate | manual; preserves deliberate high-level challenges
   effects: [],          // transient attack/spell visuals
+  floaties: [],         // canvas damage-number entries {x,y,text,kind,born}
   path: null,           // [{x,y}] pixel waypoints for click-to-move (A* routed)
   manualIntent: null,   // explicit click action: finish moving/talking before Hunt reacquires
   quest: null,          // active quest id
@@ -1517,7 +1519,7 @@ function loadMap(mapId, spawnX, spawnY) {
   const wasRift = G.mapId === 'celestial_rift' && mapId !== 'celestial_rift';
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
   G.heatField = buildHeatField(map);
-  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = [];   // don't carry paths/spell zones across maps
+  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = [];   // don't carry paths/spell zones across maps
   if (G.player) G.player.sanctuary = null;
 
   // NPCs: map gives position/identity, content gives behavior
@@ -2175,7 +2177,7 @@ function playerAvoidsHit(m) {
     p.buffs.push({ stat: 'atk', mult: S.counterMult, until: now() + S.counterMs, sourceSkillId: 'parry' });
     floatText(p.x, p.y, 'PARRY!', 'crit');
     spawnRing(p.x, p.y, TS, '#ffd24d');
-    AUDIO.playSfx('hit');
+    AUDIO.playSfx('parry');
     return true;
   }
   return false;
@@ -3666,6 +3668,7 @@ function render() {
   drawEffects();   // attack/spell visual effects on top
   drawAtmosphere();
   drawDayNight();
+  drawFloaties();  // damage numbers on top of everything
 }
 
 // day/night tint riding the world clock: day → amber dusk → blue night → dawn
@@ -4108,20 +4111,44 @@ function handlePortals() {
 // =====================================================================
 // FLOATING TEXT / MESSAGES
 // =====================================================================
-const fxLayer = () => $('#fx-layer');
+// canvas-drawn damage numbers — a DOM div per hit thrashed layout under cleave/AOE/burn ticks.
+const FLOAT_CAP = 80, FLOAT_LIFE_MS = 850, FLOAT_RISE_PX = 24;
+// ponytail: fixed cap + drop-oldest, no pooling — 80 concurrent floaties never happens outside a screenshot stress test
+const FLOAT_FONT_STACK = 'ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace';
 function floatText(worldX, worldY, text, kind) {
-  const layer = fxLayer(); if (!layer) return;
-  const el = document.createElement('div');
-  el.className = 'dmg-float' + (kind === 'crit' ? ' dmg-float--crit' : kind === 'heal' ? ' dmg-float--heal' : '');
-  if (kind === 'enemy') el.style.color = COMBAT.damageText.enemyColor;
-  else if (kind === 'crit') el.style.color = COMBAT.damageText.critColor;
-  else if (kind === 'dmg') el.style.color = COMBAT.damageText.playerColor;
-  else if (kind === 'miss') el.style.color = '#bbb';
-  el.textContent = kind === 'crit' ? text + '!' : text;
-  el.style.left = (worldX - G.cam.x) + 'px';
-  el.style.top = (worldY - G.cam.y - 20) + 'px';
-  layer.appendChild(el);
-  setTimeout(() => el.remove(), 850);
+  G.floaties.push({ x: worldX, y: worldY, text, kind, born: now() });
+  if (G.floaties.length > FLOAT_CAP) G.floaties.shift();
+}
+function floatColor(kind) {
+  const dt = G.highContrast ? COMBAT.damageTextHC : COMBAT.damageText;
+  if (kind === 'enemy') return dt.enemyColor;
+  if (kind === 'crit') return dt.critColor;
+  if (kind === 'dmg') return dt.playerColor;
+  if (kind === 'heal') return dt.healColor;
+  if (kind === 'miss') return '#bbb';
+  return '#fff';
+}
+function drawFloaties() {
+  if (!G.floaties.length) return;
+  const cx = G.cam.x, cy = G.cam.y, keep = [], reduced = prefersReducedMotion();
+  for (const f of G.floaties) {
+    const t = (now() - f.born) / FLOAT_LIFE_MS;
+    if (t >= 1) continue;
+    keep.push(f);
+    const rise = reduced ? 0 : t * FLOAT_RISE_PX;
+    const x = f.x - cx, y = f.y - cy - 20 - rise;
+    const alpha = t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4);
+    const crit = f.kind === 'crit';
+    const txt = String(crit ? f.text + '!' : f.text);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = `800 ${crit ? 22 : 17}px ${FLOAT_FONT_STACK}`;
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, x, y);
+    ctx.fillStyle = floatColor(f.kind); ctx.fillText(txt, x, y);
+    ctx.restore();
+  }
+  G.floaties = keep;
 }
 
 function logMsg(text, kind = '') {
@@ -5272,6 +5299,14 @@ function automationPanelHtml(p = G.player) {
   </section>`;
 }
 
+function applyHighContrast(on) {
+  G.highContrast = !!on;
+  if (typeof document !== 'undefined' && document.body) {
+    if (G.highContrast) document.body.classList.add('hc-mode');
+    else document.body.classList.remove('hc-mode');
+  }
+}
+
 function panelBody(id) {
   const p = G.player;
   if (id === 'settings') {
@@ -5289,6 +5324,11 @@ function panelBody(id) {
       <div class="setting-row">
         <span>SFX Volume (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
         <input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${v.sfx}" style="width:140px">
+      </div>
+      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">♿ Accessibility</div>
+      <div class="setting-row">
+        <span>High Contrast Mode</span>
+        <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
     </div>`;
   }
@@ -5646,6 +5686,8 @@ function wirePanel(id, el) {
     if (masterEl) masterEl.oninput = update;
     if (musicEl) musicEl.oninput = update;
     if (sfxEl) sfxEl.oninput = update;
+    const hcEl = el.querySelector('#hc-toggle');
+    if (hcEl) hcEl.onchange = () => { applyHighContrast(hcEl.checked); saveGame(); };
   }
   el.querySelectorAll('[data-macro-del]').forEach(b => b.onclick = () => {
     const rules = (G.autoConfig.rules || []).slice();
@@ -6616,7 +6658,7 @@ function saveGame() {
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
       quest: G.quest, pendingQuest: G.pendingQuest, killCounts: G.killCounts, won: G.won, autoFarm: G.autoFarm,
-      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig, audioVolumes: G.audioVolumes,
+      huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig, audioVolumes: G.audioVolumes, highContrast: G.highContrast,
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
@@ -6673,6 +6715,7 @@ function resumeGame() {
   const w = d.world;
   G.audioVolumes = w.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
   AUDIO.setVolumes(G.audioVolumes);
+  applyHighContrast(!!w.highContrast);
   G.quest = w.quest || null; G.pendingQuest = w.pendingQuest || null; G.killCounts = w.killCounts || {}; G.won = !!w.won; G.autoFarm = !!w.autoFarm;
   G.huntTargetId = null; G.taskGuide = null; G.autoConfig = normaliseAutoConfig(w.autoConfig);
   // legacy saves flagged `won` at the Flame Dragon (old finale); if the story is still
@@ -6836,6 +6879,7 @@ if (typeof window !== 'undefined')
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
     monsterElement, skillElement, elementMult, applyCrossCombo, applyStatus,
-    performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig };
+    performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
+    floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
 
 boot();
