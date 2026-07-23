@@ -9,7 +9,7 @@ import { AUDIO }   from './audio.js';
 import { PROGRESSION } from './progression.js';
 import { SPRITES } from './sprites.js';
 import { PAL, PX } from './pixelart.js';
-import { RARITY, RARITY_ORDER, AFFIXES } from './loot.js';
+import { RARITY, RARITY_ORDER, AFFIXES, SOCKET_BOUNDS } from './loot.js';
 import { LPC } from './lpc.js';
 import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
 import { T, currentLang, setLanguage } from './locale.js';
@@ -26,7 +26,16 @@ const MAP_MUSIC = {
   town_awakening: 'town_awakening', whispering_woods: 'whispering_woods',
   sunken_ruins: 'sunken_ruins', frostpeak_tundra: 'frostpeak_tundra',
   dragon_caldera: 'dragon_caldera', astral_rift: 'astral_rift',
+  celestial_rift: 'celestial_rift',
 };
+// Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
+// given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.
+const RIFT_MUTATORS = [
+  { id: 'volcanic_ticks',  name: 'Volcanic Ticks' },
+  { id: 'reflective_void', name: 'Reflective Void' },
+  { id: 'mana_surge',      name: 'Mana Surge' },
+];
+const dayOfYear = (d = new Date()) => Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
 const TUNING = DESIGN.tuning;
 // quest / bounty difficulty tiers: colour + reward multiplier + monster-level band for guild rolls
 const DIFFICULTY = {
@@ -106,9 +115,10 @@ const ITEM_ICON = {
   iron_helm: 'helm', dragon_helm: 'helm', iron_gauntlets: 'gloves', iron_boots: 'boots',
   warding_cloak: 'cloak', power_ring: 'ring', vitality_amulet: 'ring',
   void_edge: 'sword', astral_glaive: 'greatsword', astral_plate: 'plate', void_helm: 'helm',
-  astral_signet: 'ring', celestial_draught: 'potblue', void_shard: 'gem', star_iron: 'gem', null_core: 'core',
+  astral_signet: 'ring', celestial_draught: 'potblue', void_shard: 'gem', star_iron: 'gem', null_core: 'core', sovereign_core: 'ring',
   sharpening_stone: 'gem', iron_tonic: 'potblue', teleport_scroll: 'scroll', blessed_ore: 'core',
   soul_ledger: 'scroll', memory_prism: 'gem',
+  ruby_shard: 'gem_red', sapphire_shard: 'gem_blue', emerald_shard: 'gem_green',
   bronze_ring: 'ring', silver_amulet: 'ring', gold_ring: 'ring', star_pendant: 'ring', comet_ring: 'ring', transcendent_sigil: 'ring',
   steel_sword: 'sword', knight_plate: 'plate',
   mythril_gauntlets: 'gloves', drakescale_boots: 'boots', aurora_cloak: 'cloak',
@@ -177,7 +187,9 @@ function rollItem(itemId, bias = 0, forceRarity) {
     const value = rndInt(a.min, a.max);
     affixes.push({ stat: a.stat, value, label: a.label.replace('{v}', value) });
   }
-  return { itemId, uid: ++_uid, rarity, affixes, plus: 0 };
+  const [sMin, sMax] = SOCKET_BOUNDS[rarity] || [0, 0];
+  const sockets = Array(sMax > 0 ? rndInt(sMin, sMax) : 0).fill(null);
+  return { itemId, uid: ++_uid, rarity, affixes, plus: 0, sockets };
 }
 // loot bias grows with the monster's rolled level, the hero's LUK, and guild rank.
 const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15;
@@ -186,9 +198,70 @@ const itemAffixes = inst => Array.isArray(inst?.affixes) ? inst.affixes : [];
 const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
 const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
 const instName = inst => (inst.plus ? `+${inst.plus} ` : '') + T(itemById[inst.itemId].name, 'items');
+// display icon honors a cosmetic transmog override; base stats never look at it.
+const dispItemId = inst => inst?.transmogItemId || inst?.itemId;
+
+// ---- rune sockets (Phase 3.3): gem materials slotted into rare+ gear ----
+// ponytail: no affix extraction/rerolling — sockets are a separate, simpler
+// bonus channel that just joins the same equipment stacking layer as affixes.
+function socketStats(inst) {
+  const acc = {};
+  if (!inst || !Array.isArray(inst.sockets)) return acc;
+  for (const gid of inst.sockets) {
+    const g = gid && itemById[gid]?.gem; if (!g) continue;
+    acc[g.stat] = (acc[g.stat] || 0) + g.value;
+  }
+  // set bonus: all sockets on this item hold the same gem
+  if (inst.sockets.length >= 3 && inst.sockets.every(gid => gid && gid === inst.sockets[0])) {
+    const g = itemById[inst.sockets[0]].gem;
+    acc[g.stat] += Math.round(g.value * TUNING.gemSetBonusMult);
+  }
+  return acc;
+}
+function findGearInstance(uid) {
+  const p = G.player, u = +uid;
+  for (const slot of EQUIP_SLOTS) if (p.equip[slot]?.uid === u) return p.equip[slot];
+  return p.inventory.find(e => e.uid === u) || null;
+}
+function socketGem(uid, idx, gemItemId) {
+  const inst = findGearInstance(uid);
+  if (!inst || !Array.isArray(inst.sockets) || idx < 0 || idx >= inst.sockets.length) return false;
+  if (inst.sockets[idx]) return false;                    // already filled
+  if (!itemById[gemItemId]?.gem || itemQty(gemItemId) < 1) return false;
+  removeItem(gemItemId, 1);
+  inst.sockets[idx] = gemItemId;
+  recompute(G.player);
+  saveGame();
+  return true;
+}
+// cosmetic-only: swap the rendered icon/name to another owned same-slot item.
+function transmogItem(uid, newItemId) {
+  const inst = findGearInstance(uid); if (!inst) return false;
+  const slot = itemSlot(itemById[inst.itemId]);
+  if (newItemId && (!itemById[newItemId] || itemSlot(itemById[newItemId]) !== slot)) return false;
+  inst.transmogItemId = newItemId || null;
+  saveGame();
+  return true;
+}
+const GEM_DOT_COLOR = { atkPct: '#e2695f', hpFlat: '#4a90d9', defPct: '#5fbf7a' };
+function socketDotsHtml(inst) {
+  if (!inst?.sockets?.length) return '';
+  const dots = inst.sockets.map((gid, i) => {
+    const gem = gid && itemById[gid]?.gem;
+    const color = gem ? (GEM_DOT_COLOR[gem.stat] || '#888') : 'transparent';
+    const title = esc(gem ? T(itemById[gid].name, 'items') : T('Empty socket', 'ui'));
+    const pick = !gem ? ` data-socket-slot="${inst.uid}:${i}"` : '';
+    return `<i${pick} title="${title}" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;border:1px solid ${gem ? color : 'var(--text-muted)'};background:${color};${pick ? 'cursor:pointer' : ''}"></i>`;
+  }).join('');
+  return `<span class="gear-sockets" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">${dots}</span>`;
+}
 function equippedAffixes(p) {
   const acc = { atkPct: 0, critPct: 0, hpFlat: 0, mpFlat: 0, defPct: 0, lifesteal: 0, hitFlat: 0, fleeFlat: 0 };
-  for (const s of EQUIP_SLOTS) for (const a of itemAffixes(p.equip[s])) acc[a.stat] = (acc[a.stat] || 0) + a.value;
+  for (const s of EQUIP_SLOTS) {
+    for (const a of itemAffixes(p.equip[s])) acc[a.stat] = (acc[a.stat] || 0) + a.value;
+    const sb = socketStats(p.equip[s]);
+    for (const stat in sb) acc[stat] = (acc[stat] || 0) + sb[stat];
+  }
   return acc;
 }
 
@@ -530,6 +603,7 @@ const G = {
   guardiansSlain: new Set(),   // zone guardians defeated — gates guild bounty regions
   debugAnim: null,      // {state,frame,dir?} freeze override for LPC anim screenshots/tests
   debugTilePhase: null, // deterministic ambient-tile phase for screenshots/tests
+  rift: { floor: 0, active: false, best: 0, mutatorId: null, nextBurnAt: 0 }, // Celestial Rift run state
 };
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
@@ -1440,6 +1514,7 @@ function renderBgBuffer() {
 
 function loadMap(mapId, spawnX, spawnY) {
   const map = MAPS[mapId];
+  const wasRift = G.mapId === 'celestial_rift' && mapId !== 'celestial_rift';
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
   G.heatField = buildHeatField(map);
   G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = [];   // don't carry paths/spell zones across maps
@@ -1479,8 +1554,8 @@ function loadMap(mapId, spawnX, spawnY) {
     const nurseryCount = (map.band && sp.monsterId === weakestId) ? Math.ceil(sp.count * 0.4) : 0;
     for (let i = 0; i < sp.count; i++) {
       let col, row;
-      if (def.sizeTiles >= 2) {                 // boss → the 'B' marker tile
-        const b = findChar('B') || randomWalkableTile();
+      if (def.sizeTiles >= 2) {                 // boss → the 'B' marker tile (raid bosses use their own 'V' marker so they don't stack on the zone guardian)
+        const b = (def.raid && findChar('V')) || findChar('B') || randomWalkableTile();
         if (!b) continue;
         col = b.col; row = b.row;
       } else {
@@ -1507,7 +1582,34 @@ function loadMap(mapId, spawnX, spawnY) {
   if (firstVisit) logMsg(currentLang === 'th' ? `✦ อัปเดตพงศาวดารแล้ว — ${T(map.chronicle.epithet, 'maps')}` : `✦ Chronicle updated — ${map.chronicle.epithet}.`, 'good');
   refreshPanel('world');
   if (G.taskGuide) setTimeout(continueTaskGuide, 0);
+  if (mapId === 'celestial_rift') {
+    G.rift.floor = 1; G.rift.active = true;
+    G.rift.mutatorId = RIFT_MUTATORS[dayOfYear() % RIFT_MUTATORS.length].id;
+    G.rift.nextBurnAt = now() + TUNING.rift.burnEveryMs;
+    G.rift.best = Math.max(G.rift.best, G.rift.floor);
+    spawnRiftWave();
+    const mutName = RIFT_MUTATORS.find(x => x.id === G.rift.mutatorId).name;
+    toast(`✦ Celestial Rift — Floor 1 | Mutator: ${mutName} | Best: ${G.rift.best}`, 'good');
+  } else if (wasRift) {
+    G.rift.active = false;   // leaving the rift (portal exit or death) ends the run cleanly
+  }
   saveGame();   // persist on every zone change (no-op until the run is live)
+}
+// Celestial Rift wave spawn: fresh roster each floor, hp/atk scaled by
+// floorScale ** floor. Reuses 3 existing endgame monsters (riftPool) rather
+// than authoring rift-only content.
+function spawnRiftWave() {
+  const T_ = TUNING.rift, pool = G.map.riftPool;
+  const scale = Math.pow(T_.floorScale, G.rift.floor);
+  G.monsters = [];
+  for (let i = 0; i < T_.waveSize; i++) {
+    const def = monById[pool[i % pool.length]];
+    const t = G.spawnTiles.length ? G.spawnTiles[rndInt(0, G.spawnTiles.length - 1)] : { col: 2, row: 2 };
+    const m = makeMonster(def, t.col * TS + TS / 2, t.row * TS + TS / 2, def.level);
+    m.hp = m.maxHp = Math.round(m.maxHp * scale);
+    m.atk = m.atkBase = Math.round(m.atk * scale);
+    G.monsters.push(m);
+  }
 }
 
 // A spawned monster rolls its own level around the definition's base (bosses are
@@ -1933,7 +2035,16 @@ function damageMonster(m, dmg, isCrit, silent) {
   floatText(m.x, m.y, dmg, isCrit ? 'crit' : 'dmg');
   const p = G.player;   // lifesteal affix: heal a fraction of damage dealt
   if (p.lifesteal) { const heal = Math.max(1, Math.round(dmg * p.lifesteal / 100)); p.hp = clamp(p.hp + heal, 0, p.maxHp); }
+  // Reflective Void (rift mutator): monsters return a slice of damage taken
+  if (G.rift.active && G.mapId === 'celestial_rift' && G.rift.mutatorId === 'reflective_void' && !p.godMode) {
+    const reflect = Math.max(1, Math.round(dmg * TUNING.rift.reflectPct));
+    p.hp = clamp(p.hp - reflect, 0, p.maxHp);
+    floatText(p.x, p.y, reflect, 'enemy');
+  }
   if (m.hp <= 0) killMonster(m);
+  // ponytail: best-effort ordering — a reflect kill fires playerDeath after any
+  // floor-advance/loot from this same hit already ran; acceptable for a rift mutator.
+  if (p.hp <= 0) playerDeath();
 }
 
 // exp is scaled by the level gap: farming mobs far below you is nearly worthless,
@@ -1955,6 +2066,8 @@ function gapHit(monLevel, playerLevel) {
 function killMonster(m) {
   m.alive = false;
   m.deadUntil = now() + R.respawnMs;
+  // rift waves are cleared explicitly (see below), never respawned on the normal timer
+  if (G.rift.active && G.mapId === 'celestial_rift') m.deadUntil = Infinity;
   AUDIO.playSfx('monsterDie');
   if (G.target === m) { G.target = null; G.targetSource = null; G.path = null; }
   if (G.autoFarm) setAutoState('search', T('Finding next encounter', 'ui'), T(m.def.name, 'monsters'));
@@ -1982,6 +2095,7 @@ function killMonster(m) {
   if (m.def.id === 'ruin_golem') { toast('The ruins are cleared — a frozen path opens to the north.', 'good'); }
   if (m.def.id === 'flame_dragon') { toast('☠ The Flame Dragon falls — and behind its throne, the sky TEARS OPEN. The Astral Rift awaits.', 'good'); logMsg('A rift portal has opened at the far edge of the caldera.', 'sys'); }
   if (m.def.id === 'nullking') { toast(T('✦☠ The Nullking is unmade!', 'ui'), 'good'); triggerVictory(); }   // the TRUE finale
+  if (m.def.raid) { toast(`🏆 ${m.def.name} falls — the tide recoils!`, 'good'); logMsg(`${m.def.name} slain. A mythic drop awaits.`, 'good'); }
   // a slain roaming rare never respawns in place — the world timer re-announces it later
   if (m.def.rare) {
     m.deadUntil = Infinity;
@@ -1997,6 +2111,13 @@ function killMonster(m) {
     refreshGuildBoard();
     refreshPanel('world');
     if (zi >= 0 && ZONE_ORDER[zi + 1]) toast(`🏰 Guardian slain — the guild now posts bounties for ${MAPS[ZONE_ORDER[zi + 1]].name}!`, 'good');
+  }
+  // Celestial Rift: clearing every monster in the current wave advances the floor
+  if (G.rift.active && G.mapId === 'celestial_rift' && G.monsters.every(mo => !mo.alive)) {
+    G.rift.floor++;
+    G.rift.best = Math.max(G.rift.best, G.rift.floor);
+    spawnRiftWave();
+    toast(`✦ Celestial Rift — Floor ${G.rift.floor}! Best: ${G.rift.best}`, 'good');
   }
 }
 
@@ -2247,19 +2368,41 @@ function updateMonsters(dt) {
         AUDIO.playSfx('playerHurt');
         toast(`☠ ${m.def.name} is ENRAGED!`, 'bad');
       }
+      // ---- raid-only: 3-phase HP gates (100/66/33%). Phase 1 is the slam/enrage
+      // above; phase 2 summons adds once; phase 3 flags the slam to grow into an
+      // expanding ground hazard (reuses the same telegraph fx, bigger radius).
+      if (m.def.raid) {
+        if (!m.raidAddsSpawned && m.hp < m.maxHp * 0.66) {
+          m.raidAddsSpawned = true;
+          const addDef = monById['void_wisp'], n = rndInt(2, 3);
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2;
+            G.monsters.push(makeMonster(addDef, m.x + Math.cos(a) * TS * 2, m.y + Math.sin(a) * TS * 2));
+          }
+          spawnRing(m.x, m.y, TS * 2.5, '#7a4fd0');
+          toast(`⚠ ${m.def.name} calls forth ${n} rift wisps!`, 'bad');
+        }
+        if (!m.raidPhase3 && m.hp < m.maxHp * 0.33) {
+          m.raidPhase3 = true;
+          toast(`☠ ${m.def.name} tears the ground open!`, 'bad');
+        }
+      }
       const inCombat = now() - (m.lastCombatAt || 0) < 6000;
       if (inCombat && d < 8 * TS) {
         const slamInterval = TUNING.bossSlamEveryMs * (m.phase ? 0.8 : 1) * (m.enraged ? 0.7 : 1);
+        // phase-3 raid hazard: each slam impact grows the next ring's radius, capped at ~2.6x
+        const slamR = TS * 1.8 * (m.raidPhase3 ? Math.min(2.6, 1 + 0.2 * (m.raidHazardTicks || 0)) : 1);
         if (!m.slamAt && now() >= (m.nextSlamAt || (m.nextSlamAt = now() + slamInterval))) {
           m.slamX = p.x; m.slamY = p.y; m.slamAt = now() + 1100;      // mark the ground under the hero
-          fx({ kind: 'ring', x: m.slamX, y: m.slamY, r: TS * 1.8, color: '#ff4433', life: 1100 });
-          fx({ kind: 'crack', x: m.slamX, y: m.slamY, r: TS * 1.1, color: '#ff8866', life: 1100 });
+          fx({ kind: 'ring', x: m.slamX, y: m.slamY, r: slamR, color: '#ff4433', life: 1100 });
+          fx({ kind: 'crack', x: m.slamX, y: m.slamY, r: slamR / 1.64, color: '#ff8866', life: 1100 });
         }
         if (m.slamAt && now() >= m.slamAt) {                          // impact
           m.slamAt = null; m.nextSlamAt = now() + slamInterval;
-          spawnCrack(m.slamX, m.slamY, TS * 1.8, '#ff5533'); spawnRing(m.slamX, m.slamY, TS * 1.8, '#ff5533');
+          if (m.raidPhase3) m.raidHazardTicks = (m.raidHazardTicks || 0) + 1;
+          spawnCrack(m.slamX, m.slamY, slamR, '#ff5533'); spawnRing(m.slamX, m.slamY, slamR, '#ff5533');
           AUDIO.playSfx('hit');
-          if (dist(p.x, p.y, m.slamX, m.slamY) <= TS * 1.8 && !playerAvoidsHit(m)) {
+          if (dist(p.x, p.y, m.slamX, m.slamY) <= slamR && !playerAvoidsHit(m)) {
             const { dmg } = calcDamage(m.atk * 1.6, p.physDef * buffMult(p, 'def'), 0);
             if (!p.godMode) p.hp -= dmg;
             p.hurtUntil = now() + ANIM.hurtMs;
@@ -2320,7 +2463,7 @@ function walkableNearHome(m, rad = 6) {
   return randomWalkableTile(inHabitat, false) || (m.spawnSpec?.depth ? null : randomWalkableTile());
 }
 function respawn(m) {
-  const t = m.def.sizeTiles >= 2 ? (findChar('B') || { col: 2, row: 2 }) : walkableNearHome(m);
+  const t = m.def.sizeTiles >= 2 ? ((m.def.raid && findChar('V')) || findChar('B') || { col: 2, row: 2 }) : walkableNearHome(m);
   if (!t) { m.deadUntil = now() + 1000; return; }
   m.x = t.col * TS + TS / 2; m.y = t.row * TS + TS / 2;
   // Re-level at the new home-near position, clamped to the species habitat/range.
@@ -2330,6 +2473,7 @@ function respawn(m) {
   }
   m.hp = m.maxHp; m.alive = true; m.statuses = {}; m.provoked = false; m.path = null; m.leashing = false;
   m.enraged = false; m.phase = 0; m.atk = m.atkBase; m.slamAt = null; m.nextSlamAt = 0;
+  m.raidAddsSpawned = false; m.raidPhase3 = false; m.raidHazardTicks = 0;   // raid-only 3-phase state reset
 }
 
 // ---- roaming rare boss: an MVP-style world event announced on a timer ----
@@ -2486,13 +2630,15 @@ function stopAutomationOnDeath() {
 
 function playerDeath() {
   const p = G.player;
+  // dying inside the rift returns to its portal source map, not town — same penalty either way
+  const inRift = G.rift.active && G.mapId === 'celestial_rift';
   const automationStopped = stopAutomationOnDeath();
   const loss = Math.floor(p.zeny * TUNING.deathZenyLoss);
   p.zeny -= loss;
-  toast(`You fell... revived in town at half strength${loss ? ` — dropped ${loss}z on the way` : ''}.${automationStopped ? ' Hunt and route stopped.' : ''}`, 'bad');
+  toast(`You fell... revived ${inRift ? 'at the Astral Rift' : 'in town'} at half strength${loss ? ` — dropped ${loss}z on the way` : ''}.${automationStopped ? ' Hunt and route stopped.' : ''}`, 'bad');
   if (automationStopped) logMsg('Death canceled Hunt mode and active quest navigation. Choose a route again when ready.', 'sys');
   p.hp = Math.ceil(p.maxHp * 0.5); p.mp = Math.ceil(p.maxMp * 0.5); p.buffs = [];
-  loadMap('town_awakening');
+  loadMap(inRift ? 'astral_rift' : 'town_awakening');
   updateFarmButton();
   updateQuestTracker();
 }
@@ -3835,10 +3981,21 @@ function step(dt) {
       }
     }
   }
-  // regen a trickle of MP
-  p.mp = clamp(p.mp + 3 * dt, 0, p.maxMp);
-  // town rest: safe maps (no spawns) heal body and mind quickly
-  if (!G.map.spawns.length) {
+  // regen a trickle of MP (Mana Surge rift mutator speeds this up)
+  const manaSurge = G.rift.active && G.mapId === 'celestial_rift' && G.rift.mutatorId === 'mana_surge';
+  p.mp = clamp(p.mp + 3 * dt * (manaSurge ? TUNING.rift.manaSurgeMult : 1), 0, p.maxMp);
+  // Volcanic Ticks (rift mutator): a small periodic burn while the run is active
+  if (G.rift.active && G.mapId === 'celestial_rift' && G.rift.mutatorId === 'volcanic_ticks' && now() >= (G.rift.nextBurnAt || 0)) {
+    G.rift.nextBurnAt = now() + TUNING.rift.burnEveryMs;
+    if (!p.godMode) {
+      p.hp = clamp(p.hp - TUNING.rift.burnTickDmg, 0, p.maxHp);
+      floatText(p.x, p.y, TUNING.rift.burnTickDmg, 'enemy');
+      if (p.hp <= 0) { playerDeath(); return; }
+    }
+  }
+  // town rest: safe maps (no spawns) heal body and mind quickly — the rift's
+  // empty spawns array is a wave-count technicality, not a safe town, so exclude it
+  if (!G.map.spawns.length && G.mapId !== 'celestial_rift') {
     p.hp = clamp(p.hp + p.maxHp * 0.06 * dt, 0, p.maxHp);
     p.mp = clamp(p.mp + p.maxMp * 0.06 * dt, 0, p.maxMp);
   }
@@ -4597,18 +4754,29 @@ function adminAction(a) {
   recompute(p); renderHotbar(); updateHud();
 }
 
+// transmog: cosmetic-only icon swap — options are every owned item that shares
+// this equipment slot (bag + currently equipped), plus the item's own true id.
+function transmogOptionsHtml(p, slot, inst) {
+  const ids = new Set([inst.itemId]);
+  for (const e of p.inventory) if (e.uid && itemSlot(itemById[e.itemId]) === slot) ids.add(e.itemId);
+  for (const s of EQUIP_SLOTS) if (p.equip[s] && itemSlot(itemById[p.equip[s].itemId]) === slot) ids.add(p.equip[s].itemId);
+  const current = dispItemId(inst);
+  return [...ids].map(id => `<option value="${id}" ${id === current ? 'selected' : ''}>${esc(T(itemById[id].name, 'items'))}</option>`).join('');
+}
 // paper-doll: 7 equipment slots with icons; click a filled slot to unequip
 function paperDoll(p) {
   return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">` + EQUIP_SLOTS.map(slot => {
     const inst = p.equip[slot], it = inst ? itemById[inst.itemId] : null, rc = inst ? itemRarity(inst) : null;
-    const icon = inst ? itemIconImg(inst.itemId, 26)
+    const icon = inst ? itemIconImg(dispItemId(inst), 26)
       : `<img src="${pxDataURL('item', SLOT_ICON[slot])}" width="26" height="26" style="image-rendering:pixelated;opacity:.22;flex:0 0 26px" alt="">`;
     const stat = inst ? itemMainStatsHtml(inst) : T('empty', 'ui');
     const bonus = inst ? itemAffixesHtml(inst, p) : '';
+    const sockets = inst ? socketDotsHtml(inst) : '';
+    const transmog = inst ? `<select class="transmog-select" data-transmog="${inst.uid}" title="${T('Transmog appearance', 'ui')}" style="font-size:10px;max-width:90px">${transmogOptionsHtml(p, slot, inst)}</select>` : '';
     return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="${T('Unequip', 'ui')} ${esc(instName(inst))}"` : ''}>
       ${icon}<div style="font-size:10px;line-height:1.25;overflow:hidden">
         <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
-        ${inst ? `<b style="color:${rc.color}">${esc(instName(inst))}</b> <small style="color:${rc.color}">◆${rc.name}</small><br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>` : `<span style="color:var(--text-muted)">${stat}</span>`}
+        ${inst ? `<b style="color:${rc.color}">${esc(instName(inst))}</b> <small style="color:${rc.color}">◆${rc.name}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
       </div></div>`;
   }).join('') + `</div>`;
 }
@@ -5220,13 +5388,14 @@ function panelBody(id) {
         const usable = canUseItem(p, it);
         const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         return `<div class="gear-row">
-          <div class="gear-row__copy">${itemIconImg(e.itemId)} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small> — ${itemMainStatsHtml(e)}
+          <div class="gear-row__copy">${itemIconImg(dispItemId(e))} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${socketDotsHtml(e)} — ${itemMainStatsHtml(e)}
             ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}</div>
           <button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
         ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>`
-        : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>` : '';
+        : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>`
+        : it.gem ? `<button class="btn ${G._socketPick === it.id ? 'btn--ghost' : ''}" data-pick-gem="${it.id}">${G._socketPick === it.id ? T('Cancel', 'ui') : T('Socket…', 'ui')}</button>` : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
         <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${act}</div>`;
     };
@@ -5585,6 +5754,22 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
+  // rune sockets: click a gem to arm it, then click an empty socket dot to insert it.
+  el.querySelectorAll('[data-pick-gem]').forEach(b => b.onclick = () => {
+    G._socketPick = G._socketPick === b.dataset.pickGem ? null : b.dataset.pickGem;
+    refreshPanel('inv');
+  });
+  el.querySelectorAll('[data-socket-slot]').forEach(b => b.onclick = e => {
+    e.stopPropagation();   // dots can sit inside a doll-slot's data-unequip container
+    if (!G._socketPick) return toast(T('Pick a gem from your bag first.', 'ui'), 'bad');
+    const [uid, idx] = b.dataset.socketSlot.split(':');
+    if (socketGem(uid, +idx, G._socketPick)) { G._socketPick = null; toast(T('Gem socketed.', 'ui'), 'good'); refreshPanel(id); }
+  });
+  // transmog: cosmetic-only appearance swap on an equipped item's own row.
+  el.querySelectorAll('[data-transmog]').forEach(sel => {
+    sel.onclick = e => e.stopPropagation();          // don't let the doll-slot's unequip fire
+    sel.onchange = () => { transmogItem(sel.dataset.transmog, sel.value); refreshPanel(id); };
+  });
   // drag-a-skill source: used by both the skills panel (→ hotbar) and the
   // Automation panel (→ priority slot), so it's wired for every panel.
   el.querySelectorAll('[data-drag-skill]').forEach(nd => {
@@ -6435,7 +6620,7 @@ function saveGame() {
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
-      storage: G.storage, achievements: [...G.achievements] } };
+      storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); } catch {}
 }
 // shared canvas/HUD boot used by both new-game and continue
@@ -6507,6 +6692,9 @@ function resumeGame() {
       if (w.visited.includes(ZONE_ORDER[i])) G.guardiansSlain.add(zoneGuardian(ZONE_ORDER[i - 1]));
   G.visited = new Set(w.visited || []); G.talked = new Set(w.talked || []);
   G.storage = w.storage || []; G.achievements = new Set(w.achievements || []);
+  // ponytail: only the best floor is persisted — resuming mid-rift restarts the
+  // run fresh at floor 1 (loadMap('celestial_rift', ...) below handles that entry).
+  G.rift = { floor: 0, active: false, best: w.riftBest || 0, mutatorId: null, nextBurnAt: 0 };
   // Runtime targets and paths are never restored. Rebuild the persisted intent
   // against the current quest/bounty data so removed or completed tasks cannot
   // revive a stale route after loading.
@@ -6642,7 +6830,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, effAtk, effDef, itemSlot, itemAffixes, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

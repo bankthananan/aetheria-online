@@ -74,6 +74,7 @@ for (const monster of CONTENT.monsters) {
 const expandedMinimums = {
   town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],
   frostpeak_tundra: [48, 36], dragon_caldera: [50, 38], astral_rift: [50, 38],
+  celestial_rift: [22, 16],   // fixed-size side arena, never region-expanded
 };
 const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
 

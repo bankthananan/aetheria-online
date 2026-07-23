@@ -13,6 +13,7 @@ const LEGEND = {
   'W': { type: 'water', walkable: false, color: '#277aa0' },
   'P': { type: 'floor', walkable: true,  color: '#e0b84f' }, // portal pad (walkable)
   'B': { type: 'floor', walkable: true,  color: '#a63d45' }, // boss floor marker (walkable)
+  'V': { type: 'floor', walkable: true,  color: '#3a1a5c' }, // raid boss floor marker (walkable, separate from 'B' so it doesn't stack on the zone guardian)
   'S': { type: 'snow',  walkable: true,  color: '#e9f0ee' },
   'I': { type: 'ice',   walkable: true,  color: '#80c8d8' },
   'D': { type: 'sand',  walkable: true,  color: '#b9855d' },
@@ -392,13 +393,45 @@ export const MAPS = {
       { monsterId: 'rift_manta', count: 7, depth: [0.65, 0.96], levelRange: [75, 79] },
       { monsterId: 'constellation_mite', count: 1, depth: [0.66, 0.74], levelRange: [69, 72] },
       { monsterId: 'nullking', count: 1 },
+      { monsterId: 'voidmaw_sovereign', count: 1 }, // world boss, spawns on its own 'V' marker (see REGION_EXPANSIONS.astral_rift)
     ],
     npcs: [
       { id: 'star_echo', name: 'Echo of Serin', x: 44, y: 33, role: 'story', title: 'Rift Cartographer', color: '#d7c2ff' },
     ],
     portals: [
       { x: 1, y: 1, toMap: 'dragon_caldera', toX: 39, toY: 30, label: 'Back to Caldera' },
+      { x: 3, y: 1, toMap: 'celestial_rift', toX: 2, toY: 2, label: 'Enter the Celestial Rift' },
     ],
+  },
+
+  // Endless arena: no static spawns array (an endless floor counter has no fixed
+  // roster) — game.js drives waves at runtime from riftPool, scaled by G.rift.floor.
+  // spawns: [] means selfCheck never demands a band/'B' marker for this map.
+  celestial_rift: {
+    id: 'celestial_rift',
+    name: 'Celestial Rift',
+    ambient: 'Crystalline platforms hang in impossible geometries, waiting for the next challenger.',
+    chronicle: {
+      province: 'The Shattered Plane',
+      epithet: 'Arena of Ascendant Trials',
+      landmark: 'The Resonance Chamber',
+      lore: 'A pocket dimension carved by ancient mages, now corrupted by astral incursion. Heroes test themselves against trials that demand perfect discipline.',
+    },
+    width: 22, height: 16,
+    legend: LEGEND,
+    tiles: (() => {
+      const W = 22, H = 16, rows = [];
+      for (let y = 0; y < H; y++) rows.push(y === 0 || y === H - 1 ? 'O'.repeat(W) : 'O' + 'X'.repeat(W - 2) + 'O');
+      rows[13] = rows[13].slice(0, 19) + 'P' + rows[13].slice(20);   // return portal pad
+      return rows;
+    })(),
+    riftPool: ['void_wisp', 'star_reaver', 'astral_knight'],   // wave roster (levels ~63-73, endgame-appropriate)
+    spawns: [],
+    npcs: [],
+    portals: [
+      { x: 19, y: 13, toMap: 'astral_rift', toX: 5, toY: 2, label: 'Back to Astral Rift' },
+    ],
+    playerStart: { x: 2, y: 2 },
   },
 };
 
@@ -485,7 +518,7 @@ const REGION_EXPANSIONS = {
   },
   astral_rift: {
     east: 8, south: 6, ground: 'X', border: 'O', blocked: 'O', accent: 'I', seed: 601,
-    stamps: [{ x: 43, y: 7, rows: ['FFIIFF', 'FpIIpF', 'FFIIFF'] }, { x: 12, y: 34, rows: ['OOXXXOO', 'OXXIXXO'] }],
+    stamps: [{ x: 43, y: 7, rows: ['FFIIFF', 'FpIIpF', 'FFIIFF'] }, { x: 12, y: 34, rows: ['OOXXXOO', 'OXXIXXO'] }, { x: 45, y: 15, rows: ['V'] }],
     paths: [{ from: { x: 38, y: 28 }, to: { x: 44, y: 33 }, tile: 'I' }],
     safe: [{ x: 44, y: 33 }],
   },

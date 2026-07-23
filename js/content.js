@@ -19,16 +19,16 @@ export const CONTENT = {
       drops: [{ itemId: "slime_gel", chance: 0.35 }, { itemId: "wolf_pelt", chance: 0.2 }], behavior: "passive" },
     { id: "shade", element: "void", name: "Woodland Shade", flavor: "A restless spirit bound to the ruins' edge.",
       level: 21, hp: 332, atk: 46, def: 19, exp: 531, spriteColor: "#7e57c2", sizeTiles: 1,
-      drops: [{ itemId: "shade_dust", chance: 0.5 }, { itemId: "warding_cloak", chance: 0.06 }, { itemId: "iron_gauntlets", chance: 0.05 }, { itemId: "mid_potion", chance: 0.2 }, { itemId: "mana_potion", chance: 0.2 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.25, projectileColor: "#c99aef" },
+      drops: [{ itemId: "shade_dust", chance: 0.5 }, { itemId: "warding_cloak", chance: 0.06 }, { itemId: "iron_gauntlets", chance: 0.05 }, { itemId: "mid_potion", chance: 0.2 }, { itemId: "mana_potion", chance: 0.2 }, { itemId: "ruby_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.25, projectileColor: "#c99aef" },
     { id: "mire_leech", element: "void", name: "Mire Leech", flavor: "A pale feeder swollen on memories leaking from the drowned dead.",
       level: 18, hp: 295, atk: 40, def: 16, exp: 395, spriteColor: "#6f8f72", sizeTiles: 1,
       drops: [{ itemId: "shade_dust", chance: 0.35 }, { itemId: "mid_potion", chance: 0.18 }, { itemId: "mana_potion", chance: 0.12 }], behavior: "aggressive" },
     { id: "drowned_acolyte", element: "void", name: "Drowned Acolyte", flavor: "An abbey novice still chanting through lungs full of black water.",
       level: 25, hp: 390, atk: 58, def: 21, exp: 720, spriteColor: "#5f9fa5", sizeTiles: 1,
-      drops: [{ itemId: "shade_dust", chance: 0.55 }, { itemId: "warding_cloak", chance: 0.04 }, { itemId: "mana_potion", chance: 0.24 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#7ed6d9" },
+      drops: [{ itemId: "shade_dust", chance: 0.55 }, { itemId: "warding_cloak", chance: 0.04 }, { itemId: "mana_potion", chance: 0.24 }, { itemId: "emerald_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#7ed6d9" },
     { id: "ruin_crawler", name: "Ruin Crawler", flavor: "Stone plates click beneath the drowned halls as it searches for warmth.",
       level: 22, hp: 348, atk: 50, def: 20, exp: 610, spriteColor: "#8b7b68", sizeTiles: 1,
-      drops: [{ itemId: "golem_core", chance: 0.08 }, { itemId: "shade_dust", chance: 0.3 }], behavior: "aggressive" },
+      drops: [{ itemId: "golem_core", chance: 0.08 }, { itemId: "shade_dust", chance: 0.3 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive" },
     { id: "elderwood_treant", name: "Elderwood Treant", flavor: "The forest's oldest warden. It does not forgive the axe.",
       level: 14, hp: 853, atk: 41, def: 16, exp: 1004, spriteColor: "#4e8a3f", sizeTiles: 2,
       drops: [{ itemId: "blessed_ore", chance: 0.5 }, { itemId: "leather_vest", chance: 0.35 }, { itemId: "mid_potion", chance: 1.0 }], behavior: "aggressive" },
@@ -48,7 +48,7 @@ export const CONTENT = {
       drops: [{ itemId: "frost_shard", chance: 0.6 }, { itemId: "knight_plate", chance: 0.04 }, { itemId: "wolf_pelt", chance: 0.4 }, { itemId: "greater_potion", chance: 0.15 }, { itemId: "blessed_ore", chance: 0.08 }], behavior: "aggressive" },
     { id: "ice_wraith", element: "ice", name: "Ice Wraith", flavor: "A frozen soul that drifts the peaks, chilling to the bone.",
       level: 37, hp: 548, atk: 86, def: 32, exp: 1513, spriteColor: "#bfe6ff", sizeTiles: 1,
-      drops: [{ itemId: "frost_shard", chance: 0.5 }, { itemId: "ice_core", chance: 0.3 }, { itemId: "silver_amulet", chance: 0.04 }, { itemId: "aurora_cloak", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#bfe6ff" },
+      drops: [{ itemId: "frost_shard", chance: 0.5 }, { itemId: "ice_core", chance: 0.3 }, { itemId: "silver_amulet", chance: 0.04 }, { itemId: "aurora_cloak", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#bfe6ff" },
     { id: "rime_harpy", element: "ice", name: "Rime Harpy", flavor: "It rides the knife-wind, hurling frozen feathers at anything warm.",
       level: 41, hp: 610, atk: 96, def: 36, exp: 1775, spriteColor: "#80c8d8", sizeTiles: 1,
       drops: [{ itemId: "frost_shard", chance: 0.55 }, { itemId: "ice_core", chance: 0.2 }, { itemId: "aurora_cloak", chance: 0.04 }, { itemId: "mana_potion", chance: 0.2 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.15, projectileColor: "#d7f4ff" },
@@ -60,7 +60,7 @@ export const CONTENT = {
       drops: [{ itemId: "sand_fang", chance: 0.6 }, { itemId: "gold_ring", chance: 0.03 }, { itemId: "drakescale_boots", chance: 0.05 }, { itemId: "greater_potion", chance: 0.2 }, { itemId: "blessed_ore", chance: 0.08 }], behavior: "aggressive" },
     { id: "ember_imp", element: "fire", name: "Ember Imp", flavor: "A gleeful little devil made of coals and spite.",
       level: 47, hp: 682, atk: 128, def: 40, exp: 2356, spriteColor: "#e0714b", sizeTiles: 1,
-      drops: [{ itemId: "ember_ash", chance: 0.6 }, { itemId: "star_pendant", chance: 0.02 }, { itemId: "mythril_gauntlets", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "mythril_sword", chance: 0.05 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.15, projectileColor: "#ff8b3d" },
+      drops: [{ itemId: "ember_ash", chance: 0.6 }, { itemId: "star_pendant", chance: 0.02 }, { itemId: "mythril_gauntlets", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "mythril_sword", chance: 0.05 }, { itemId: "ruby_shard", chance: 0.04 }, { itemId: "emerald_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.15, projectileColor: "#ff8b3d" },
     { id: "magma_beetle", element: "fire", name: "Magma Beetle", flavor: "Its basalt shell seals a furnace-hot core that cracks open when angered.",
       level: 56, hp: 830, atk: 151, def: 48, exp: 3150, spriteColor: "#c45d32", sizeTiles: 1,
       drops: [{ itemId: "ember_ash", chance: 0.55 }, { itemId: "blessed_ore", chance: 0.1 }, { itemId: "drakescale_boots", chance: 0.04 }, { itemId: "greater_potion", chance: 0.18 }], behavior: "aggressive" },
@@ -89,7 +89,12 @@ export const CONTENT = {
       drops: [{ itemId: "star_iron", chance: 0.35 }, { itemId: "void_shard", chance: 0.3 }], behavior: "aggressive" },
     { id: "nullking", element: "void", name: "The Nullking", flavor: "The crowned end of all things. It does not roar — it simply unmakes.",
       level: 80, hp: 3500, atk: 198, def: 79, exp: 25208, spriteColor: "#7a4fd0", sizeTiles: 2,
-      drops: [{ itemId: "null_core", chance: 1.0 }, { itemId: "astral_glaive", chance: 0.7 }, { itemId: "astral_signet", chance: 0.6 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" }
+      drops: [{ itemId: "null_core", chance: 1.0 }, { itemId: "astral_glaive", chance: 0.7 }, { itemId: "astral_signet", chance: 0.6 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+
+    // ===== World boss: 3-phase raid (Voidmaw Sovereign, Astral Rift) =====
+    { id: "voidmaw_sovereign", element: "void", name: "Voidmaw Sovereign", flavor: "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.",
+      level: 80, hp: 4300, atk: 205, def: 82, exp: 42000, spriteColor: "#3a1a5c", sizeTiles: 2, raid: true,
+      drops: [{ itemId: "sovereign_core", chance: 1.0 }, { itemId: "null_core", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }, { itemId: "astral_signet", chance: 0.3 }], behavior: "aggressive" }
   ],
 
   items: [
@@ -133,6 +138,10 @@ export const CONTENT = {
     { id: "wolf_fang", name: "Beast Fang", type: "material", desc: "A sharp trophy.", value: 25, classReq: null },
     { id: "shade_dust", name: "Shade Dust", type: "material", desc: "Faintly glowing spectral ash.", value: 40, classReq: null },
     { id: "golem_core", name: "Golem Core", type: "material", desc: "The still-warm heart of the Ruin Golem.", value: 250, classReq: null },
+    // Rune gems: socket into rare-or-better gear for a permanent stat bonus (see loot.js SOCKET_BOUNDS).
+    { id: "ruby_shard", name: "Ruby Shard", type: "material", desc: "A raw ember-red gem. Socket it into rare-or-better gear for a permanent ATK boost.", value: 60, classReq: null, gem: { stat: "atkPct", value: 4 } },
+    { id: "sapphire_shard", name: "Sapphire Shard", type: "material", desc: "A raw azure gem. Socket it into rare-or-better gear for a permanent Max HP boost.", value: 60, classReq: null, gem: { stat: "hpFlat", value: 30 } },
+    { id: "emerald_shard", name: "Emerald Shard", type: "material", desc: "A raw verdant gem. Socket it into rare-or-better gear for a permanent DEF boost.", value: 60, classReq: null, gem: { stat: "defPct", value: 4 } },
     // Quest items
     { id: "guide_letter", name: "Guide's Letter", type: "quest", desc: "A sealed note from the one who summoned you.", value: 0, classReq: null },
     { id: "ancient_seal", name: "Ancient Seal", type: "quest", desc: "Unlocks the ruins beyond the woods.", value: 0, classReq: null },
@@ -170,6 +179,7 @@ export const CONTENT = {
     { id: "void_shard", name: "Void Shard", type: "material", desc: "A splinter of nothing. It hurts to look at.", value: 120, classReq: null },
     { id: "star_iron", name: "Star Iron", type: "material", desc: "Metal that fell from the sky, still humming.", value: 160, classReq: null },
     { id: "null_core", name: "Null Core", type: "material", desc: "The heart of the Nullking. The end of a legend, in your hand.", value: 1500, classReq: null },
+    { id: "sovereign_core", name: "Sovereign Core", type: "accessory", slot: "accessory", desc: "The still-beating heart of a world-eating tide. Exclusive to whoever fells the Voidmaw Sovereign.", atk: 20, def: 20, value: 20000, classReq: null, rankReq: "S" },
 
     // ===== Buff foods, teleport, refinement material =====
     { id: "sharpening_stone", name: "Sharpening Stone", type: "potion", desc: "Hones your edge — +15% ATK for 60s.", buff: { stat: "atk", mult: 1.15, durationMs: 60000 }, value: 80, classReq: null },

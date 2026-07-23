@@ -51,6 +51,12 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['C5','D5','E5','R','F#5','A#5','G#5','R','D5','F#5','G#5','E5','R','A#4','C5','R'],
     bass: ['C3','E3','F#2','A#2','D3','G#2','E3','C3'], pad: ['C4','F#3','D4','G#3'],
   },
+  celestial_rift: { // crystalline arena chimes driven by an insistent pulse
+    bpm: 132, leadWave: 'square', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.17, padPeak: 0.05, leadGate: 0.62, padEvery: 4, swing: 0.05,
+    lead: ['G5','B5','D6','R','A5','C6','E6','R','F#5','A5','C6','B5','R','D5','G5','R'],
+    bass: ['G2','G2','D3','D3','A2','A2','E3','E3'], pad: ['G4','D4','A3'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.

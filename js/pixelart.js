@@ -1645,6 +1645,10 @@ const monster = {
     '       kk   kk',
     '', '', '', '')),
 };
+// ponytail: raid boss reuses the Nullking silhouette (both void-tier endgame threats)
+// instead of hand-authoring a new 24x24 frame-set; swap in a dedicated matrix if it
+// ever needs a distinct look.
+monster.voidmaw_sovereign = monster.nullking;
 
 // ---- player WALK frames: cloth, weapon and stance all shift with the step ----
 const walkFrame = (base, replacements) => matrix(
@@ -1810,6 +1814,46 @@ const item = {
     '    klllllzk',
     '     klllzk',
     '      klzk',
+    '       kk',
+    '', '', '', '', ''),
+
+  // Rune-socket gems: same cut, red/blue/green ATK/HP/DEF palettes.
+  gem_red: matrix(16, 16,
+    '', '',
+    '       kk',
+    '      krrk',
+    '     krRRRk',
+    '    krRRRRRk',
+    '   krRxRRRRRk',
+    '    kRRRRRRk',
+    '     kRRRk',
+    '      kRk',
+    '       kk',
+    '', '', '', '', ''),
+
+  gem_blue: matrix(16, 16,
+    '', '',
+    '       kk',
+    '      kuuk',
+    '     kuUUUk',
+    '    kuUUUUUk',
+    '   kuUxUUUUUk',
+    '    kUUUUUUk',
+    '     kUUUk',
+    '      kUk',
+    '       kk',
+    '', '', '', '', ''),
+
+  gem_green: matrix(16, 16,
+    '', '',
+    '       kk',
+    '      kggk',
+    '     kgGGGk',
+    '    kgGGGGGk',
+    '   kgGxGGGGGk',
+    '    kGGGGGGk',
+    '     kGGGk',
+    '      kGk',
     '       kk',
     '', '', '', '', ''),
 

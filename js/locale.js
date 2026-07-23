@@ -1075,6 +1075,12 @@ export const L10N = {
       "Faintly glowing spectral ash.": "เถ้าถ่านวิญญาณที่เรืองแสงจางๆ",
       "Golem Core": "แกนกลางโกเลม",
       "The still-warm heart of the Ruin Golem.": "หัวใจที่ยังคงอบอุ่นของโกเลมโบราณสถาน",
+      "Ruby Shard": "เศษทับทิม",
+      "A raw ember-red gem. Socket it into rare-or-better gear for a permanent ATK boost.": "อัญมณีสีแดงดิบ ฝังลงในอุปกรณ์ระดับหายากขึ้นไปเพื่อเพิ่มพลังโจมตีถาวร",
+      "Sapphire Shard": "เศษไพลิน",
+      "A raw azure gem. Socket it into rare-or-better gear for a permanent Max HP boost.": "อัญมณีสีฟ้าดิบ ฝังลงในอุปกรณ์ระดับหายากขึ้นไปเพื่อเพิ่มพลังชีวิตสูงสุดถาวร",
+      "Emerald Shard": "เศษมรกต",
+      "A raw verdant gem. Socket it into rare-or-better gear for a permanent DEF boost.": "อัญมณีสีเขียวดิบ ฝังลงในอุปกรณ์ระดับหายากขึ้นไปเพื่อเพิ่มพลังป้องกันถาวร",
       "Guide's Letter": "จดหมายของผู้นำทาง",
       "A sealed note from the one who summoned you.": "จดหมายปิดผนึกจากผู้ที่อัญเชิญคุณมายังโลกนี้",
       "Ancient Seal": "ตราประทับโบราณ",
@@ -1135,6 +1141,8 @@ export const L10N = {
       "Metal that fell from the sky, still humming.": "แร่อุกกาบาตที่ร่วงหล่นจากฟากฟ้า ยังคงส่งเสียงฮัมจางๆ",
       "Null Core": "แกนความดับสูญ",
       "The heart of the Nullking. The end of a legend, in your hand.": "แกนเหล็กแห่งหัวใจของนัลคิง จุดจบของตำนานอยู่ในมือคุณแล้ว",
+      "Sovereign Core": "แกนราชันย์",
+      "The still-beating heart of a world-eating tide. Exclusive to whoever fells the Voidmaw Sovereign.": "แกนหัวใจที่ยังคงเต้นอยู่ของกระแสน้ำผู้กลืนกินโลก มีเฉพาะผู้ที่ล้มราชันปากมืดได้เท่านั้น",
       "Sharpening Stone": "หินลับมีด",
       "Hones your edge — +15% ATK for 60s.": "หินสำหรับลับดาบให้คมกริบ — เพิ่มพลังโจมตี +15% เป็นเวลา 60 วินาที",
       "Iron Tonic": "ยาบำรุงเหล็กกล้า",
@@ -1260,7 +1268,9 @@ export const L10N = {
       "Constellation Mite": "ไรกลุ่มดาว",
       "A tiny star-eater that skitters across broken paths between worlds.": "นักกินดาวตัวจ้อยที่วิ่งข้ามเส้นทางแตกร้าวระหว่างโลก",
       "The Nullking": "ราชันความดับสูญ",
-      "The crowned end of all things. It does not roar — it simply unmakes.": "จุดจบของสรรพสิ่งผู้สวมมงกุฎ มันไม่ส่งเสียงคำราม — มันเพียงแต่ลบเลือน"
+      "The crowned end of all things. It does not roar — it simply unmakes.": "จุดจบของสรรพสิ่งผู้สวมมงกุฎ มันไม่ส่งเสียงคำราม — มันเพียงแต่ลบเลือน",
+      "Voidmaw Sovereign": "ราชันปากมืด",
+      "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.": "กระแสน้ำผู้กลืนกินโลกที่ได้รับมงกุฎ แม้แต่ห้องบัลลังก์ของนัลคิงยังต้องถอยห่าง"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
@@ -1623,6 +1633,7 @@ export const L10N = {
       "Frostpeak Tundra": "ทุ่งหิมะเยือกแข็งฟรอสต์พีก",
       "Dragon Caldera": "แอ่งภูเขาไฟมังกร",
       "Astral Rift": "รอยแยกดวงดารา",
+      "Celestial Rift": "รอยแยกสวรรค์",
 
       // Chronicles
       "Crownlands of Aster": "อาณาจักรใจกลางแอสเตอร์",
@@ -1655,6 +1666,11 @@ export const L10N = {
       "The Unwritten Throne": "บัลลังก์ที่ไม่มีการจดจารึก",
       "The first summoners tore this wound while reaching beyond one world too many. Every stolen destiny gathers here around a king whom history refuses to record.": "ผู้อัญเชิญรุ่นแรกๆ ได้ฉีกกระชากฟากฟ้าสร้างบาดแผลนี้ขึ้นในตอนที่พยายามเอื้อมมือข้ามโลกมากเกินไป โชคชะตาที่ถูกพรากทั้งหมดมารวมตัวกันที่นี่รอบราชาผู้ซึ่งประวัติศาสตร์ปฏิเสธที่จะจดบันทึกไว้",
 
+      "The Shattered Plane": "ที่ราบแตกสลาย",
+      "Arena of Ascendant Trials": "สังเวียนแห่งบททดสอบสู่ความรุ่งโรจน์",
+      "The Resonance Chamber": "ห้องแห่งเสียงสะท้อน",
+      "A pocket dimension carved by ancient mages, now corrupted by astral incursion. Heroes test themselves against trials that demand perfect discipline.": "มิติแทรกซ้อนที่เหล่านักเวทโบราณสลักสร้างขึ้น บัดนี้ถูกกัดกร่อนด้วยการรุกล้ำของดวงดารา ผู้กล้าจะได้พิสูจน์ตนเองผ่านบททดสอบที่เรียกร้องวินัยอันสมบูรณ์แบบ",
+
       // Ambients
       "Warm bells and unfamiliar stars — you are not home.": "เสียงระฆังอันอบอุ่นและหมู่ดาวที่ไม่คุ้นเคย — ที่นี่ไม่ใช่บ้านของคุณ",
       "Leaves murmur secrets; small things rustle in the brush.": "ใบไม้กระซิบกระซาบความลับ สิ่งมีชีวิตตัวเล็กๆ ส่งเสียงกรอบแกรบอยู่ในพุ่มไม้",
@@ -1662,6 +1678,7 @@ export const L10N = {
       "Wind screams across the white silence; something hunts here.": "สายลมกรีดร้องผ่านความเงียบสงบสีขาวโพลน — บางสิ่งกำลังล่าเหยื่ออยู่ที่นี่",
       "The air shimmers with heat. Far below, something vast stirs.": "อากาศสั่นระยิบระยับด้วยความร้อน ลึกลงไปด้านล่าง บางสิ่งที่กว้างใหญ่ขยับเขยื้อน",
       "Reality thins here; stars bleed through the cracks in the world.": "ความจริงเริ่มบางเบาที่นี่ ดวงดาวรั่วไหลผ่านรอยร้าวของโลก",
+      "Crystalline platforms hang in impossible geometries, waiting for the next challenger.": "แท่นผลึกลอยอยู่ในรูปทรงที่เป็นไปไม่ได้ รอคอยผู้ท้าทายรายต่อไป",
       // Portal labels
       "To Whispering Woods": "ไปยังผืนป่ากระซิบ",
       "Back to Town": "กลับเมือง",
@@ -1672,7 +1689,9 @@ export const L10N = {
       "To Dragon Caldera": "ไปยังแอ่งภูเขาไฟมังกร",
       "Back to Frostpeak": "กลับฟรอสต์พีก",
       "To the Astral Rift": "ไปยังรอยแยกดวงดารา",
-      "Back to Caldera": "กลับแอ่งภูเขาไฟ"
+      "Back to Caldera": "กลับแอ่งภูเขาไฟ",
+      "Enter the Celestial Rift": "เข้าสู่รอยแยกสวรรค์",
+      "Back to Astral Rift": "กลับรอยแยกดวงดารา"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",

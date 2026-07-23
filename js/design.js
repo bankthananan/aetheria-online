@@ -209,6 +209,18 @@ export const DESIGN = {
       counterMult: 1.4,     // ATK buff granted by a successful parry...
       counterMs: 4000,      // ...for this long
     },
+
+    // --- Celestial Rift: endless arena floors ---
+    rift: {
+      floorScale: 1.15,     // monster hp/atk multiply by floorScale ** floor
+      waveSize: 5,          // monsters spawned per floor
+      burnTickDmg: 8,       // Volcanic Ticks mutator: flat player burn tick
+      burnEveryMs: 3000,    // ...how often it ticks
+      reflectPct: 0.20,     // Reflective Void mutator: % of damage dealt reflected to the player
+      manaSurgeMult: 2.5,   // Mana Surge mutator: MP regen multiplier
+    },
+
+    gemSetBonusMult: 0.5, // 3 matching gems in one item's sockets add +this × one gem's own bonus, extra
   },
   progressionPillars: [
     "Every level visibly bumps HP/MP and a stat you can feel in combat.",

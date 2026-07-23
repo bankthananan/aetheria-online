@@ -9,6 +9,10 @@ export const RARITY = {
 };
 export const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
+// Rune sockets rolled at drop time, [min, max] per rarity — only rare-and-above
+// equipment gets sockets at all.
+export const SOCKET_BOUNDS = { common: [0, 0], uncommon: [0, 0], rare: [1, 1], epic: [1, 2], legendary: [2, 3] };
+
 // Affix pool. `stat` is read by the engine in recompute()/combat. `roll` returns the value.
 // {v} in label is replaced by the rolled value.
 export const AFFIXES = [

@@ -120,6 +120,10 @@
             }
             if (warp === 'dragon_caldera') { const d = A.G.monsters.find(m => m.def.id === 'flame_dragon'); if (d) { A.G.player.x = d.x - 60; A.G.player.y = d.y; } }
             if (warp === 'astral_rift') { const d = A.G.monsters.find(m => m.def.id === 'nullking'); if (d) { A.G.player.x = d.x - 64; A.G.player.y = d.y; } }
+            if (params.get('raid')) {               // world boss screenshot: god mode so the endgame roster can't one-shot a low-level test hero
+              const rb = A.G.monsters.find(m => m.def.raid);
+              if (rb) { A.G.player.godMode = true; A.G.player.x = rb.x - 70; A.G.player.y = rb.y; }
+            }
             if (params.get('gear')) {                 // seed varied-rarity loot for the inventory shot
               A.addItem('iron_sword', 1, 6); A.addItem('hero_blade', 1, 8);
               A.addItem('guardian_plate', 1, 6); A.addItem('leather_vest', 1, 4);
@@ -128,6 +132,13 @@
               ['iron_sword:epic', 'iron_helm:rare', 'guardian_plate:epic', 'iron_gauntlets:uncommon', 'warding_cloak:rare', 'iron_boots:common', 'power_ring:legendary'].forEach(spec => {
                 const [id, rar] = spec.split(':'); const inst = A.rollItem(id, 0, rar); A.G.player.inventory.push(inst); A.equip(inst.uid);
               });
+              // Phase 3.3: rune sockets + transmog — a spare gem in the bag (for the
+              // "Socket…" button) plus an unequipped epic ring with one socket already
+              // filled (colored dot) and one still open, so the bag row shows both.
+              A.addItem('ruby_shard', 2); A.addItem('sapphire_shard', 2); A.addItem('emerald_shard', 2);
+              const socketDemo = A.rollItem('vitality_amulet', 0, 'epic');
+              A.G.player.inventory.push(socketDemo);
+              A.socketGem(socketDemo.uid, 0, 'ruby_shard');
             }
             if (params.get('fx')) {                   // learn a fireball for the effects shot
               A.learnSkill('arcane_bolt'); A.learnSkill('arcane_bolt'); A.learnSkill('flame_burst');
