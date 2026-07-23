@@ -427,5 +427,19 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
 /* Settings Sliders */
 .setting-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(120,90,50,.3)}
 .setting-row input[type="range"]{accent-color:var(--gold-bright);cursor:pointer}
+
+/* Stamina bar (dodge/parry fuel) — kept slim against the 16px #hud .bar default */
+#hud .stamina-bar,.stamina-bar{height:7px;border-width:0 2px 2px;background:#131a10}
+#hud .stamina-bar > .fill,.stamina-bar > .fill{background:linear-gradient(90deg,#8fbf5b,#d7e86a)}
+
+/* Macro rule builder */
+.macro-rule{display:flex;align-items:center;gap:8px;padding:4px 6px;border:1px solid rgba(120,90,50,.35);margin-bottom:4px;background:rgba(0,0,0,.25)}
+.macro-rule code{flex:1;font-size:11px;color:var(--gold-bright)}
+.macro-rule__del{background:none;border:none;color:#e08d8d;font-size:14px;cursor:pointer;padding:0 4px}
+.macro-builder{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;margin-top:6px}
+.macro-builder select,.macro-builder input{background:#171712;color:var(--text,#e8dcc0);border:1px solid rgba(120,90,50,.5);font-size:11px;padding:2px 4px}
+.macro-builder input{width:52px}
+.macro-json{margin-top:8px;font-size:11px}
+.macro-json textarea{width:100%;background:#12120d;color:#cfe3a8;border:1px solid rgba(120,90,50,.5);font-family:monospace;font-size:10px;margin:6px 0}
 `,
 };

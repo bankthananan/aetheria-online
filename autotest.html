@@ -185,6 +185,10 @@
             }
             if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
             if (!document.getElementById('panel')) A.togglePanel(wantPanel);
+            if (params.get('scrollpanel')) {         // e.g. panel=automation&scrollpanel=9999 → bottom of panel
+              const pane = document.getElementById('panel');   // .panel is the overflow:auto scroller
+              if (pane) pane.scrollTop = +params.get('scrollpanel');
+            }
             if (params.get('tip')) {                 // hover a skill node to reveal its tooltip
               const nodes = document.querySelectorAll('#panel .ro-skill[data-skill]');
               const nd = nodes[+params.get('tip') || 0];

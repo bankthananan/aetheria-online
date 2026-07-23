@@ -163,6 +163,17 @@ export const COMBAT = {
     sunder: { name: "Sundered", durationMs: 7000, tickDamage: 0, defReduction: 0.20, perLevel: 0.05, description: "Armor is reduced." },
   },
 
+  // Cross-class primer/detonator combos: any source of the primer status arms the
+  // target; landing the named detonator skill consumes it for the listed payoff.
+  crossCombos: [
+    { id: "cryo_shatter", name: "Cryo-Shatter", primerStatus: "slow", detonatorSkill: "earthshaker",
+      burstMult: 2.5, description: "A chilled foe struck by Earthshaker erupts for 250% physical burst." },
+    { id: "superconduct", name: "Superconduct", primerStatus: "stun", detonatorSkill: "ice_lance",
+      aoeStatus: "sunder", aoeRadiusTiles: 2, description: "A shocked foe struck by Ice Lance sunders the armor of everything nearby." },
+    { id: "melt_surge", name: "Melt Surge", primerStatus: "burn", detonatorSkill: "piercing_shot",
+      critMult: 2.0, description: "A burning foe struck by Piercing Shot takes a guaranteed critical at double power." },
+  ],
+
   combatRules: {
     critMultiplier: 1.5,
     missIfFleeExceedsHit: true, // miss when target's flee > attacker's hit

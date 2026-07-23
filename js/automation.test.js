@@ -49,10 +49,10 @@ await import('./game.js');
 const A = globalThis.__AWO;
 assert.ok(A, 'game debug API loaded');
 
-assert.deepEqual(A.normaliseAutoConfig(null), { skills: true, heal: true, potions: true, profile: 'balanced', targetId: null, priority: [] },
+assert.deepEqual(A.normaliseAutoConfig(null), { skills: true, heal: true, potions: true, profile: 'balanced', targetId: null, priority: [], rules: [] },
   'automation defaults enable the connected controller');
 assert.deepEqual(A.normaliseAutoConfig({ skills: false, heal: false, potions: false, profile: 'unknown' }),
-  { skills: false, heal: false, potions: false, profile: 'balanced', targetId: null, priority: [] }, 'saved toggles survive and invalid profiles migrate');
+  { skills: false, heal: false, potions: false, profile: 'balanced', targetId: null, priority: [], rules: [] }, 'saved toggles survive and invalid profiles migrate');
 
 const mage = A.makePlayer('codeweaver', 'Rotation');
 A.G.player = mage;
@@ -144,7 +144,7 @@ const saved = JSON.parse(globalThis.localStorage.getItem('awo_save_v1'));
 assert.deepEqual(saved.world.autoConfig, A.G.autoConfig, 'automation preferences persist in the compatible save schema');
 assert.equal(saved.v, 5, 'automation preferences persist inside the third-job save schema');
 assert.equal(A.resumeGame(), true, 'automation save resumes through the live load path');
-assert.deepEqual(A.G.autoConfig, { skills: false, heal: true, potions: false, profile: 'cautious', targetId: null, priority: [] },
+assert.deepEqual(A.G.autoConfig, { skills: false, heal: true, potions: false, profile: 'cautious', targetId: null, priority: [], rules: [] },
   'automation preferences survive a full save/load round trip');
 
 assert.equal(A.stopAutomationOnDeath(), true, 'death reports that active automation was stopped');

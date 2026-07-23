@@ -186,6 +186,29 @@ export const DESIGN = {
       powerPerPoint: 0.25,// finisher power +this per Momentum spent
       detonateBonus: 0.5, // +this fraction of damage when detonating a matching status
     },
+
+    // --- elemental weakness matrix ---
+    // A defender of element X takes weaknessMult damage from attacks of weakness[X].
+    // Symmetric pairs: fire↔ice, holy↔void, physical↔lightning. Untagged monsters are physical.
+    elements: {
+      ids: ['physical', 'fire', 'ice', 'lightning', 'holy', 'void'],
+      weakness: { fire: 'ice', ice: 'fire', holy: 'void', void: 'holy', physical: 'lightning', lightning: 'physical' },
+      weaknessMult: 1.5,
+    },
+
+    // --- stamina: active dodge roll + timed parry ---
+    stamina: {
+      max: 100,
+      regenPerSec: 18,      // out-of-action refill rate
+      dodgeCost: 35,
+      dodgeMs: 300,         // invincibility frames after a dodge roll
+      dodgeDistTiles: 1.6,  // roll distance in the current movement/facing direction
+      parryCost: 15,
+      parryWindowMs: 200,   // precision window opened by the parry key
+      parryStunMs: 1200,    // attacker is stunned this long on a successful parry
+      counterMult: 1.4,     // ATK buff granted by a successful parry...
+      counterMs: 4000,      // ...for this long
+    },
   },
   progressionPillars: [
     "Every level visibly bumps HP/MP and a stat you can feel in combat.",

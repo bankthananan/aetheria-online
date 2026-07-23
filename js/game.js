@@ -442,6 +442,20 @@ function selfCheck() {
   for (const k of ['max','finisherMin','perHit','decayMs','powerPerPoint','detonateBonus'])
     if (!Number.isFinite(TUNING?.momentum?.[k])) errs.push(`tuning.momentum.${k} missing/non-numeric`);
   for (const s of COMBAT.skills) if (s.detonate && !COMBAT.statusEffects[s.detonate]) errs.push(`skill ${s.id} detonate → unknown status ${s.detonate}`);
+  // elemental matrix, cross-class combos, stamina knobs (Phase 2)
+  const elemIds = new Set(TUNING.elements?.ids || []);
+  if (!elemIds.size || !Number.isFinite(TUNING.elements?.weaknessMult)) errs.push('tuning.elements missing/invalid');
+  for (const [def, att] of Object.entries(TUNING.elements?.weakness || {}))
+    if (!elemIds.has(def) || !elemIds.has(att)) errs.push(`tuning.elements.weakness ${def}→${att} unknown element`);
+  for (const md of CONTENT.monsters) if (md.element && !elemIds.has(md.element)) errs.push(`monster ${md.id} → unknown element ${md.element}`);
+  if (!(COMBAT.crossCombos || []).length) errs.push('no cross-class combos defined');
+  for (const combo of COMBAT.crossCombos || []) {
+    if (!COMBAT.skills.some(s => s.id === combo.detonatorSkill)) errs.push(`crossCombo ${combo.id} → unknown detonator ${combo.detonatorSkill}`);
+    if (!COMBAT.statusEffects[combo.primerStatus]) errs.push(`crossCombo ${combo.id} → unknown primer status ${combo.primerStatus}`);
+    if (combo.aoeStatus && !COMBAT.statusEffects[combo.aoeStatus]) errs.push(`crossCombo ${combo.id} → unknown aoe status ${combo.aoeStatus}`);
+  }
+  for (const k of ['max', 'regenPerSec', 'dodgeCost', 'dodgeMs', 'dodgeDistTiles', 'parryCost', 'parryWindowMs', 'parryStunMs', 'counterMult', 'counterMs'])
+    if (!Number.isFinite(TUNING?.stamina?.[k])) errs.push(`tuning.stamina.${k} missing/non-numeric`);
   for (const r of CONTENT.recipes || []) {
     if (!itemById[r.out]) errs.push(`recipe ${r.id} → unknown output ${r.out}`);
     if (!Number.isFinite(r.cost) || r.cost < 0) errs.push(`recipe ${r.id} bad cost`);
@@ -542,6 +556,7 @@ function makePlayer(classId, name) {
     x: 0, y: 0, facing: { x: 0, y: 1 },
     hp: 1, mp: 1,
     attackCdUntil: 0, skillCd: {}, buffs: [], momentum: 0, lastSkillAt: 0,
+    stamina: DESIGN.tuning.stamina.max, invulnUntil: 0, parryUntil: 0,
     animAttackUntil: 0, animCastUntil: 0, hurtUntil: 0,   // LPC anim-state timers
     // progression
     alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 },
@@ -1589,7 +1604,37 @@ function normaliseAutoConfig(raw) {
     profile,
     targetId: typeof cfg.targetId === 'string' ? cfg.targetId : null,   // player-pinned Hunt species; quest guides still override
     priority: Array.isArray(cfg.priority) ? cfg.priority.filter(id => typeof id === 'string').slice(0, AUTO_PRIORITY_SLOTS) : [],
+    // macro rules: IF hp/mp threshold THEN item/skill/stop-hunt (Phase 2 condition builder)
+    rules: Array.isArray(cfg.rules) ? cfg.rules
+      .filter(r => r && typeof r === 'object'
+        && ['hp_pct', 'mp_pct'].includes(r.when) && ['<', '>'].includes(r.op)
+        && Number.isFinite(+r.value) && ['use_item', 'cast_skill', 'stop_hunt'].includes(r.action))
+      .map(r => ({ when: r.when, op: r.op, value: clamp(+r.value, 0, 1), action: r.action, arg: typeof r.arg === 'string' ? r.arg : '' }))
+      .slice(0, 8) : [],
   };
+}
+
+// Evaluate macro rules each automation tick; a fired rule rests 2s so a
+// persistent condition can't spam items or skills.
+function evaluateMacroRules(p = G.player) {
+  for (const r of G.autoConfig?.rules || []) {
+    if (now() < (r._nextAt || 0)) continue;
+    const val = r.when === 'hp_pct' ? (p.maxHp > 0 ? p.hp / p.maxHp : 0) : (p.maxMp > 0 ? p.mp / p.maxMp : 0);
+    if (!(r.op === '<' ? val < r.value : val > r.value)) continue;
+    r._nextAt = now() + 2000;
+    if (r.action === 'use_item') {
+      if (itemQty(r.arg) > 0 && useItem(r.arg)) { setAutoState('recover', T('Macro Rule', 'ui'), T(itemById[r.arg]?.name || r.arg, 'items')); return true; }
+    } else if (r.action === 'cast_skill') {
+      castSkillById(r.arg);
+      setAutoState('recover', T('Macro Rule', 'ui'), T(COMBAT.skills.find(s => s.id === r.arg)?.name || r.arg, 'skills'));
+      return true;
+    } else if (r.action === 'stop_hunt' && G.autoFarm) {
+      toggleFarm();
+      setAutoState('idle', T('Macro Rule', 'ui'), T('Hunt stopped', 'ui'));
+      return true;
+    }
+  }
+  return false;
 }
 const autoProfile = () => TUNING.automationProfiles[G.autoConfig?.profile] || TUNING.automationProfiles.balanced;
 function setAutoState(phase, label, detail = '') {
@@ -1709,6 +1754,7 @@ function chooseAutoSkill(p = G.player, target = G.target) {
 
 function autoRecoveryAction() {
   const p = G.player, cfg = G.autoConfig, profile = autoProfile();
+  if (evaluateMacroRules(p)) return { type: 'macro' };
   const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 0, mpRatio = p.maxMp > 0 ? p.mp / p.maxMp : 0;
   if (cfg.heal && hpRatio <= profile.healSkillAt) {
     const heal = chooseAutoHealSkill(p);
@@ -1836,11 +1882,47 @@ function playerBasicAttack() {
 function strike(m, atk, p, silent) {
   if (!rollHit(p.hit, m.flee)) { floatText(m.x, m.y, 'miss', 'miss'); return; }
   const { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
-  damageMonster(m, dmg, isCrit, silent);
+  damageMonster(m, applyElement('physical', m, dmg), isCrit, silent);
 }
 
 const liveStatus = (m, id) => m.statuses[id] && m.statuses[id].until > now() ? m.statuses[id] : null;
 const monsterDef = m => Math.max(0, Math.round(m.dv * (liveStatus(m, 'sunder')?.defMult || 1)));
+
+// ---- elemental weakness: a defender of element X takes bonus damage from weakness[X] ----
+const monsterElement = m => m.def.element || 'physical';
+function skillElement(sk) {
+  if (sk.element) return sk.element;
+  if (sk.effect === 'burn') return 'fire';
+  if (sk.effect === 'slow') return 'ice';
+  if (sk.effect === 'stun') return 'lightning';
+  if (sk.classId === 'cleric') return 'holy';
+  return 'physical';
+}
+function elementMult(attackEl, m) {
+  const E = TUNING.elements;
+  return E.weakness[monsterElement(m)] === attackEl ? E.weaknessMult : 1;
+}
+function applyElement(attackEl, m, dmg) {
+  const mult = elementMult(attackEl, m);
+  if (mult > 1) floatText(m.x, m.y - 12, 'WEAK!', 'crit');
+  return Math.round(dmg * mult);
+}
+
+// ---- cross-class combos: a primer status (from any source) consumed by the named detonator skill ----
+function applyCrossCombo(sk, m, dmg, isCrit) {
+  for (const combo of COMBAT.crossCombos) {
+    if (combo.detonatorSkill !== sk.id || !liveStatus(m, combo.primerStatus)) continue;
+    delete m.statuses[combo.primerStatus];
+    if (combo.burstMult) dmg = Math.round(dmg * combo.burstMult);
+    if (combo.critMult) { dmg = Math.round(dmg * combo.critMult); isCrit = true; }
+    if (combo.aoeStatus) for (const o of G.monsters)
+      if (o.alive && dist(m.x, m.y, o.x, o.y) <= combo.aoeRadiusTiles * TS + o.size / 2) applyStatus(o, combo.aoeStatus, 1);
+    floatText(m.x, m.y - 20, combo.name + '!', 'crit');
+    logMsg(`✦ ${combo.name} — ${combo.description}`, 'good');
+    spawnRing(m.x, m.y, TS * 1.4, '#b9e2ff');
+  }
+  return { dmg, isCrit };
+}
 
 function damageMonster(m, dmg, isCrit, silent) {
   const mark = liveStatus(m, 'mark');
@@ -1932,6 +2014,50 @@ function applyStatus(m, effect, skillLvl = 1) {
   if (def.damageTaken) status.damageTaken = def.damageTaken + (def.perLevel || 0) * (skillLvl - 1);
   if (def.defReduction) status.defMult = Math.max(0, 1 - def.defReduction - (def.perLevel || 0) * (skillLvl - 1));
   m.statuses[effect] = status;
+}
+
+// ---- active dodge roll + timed parry (stamina-fueled) ----
+function performDodge() {
+  const p = G.player, S = TUNING.stamina;
+  if (!p || p.stamina < S.dodgeCost || now() < p.invulnUntil) return false;
+  p.stamina -= S.dodgeCost;
+  const k = G.keys;
+  let dx = ((k['d'] || k['arrowright']) ? 1 : 0) - ((k['a'] || k['arrowleft']) ? 1 : 0);
+  let dy = ((k['s'] || k['arrowdown']) ? 1 : 0) - ((k['w'] || k['arrowup']) ? 1 : 0);
+  if (!dx && !dy) { dx = p.facing?.x || 0; dy = p.facing?.y || 1; }
+  const len = Math.hypot(dx, dy) || 1, roll = S.dodgeDistTiles * TS;
+  moveEntity(p, (dx / len) * roll, (dy / len) * roll, 12);
+  p.invulnUntil = now() + S.dodgeMs;
+  G.path = null;
+  spawnRing(p.x, p.y, TS, '#9fd8ff');
+  AUDIO.playSfx('skill');
+  return true;
+}
+function performParry() {
+  const p = G.player, S = TUNING.stamina;
+  if (!p || p.stamina < S.parryCost || now() < p.parryUntil) return false;
+  p.stamina -= S.parryCost;
+  p.parryUntil = now() + S.parryWindowMs;
+  spawnRing(p.x, p.y, TS * 0.8, '#ffd24d');
+  return true;
+}
+// Shared incoming-hit gate for every monster damage source: dodge i-frames
+// negate outright; an open parry window negates, stuns the attacker, and arms
+// a counter-attack buff.
+function playerAvoidsHit(m) {
+  const p = G.player, S = TUNING.stamina;
+  if (now() < p.invulnUntil) { floatText(p.x, p.y, 'dodged!', 'heal'); return true; }
+  if (now() < p.parryUntil) {
+    p.parryUntil = 0;
+    applyStatus(m, 'stun', 1);
+    if (m.statuses.stun) m.statuses.stun.until = now() + S.parryStunMs;
+    p.buffs.push({ stat: 'atk', mult: S.counterMult, until: now() + S.counterMs, sourceSkillId: 'parry' });
+    floatText(p.x, p.y, 'PARRY!', 'crit');
+    spawnRing(p.x, p.y, TS, '#ffd24d');
+    AUDIO.playSfx('hit');
+    return true;
+  }
+  return false;
 }
 
 function castSkill(hotkey) {   // by class hotkey (legacy/UI convenience)
@@ -2027,6 +2153,8 @@ function castSkillById(id) {
     for (const m of G.monsters) if (m.alive && dist(cx, cy, m.x, m.y) <= sk.radius * TS + m.size / 2) {
       let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
       if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete m.statuses[sk.detonate]; }
+      dmg = applyElement(skillElement(sk), m, dmg);
+      ({ dmg, isCrit } = applyCrossCombo(sk, m, dmg, isCrit));
       damageMonster(m, dmg, isCrit); applyStatus(m, sk.effect, lvl);
       extendBranchStatus(p, sk, m);
       hit = true; lastDmg = dmg;
@@ -2050,6 +2178,8 @@ function castSkillById(id) {
   let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance);
   if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete t.statuses[sk.detonate]; }
   dmg = branchDetonateBonus(p, sk, t, dmg);
+  dmg = applyElement(skillElement(sk), t, dmg);
+  ({ dmg, isCrit } = applyCrossCombo(sk, t, dmg, isCrit));
   damageMonster(t, dmg, isCrit); applyStatus(t, sk.effect, lvl);
   extendBranchStatus(p, sk, t);
   procBranchMechanic(p, sk, { dmg });
@@ -2129,7 +2259,7 @@ function updateMonsters(dt) {
           m.slamAt = null; m.nextSlamAt = now() + slamInterval;
           spawnCrack(m.slamX, m.slamY, TS * 1.8, '#ff5533'); spawnRing(m.slamX, m.slamY, TS * 1.8, '#ff5533');
           AUDIO.playSfx('hit');
-          if (dist(p.x, p.y, m.slamX, m.slamY) <= TS * 1.8) {
+          if (dist(p.x, p.y, m.slamX, m.slamY) <= TS * 1.8 && !playerAvoidsHit(m)) {
             const { dmg } = calcDamage(m.atk * 1.6, p.physDef * buffMult(p, 'def'), 0);
             if (!p.godMode) p.hp -= dmg;
             p.hurtUntil = now() + ANIM.hurtMs;
@@ -2154,7 +2284,7 @@ function updateMonsters(dt) {
         m.path = null; m.lastCombatAt = now();
         // fighting up is dangerous both ways: a monster above your level lands hits an
         // evasion build would otherwise dodge (mirror of combatGapFactor on your damage)
-        if (rollHit(m.hit + gapHit(m.lvl, p.level), p.flee)) {
+        if (rollHit(m.hit + gapHit(m.lvl, p.level), p.flee) && !playerAvoidsHit(m)) {
           const { dmg, isCrit } = calcDamage(m.atk, p.physDef * buffMult(p, 'def'), 5);
           if (m.def.attackRange) spawnBolt(m.x, m.y, p.x, p.y, m.def.projectileColor || '#ffffff', '#ffffff');
           if (!p.godMode) p.hp -= dmg;                                  // admin god mode
@@ -3728,6 +3858,9 @@ function step(dt) {
   // One objective-aware acquisition path handles focused and free Hunt.
   if (G.autoFarm && !G.manualIntent && !dlg && (!G.target || !G.target.alive)) acquireAutoTarget(p);
 
+  const S = TUNING.stamina;
+  p.stamina = Math.min(S.max, (p.stamina ?? S.max) + S.regenPerSec * dt);
+
   // movement — WASD/arrows take priority and cancel any click-to-move
   if (touchJoystickState.active) {
     const dz = 0.25;
@@ -3972,15 +4105,7 @@ function initTouchControls() {
       else if (act === 's2') useHotbarSlot(1);
       else if (act === 's3') useHotbarSlot(2);
       else if (act === 's4') useHotbarSlot(3);
-      else if (act === 'dodge') {
-        if (!castSkillById('dodge') && !castSkillById('dash')) {
-          const p = G.player;
-          if (p) {
-            const dirX = p.facingLeft ? -1 : 1;
-            moveEntity(p, dirX * TS * 1.5, 0, 12);
-          }
-        }
-      }
+      else if (act === 'dodge') performDodge();
     };
     btn.addEventListener('touchstart', trigger, { passive: false });
     btn.addEventListener('click', trigger);
@@ -3998,6 +4123,7 @@ function buildHud() {
       <div class="stat-stack">
         <div class="bar hp-bar" role="progressbar" aria-label="${T('Health', 'ui')}"><div class="fill" id="hp-fill"></div><div class="label" id="hp-label"></div></div>
         <div class="bar mp-bar" role="progressbar" aria-label="${T('Mana', 'ui')}"><div class="fill" id="mp-fill"></div><div class="label" id="mp-label"></div></div>
+        <div class="bar stamina-bar" role="progressbar" aria-label="${T('Stamina', 'ui')}" title="${T('Stamina — Space to dodge roll, V to parry', 'ui')}"><div class="fill" id="stamina-fill"></div></div>
         <div class="hud-identity"><span id="hud-name"></span><span class="hud-sep">◆</span><span id="hud-job"></span><span class="hud-sep">◆</span><span class="hud-coin">G</span><span id="hud-zeny"></span></div>
       </div>
       <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div></div>
@@ -4062,6 +4188,7 @@ function updateAutomationHud() {
   const icons = { idle: '◎', route: '➤', search: '⌖', encounter: '!', combat: '⚔', recover: '✚', waiting: '◷', blocked: '⚠' };
   el.dataset.phase = state.phase;
   el.hidden = !automationActive() && state.phase === 'idle';
+  if (!el.querySelector('.auto-status__icon')) return;   // HUD not built yet
   el.querySelector('.auto-status__icon').textContent = icons[state.phase] || '◎';
   el.querySelector('b').textContent = state.label;
   el.querySelector('small').textContent = state.detail || '';
@@ -4222,6 +4349,7 @@ function updateHud() {
   const hpRatio = safeRatio(p.hp, p.maxHp), mpRatio = safeRatio(p.mp, p.maxMp);
   $('#hp-fill').style.width = (100 * hpRatio) + '%';
   $('#mp-fill').style.width = (100 * mpRatio) + '%';
+  if ($('#stamina-fill')) $('#stamina-fill').style.width = (100 * safeRatio(p.stamina, TUNING.stamina.max)) + '%';
   const need = p.level >= DESIGN.levelCap ? 1 : xpForNext(p.level);
   $('#xp-fill').style.width = (100 * p.xp / need) + '%';
   if ($('#job-fill')) $('#job-fill').style.width = (p.jobLevel >= activeJobLevelCap(p) ? 100 : 100 * p.jobXp / jobXpForNext(p.jobLevel)) + '%';
@@ -4952,6 +5080,26 @@ function automationPanelHtml(p = G.player) {
     <div class="automation-section"><h3>${T('Skill Priority', 'ui')}</h3><p>${T('Drag skills into rank order. Automation casts the top ready skill; unranked skills use its own judgment.', 'ui')}</p>
       <div class="auto-slot-grid">${slotHtml}</div><div class="auto-skill-pool">${poolHtml}</div></div>
     <div class="automation-section"><h3>${T('Recovery Profile', 'ui')}</h3><p>${T('Choose how early automation recovers. Potion cooldown is always respected.', 'ui')}</p><div class="auto-profile-grid">${profiles}</div></div>
+    <div class="automation-section"><h3>${T('Macro Rules', 'ui')}</h3><p>${T('IF a resource crosses a threshold THEN act. Checked before built-in recovery.', 'ui')}</p>
+      <div class="macro-rule-list">${(cfg.rules || []).map((r, i) => `<div class="macro-rule"><code>${T('IF', 'ui')} ${r.when === 'hp_pct' ? 'HP' : 'MP'} ${r.op === '<' ? '&lt;' : '&gt;'} ${Math.round(r.value * 100)}% ${T('THEN', 'ui')} ${r.action === 'use_item' ? `${T('use', 'ui')} ${esc(T(itemById[r.arg]?.name || r.arg, 'items'))}` : r.action === 'cast_skill' ? `${T('cast', 'ui')} ${esc(T(COMBAT.skills.find(s => s.id === r.arg)?.name || r.arg, 'skills'))}` : T('stop hunt', 'ui')}</code><button class="macro-rule__del" data-macro-del="${i}" aria-label="${T('Delete rule', 'ui')}">×</button></div>`).join('')
+        || `<small class="auto-empty">${T('No rules yet — automation uses only its built-in judgment.', 'ui')}</small>`}</div>
+      <div class="macro-builder">
+        <span>${T('IF', 'ui')}</span>
+        <select id="macro-when"><option value="hp_pct">HP</option><option value="mp_pct">MP</option></select>
+        <select id="macro-op"><option value="<">&lt;</option><option value=">">&gt;</option></select>
+        <input id="macro-val" type="number" min="1" max="99" value="35" aria-label="${T('Threshold percent', 'ui')}">%
+        <span>${T('THEN', 'ui')}</span>
+        <select id="macro-action"><option value="use_item">${T('Use item', 'ui')}</option><option value="cast_skill">${T('Cast skill', 'ui')}</option><option value="stop_hunt">${T('Stop hunt', 'ui')}</option></select>
+        <select id="macro-arg">
+          <optgroup label="${T('Items', 'ui')}">${[...new Map(p.inventory.filter(s => !s.uid && (itemById[s.itemId]?.hpRestore || itemById[s.itemId]?.mpRestore || itemById[s.itemId]?.type === 'potion')).map(s => [s.itemId, itemById[s.itemId]])).values()].map(it => `<option value="${esc(it.id)}">${esc(T(it.name, 'items'))}</option>`).join('')}</optgroup>
+          <optgroup label="${T('Skills', 'ui')}">${rotationSkills.map(sk => `<option value="${esc(sk.id)}">${esc(T(sk.name, 'skills'))}</option>`).join('')}</optgroup>
+        </select>
+        <button class="btn" id="macro-add">＋ ${T('Add Rule', 'ui')}</button>
+      </div>
+      <details class="macro-json"><summary>${T('JSON profile (export / import)', 'ui')}</summary>
+        <textarea id="macro-json" rows="3" spellcheck="false">${esc(JSON.stringify(cfg.rules || []))}</textarea>
+        <button class="btn" id="macro-json-apply">${T('Import JSON', 'ui')}</button></details>
+    </div>
     <footer class="automation-foot">⚠ ${T('Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.', 'ui')}</footer>
   </section>`;
 }
@@ -5330,6 +5478,31 @@ function wirePanel(id, el) {
     if (musicEl) musicEl.oninput = update;
     if (sfxEl) sfxEl.oninput = update;
   }
+  el.querySelectorAll('[data-macro-del]').forEach(b => b.onclick = () => {
+    const rules = (G.autoConfig.rules || []).slice();
+    rules.splice(+b.dataset.macroDel, 1);
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, rules });
+    saveGame(); refreshPanel('automation');
+  });
+  const macroAdd = el.querySelector('#macro-add');
+  if (macroAdd) macroAdd.onclick = () => {
+    const action = el.querySelector('#macro-action').value, arg = el.querySelector('#macro-arg').value;
+    if (action === 'use_item' && !itemById[arg]) return toast(T('Pick an item for this rule.', 'ui'), 'bad');
+    if (action === 'cast_skill' && !COMBAT.skills.some(s => s.id === arg)) return toast(T('Pick a skill for this rule.', 'ui'), 'bad');
+    const rule = { when: el.querySelector('#macro-when').value, op: el.querySelector('#macro-op').value,
+      value: clamp((+el.querySelector('#macro-val').value || 0) / 100, 0, 1), action, arg };
+    G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, rules: [...(G.autoConfig.rules || []), rule] });
+    saveGame(); refreshPanel('automation');
+  };
+  const macroImport = el.querySelector('#macro-json-apply');
+  if (macroImport) macroImport.onclick = () => {
+    try {
+      const rules = JSON.parse(el.querySelector('#macro-json').value);
+      G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, rules });
+      saveGame(); refreshPanel('automation');
+      toast(T('Macro profile imported.', 'ui'), 'good');
+    } catch { toast(T('Invalid JSON profile.', 'ui'), 'bad'); }
+  };
   el.querySelectorAll('[data-auto-toggle]').forEach(b => b.onclick = () => {
     const key = b.dataset.autoToggle;
     if (!['skills', 'heal', 'potions'].includes(key)) return;
@@ -6437,6 +6610,8 @@ window.addEventListener('keydown', e => {
   else if (key === 'k') togglePanel('skills');
   else if (key === 'm') togglePanel('world');
   else if (key === 'q') togglePanel('quest');
+  else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
+  else if (key === 'v') performParry();
   else if (key === 'escape') {
     hideSkillTip();
     cancelHotkeyRebind(false);
@@ -6471,6 +6646,8 @@ if (typeof window !== 'undefined')
     LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
-    canUseItem, itemClassRequirementText, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice };
+    canUseItem, itemClassRequirementText, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
+    monsterElement, skillElement, elementMult, applyCrossCombo, applyStatus,
+    performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig };
 
 boot();
