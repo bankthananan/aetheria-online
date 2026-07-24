@@ -28,8 +28,9 @@ const { COMBAT } = await import('./combat.js');
 const { CONTENT } = await import('./content.js');
 await import('./game.js');
 const A = globalThis.window.__AWO;
-const { G, DESIGN, makePlayer, loadMap, addItem, monsterElement, skillElement, elementMult,
+const { G, DESIGN, makePlayer, loadMap, addItem, monsterElement, skillElement, attackElement, elementMult,
   weakToElement, milestoneStat, milestoneTarget, claimMilestone } = A;
+const FOREVER = Number.MAX_SAFE_INTEGER;
 const E = DESIGN.tuning.elements;
 
 console.log('=== RUNNING PHASE 5 TEST SUITE ===');
@@ -47,11 +48,26 @@ assert.equal(slime.element, 'nature', 'Gel Slime is nature');
 const slimeMon = { def: slime };
 assert.equal(elementMult('fire', slimeMon), E.weaknessMult, 'nature weak to fire (1.5x)');
 assert.equal(elementMult('ice', slimeMon), 1, 'nature not weak to ice');
-// HOLY FIX: paladin skills are holy, and a void monster now has a counter
-const smite = COMBAT.skills.find(s => s.id === 'smite');
-assert.equal(skillElement(smite), 'holy', 'paladin skill resolves to holy (dead branch fixed)');
+// the wheel: void is countered by holy
 const voidMon = { def: CONTENT.monsters.find(m => m.element === 'void') };
-assert.equal(elementMult('holy', voidMon), E.weaknessMult, 'void monster now takes 1.5x from holy');
+assert.equal(elementMult('holy', voidMon), E.weaknessMult, 'void monster takes 1.5x from holy');
+// PALADIN IMBUE: skills are physical by default (holy only while Blessed)
+const smite = COMBAT.skills.find(s => s.id === 'smite');
+assert.equal(skillElement(smite), 'physical', 'paladin skill is physical by default (no innate holy)');
+const pal = makePlayer('lightbringer', 'Cru');
+assert.equal(attackElement(pal, smite), 'physical', 'un-imbued paladin skill hits physical');
+assert.equal(attackElement(pal, null), 'physical', 'un-imbued paladin basic attack is physical');
+assert.equal(elementMult(attackElement(pal, smite), voidMon), 1, 'un-imbued paladin does 1x to void');
+pal.imbue = { element: 'holy', until: FOREVER };   // simulate an active Blessing
+assert.equal(attackElement(pal, smite), 'holy', 'Blessed paladin skill becomes holy');
+assert.equal(attackElement(pal, null), 'holy', 'Blessed paladin basic attack becomes holy');
+assert.equal(elementMult(attackElement(pal, smite), voidMon), E.weaknessMult, 'Blessed paladin does 1.5x to void');
+pal.imbue.until = 0;   // expired
+assert.equal(attackElement(pal, smite), 'physical', 'expired imbue reverts to physical');
+// imbue never overrides an already-elemental skill (a fire spell stays fire)
+const flame = COMBAT.skills.find(s => s.id === 'flame_burst');
+const mageP = makePlayer('codeweaver', 'M'); mageP.imbue = { element: 'holy', until: FOREVER };
+assert.equal(attackElement(mageP, flame), 'fire', 'imbue does not override an elemental skill');
 // every skill resolves to a valid element
 for (const s of COMBAT.skills) assert.ok(E.ids.includes(skillElement(s)), `${s.id} resolves to a real element`);
 // sample derivations

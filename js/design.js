@@ -196,6 +196,7 @@ export const DESIGN = {
       weakness: { fire: 'ice', ice: 'fire', nature: 'fire', lightning: 'nature', holy: 'void', void: 'holy' },
       weaknessMult: 1.5,
     },
+    holyImbueMs: 8000,   // Paladin's Blessing imbues weapons with holy for this long (vs 13s cooldown → ~60% uptime)
 
     // --- stamina: active dodge roll + timed parry ---
     stamina: {

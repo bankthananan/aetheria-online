@@ -641,7 +641,7 @@ function makePlayer(classId, name) {
     x: 0, y: 0, facing: { x: 0, y: 1 },
     hp: 1, mp: 1,
     attackCdUntil: 0, skillCd: {}, buffs: [], momentum: 0, lastSkillAt: 0,
-    stamina: DESIGN.tuning.stamina.max, invulnUntil: 0, parryUntil: 0,
+    stamina: DESIGN.tuning.stamina.max, invulnUntil: 0, parryUntil: 0, imbue: null,
     animAttackUntil: 0, animCastUntil: 0, hurtUntil: 0,   // LPC anim-state timers
     // progression
     alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 },
@@ -1996,7 +1996,7 @@ function playerBasicAttack() {
 function strike(m, atk, p, silent) {
   if (!rollHit(p.hit, m.flee)) { floatText(m.x, m.y, 'miss', 'miss'); return; }
   const { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
-  damageMonster(m, applyElement('physical', m, dmg), isCrit, silent);
+  damageMonster(m, applyElement(attackElement(p, null), m, dmg), isCrit, silent);
 }
 
 const liveStatus = (m, id) => m.statuses[id] && m.statuses[id].until > now() ? m.statuses[id] : null;
@@ -2010,7 +2010,7 @@ const monsterElement = m => m.def.element || 'physical';
 // override on a skill with an explicit `element:` field only where it's wrong.
 function skillElement(sk) {
   if (sk.element) return sk.element;
-  if (sk.classId === 'paladin') return 'holy';         // Lightbringer channels dawnlight
+  if (sk.classId === 'paladin') return 'physical';     // holy comes ONLY from the Blessing weapon imbue, never innately
   const n = sk.id;
   if (/frost|ice|rime|blizzard|glacial|absolute_clause/.test(n)) return 'ice';
   if (/flame|fire|ember|inferno|meteor|pyro|solar|prismatic|frostfire/.test(n)) return 'fire';
@@ -2033,6 +2033,14 @@ const ELEMENT_META = {
   void:      { label: 'Void',      color: '#b98cff', icon: '🌌' },
 };
 const elementMeta = el => ELEMENT_META[el] || ELEMENT_META.physical;
+// Weapon imbue: a temporary buff (Paladin's Blessing) that reskins PHYSICAL damage
+// to another element. Elemental skills (a fire spell) keep their own element.
+const imbueElement = p => (p?.imbue && now() < p.imbue.until) ? p.imbue.element : null;
+function attackElement(p, sk) {
+  const base = sk ? skillElement(sk) : 'physical';   // sk omitted = basic attack
+  if (base === 'physical') { const im = imbueElement(p); if (im) return im; }
+  return base;
+}
 const elementChip = el => { const m = elementMeta(el); return `<span class="elem-chip" style="color:${m.color};border-color:${m.color}">${m.icon} ${m.label}</span>`; };
 const weakToElement = monEl => TUNING.elements.weakness[monEl] || null;   // null = neutral, no weakness
 function elementMult(attackEl, m) {
@@ -2314,7 +2322,9 @@ function castSkillById(id) {
     const mult = 1 + (eff[1] - 1) * (1 + 0.25 * (lvl - 1));
     p.buffs.push({ stat: eff[0], mult, until: now() + 8000, sourceSkillId: sk.id });
     skillFx(sk, p.x, p.y);
-    toast(`${sk.name} Lv${lvl} active!`, 'good');
+    // Blessing also imbues the weapon with holy — the ONLY way a Paladin deals holy (1.5× vs void).
+    if (sk.id === 'blessing') { p.imbue = { element: 'holy', until: now() + TUNING.holyImbueMs }; spawnRing(p.x, p.y, TS, '#ffe9a6'); }
+    toast(sk.id === 'blessing' ? `${sk.name} — ✨ ${T('weapon imbued with Holy', 'ui')}!` : `${sk.name} Lv${lvl} active!`, 'good');
     procBranchMechanic(p, sk);
     return;
   }
@@ -2325,7 +2335,7 @@ function castSkillById(id) {
     for (const m of G.monsters) if (m.alive && dist(cx, cy, m.x, m.y) <= sk.radius * TS + m.size / 2) {
       let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
       if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete m.statuses[sk.detonate]; }
-      dmg = applyElement(skillElement(sk), m, dmg);
+      dmg = applyElement(attackElement(p, sk), m, dmg);
       ({ dmg, isCrit } = applyCrossCombo(sk, m, dmg, isCrit));
       damageMonster(m, dmg, isCrit); applyStatus(m, sk.effect, lvl);
       extendBranchStatus(p, sk, m);
@@ -2350,7 +2360,7 @@ function castSkillById(id) {
   let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance);
   if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete t.statuses[sk.detonate]; }
   dmg = branchDetonateBonus(p, sk, t, dmg);
-  dmg = applyElement(skillElement(sk), t, dmg);
+  dmg = applyElement(attackElement(p, sk), t, dmg);
   ({ dmg, isCrit } = applyCrossCombo(sk, t, dmg, isCrit));
   damageMonster(t, dmg, isCrit); applyStatus(t, sk.effect, lvl);
   extendBranchStatus(p, sk, t);
@@ -5227,7 +5237,7 @@ function skillNodeTip(id, isPassive) {
 
   const displayType = currentLang === 'th' ? ({ active: 'ใช้งาน', passive: 'ติดตัว', heal: 'รักษา', aoe: 'โจมตีหมู่', buff: 'บัฟ' }[s.type] || s.type) : s.type;
 
-  return `<div class="tip-name">${T(s.name, 'skills')} <small style="color:var(--text-muted)">· ${displayType}${s.effect ? ` · ${currentLang === 'th' ? 'มอบสถานะ' : 'inflicts'} ${displayEffect}` : ''}</small> ${elementChip(skillElement(s))}</div>
+  return `<div class="tip-name">${T(s.name, 'skills')} <small style="color:var(--text-muted)">· ${displayType}${s.effect ? ` · ${currentLang === 'th' ? 'มอบสถานะ' : 'inflicts'} ${displayEffect}` : ''}</small> ${elementChip(skillElement(s))}${s.classId === 'paladin' && isDamageSkill(s) ? ` <small style="color:#ffe9a6">✨ ${currentLang === 'th' ? 'ศักดิ์สิทธิ์เมื่อได้รับพร' : 'holy while Blessed'}</small>` : ''}</div>
     <div class="tip-eff">${skillEffectLine(s, L, p)} <small style="color:var(--text-muted)">(${lv ? (currentLang === 'th' ? 'เลเวล ' : 'Lv ') + lv : (currentLang === 'th' ? 'ที่ เลเวล 1' : 'at Lv 1')})</small></div>
     <div class="tip-row">${resourceTxt} · ${currentLang === 'th' ? 'คูลดาวน์' : 'cooldown'} <b>${s.cooldownMs / 1000}${currentLang === 'th' ? ' วินาที' : 's'}</b> · ${rangeTxt}</div>
     <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${max}</b></div>${masteryHtml}
@@ -7039,7 +7049,7 @@ if (typeof window !== 'undefined')
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
-    monsterElement, skillElement, elementMult, applyCrossCombo, applyStatus,
+    monsterElement, skillElement, attackElement, imbueElement, elementMult, applyCrossCombo, applyStatus,
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
