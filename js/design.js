@@ -189,10 +189,11 @@ export const DESIGN = {
 
     // --- elemental weakness matrix ---
     // A defender of element X takes weaknessMult damage from attacks of weakness[X].
-    // Symmetric pairs: fire↔ice, holy↔void, physical↔lightning. Untagged monsters are physical.
+    // 'physical' is NEUTRAL — no map entry, so it deals and takes 1x, and is the
+    // default for any untagged monster/skill. The other six form a weakness wheel.
     elements: {
-      ids: ['physical', 'fire', 'ice', 'lightning', 'holy', 'void'],
-      weakness: { fire: 'ice', ice: 'fire', holy: 'void', void: 'holy', physical: 'lightning', lightning: 'physical' },
+      ids: ['physical', 'fire', 'ice', 'lightning', 'nature', 'holy', 'void'],
+      weakness: { fire: 'ice', ice: 'fire', nature: 'fire', lightning: 'nature', holy: 'void', void: 'holy' },
       weaknessMult: 1.5,
     },
 

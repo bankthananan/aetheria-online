@@ -432,6 +432,41 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
 #hud .stamina-bar,.stamina-bar{height:7px;border-width:0 2px 2px;background:#131a10}
 #hud .stamina-bar > .fill,.stamina-bar > .fill{background:linear-gradient(90deg,#8fbf5b,#d7e86a)}
 
+/* Element chips + Collection Book */
+.elem-chip{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:3px;font-size:9px;font-weight:800;line-height:15px;vertical-align:middle;white-space:nowrap}
+.collection-book{display:flex;flex-direction:column;gap:10px}
+.book-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.book-tab{padding:5px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(120,90,50,.5);color:var(--text,#e8dcc0);font-size:11px;font-weight:700;cursor:pointer;border-radius:3px}
+.book-tab.active{background:var(--gold-deep,#74501d);color:var(--gold-bright,#f2d88a);border-color:var(--gold,#d6b45a)}
+.book-pane{min-height:160px}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.book-card{display:flex;flex-direction:column;gap:2px;padding:7px;background:rgba(0,0,0,.28);border:1px solid rgba(120,90,50,.4);border-radius:4px}
+.book-card-head{display:flex;align-items:center;gap:6px}
+.book-card-head b{font-size:12px}
+.book-card small{font-size:10px;color:var(--text-muted,#b9a884)}
+.book-card.locked{align-items:center;justify-content:center;color:var(--text-muted,#8a7c62);min-height:70px;opacity:.6}
+.book-lock{font-size:20px}
+.book-src{font-style:italic}
+.book-kills b{color:var(--gold-bright,#f2d88a)}
+.elem-list .elem-row{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid rgba(120,90,50,.25)}
+.elem-vs{font-size:11px;color:var(--text-muted,#b9a884)}
+.book-hint,.book-skillgroup h4{margin:4px 0}
+.book-skillgroup h4{color:var(--gold-bright,#f2d88a);text-transform:capitalize;font-size:12px}
+.book-skill{padding:2px 0;font-size:11px}
+.book-skill small{color:var(--text-muted,#b9a884)}
+.book-milestones{border-top:1px solid rgba(120,90,50,.4);padding-top:8px}
+.book-milestones h3{font-size:13px;margin:0 0 6px}
+.mile-row{display:flex;align-items:center;gap:8px;padding:5px 4px}
+.mile-row.is-ready{background:rgba(120,90,30,.25);border-radius:3px}
+.mile-ico{font-size:18px}
+.mile-main{flex:1;min-width:0}
+.mile-main b{font-size:11px}
+.mile-bar{height:6px;margin-top:3px;background:#131a10;border-radius:3px;overflow:hidden}
+.mile-fill{height:100%;background:linear-gradient(90deg,#8fbf5b,#d7e86a)}
+.mile-claim{padding:2px 8px;font-size:10px}
+.mile-claimed{color:var(--success,#8fbf5b);font-size:10px;font-weight:700}
+.mile-progress{color:var(--text-muted,#b9a884);font-size:10px}
+
 /* Macro rule builder */
 .macro-rule{display:flex;align-items:center;gap:8px;padding:4px 6px;border:1px solid rgba(120,90,50,.35);margin-bottom:4px;background:rgba(0,0,0,.25)}
 .macro-rule code{flex:1;font-size:11px;color:var(--gold-bright)}

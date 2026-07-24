@@ -153,6 +153,7 @@ assert.ok(p2.mp - mpBefore > 3 * (RIFT.manaSurgeMult - 0.01), 'Mana Surge speeds
 
 G.rift.mutatorId = 'volcanic_ticks';
 G.rift.nextBurnAt = 0;
+G.monsters.forEach(m => { m.x = m.y = m.homeX = m.homeY = 2000; });  // park the wave — an adjacent rift mob would attack during step() and flake this
 p2.hp = p2.maxHp;
 const hpBeforeBurn = p2.hp;
 A.step(0.016);

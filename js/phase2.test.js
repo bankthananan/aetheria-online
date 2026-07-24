@@ -97,7 +97,7 @@ assert.ok(G.monsters.length >= 3, 'field map has monsters to test against');
 
 // ---- Task 2.1: elemental weakness matrix ----
 const E = DESIGN.tuning.elements;
-assert.equal(E.ids.length, 6, 'six elements defined');
+assert.equal(E.ids.length, 7, 'seven elements defined (incl. neutral physical + nature)');
 for (const [def, att] of Object.entries(E.weakness)) {
   assert.ok(E.ids.includes(def) && E.ids.includes(att), `weakness pair ${def}→${att} uses real elements`);
 }
@@ -110,7 +110,8 @@ assert.equal(monsterElement(fireMon), 'fire');
 assert.equal(monsterElement(plainMon), 'physical');
 assert.equal(elementMult('ice', fireMon), E.weaknessMult, 'fire monster weak to ice');
 assert.equal(elementMult('fire', fireMon), 1, 'fire monster not weak to fire');
-assert.equal(elementMult('lightning', plainMon), E.weaknessMult, 'physical monster weak to lightning');
+assert.equal(elementMult('lightning', plainMon), 1, 'physical is neutral — no weakness');
+assert.equal(elementMult('fire', plainMon), 1, 'physical takes 1x from every element');
 console.log('✓ Task 2.1 | Elemental weakness matrix verified');
 
 // ---- Task 2.2: cross-class combos ----

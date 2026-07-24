@@ -2,7 +2,7 @@
 // Balanced for the full Base Lv 1 -> 80 journey.
 export const CONTENT = {
   monsters: [
-    { id: "slime", name: "Gel Slime", flavor: "A wobbling blob. Your first foe in this new world.",
+    { id: "slime", element: "nature", name: "Gel Slime", flavor: "A wobbling blob. Your first foe in this new world.",
       level: 2, hp: 75, atk: 10, def: 4, exp: 7, spriteColor: "#4fc3f7", sizeTiles: 1,
       drops: [{ itemId: "slime_gel", chance: 0.7 }, { itemId: "minor_potion", chance: 0.1 }], behavior: "passive" },
     { id: "goblin", name: "Scrap Goblin", flavor: "A scrawny raider that jabs with a rusty knife.",
@@ -11,10 +11,10 @@ export const CONTENT = {
     { id: "wolf", name: "Dire Wolf", flavor: "Lean, fast, and always hunting in the woods.",
       level: 9, hp: 170, atk: 23, def: 9, exp: 111, spriteColor: "#9e9e9e", sizeTiles: 1,
       drops: [{ itemId: "wolf_pelt", chance: 0.6 }, { itemId: "iron_boots", chance: 0.06 }, { itemId: "wolf_fang", chance: 0.35 }], behavior: "aggressive" },
-    { id: "thornback_boar", name: "Thornback Boar", flavor: "Bramble roots armor its hide and splinter anyone who stands their ground.",
+    { id: "thornback_boar", element: "nature", name: "Thornback Boar", flavor: "Bramble roots armor its hide and splinter anyone who stands their ground.",
       level: 12, hp: 218, atk: 31, def: 12, exp: 190, spriteColor: "#8f6b45", sizeTiles: 1,
       drops: [{ itemId: "wolf_pelt", chance: 0.45 }, { itemId: "wolf_fang", chance: 0.25 }, { itemId: "mid_potion", chance: 0.12 }], behavior: "aggressive" },
-    { id: "mossback_beetle", name: "Mossback Beetle", flavor: "A patient shell-creeper that carries half the forest on its back.",
+    { id: "mossback_beetle", element: "nature", name: "Mossback Beetle", flavor: "A patient shell-creeper that carries half the forest on its back.",
       level: 6, hp: 132, atk: 18, def: 7, exp: 48, spriteColor: "#5f9f63", sizeTiles: 1,
       drops: [{ itemId: "slime_gel", chance: 0.35 }, { itemId: "wolf_pelt", chance: 0.2 }], behavior: "passive" },
     { id: "shade", element: "void", name: "Woodland Shade", flavor: "A restless spirit bound to the ruins' edge.",
@@ -29,7 +29,7 @@ export const CONTENT = {
     { id: "ruin_crawler", name: "Ruin Crawler", flavor: "Stone plates click beneath the drowned halls as it searches for warmth.",
       level: 22, hp: 348, atk: 50, def: 20, exp: 610, spriteColor: "#8b7b68", sizeTiles: 1,
       drops: [{ itemId: "golem_core", chance: 0.08 }, { itemId: "shade_dust", chance: 0.3 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive" },
-    { id: "elderwood_treant", name: "Elderwood Treant", flavor: "The forest's oldest warden. It does not forgive the axe.",
+    { id: "elderwood_treant", element: "nature", name: "Elderwood Treant", flavor: "The forest's oldest warden. It does not forgive the axe.",
       level: 14, hp: 853, atk: 41, def: 16, exp: 1004, spriteColor: "#4e8a3f", sizeTiles: 2,
       drops: [{ itemId: "blessed_ore", chance: 0.5 }, { itemId: "leather_vest", chance: 0.35 }, { itemId: "mid_potion", chance: 1.0 }], behavior: "aggressive" },
     { id: "frost_revenant", element: "ice", name: "Frost Revenant", flavor: "A king who froze on his throne and never noticed he died.",
@@ -571,6 +571,16 @@ export const CONTENT = {
     { id: "ach_guild_ace", icon: "🏅", name: "Guild Ace", desc: "Reach guild rank C.", type: "rank", target: "C" },
     { id: "ach_hero", icon: "👑", name: "Hero of Aetheria", desc: "Complete the main story.", type: "story" },
     { id: "ach_reborn", icon: "✦", name: "Twice-Born", desc: "Complete a rebirth.", type: "rebirths", count: 1 },
+  ],
+
+  // Collection Book milestones — one-time claimable rewards for collection progress.
+  // type: 'kills' (total monster kills) | 'bestiary' (distinct monsters seen) | 'items' (distinct equipment collected).
+  milestones: [
+    { id: "mile_hunt_100", icon: "⚔", label: "Hunter — slay 100 monsters", type: "kills", target: 100, reward: { zeny: 1500 } },
+    { id: "mile_hunt_1000", icon: "☠", label: "Slayer — slay 1,000 monsters", type: "kills", target: 1000, reward: { zeny: 12000, itemId: "elixir" } },
+    { id: "mile_bestiary_half", icon: "📖", label: "Naturalist — discover 14 monsters", type: "bestiary", target: 14, reward: { zeny: 2000 } },
+    { id: "mile_bestiary_all", icon: "🏆", label: "Loremaster — discover every monster", type: "bestiary", target: 0, reward: { zeny: 20000, itemId: "elixir" } },
+    { id: "mile_items_all", icon: "💎", label: "Collector — obtain every piece of gear", type: "items", target: 0, reward: { zeny: 25000, itemId: "celestial_draught" } },
   ],
 
   story: {

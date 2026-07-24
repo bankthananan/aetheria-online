@@ -543,6 +543,12 @@ function selfCheck() {
     if (a.type === 'rank' && !GUILD_RANKS.includes(a.target)) errs.push(`achievement ${a.id} → unknown guild rank ${a.target}`);
     if (!a.name || !a.desc || !a.icon) errs.push(`achievement ${a.id} missing name/desc/icon`);
   }
+  for (const mile of CONTENT.milestones || []) {
+    if (!['kills', 'bestiary', 'items'].includes(mile.type)) errs.push(`milestone ${mile.id} bad type ${mile.type}`);
+    if (!Number.isFinite(mile.target) || mile.target < 0) errs.push(`milestone ${mile.id} bad target`);
+    if (mile.reward?.itemId && !itemById[mile.reward.itemId]) errs.push(`milestone ${mile.id} → unknown reward item ${mile.reward.itemId}`);
+    if (!mile.label || !mile.icon) errs.push(`milestone ${mile.id} missing label/icon`);
+  }
   if (!achIds.size) errs.push('no achievements defined');
   for (const q of CONTENT.quests) if (q.difficulty && !DIFFICULTY[q.difficulty]) errs.push(`quest ${q.id} bad difficulty ${q.difficulty}`);
   for (const it of CONTENT.items) if (it.rankReq && !GUILD_RANKS.includes(it.rankReq)) errs.push(`item ${it.id} bad rankReq ${it.rankReq}`);
@@ -571,6 +577,9 @@ const G = {
   keys: {},
   audioVolumes: { master: 1.0, music: 0.8, sfx: 1.0 },
   highContrast: false,  // Settings > Accessibility: hc-mode body class + high-contrast damage palette
+  seenMonsters: new Set(),     // Collection Book: monster ids ever encountered/killed
+  collectedItems: new Set(),   // Collection Book: equipment ids ever obtained
+  claimedMilestones: new Set(),// Collection Book: milestone ids whose reward was claimed
   target: null,
   targetSource: null,   // hunt | retaliate | manual; preserves deliberate high-level challenges
   effects: [],          // transient attack/spell visuals
@@ -1330,6 +1339,7 @@ function addStack(itemId, qty = 1) {
 }
 // weapons/armor become rarity-rolled instances (not stackable); everything else stacks
 function addItem(itemId, qty = 1, bias = 0) {
+  if (itemById[itemId]) G.collectedItems?.add(itemId);   // Collection Book discovery
   if (isEquip(itemId)) { const inst = rollItem(itemId, bias); G.player.inventory.push(inst); return inst; }
   addStack(itemId, qty);
 }
@@ -1994,14 +2004,37 @@ const monsterDef = m => Math.max(0, Math.round(m.dv * (liveStatus(m, 'sunder')?.
 
 // ---- elemental weakness: a defender of element X takes bonus damage from weakness[X] ----
 const monsterElement = m => m.def.element || 'physical';
+// Resolve a skill's damage element. Explicit sk.element wins; otherwise derive
+// from class → name theme → status effect, defaulting to neutral 'physical'.
+// ponytail: name/effect resolver instead of tagging all ~90 skills by hand —
+// override on a skill with an explicit `element:` field only where it's wrong.
 function skillElement(sk) {
   if (sk.element) return sk.element;
+  if (sk.classId === 'paladin') return 'holy';         // Lightbringer channels dawnlight
+  const n = sk.id;
+  if (/frost|ice|rime|blizzard|glacial|absolute_clause/.test(n)) return 'ice';
+  if (/flame|fire|ember|inferno|meteor|pyro|solar|prismatic|frostfire/.test(n)) return 'fire';
+  if (/spark|thunder|storm|shock|static|lightning|tempest|overload/.test(n)) return 'lightning';
+  if (/quake|earth|stone|seismic|titan|adamant|colossus/.test(n)) return 'nature';
   if (sk.effect === 'burn') return 'fire';
   if (sk.effect === 'slow') return 'ice';
   if (sk.effect === 'stun') return 'lightning';
-  if (sk.classId === 'cleric') return 'holy';
   return 'physical';
 }
+
+// Element presentation shared by the skill tooltip, Abilities rows, and Collection Book.
+const ELEMENT_META = {
+  physical:  { label: 'Neutral',   color: '#b9b9b9', icon: '◆' },
+  fire:      { label: 'Fire',      color: '#ff8b3d', icon: '🔥' },
+  ice:       { label: 'Ice',       color: '#6ec6ff', icon: '❄' },
+  lightning: { label: 'Lightning', color: '#f2d24d', icon: '⚡' },
+  nature:    { label: 'Nature',    color: '#7bc56a', icon: '🌿' },
+  holy:      { label: 'Holy',      color: '#ffe9a6', icon: '✨' },
+  void:      { label: 'Void',      color: '#b98cff', icon: '🌌' },
+};
+const elementMeta = el => ELEMENT_META[el] || ELEMENT_META.physical;
+const elementChip = el => { const m = elementMeta(el); return `<span class="elem-chip" style="color:${m.color};border-color:${m.color}">${m.icon} ${m.label}</span>`; };
+const weakToElement = monEl => TUNING.elements.weakness[monEl] || null;   // null = neutral, no weakness
 function elementMult(attackEl, m) {
   const E = TUNING.elements;
   return E.weakness[monsterElement(m)] === attackEl ? E.weaknessMult : 1;
@@ -2068,6 +2101,7 @@ function gapHit(monLevel, playerLevel) {
 function killMonster(m) {
   m.alive = false;
   m.deadUntil = now() + R.respawnMs;
+  G.seenMonsters?.add(m.def.id);   // Collection Book discovery
   // rift waves are cleared explicitly (see below), never respawned on the normal timer
   if (G.rift.active && G.mapId === 'celestial_rift') m.deadUntil = Infinity;
   AUDIO.playSfx('monsterDie');
@@ -4348,6 +4382,7 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
         ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
@@ -4731,7 +4766,7 @@ function togglePanel(id) {
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio' }[id], 'ui'); }
+function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio', book: 'Collection Book' }[id], 'ui'); }
 
 const ADMIN_GROUPS = [
   ['🧍 Character', [
@@ -5192,7 +5227,7 @@ function skillNodeTip(id, isPassive) {
 
   const displayType = currentLang === 'th' ? ({ active: 'ใช้งาน', passive: 'ติดตัว', heal: 'รักษา', aoe: 'โจมตีหมู่', buff: 'บัฟ' }[s.type] || s.type) : s.type;
 
-  return `<div class="tip-name">${T(s.name, 'skills')} <small style="color:var(--text-muted)">· ${displayType}${s.effect ? ` · ${currentLang === 'th' ? 'มอบสถานะ' : 'inflicts'} ${displayEffect}` : ''}</small></div>
+  return `<div class="tip-name">${T(s.name, 'skills')} <small style="color:var(--text-muted)">· ${displayType}${s.effect ? ` · ${currentLang === 'th' ? 'มอบสถานะ' : 'inflicts'} ${displayEffect}` : ''}</small> ${elementChip(skillElement(s))}</div>
     <div class="tip-eff">${skillEffectLine(s, L, p)} <small style="color:var(--text-muted)">(${lv ? (currentLang === 'th' ? 'เลเวล ' : 'Lv ') + lv : (currentLang === 'th' ? 'ที่ เลเวล 1' : 'at Lv 1')})</small></div>
     <div class="tip-row">${resourceTxt} · ${currentLang === 'th' ? 'คูลดาวน์' : 'cooldown'} <b>${s.cooldownMs / 1000}${currentLang === 'th' ? ' วินาที' : 's'}</b> · ${rangeTxt}</div>
     <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${max}</b></div>${masteryHtml}
@@ -5322,8 +5357,108 @@ function applyHighContrast(on) {
   }
 }
 
+// ===== Collection Book (hotkey B) — bestiary / items / elements / skills + milestones =====
+const BOOK_TABS = [['bestiary', '👹 Bestiary'], ['items', '🎒 Items'], ['elements', '🔮 Elements'], ['skills', '📜 Skills']];
+const collectibleItems = () => CONTENT.items.filter(it => isEquip(it.id));
+
+function monsterIconImg(m, sz = 40) {
+  const url = pxDataURL('monster', m.id);
+  return url ? `<img src="${url}" width="${sz}" height="${sz}" style="image-rendering:pixelated" alt="">`
+    : `<span style="display:inline-block;width:${sz}px;height:${sz}px;background:${m.spriteColor};border-radius:4px"></span>`;
+}
+function bookItemSource(itemId) {
+  const from = CONTENT.monsters.filter(m => (m.drops || []).some(d => d.itemId === itemId));
+  if (from.length) return `${T('Drops from', 'ui')}: ${from.slice(0, 3).map(m => T(m.name, 'monsters')).join(', ')}`;
+  return T('Trader or crafting', 'ui');
+}
+function milestoneStat(type) {
+  if (type === 'kills') return Object.values(G.killCounts).reduce((s, n) => s + n, 0);
+  if (type === 'bestiary') return G.seenMonsters.size;
+  if (type === 'items') return G.collectedItems.size;
+  return 0;
+}
+function milestoneTarget(mile) {
+  if (mile.target > 0) return mile.target;
+  if (mile.type === 'bestiary') return CONTENT.monsters.length;
+  if (mile.type === 'items') return collectibleItems().length;
+  return 1;
+}
+function claimMilestone(id) {
+  const mile = (CONTENT.milestones || []).find(m => m.id === id);
+  if (!mile || G.claimedMilestones.has(id)) return false;
+  if (milestoneStat(mile.type) < milestoneTarget(mile)) return false;
+  G.claimedMilestones.add(id);
+  const p = G.player;
+  if (mile.reward.zeny) p.zeny += mile.reward.zeny;
+  if (mile.reward.itemId) addItem(mile.reward.itemId, 1);
+  const parts = [mile.reward.zeny ? `${mile.reward.zeny}z` : null, mile.reward.itemId ? T(itemById[mile.reward.itemId].name, 'items') : null].filter(Boolean).join(' + ');
+  toast(`🎁 ${mile.label} — ${T('reward', 'ui')}: ${parts}!`, 'good');
+  updateHud(); saveGame(); refreshPanel('book');
+  return true;
+}
+function collectionBookHtml() {
+  const tab = BOOK_TABS.some(([k]) => k === G._bookTab) ? G._bookTab : 'bestiary';
+  const tabs = BOOK_TABS.map(([k, label]) => `<button class="book-tab${tab === k ? ' active' : ''}" data-book-tab="${k}">${label}</button>`).join('');
+  const miles = (CONTENT.milestones || []).map(mile => {
+    const have = milestoneStat(mile.type), need = milestoneTarget(mile), done = have >= need, claimed = G.claimedMilestones.has(mile.id);
+    const pct = Math.min(100, Math.round(100 * have / need));
+    const btn = claimed ? `<span class="mile-claimed">✓ ${T('Claimed', 'ui')}</span>`
+      : done ? `<button class="btn mile-claim" data-mile-claim="${mile.id}">${T('Claim', 'ui')}</button>`
+      : `<span class="mile-progress">${have}/${need}</span>`;
+    return `<div class="mile-row${claimed ? ' is-claimed' : done ? ' is-ready' : ''}"><span class="mile-ico">${mile.icon}</span>
+      <div class="mile-main"><b>${mile.label}</b><div class="mile-bar"><div class="mile-fill" style="width:${pct}%"></div></div></div>${btn}</div>`;
+  }).join('');
+  return `<section class="collection-book">
+    <div class="book-tabs">${tabs}</div>
+    <div class="book-pane">${bookTabHtml(tab)}</div>
+    <div class="book-milestones"><h3>🏅 ${T('Collection Milestones', 'ui')}</h3>${miles}</div>
+  </section>`;
+}
+function bookTabHtml(tab) {
+  if (tab === 'elements') {
+    const rows = TUNING.elements.ids.map(el => {
+      const w = weakToElement(el);
+      return `<div class="elem-row">${elementChip(el)} <span class="elem-vs">${w ? `${T('weak to', 'ui')} ${elementChip(w)} <b>(${TUNING.elements.weaknessMult}×)</b>` : T('Neutral — no weakness', 'ui')}</span></div>`;
+    }).join('');
+    return `<div class="elem-list"><p class="book-hint">${T('An attack of the listed element deals bonus damage to a monster of that type.', 'ui')}</p>${rows}</div>`;
+  }
+  if (tab === 'skills') {
+    const byClass = {};
+    for (const s of COMBAT.skills) (byClass[s.classId] = byClass[s.classId] || []).push(s);
+    return Object.entries(byClass).map(([cls, list]) => `<div class="book-skillgroup"><h4>${cls}</h4>${
+      list.map(s => { const role = s.finisher ? 'finisher' : s.detonate ? 'detonator' : isDamageSkill(s) ? 'builder' : 'utility';
+        return `<div class="book-skill"><b>${T(s.name, 'skills')}</b> ${elementChip(skillElement(s))} <small>${s.type} · ${role}${s.effect ? ` · ${s.effect}` : ''}</small></div>`; }).join('')
+    }</div>`).join('');
+  }
+  if (tab === 'items') {
+    const items = collectibleItems();
+    return `<div class="book-grid">${items.map(it => {
+      const got = G.collectedItems.has(it.id);
+      if (!got) return `<div class="book-card locked"><span class="book-lock">🔒</span><b>???</b></div>`;
+      const atk = it.atk ? `ATK ${it.atk}` : '', def = it.def ? `DEF ${it.def}` : '';
+      return `<div class="book-card"><div class="book-card-head">${itemIconImg(it.id, 28)}<b>${esc(T(it.name, 'items'))}</b></div>
+        <small>${[atk, def].filter(Boolean).join(' · ') || ITEM_CAT(it)}</small>
+        <small class="book-req">${it.classReq ? itemClassRequirementText(it) : T('All classes', 'ui')}</small>
+        <small class="book-src">${bookItemSource(it.id)}</small></div>`;
+    }).join('')}</div>`;
+  }
+  // bestiary (default)
+  return `<div class="book-grid">${CONTENT.monsters.map(m => {
+    const seen = G.seenMonsters.has(m.id);
+    if (!seen) return `<div class="book-card locked"><span class="book-lock">?</span><b>???</b></div>`;
+    const el = m.element || 'physical', w = weakToElement(el), kills = G.killCounts[m.id] || 0;
+    const drops = (m.drops || []).map(d => esc(T(itemById[d.itemId]?.name || d.itemId, 'items'))).join(', ') || '—';
+    return `<div class="book-card"><div class="book-card-head">${monsterIconImg(m, 34)}<b>${esc(T(m.name, 'monsters'))}</b></div>
+      <small>Lv ${m.level} · HP ${m.hp} · ATK ${m.atk}</small>
+      <small>${elementChip(el)} ${w ? `${T('weak to', 'ui')} ${elementChip(w)}` : ''}</small>
+      <small class="book-src">${T('Drops', 'ui')}: ${drops}</small>
+      <small class="book-kills">${T('Defeated', 'ui')}: <b>${kills}</b></small></div>`;
+  }).join('')}</div>`;
+}
+
 function panelBody(id) {
   const p = G.player;
+  if (id === 'book') return collectionBookHtml();
   if (id === 'settings') {
     const v = G.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
     return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
@@ -5679,6 +5814,10 @@ function panelBody(id) {
 }
 
 function wirePanel(id, el) {
+  if (id === 'book') {
+    el.querySelectorAll('[data-book-tab]').forEach(b => b.onclick = () => { G._bookTab = b.dataset.bookTab; refreshPanel('book'); });
+    el.querySelectorAll('[data-mile-claim]').forEach(b => b.onclick = () => claimMilestone(b.dataset.mileClaim));
+  }
   if (id === 'settings') {
     const masterEl = el.querySelector('#vol-master');
     const musicEl = el.querySelector('#vol-music');
@@ -6677,6 +6816,7 @@ function saveGame() {
       advance: G.advance, guildBoard: G.guildBoard, activeGuilds: G.activeGuilds,
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
+      seenMonsters: [...G.seenMonsters], collectedItems: [...G.collectedItems], claimedMilestones: [...G.claimedMilestones],
       storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); } catch {}
 }
@@ -6753,6 +6893,10 @@ function resumeGame() {
   // ponytail: only the best floor is persisted — resuming mid-rift restarts the
   // run fresh at floor 1 (loadMap('celestial_rift', ...) below handles that entry).
   G.rift = { floor: 0, active: false, best: w.riftBest || 0, mutatorId: null, nextBurnAt: 0 };
+  // Collection Book discovery — backfill seenMonsters from existing kill counts so old saves aren't blank.
+  G.seenMonsters = new Set([...(w.seenMonsters || []), ...Object.keys(G.killCounts || {})]);
+  G.collectedItems = new Set(w.collectedItems || []);
+  G.claimedMilestones = new Set(w.claimedMilestones || []);
   // Runtime targets and paths are never restored. Rebuild the persisted intent
   // against the current quest/bounty data so removed or completed tasks cannot
   // revive a stale route after loading.
@@ -6792,6 +6936,7 @@ function begin(classId, name) {
   G.autoConfig = normaliseAutoConfig(null);
   G.autoState = { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
   G.visited = new Set(); G.talked = new Set();
+  G.seenMonsters = new Set(); G.collectedItems = new Set(); G.claimedMilestones = new Set();
   G.storage = []; G.achievements = new Set();
   G.activeGuilds = []; G.guildRankIdx = 0; G.guildPoints = 0; G.guardiansSlain = new Set(); refreshGuildBoard();
   preloadSprites();
@@ -6856,6 +7001,7 @@ window.addEventListener('keydown', e => {
   else if (key === 'k') togglePanel('skills');
   else if (key === 'm') togglePanel('world');
   else if (key === 'q') togglePanel('quest');
+  else if (key === 'b') togglePanel('book');
   else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
   else if (key === 'v') performParry();
   else if (key === 'escape') {
@@ -6894,6 +7040,7 @@ if (typeof window !== 'undefined')
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
     monsterElement, skillElement, elementMult, applyCrossCombo, applyStatus,
+    elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
 
