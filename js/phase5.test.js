@@ -42,12 +42,19 @@ assert.equal(E.weakness.physical, undefined, 'physical has no weakness entry (ne
 // neutral: physical monster takes 1x from every element
 const physMon = { def: {} };
 for (const el of E.ids) assert.equal(elementMult(el, physMon), 1, `physical neutral vs ${el}`);
-// nature monster (slime) is weak to fire only
+// nature monster (slime) is weak to lightning only
 const slime = CONTENT.monsters.find(m => m.id === 'slime');
 assert.equal(slime.element, 'nature', 'Gel Slime is nature');
 const slimeMon = { def: slime };
-assert.equal(elementMult('fire', slimeMon), E.weaknessMult, 'nature weak to fire (1.5x)');
-assert.equal(elementMult('ice', slimeMon), 1, 'nature not weak to ice');
+assert.equal(elementMult('lightning', slimeMon), E.weaknessMult, 'nature weak to lightning (1.5x)');
+assert.equal(elementMult('fire', slimeMon), 1, 'nature not weak to fire');
+// ...and the rivalry runs both ways: lightning monsters take 1.5x from nature
+const stormMon = { def: CONTENT.monsters.find(m => m.element === 'lightning') };
+assert.ok(stormMon.def, 'the bestiary needs at least one lightning species');
+assert.equal(elementMult('nature', stormMon), E.weaknessMult, 'lightning weak to nature (1.5x)');
+// every non-neutral element must be somebody's weakness, or its kit is dead damage
+for (const el of E.ids.filter(id => id !== 'physical'))
+  assert.ok(Object.values(E.weakness).includes(el), `${el} attacks can never exploit a weakness`);
 // the wheel: void is countered by holy
 const voidMon = { def: CONTENT.monsters.find(m => m.element === 'void') };
 assert.equal(elementMult('holy', voidMon), E.weaknessMult, 'void monster takes 1.5x from holy');
@@ -80,7 +87,7 @@ console.log('✓ Task 5.1 | Element rework: nature, neutral physical, holy fix, 
 G.player = makePlayer('reborn_blade', 'Booktester');
 loadMap('whispering_woods');
 // weak-to computation
-assert.equal(weakToElement('nature'), 'fire', 'nature weak-to resolves to fire');
+assert.equal(weakToElement('nature'), 'lightning', 'nature weak-to resolves to lightning');
 assert.equal(weakToElement('physical'), null, 'physical (neutral) has no weak-to');
 // discovery gating: fresh player has not seen an arbitrary monster
 G.seenMonsters = new Set(); G.collectedItems = new Set(); G.claimedMilestones = new Set(); G.killCounts = {};

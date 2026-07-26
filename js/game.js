@@ -195,8 +195,9 @@ function rollItem(itemId, bias = 0, forceRarity) {
 const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15;
 const itemRarity = inst => RARITY[inst?.rarity] || RARITY.common;
 const itemAffixes = inst => Array.isArray(inst?.affixes) ? inst.affixes : [];
-const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
-const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * itemRarity(inst).mult * (1 + 0.05 * (inst.plus || 0))) : 0;
+const refineMult = inst => 1 + TUNING.refine.atkPerPlus * (inst.plus || 0);
+const effAtk = inst => inst ? Math.round((itemById[inst.itemId].atk || 0) * itemRarity(inst).mult * refineMult(inst)) : 0;
+const effDef = inst => inst ? Math.round((itemById[inst.itemId].def || 0) * itemRarity(inst).mult * refineMult(inst)) : 0;
 const instName = inst => (inst.plus ? `+${inst.plus} ` : '') + T(itemById[inst.itemId].name, 'items');
 // display icon honors a cosmetic transmog override; base stats never look at it.
 const dispItemId = inst => inst?.transmogItemId || inst?.itemId;
@@ -501,6 +502,20 @@ function selfCheck() {
   }
   for (const role of Object.keys(NPC_BY_ROLE)) if (!PX.npc[role]) errs.push(`no npc pixel sprite for role ${role}`);
   for (const cc of Object.values(CLASS_COMBAT)) if (!PX.playerWalk[cc]) errs.push(`no walk frame for ${cc}`);
+  // LPC sheet metadata: every state must sit inside the measured 54-row core, and
+  // every class needs an attack/finisher identity or it silently sword-slashes.
+  const LPC_SHEET_ROWS = 54;
+  for (const [id, st] of Object.entries(LPC.states)) {
+    if (!Number.isFinite(st.row) || !Number.isFinite(st.frames) || !Number.isFinite(st.ms)) errs.push(`LPC state ${id} missing row/frames/ms`);
+    if (st.frames > LPC.cols) errs.push(`LPC state ${id} wants ${st.frames} frames but the core grid is ${LPC.cols} wide`);
+    if (st.row + (st.downOnly ? 1 : LPC.dirs.length) > LPC_SHEET_ROWS) errs.push(`LPC state ${id} runs past row ${LPC_SHEET_ROWS}`);
+  }
+  for (const cc of Object.values(CLASS_COMBAT)) {
+    if (!LPC.player[cc]) errs.push(`no LPC sheet for ${cc}`);
+    const a = LPC.anim[cc];
+    if (!a) { errs.push(`no LPC anim identity for ${cc}`); continue; }
+    for (const k of ['attack', 'finisher']) if (!LPC.states[a[k]]) errs.push(`LPC anim ${cc}.${k} → unknown state ${a[k]}`);
+  }
   for (const k of new Set(Object.values(ITEM_ICON))) if (!PX.item[k]) errs.push(`missing item icon '${k}'`);
   for (const it of CONTENT.items) if (!ITEM_ICON[it.id]) errs.push(`item ${it.id} has no icon mapping`);
   for (const [id, pa] of Object.entries(PROGRESSION.passives || {})) {
@@ -510,10 +525,20 @@ function selfCheck() {
   }
   for (const k of new Set(Object.values(SLOT_ICON))) if (!PX.item[k]) errs.push(`missing slot icon '${k}'`);
   // tuning knobs + quest difficulty tiers must be present/valid
-  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','monsterHpLevelGrowth','monsterDefLevelGrowth','bossHpMult','monsterExpMult','expGapFalloff','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','autoHuntMaxLevelGap','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery','rareBossEveryMs','dayCycleMs','rebirthStatBonus','rebirthHpMpPct','rebirthMonsterAtkMult','rebirthMonsterDefMult','rebirthMonsterHpMult','rebirthGearHpPerAtk','rebirthGearHpCap','rebirthMonsterExp'])
+  for (const k of ['monsterLevelSpread','monsterStatPerLevel','monsterAtkMult','monsterHpMult','monsterHpLevelGrowth','monsterDefLevelGrowth','bossHpMult','bossDefLevelGrowth','monsterExpMult','expGapFalloff','expGapRise','expGapMin','expGapMax','dropLevelBias','dropLuckBias','zenyPerLevel','combatGapFalloff','combatGapFloor','deathZenyLoss','bossSlamEveryMs','bossEnrageAt','statCostEvery','potionCdMs','combatGapHitPerLvl','autoHuntMaxLevelGap','hitBaseChance','hitStatScale','hitChanceMin','hitChanceMax','heatNursery','rareBossEveryMs','dayCycleMs','rebirthStatBonus','rebirthHpMpPct','rebirthMonsterAtkMult','rebirthMonsterDefMult','rebirthMonsterHpMult','rebirthGearHpPerAtk','rebirthGearHpCap','rebirthMonsterExp'])
     if (!Number.isFinite(TUNING?.[k])) errs.push(`tuning.${k} missing/non-numeric`);
   for (const k of ['max','finisherMin','perHit','decayMs','powerPerPoint','detonateBonus'])
     if (!Number.isFinite(TUNING?.momentum?.[k])) errs.push(`tuning.momentum.${k} missing/non-numeric`);
+  // refinement: chance table must cover every step to max, fuel tables every bracket
+  const rf = TUNING.refine || {};
+  if (!Number.isFinite(rf.max) || !Number.isFinite(rf.atkPerPlus)) errs.push('tuning.refine.max/atkPerPlus missing');
+  if (!Array.isArray(rf.chance) || rf.chance.length !== rf.max) errs.push(`tuning.refine.chance must have ${rf.max} entries`);
+  if (rf.chance?.some(c => !(c > 0 && c <= 100))) errs.push('tuning.refine.chance has a non-percentage entry');
+  for (const k of ['fragsPerTier', 'orePerTier'])
+    if (!Array.isArray(rf[k]) || rf[k].length !== 3 || rf[k].some(n => !(n >= 1))) errs.push(`tuning.refine.${k} needs 3 positive brackets`);
+  // every non-neutral element must be somebody's weakness, or its whole kit is dead damage
+  for (const el of (TUNING.elements?.ids || []).filter(e => e !== 'physical'))
+    if (!Object.values(TUNING.elements.weakness).includes(el)) errs.push(`element ${el} is nobody's weakness — attacks of that element can never crit the wheel`);
   for (const s of COMBAT.skills) if (s.detonate && !COMBAT.statusEffects[s.detonate]) errs.push(`skill ${s.id} detonate → unknown status ${s.detonate}`);
   // elemental matrix, cross-class combos, stamina knobs (Phase 2)
   const elemIds = new Set(TUNING.elements?.ids || []);
@@ -1644,7 +1669,10 @@ function monsterStatsFor(def, lvl) {
   const durabilityLevel = Math.max(lvl, def.level);
   const levelRoot = Math.sqrt(Math.max(0, durabilityLevel - 1));
   const levelHpMult = normal ? 1 + levelRoot * TUNING.monsterHpLevelGrowth : 1;
-  const levelDefMult = normal ? 1 + levelRoot * TUNING.monsterDefLevelGrowth : 1;
+  // Guardians keep their flat HP multiplier instead of the HP curve, but they get
+  // their own gentler DEF curve — otherwise they are the softest-skinned thing on
+  // their own map, with less armor than the trash mobs standing next to them.
+  const levelDefMult = 1 + levelRoot * (normal ? TUNING.monsterDefLevelGrowth : TUNING.bossDefLevelGrowth);
 
   // NG+ separates damage, armor, and health. Retained physical/ranged gear is
   // converted into extra early-run HP pressure, then fades to zero at the cap;
@@ -1975,7 +2003,9 @@ function playerBasicAttack() {
   if (dist(p.x, p.y, t.x, t.y) > p.basicRange * TS + t.size / 2) return;
   if (now() < p.attackCdUntil) return;
   p.attackCdUntil = now() + (p.atkDelay || COMBAT.attackSpeedMs);   // AGI-scaled swing speed
-  p.animAttackUntil = now() + ANIM.attackMs;
+  // A 13-frame bow draw must not outlast the swing it belongs to, or a fast AGI
+  // build would never finish an animation before starting the next one.
+  p.animAttackUntil = now() + Math.min(animMs(attackStateFor(p)), p.atkDelay || COMBAT.attackSpeedMs);
   faceToward(p, t.x, t.y);
   AUDIO.playSfx('attack');
   const atk = p.atkStat * buffMult(p, 'atk');
@@ -2092,8 +2122,12 @@ function damageMonster(m, dmg, isCrit, silent) {
 
 // exp is scaled by the level gap: farming mobs far below you is nearly worthless,
 // fighting at/above your level pays full-to-bonus. This is the real anti-powerlevel lever.
+// The two directions use different slopes on purpose: the down-side is the
+// anti-powerlevel lever, the up-side has to out-pay combatGapFalloff or fighting
+// up is strictly worse than farming at level and the risk is never worth taking.
 function expGapFactor(playerLevel, monLevel) {
-  const f = 1 - (playerLevel - monLevel) * TUNING.expGapFalloff;
+  const gap = monLevel - playerLevel;
+  const f = 1 + gap * (gap >= 0 ? TUNING.expGapRise : TUNING.expGapFalloff);
   return clamp(f, TUNING.expGapMin, TUNING.expGapMax);
 }
 // ...and the mirror for combat: your damage shrinks vs monsters ABOVE your level,
@@ -2284,7 +2318,11 @@ function castSkillById(id) {
   if (sk.finisher) { momentumMult = 1 + M.powerPerPoint * p.momentum; p.momentum = 0; }
   else { p.mp -= sk.mpCost; }
   p.skillCd[sk.id] = now() + sk.cooldownMs;
-  p.animCastUntil = now() + ANIM.castMs;
+  // Buffs and heals are channelled; damage skills use the class's own attack
+  // motion, and Momentum finishers get the heavy wind-up variant.
+  p.animCastState = (sk.type === 'buff' || sk.type === 'heal') ? 'cast'
+    : sk.finisher ? finisherStateFor(p) : attackStateFor(p);
+  p.animCastUntil = now() + animMs(p.animCastState);
   AUDIO.playSfx('skill');
   const lvl = skillLevel(p, sk.id);
   const atk = p.atkStat * buffMult(p, 'atk') * skillPower(p, sk) * momentumMult;
@@ -3351,14 +3389,35 @@ function facingDir(p) {
   return Math.abs(x) >= Math.abs(y) ? (x < 0 ? 'left' : 'right') : (y < 0 ? 'up' : 'down');
 }
 const ANIM = { walkMs: 90, attackMs: 340, castMs: 420, hurtMs: 200, idleMs: 600 };
+// Duration of one pass of an LPC state, and the class's own attack/finisher state.
+const animMs = state => LPC.states[state]?.ms ?? ANIM.attackMs;
+const attackStateFor = p => LPC.anim[p.combatClass]?.attack || 'attack';
+const finisherStateFor = p => LPC.anim[p.combatClass]?.finisher || 'attack';
+// One-shot states play their frames across `ms` and hold the last frame; looping
+// states advance one frame per `ms`. Replaces five hand-rolled frame formulas.
+function animFrame(state, elapsed) {
+  const st = LPC.states[state]; if (!st) return 0;
+  return st.loop
+    ? Math.floor(elapsed / st.ms) % st.frames
+    : Math.min(st.frames - 1, Math.floor(elapsed / (st.ms / st.frames)));
+}
 function playerAnim(p) {
   if (G.debugAnim) return { state: G.debugAnim.state, dir: G.debugAnim.dir || 'down', frame: G.debugAnim.frame | 0 };
   const t = now(), dir = facingDir(p);
-  if (p.hurtUntil > t) return { state: 'hurt', dir, frame: Math.floor((ANIM.hurtMs - (p.hurtUntil - t)) / (ANIM.hurtMs / 3)) };
-  if (p.animCastUntil > t) return { state: 'cast', dir, frame: Math.floor((ANIM.castMs - (p.animCastUntil - t)) / (ANIM.castMs / 7)) };
-  if (p.animAttackUntil > t) return { state: 'attack', dir, frame: Math.floor((ANIM.attackMs - (p.animAttackUntil - t)) / (ANIM.attackMs / 6)) };
-  if (p.moving) return { state: 'walk', dir, frame: 1 + Math.floor(t / ANIM.walkMs) % 8 };
-  return { state: 'walk', dir, frame: 0 };                    // walk frame 0 = standing idle
+  const shot = (state, until) => ({ state, dir, frame: animFrame(state, animMs(state) - (until - t)) });
+  if (p.hurtUntil > t) return shot('hurt', p.hurtUntil);
+  // the stamina dodge roll finally has a body to go with its i-frames
+  if (p.invulnUntil > t) return shot('jump', p.invulnUntil);
+  if (p.animCastUntil > t) return shot(p.animCastState || 'cast', p.animCastUntil);
+  if (p.animAttackUntil > t) return shot(attackStateFor(p), p.animAttackUntil);
+  if (p.moving) {
+    // AGI buys real speed, so show it: past a brisk pace the hero runs, not walks
+    const state = (p.moveMult || 1) >= 1.25 ? 'run' : 'walk';
+    return { state, dir, frame: animFrame(state, t) };
+  }
+  // standing: a battle stance while something is actually engaged, else breathing
+  const state = G.target?.alive ? 'combatIdle' : 'idle';
+  return { state, dir, frame: animFrame(state, t) };
 }
 // monster equivalent of playerAnim — no `dir`, just state/frame (monster frame-sets are flip-only, no 4-way facing)
 function monsterAnim(m) {
@@ -3795,7 +3854,8 @@ const NPC_ROLE = {
 function drawNpc(n, cx, cy) {
   const x = n.x * TS - cx + TS / 2, y = n.y * TS - cy + TS / 2;
   groundShadow(x, y + 14, 11);
-  if (!drawLpc(LPC.npc[n.role], x, y + 8, 'walk', 'down', Math.floor(now() / 800) % 2, 64)) {
+  // idle-breathe rather than the old walk-frames-0/1 shuffle-in-place
+  if (!drawLpc(LPC.npc[n.role], x, y + 8, 'idle', 'down', animFrame('idle', now()), 64)) {
     if (!drawPx('npc', n.role, x, y, 32)) { ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill(); }
   }
   const role = NPC_ROLE[n.role] || NPC_ROLE.quest;
@@ -5785,13 +5845,14 @@ function panelBody(id) {
     // enhance tab — equipped gear (with slot badges) first, then bag gear, each in its own section
     const enhRow = (inst, ref, slot) => {
       const rc = itemRarity(inst), plus = inst.plus || 0, cost = refineCost(inst);
-      const tier = refineTier(plus), frags = tierOwned(tier), haveFuel = frags >= REFINE_FRAGS || itemQty('blessed_ore') >= 1;
+      const tier = refineTier(plus), frags = tierOwned(tier), nFrags = refineFrags(tier), nOre = refineOre(tier);
+      const haveFuel = frags >= nFrags || itemQty('blessed_ore') >= nOre;
       const disabled = plus >= REFINE_MAX || !haveFuel || p.zeny < cost;
       const badge = slot ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(95,191,122,.15);color:var(--success);border:1px solid rgba(95,191,122,.5)">${T(SLOT_LABEL[slot], 'ui')}</span> ` : '';
       const fragName = itemById[REFINE_FRAG[tier]].name;
       const fuelTxt = plus >= REFINE_MAX ? 'MAX' : (currentLang === 'th'
-        ? `ต้องการ <b>${T(fragName, 'items')}</b> ×${REFINE_FRAGS} <b style="color:${frags >= REFINE_FRAGS ? 'var(--success)' : 'var(--danger)'}">(มีอยู่ ${frags})</b> — หรือ Blessed Ore 1 ชิ้น`
-        : `needs ${REFINE_FRAGS}× <b>${fragName}</b> <b style="color:${frags >= REFINE_FRAGS ? 'var(--success)' : 'var(--danger)'}">(have ${frags})</b> — or 1 Blessed Ore`);
+        ? `ต้องการ <b>${T(fragName, 'items')}</b> ×${nFrags} <b style="color:${frags >= nFrags ? 'var(--success)' : 'var(--danger)'}">(มีอยู่ ${frags})</b> — หรือ Blessed Ore ${nOre} ชิ้น`
+        : `needs ${nFrags}× <b>${fragName}</b> <b style="color:${frags >= nFrags ? 'var(--success)' : 'var(--danger)'}">(have ${frags})</b> — or ${nOre}× Blessed Ore`);
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
         <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')}<br>
           <small style="color:var(--text-muted)">${fuelTxt}</small></span>
@@ -5806,8 +5867,8 @@ function panelBody(id) {
       (bagRows || `<small style="color:var(--text-muted)">${T('No spare equipment in the bag.', 'ui')}</small>`);
       
     const refineFuelText = currentLang === 'th'
-      ? `🔨 เชื้อเพลิงตีบวก: <b>เขี้ยวสัตว์ป่า (Beast Fang)</b> สำหรับ +0–2 · <b>ผงเงา (Shade Dust)</b> สำหรับ +3–5 · <b>แร่ดารา (Star Iron)</b> สำหรับ +6–8 (ใช้ ${REFINE_FRAGS} ชิ้นต่อครั้ง) — หรือใช้ Blessed Ore 1 ชิ้นแทนได้ (คุณมีอยู่ ${itemQty('blessed_ore')} ชิ้น)`
-      : `🔨 Refining fuel: <b>Beast Fang</b> for +0–2 · <b>Shade Dust</b> for +3–5 · <b>Star Iron</b> for +6–8 (${REFINE_FRAGS} per attempt) — or 1× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).`;
+      ? `🔨 เชื้อเพลิงตีบวก: <b>เขี้ยวสัตว์ป่า (Beast Fang)</b> ×${refineFrags(0)} สำหรับ +0–2 · <b>ผงเงา (Shade Dust)</b> ×${refineFrags(1)} สำหรับ +3–5 · <b>แร่ดารา (Star Iron)</b> ×${refineFrags(2)} สำหรับ +6–8 — หรือใช้ Blessed Ore ${refineOre(0)}/${refineOre(1)}/${refineOre(2)} ชิ้นแทนได้ (คุณมีอยู่ ${itemQty('blessed_ore')} ชิ้น)`
+      : `🔨 Refining fuel: <b>Beast Fang</b> ×${refineFrags(0)} for +0–2 · <b>Shade Dust</b> ×${refineFrags(1)} for +3–5 · <b>Star Iron</b> ×${refineFrags(2)} for +6–8 — or ${refineOre(0)}/${refineOre(1)}/${refineOre(2)}× Blessed Ore as a substitute (you have ${itemQty('blessed_ore')}).`;
       
     return head + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">${refineFuelText}</div>` + enhBody;
   }
@@ -6215,14 +6276,17 @@ const sellPrice = e => {
   const rolled = value * 0.35 * itemRarity(e).mult * (1 + 0.04 * (e.plus || 0));
   return Math.max(1, Math.min(Math.floor(value * 0.8), Math.floor(rolled)));
 };
-// refinement: +0..+9, safe (fail wastes the attempt, item never breaks/downgrades)
-const REFINE_MAX = 9, REFINE_CHANCE = [100, 100, 90, 80, 70, 60, 50, 40, 30];
+// refinement: +0..+max, safe (fail wastes the attempt, item never breaks/downgrades).
+// All numbers live in DESIGN.tuning.refine.
+const REFINE_MAX = TUNING.refine.max, REFINE_CHANCE = TUNING.refine.chance;
 const refineCost = inst => Math.max(50, Math.floor((itemById[inst.itemId].value || 0) * 0.15 * ((inst.plus || 0) + 1)));
 // fuel: ONE named fragment per bracket — a clear farm target, not "whatever's in the bag".
-// Blessed Ore remains the universal substitute.
+// Blessed Ore remains the universal substitute. Both scale with the bracket, so the
+// +6→+9 stretch costs real farming instead of the same 2 fragments as +0→+3.
 const REFINE_FRAG = ['wolf_fang', 'shade_dust', 'star_iron'];   // +0-2 · +3-5 · +6-8
-const REFINE_FRAGS = 2;                       // fragments per attempt
 const refineTier = plus => plus < 3 ? 0 : plus < 6 ? 1 : 2;
+const refineFrags = tier => TUNING.refine.fragsPerTier[tier];
+const refineOre = tier => TUNING.refine.orePerTier[tier];
 const tierOwned = t => itemQty(REFINE_FRAG[t]);
 function refineItem(ref) {
   const p = G.player;
@@ -6231,12 +6295,13 @@ function refineItem(ref) {
   const plus = inst.plus || 0;
   if (plus >= REFINE_MAX) { toast('Already +9.', 'sys'); return; }
   const tier = refineTier(plus), fragId = REFINE_FRAG[tier];
-  const useFrags = tierOwned(tier) >= REFINE_FRAGS;             // fragments first — ore is the fallback
-  if (!useFrags && itemQty('blessed_ore') < 1) { toast(`Need ${REFINE_FRAGS}× ${itemById[fragId].name} — or 1× Blessed Ore.`, 'bad'); return; }
+  const nFrags = refineFrags(tier), nOre = refineOre(tier);
+  const useFrags = tierOwned(tier) >= nFrags;                   // fragments first — ore is the fallback
+  if (!useFrags && itemQty('blessed_ore') < nOre) { toast(`Need ${nFrags}× ${itemById[fragId].name} — or ${nOre}× Blessed Ore.`, 'bad'); return; }
   const cost = refineCost(inst);
   if (p.zeny < cost) { toast('Not enough zeny.', 'bad'); return; }
   p.zeny -= cost;
-  const fuel = useFrags ? (removeItem(fragId, REFINE_FRAGS), `${REFINE_FRAGS}× ${itemById[fragId].name}`) : (removeItem('blessed_ore', 1), 'Blessed Ore');
+  const fuel = useFrags ? (removeItem(fragId, nFrags), `${nFrags}× ${itemById[fragId].name}`) : (removeItem('blessed_ore', nOre), `${nOre}× Blessed Ore`);
   if (Math.random() * 100 < REFINE_CHANCE[plus]) {
     inst.plus = plus + 1; recompute(p); AUDIO.playSfx('levelup');
     toast(`✨ ${instName(inst)} — refine success!`, 'good'); logMsg(`${instName(inst)} refined with ${fuel}.`, 'good');
@@ -7044,8 +7109,8 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
-    LPC, playerAnim, drawLpc, monsterAnim, drawPx, drawMonster, PX, selfCheck,
+  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+    LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,

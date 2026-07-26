@@ -62,6 +62,48 @@ for (const group of spriteGroups) {
 for (const [id, file] of Object.entries(LPC.player)) assert.ok(fs.existsSync(path.join(repoRoot, file)), `LPC.player.${id} sheet missing on disk: ${file}`);
 for (const [role, file] of Object.entries(LPC.npc)) assert.ok(fs.existsSync(path.join(repoRoot, file)), `LPC.npc.${role} sheet missing on disk: ${file}`);
 
+// The LPC.states row table is measured from the sheets, so it is only valid for
+// the ULPC v3 core layout. Read each PNG's IHDR and prove every declared state
+// still lands inside the image — swapping in a sheet from a different generator
+// version shifts every row, and an archer would silently animate a chair.
+const LPC_CORE_ROWS = 54;   // rows 0-53; blade/monk carry an extra 128px block below
+function pngSize(file) {
+  const head = Buffer.alloc(24);
+  const fd = fs.openSync(path.join(repoRoot, file), 'r');
+  fs.readSync(fd, head, 0, 24, 0); fs.closeSync(fd);
+  assert.equal(head.toString('ascii', 12, 16), 'IHDR', `${file} is not a PNG`);
+  return { w: head.readUInt32BE(16), h: head.readUInt32BE(20) };
+}
+for (const file of [...Object.values(LPC.player), ...Object.values(LPC.npc)]) {
+  const { w, h } = pngSize(file);
+  assert.equal(w % LPC.cell, 0, `${file} width ${w} is not a multiple of the ${LPC.cell}px cell`);
+  assert.equal(h % LPC.cell, 0, `${file} height ${h} is not a multiple of the ${LPC.cell}px cell`);
+  assert.ok(h / LPC.cell >= LPC_CORE_ROWS, `${file} has ${h / LPC.cell} rows — too short for the ${LPC_CORE_ROWS}-row ULPC core`);
+  assert.ok(w / LPC.cell >= LPC.cols, `${file} is ${w / LPC.cell} frames wide, narrower than LPC.cols`);
+}
+for (const [id, st] of Object.entries(LPC.states)) {
+  assert.ok(Number.isFinite(st.row) && Number.isFinite(st.frames) && Number.isFinite(st.ms), `LPC state ${id} needs row/frames/ms`);
+  assert.ok(st.frames >= 1 && st.frames <= LPC.cols, `LPC state ${id} declares ${st.frames} frames, outside the ${LPC.cols}-wide core`);
+  assert.ok(st.row + (st.downOnly ? 1 : LPC.dirs.length) <= LPC_CORE_ROWS, `LPC state ${id} runs past the core at row ${st.row}`);
+}
+// No two 4-direction states may claim the same rows, or one animation overwrites another.
+const claimed = new Map();
+for (const [id, st] of Object.entries(LPC.states)) {
+  for (let r = st.row; r < st.row + (st.downOnly ? 1 : LPC.dirs.length); r++) {
+    assert.ok(!claimed.has(r), `LPC states ${claimed.get(r)} and ${id} both claim row ${r}`);
+    claimed.set(r, id);
+  }
+}
+// Every class needs its own attack identity — this is what stops an archer sword-slashing.
+for (const cc of Object.keys(LPC.player)) {
+  const a = LPC.anim[cc];
+  assert.ok(a, `LPC.anim missing an entry for ${cc}`);
+  for (const k of ['attack', 'finisher']) assert.ok(LPC.states[a[k]], `LPC.anim.${cc}.${k} → unknown state "${a[k]}"`);
+}
+assert.equal(LPC.anim.ranger.attack, 'shoot', 'the archer must draw a bow, not swing a sword');
+assert.equal(LPC.anim.mage.attack, 'cast', 'the mage must cast, not swing a sword');
+assert.equal(LPC.anim.elementalist.attack, 'cast', 'the elementalist must cast, not swing a sword');
+
 for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist']) {
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
 }

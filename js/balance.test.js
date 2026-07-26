@@ -85,7 +85,7 @@ function monsterStats(monster, level = monster.level, { rebirths = 0, retainedGe
   const normal = monster.sizeTiles < 2;
   const levelRoot = Math.sqrt(Math.max(0, Math.max(level, monster.level) - 1));
   const levelHpMult = normal ? 1 + levelRoot * DESIGN.tuning.monsterHpLevelGrowth : 1;
-  const levelDefMult = normal ? 1 + levelRoot * DESIGN.tuning.monsterDefLevelGrowth : 1;
+  const levelDefMult = 1 + levelRoot * (normal ? DESIGN.tuning.monsterDefLevelGrowth : DESIGN.tuning.bossDefLevelGrowth);
   const progress = Math.max(0, Math.min(1, (level - 1) / (DESIGN.levelCap - 1)));
   const gearHp = rebirths
     ? Math.min(DESIGN.tuning.rebirthGearHpCap, retainedGearAtk * DESIGN.tuning.rebirthGearHpPerAtk) * (1 - progress)
@@ -131,9 +131,60 @@ for (const monster of CONTENT.monsters) {
   } else {
     const averageAttack = DESIGN.classes.reduce((sum, cls) => sum + classAttack(cls, monster.level), 0) / DESIGN.classes.length;
     const starterCasts = hp / Math.max(1, averageAttack * 2 - dv);
-    assert.ok(starterCasts >= 20 && starterCasts <= 34, `${monster.id} guardian duration drifted: ${starterCasts.toFixed(1)} casts`);
+    // raid bosses are deliberately the longest encounter in the game (3 HP-gated phases)
+    const maxCasts = monster.raid ? 40 : 34;
+    assert.ok(starterCasts >= 20 && starterCasts <= maxCasts, `${monster.id} guardian duration drifted: ${starterCasts.toFixed(1)} casts`);
   }
 }
+
+// A guardian must never be softer-skinned than the trash guarding its map. Before
+// bossDefLevelGrowth existed, bosses were the only enemies excluded from level-DEF
+// growth and every one of them sat at ~0.72x a same-band normal mob's armor.
+for (const guardian of CONTENT.monsters.filter(monster => monster.sizeTiles >= 2)) {
+  const armor = monsterStats(guardian).dv;
+  const peerArmor = Math.max(...CONTENT.monsters
+    .filter(monster => monster.sizeTiles < 2 && Math.abs(monster.level - guardian.level) <= 6)
+    .map(monster => monsterStats(monster).dv));
+  assert.ok(armor >= peerArmor * 0.85,
+    `${guardian.id} has softer armor than its own map's trash: ${armor} vs ${peerArmor}`);
+}
+
+// Fighting up has to actually pay. The exp bonus per level above you must out-run
+// the damage penalty, or the optimal play is always "farm exactly at level" and
+// expGapMax / autoHuntMaxLevelGap are dead knobs.
+const expGap = gap => Math.min(DESIGN.tuning.expGapMax, Math.max(DESIGN.tuning.expGapMin,
+  1 + gap * (gap >= 0 ? DESIGN.tuning.expGapRise : DESIGN.tuning.expGapFalloff)));
+const dmgGap = gap => Math.min(1, Math.max(DESIGN.tuning.combatGapFloor, 1 - Math.max(0, gap) * DESIGN.tuning.combatGapFalloff));
+assert.ok(expGap(1) * dmgGap(1) >= 1, 'a +1 monster must be at least as rewarding per second as an at-level one');
+assert.ok(expGap(2) * dmgGap(2) >= 0.9, 'the fighting-up sweet spot must reach +2');
+assert.ok(expGap(4) * dmgGap(4) < 0.8, '+4 and beyond must still be a bad trade, not a powerlevel route');
+assert.ok(expGap(-3) < expGap(0), 'farming below your level must still decay');
+// ...and the reward stays a nudge, not a highway: the best gap may beat at-level
+// farming, but only slightly, or the exp curve stops describing the game's length.
+const bestGain = Math.max(...[0, 1, 2, 3, 4, 5].map(gap => expGap(gap) * dmgGap(gap)));
+assert.ok(bestGain <= 1.15, `fighting up is now a powerlevel lane: ${bestGain.toFixed(2)}x at-level exp/second`);
+// Absolute pace, not just the ratio — this is the guard that notices when a tuning
+// tweak quietly shortens or lengthens the 1-80 climb.
+for (const monster of CONTENT.monsters.filter(entry => entry.sizeTiles < 2)) {
+  const killsAtSweetSpot = xpForNext(monster.level) / (monsterStats(monster, monster.level + 2).exp * expGap(2));
+  assert.ok(killsAtSweetSpot >= 12 && killsAtSweetSpot <= 20,
+    `${monster.id} sweet-spot XP pace drifted: ${killsAtSweetSpot.toFixed(1)} kills/level at +2`);
+}
+
+// Refinement is safe (no break, no downgrade), so the fuel curve is the only thing
+// making the top of the ladder an achievement rather than a 30-fragment errand.
+const refine = DESIGN.tuning.refine;
+assert.equal(refine.chance.length, refine.max, 'refine chance table must cover every step');
+for (const table of [refine.fragsPerTier, refine.orePerTier]) {
+  assert.equal(table.length, 3, 'refine fuel tables cover three brackets');
+  assert.ok(table[2] > table[0], 'the +6-8 bracket must cost more fuel than +0-2');
+}
+const expectedAttempts = refine.chance.reduce((sum, pct) => sum + 100 / pct, 0);
+assert.ok(expectedAttempts >= 14 && expectedAttempts <= 22, `refine attempt count drifted: ${expectedAttempts.toFixed(1)}`);
+// ...and a fully-refined common must still lose to an unrefined legendary, so the
+// refine treadmill can never replace the hunt for rarity.
+assert.ok(RARITY.common.mult * (1 + refine.atkPerPlus * refine.max) < RARITY.legendary.mult,
+  '+max common outclasses a +0 legendary — refinement is beating the rarity ladder');
 
 // The reported breakpoints stay explicit: opening Slimes take about three
 // starter casts, and even a low-rolled Wolf cannot be one-shot by a focused

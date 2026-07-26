@@ -49,9 +49,11 @@ export const CONTENT = {
     { id: "ice_wraith", element: "ice", name: "Ice Wraith", flavor: "A frozen soul that drifts the peaks, chilling to the bone.",
       level: 37, hp: 548, atk: 86, def: 32, exp: 1513, spriteColor: "#bfe6ff", sizeTiles: 1,
       drops: [{ itemId: "frost_shard", chance: 0.5 }, { itemId: "ice_core", chance: 0.3 }, { itemId: "silver_amulet", chance: 0.04 }, { itemId: "aurora_cloak", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#bfe6ff" },
-    { id: "rime_harpy", element: "ice", name: "Rime Harpy", flavor: "It rides the knife-wind, hurling frozen feathers at anything warm.",
-      level: 41, hp: 610, atk: 96, def: 36, exp: 1775, spriteColor: "#80c8d8", sizeTiles: 1,
-      drops: [{ itemId: "frost_shard", chance: 0.55 }, { itemId: "ice_core", chance: 0.2 }, { itemId: "aurora_cloak", chance: 0.04 }, { itemId: "mana_potion", chance: 0.2 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.15, projectileColor: "#d7f4ff" },
+    // lightning, not ice: the tundra's fourth ice mob was redundant, and the wheel
+    // needs a lightning-element species or nature attacks have nothing to exploit.
+    { id: "rime_harpy", element: "lightning", name: "Storm Harpy", flavor: "It rides the storm-front, and the wind it rides answers with thunder.",
+      level: 41, hp: 610, atk: 96, def: 36, exp: 1775, spriteColor: "#c9b6e8", sizeTiles: 1,
+      drops: [{ itemId: "frost_shard", chance: 0.55 }, { itemId: "ice_core", chance: 0.2 }, { itemId: "aurora_cloak", chance: 0.04 }, { itemId: "mana_potion", chance: 0.2 }], behavior: "aggressive", attackRange: 3.5, attackCooldownMult: 1.15, projectileColor: "#f2e07a" },
     { id: "tundra_lurker", element: "ice", name: "Tundra Lurker", flavor: "It vanishes beneath powder snow, leaving only a trail of frost shards.",
       level: 39, hp: 575, atk: 90, def: 34, exp: 1600, spriteColor: "#77b7c9", sizeTiles: 1,
       drops: [{ itemId: "frost_shard", chance: 0.4 }, { itemId: "ice_core", chance: 0.12 }], behavior: "aggressive" },

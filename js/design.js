@@ -132,10 +132,17 @@ export const DESIGN = {
     monsterHpLevelGrowth: 0.23, // normal HP gains this × sqrt(level-1), keeping ranked skills from one-shotting
     monsterDefLevelGrowth: 0.08,// normal DEF gains this × sqrt(level-1), so upgraded gear still meets resistance
     bossHpMult: 3.2,           // guardians outlast normal foes and reliably show slams, enrage, and potion pressure
+    bossDefLevelGrowth: 0.05,  // guardians get their own (gentler) DEF curve. Without it they were the ONLY
+                               // enemies with no level-DEF growth, leaving every guardian softer-skinned than
+                               // the trash guarding it (~0.72× a peer mob's DEF). 0.05 restores parity (~0.9-1.1×)
+                               // while barely moving fight length — guardians are HP walls, not damage sponges.
     monsterExpMult: 1.15,      // roughly 22-25 even-level kills per base level before quest rewards
-    expGapFalloff: 0.10,       // exp shrinks this much per player-level above the monster
+    expGapFalloff: 0.10,       // exp shrinks this much per player-level BELOW you (anti-powerlevel)
+    expGapRise: 0.25,          // ...and grows this much per level ABOVE you. Must out-run combatGapFalloff
+                               // (0.15) or fighting up is strictly worse and the risk/reward choice is dead.
+                               // At 0.25 the exp/second curve is flat from -1 to +2 and falls off hard past +3.
     expGapMin: 0.10,           // ...but never below this fraction (trash still gives a crumb)
-    expGapMax: 1.50,           // ...and up to this much for fighting above your level
+    expGapMax: 1.50,           // ...and up to this much for fighting above your level (reached at +2)
     dropLevelBias: 0.11,       // rarity bias added per monster level
     dropLuckBias: 0.012,       // rarity bias added per point of player LUK
     shopStockMs: 300000,       // rolled trader gear stays stable for five minutes
@@ -190,10 +197,15 @@ export const DESIGN = {
     // --- elemental weakness matrix ---
     // A defender of element X takes weaknessMult damage from attacks of weakness[X].
     // 'physical' is NEUTRAL — no map entry, so it deals and takes 1x, and is the
-    // default for any untagged monster/skill. The other six form a weakness wheel.
+    // default for any untagged monster/skill. The other six pair off into three
+    // MUTUAL rivalries, so every element is somebody's weakness:
+    //   fire ↔ ice   ·   nature ↔ lightning   ·   holy ↔ void
+    // The old wheel routed nature→fire, which left lightning and nature with zero
+    // victims in the whole bestiary — Reborn Blade and Iron Fist (lightning/nature
+    // kits) could never exploit a weakness at all, while fire alone beat 9 species.
     elements: {
       ids: ['physical', 'fire', 'ice', 'lightning', 'nature', 'holy', 'void'],
-      weakness: { fire: 'ice', ice: 'fire', nature: 'fire', lightning: 'nature', holy: 'void', void: 'holy' },
+      weakness: { fire: 'ice', ice: 'fire', nature: 'lightning', lightning: 'nature', holy: 'void', void: 'holy' },
       weaknessMult: 1.5,
     },
     holyImbueMs: 8000,   // Paladin's Blessing imbues weapons with holy for this long (vs 13s cooldown → ~60% uptime)
@@ -220,6 +232,22 @@ export const DESIGN = {
       burnEveryMs: 3000,    // ...how often it ticks
       reflectPct: 0.20,     // Reflective Void mutator: % of damage dealt reflected to the player
       manaSurgeMult: 2.5,   // Mana Surge mutator: MP regen multiplier
+    },
+
+    // --- refinement (+0 … +max) ---
+    // Safe refine: a failure wastes the attempt, the item never breaks or downgrades.
+    // Fuel cost therefore has to carry the difficulty, and it scales by tier: the
+    // +6→+9 stretch used to cost exactly as much fuel per attempt as +0→+3 despite
+    // being worth far more, so the whole ladder was a ~30-fragment errand.
+    refine: {
+      max: 9,
+      chance: [100, 100, 90, 80, 70, 60, 50, 40, 30],  // success % at +0 … +8
+      atkPerPlus: 0.05,          // each refine adds this fraction of the item's base ATK/DEF
+      fragsPerTier: [2, 3, 5],   // fragments per attempt for +0-2 · +3-5 · +6-8
+      orePerTier: [1, 3, 6],     // ...or this much Blessed Ore as the universal substitute. It must stay
+                                 // the DEARER path: Blessed Ore drops 0.5 from the Lv14 Elderwood Treant,
+                                 // which respawns on the plain 5s timer, so a cheap ore price would let a
+                                 // late-game hero farm a starter-zone guardian instead of endgame fragments.
     },
 
     gemSetBonusMult: 0.5, // 3 matching gems in one item's sockets add +this × one gem's own bonus, extra
