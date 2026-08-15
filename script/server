@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# === Port Configuration ===
+export PORT=${CONDUCTOR_PORT:-3000}
+export VITE_PORT=$((PORT))
+
+exec npm run dev
