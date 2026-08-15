@@ -2,7 +2,7 @@
   "id": "content-expansion_20260815",
   "title": "Content Expansion",
   "type": "feature",
-  "status": "pending",
+  "status": "in_progress",
   "created": "2026-08-15T17:59:17Z",
   "updated": "2026-08-15T17:59:17Z",
   "phases": {
@@ -11,6 +11,6 @@
   },
   "tasks": {
     "total": 15,
-    "completed": 0
+    "completed": 1
   }
 }

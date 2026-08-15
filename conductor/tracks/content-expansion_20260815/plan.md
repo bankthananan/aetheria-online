@@ -15,7 +15,7 @@ Implement The Whispering Depths and Sky-Shattered Peaks.
 
 ### Tasks
 
-- [ ] Task 1.1: Add new tileset elements (`~`, `w`, `K`, `_`, `^`) to `js/maps.js`.
+- [x] Task 1.1: Add new tileset elements (`~`, `w`, `K`, `_`, `^`) to `js/maps.js`.
 - [ ] Task 1.2: Implement Windstream (`^`) global environment tick logic and 1s movement immunity.
 - [ ] Task 1.3: Add monsters (Tidecrawler, Abyssal Siren, Leviathan's Shadow) for Whispering Depths to `js/content.js`.
 - [ ] Task 1.4: Add monsters (Zephyr Hawk, Storm Elemental, The Zenith Warden) for Sky-Shattered Peaks to `js/content.js`.
