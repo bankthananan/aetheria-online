@@ -1493,7 +1493,9 @@ function findPath(sc, sr, gc, gr) {
       const nc = cur.c + dc, nr = cur.r + dr;
       if (!walkTile(nc, nr)) continue;
       if (dc && dr && (!walkTile(cur.c + dc, cur.r) || !walkTile(cur.c, cur.r + dr))) continue; // no corner-cut
-      const ng = cur.g + (dc && dr ? 1.414 : 1), nk = key(nc, nr);
+      const isWind = tileChar(nc, nr) === '^';
+      const penalty = (isWind && dr > 0) ? 99 : 0;
+      const ng = cur.g + (dc && dr ? 1.414 : 1) + penalty, nk = key(nc, nr);
       if (gsc[nk] === undefined || ng < gsc[nk]) { gsc[nk] = ng; came[nk] = key(cur.c, cur.r); open.push({ c: nc, r: nr, g: ng, f: ng + heur(nc, nr) }); }
     }
   }
@@ -4080,8 +4082,19 @@ function frame(t) {
 }
 
 function step(dt) {
+  if (G.physicsSuspended) return;
   const p = G.player;
   if (G.jobChoiceOpen) return; // the permanent choice is readable because the world is truly paused
+  
+  // Windstream environment tick
+  const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS);
+  if (tileChar(tx, ty) === '^' && now() >= (p.windImmunityUntil || 0)) {
+    if (walkableAt(p.x, p.y - TS)) {
+      p.y -= TS;
+    }
+    p.windImmunityUntil = now() + 1000;
+  }
+
   // roaming rare boss world timer (first window arms lazily on the first frame)
   if (!G.nextRareBossAt) G.nextRareBossAt = now() + TUNING.rareBossEveryMs;
   else if (!G.rareBossMapId && now() >= G.nextRareBossAt) spawnRareBoss();
@@ -6997,6 +7010,21 @@ function resumeGame() {
     else showJobChoice(p);
   }
   updateFarmButton();
+  
+  const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS);
+  if (tileChar(tx, ty) === '^') {
+    G.physicsSuspended = true;
+    const overlay = document.createElement('div');
+    overlay.id = 'physics-resync-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);color:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;font-size:24px;font-weight:bold;font-family:sans-serif;pointer-events:none;';
+    overlay.textContent = 'Re-syncing physics...';
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+      G.physicsSuspended = false;
+      overlay.remove();
+    }, 1000);
+  }
+
   G.running = true; last = now(); requestAnimationFrame(frame);
   toast(T('Welcome back, {name} — Lv {level} {class}.', 'ui')
     .replace('{name}', p.name).replace('{level}', p.level).replace('{class}', T(p.className, 'classes')), 'good');
