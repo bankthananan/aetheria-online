@@ -112,6 +112,8 @@ const ITEM_ICON = {
   mythril_plate: 'plate', seraph_ward: 'plate',
   greater_potion: 'potred', elixir: 'potblue',
   frost_shard: 'gem', ice_core: 'core', sand_fang: 'gem', ember_ash: 'gem', dragon_heart: 'core',
+  crawler_shell: 'crawler_shell', siren_scale: 'siren_scale', tide_core: 'tide_core', abyssal_trident: 'abyssal_trident',
+  cloud_feather: 'cloud_feather', storm_core: 'storm_core', zenith_core: 'zenith_core', windwalker_boots: 'windwalker_boots',
   iron_helm: 'helm', dragon_helm: 'helm', iron_gauntlets: 'gloves', iron_boots: 'boots',
   warding_cloak: 'cloak', power_ring: 'ring', vitality_amulet: 'ring',
   void_edge: 'sword', astral_glaive: 'greatsword', astral_plate: 'plate', void_helm: 'helm',

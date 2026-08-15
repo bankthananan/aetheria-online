@@ -42,6 +42,17 @@ export const CONTENT = {
       level: 28, hp: 1150, atk: 74, def: 29, exp: 3616, spriteColor: "#795548", sizeTiles: 2,
       drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "hero_blade", chance: 0.5 }, { itemId: "vitality_amulet", chance: 0.4 }, { itemId: "mid_potion", chance: 1.0 }], behavior: "aggressive" },
 
+    // ===== Whispering Depths =====
+    { id: "tidecrawler", element: "nature", name: "Tidecrawler", flavor: "A heavily armored crustacean guarding the abyssal shallows.",
+      level: 32, hp: 550, atk: 55, def: 25, exp: 1100, spriteColor: "#456b8f", sizeTiles: 1,
+      drops: [{ itemId: "crawler_shell", chance: 0.6 }, { itemId: "mid_potion", chance: 0.2 }], behavior: "aggressive" },
+    { id: "abyssal_siren", element: "ice", name: "Abyssal Siren", flavor: "Her song draws you into the crushing depths.",
+      level: 38, hp: 500, atk: 98, def: 25, exp: 1650, spriteColor: "#57c2a8", sizeTiles: 1,
+      drops: [{ itemId: "siren_scale", chance: 0.5 }, { itemId: "sapphire_shard", chance: 0.08 }, { itemId: "mana_potion", chance: 0.25 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#57c2a8" },
+    { id: "leviathans_shadow", element: "void", name: "Leviathan's Shadow", flavor: "A fraction of the abyssal terror made manifest.",
+      level: 45, hp: 2100, atk: 125, def: 55, exp: 10500, spriteColor: "#1b2c45", sizeTiles: 2, rare: true,
+      drops: [{ itemId: "tide_core", chance: 1.0 }, { itemId: "abyssal_trident", chance: 0.3 }, { itemId: "elixir", chance: 0.8 }, { itemId: "sapphire_shard", chance: 0.2 }], behavior: "aggressive" },
+
     // ===== Expansion monsters (Frostpeak & Dragon Caldera) =====
     { id: "frost_wolf", element: "ice", name: "Frost Wolf", flavor: "A wolf of living ice, hunting the white silence.",
       level: 32, hp: 480, atk: 74, def: 28, exp: 1157, spriteColor: "#9fe6ff", sizeTiles: 1,
@@ -72,6 +83,18 @@ export const CONTENT = {
     { id: "flame_dragon", element: "fire", name: "Flame Dragon", flavor: "The tyrant of the caldera. Its roar is the last thing many hear.",
       level: 60, hp: 2250, atk: 150, def: 60, exp: 14804, spriteColor: "#e2551f", sizeTiles: 2,
       drops: [{ itemId: "dragon_heart", chance: 1.0 }, { itemId: "dawn_edge", chance: 0.6 }, { itemId: "dragon_helm", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+
+    // ===== Sky-Shattered Peaks (expansion biome, Lv 50-65) =====
+    { id: "zephyr_hawk", element: "nature", name: "Zephyr Hawk", flavor: "It dances on the windstreams, striking with blinding speed.",
+      level: 52, hp: 730, atk: 135, def: 42, exp: 2750, spriteColor: "#c2e6e6", sizeTiles: 1,
+      drops: [{ itemId: "cloud_feather", chance: 0.6 }, { itemId: "greater_potion", chance: 0.25 }], behavior: "aggressive", attackCooldownMult: 0.8 },
+    { id: "storm_elemental", element: "lightning", name: "Storm Elemental", flavor: "A coalesced tempest, raining down sparks and fury.",
+      level: 58, hp: 860, atk: 155, def: 50, exp: 3450, spriteColor: "#f2e07a", sizeTiles: 1,
+      drops: [{ itemId: "storm_core", chance: 0.55 }, { itemId: "elixir", chance: 0.1 }], behavior: "aggressive", attackRange: 4, projectileColor: "#f2e07a" },
+    { id: "zenith_warden", element: "lightning", name: "The Zenith Warden", flavor: "An ancient construct appointed to guard the highest peaks from intruders.",
+      level: 65, hp: 2500, atk: 165, def: 62, exp: 16500, spriteColor: "#d9c18f", sizeTiles: 2,
+      drops: [{ itemId: "zenith_core", chance: 1.0 }, { itemId: "windwalker_boots", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+
 
     // ===== Astral Rift (endgame biome, Lv 61-80) =====
     { id: "void_wisp", element: "void", name: "Void Wisp", flavor: "A mote of unmade reality, drifting where the stars leak through.",
@@ -157,10 +180,18 @@ export const CONTENT = {
     { id: "greater_potion", name: "Greater Potion", type: "potion", desc: "Restores a large amount of health.", hpRestore: 220, value: 120, classReq: null },
     { id: "elixir", name: "Elixir", type: "potion", desc: "Restores health and magic in a single draught.", hpRestore: 500, mpRestore: 200, value: 400, classReq: null },
     { id: "frost_shard", name: "Frost Shard", type: "material", desc: "A sliver of everlasting ice.", value: 45, classReq: null },
+    { id: "crawler_shell", name: "Crawler Shell", type: "material", desc: "A dense, barnacle-encrusted shell.", value: 50, classReq: null },
+    { id: "siren_scale", name: "Siren Scale", type: "material", desc: "Shimmers with a hypnotic glow.", value: 75, classReq: null },
+    { id: "tide_core", name: "Tide Core", type: "material", desc: "The freezing heart of the depths.", value: 120, classReq: null },
+    { id: "abyssal_trident", name: "Abyssal Trident", type: "weapon", desc: "Forged in crushing pressure, it commands the sea.", atk: 40, value: 3000, classReq: ["reborn_blade", "lightbringer"], rankReq: "C", gearLevel: 55 },
     { id: "ice_core", name: "Ice Core", type: "material", desc: "The frozen heart of a wraith.", value: 90, classReq: null },
     { id: "sand_fang", name: "Sand Fang", type: "material", desc: "A venom-tipped fang.", value: 70, classReq: null },
     { id: "ember_ash", name: "Ember Ash", type: "material", desc: "Ash that never cools.", value: 85, classReq: null },
     { id: "dragon_heart", name: "Dragon Heart", type: "material", desc: "Still smouldering. Worth a fortune — or a legendary forge.", value: 800, classReq: null },
+    { id: "cloud_feather", name: "Cloud Feather", type: "material", desc: "A feather as light as the winds of the peak.", value: 80, classReq: null },
+    { id: "storm_core", name: "Storm Core", type: "material", desc: "Crackles with contained lightning.", value: 130, classReq: null },
+    { id: "zenith_core", name: "Zenith Core", type: "material", desc: "The crystallized essence of the highest peak.", value: 600, classReq: null },
+    { id: "windwalker_boots", name: "Windwalker Boots", type: "armor", slot: "feet", desc: "Steps taken in these boots leave no trace, only a gentle breeze.", def: 15, value: 2000, classReq: null, rankReq: "C" },
 
     // ===== Equipment slots: head / hands / feet / cloak / accessory =====
     { id: "iron_helm", name: "Iron Helm", type: "armor", slot: "head", desc: "Dented but dependable.", def: 8, value: 400, classReq: ["reborn_blade", "lightbringer"] },
