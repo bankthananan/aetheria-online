@@ -11,6 +11,11 @@ const LEGEND = {
   'T': { type: 'tree',  walkable: false, color: '#20523b' },
   '#': { type: 'wall',  walkable: false, color: '#4b5058' },
   'W': { type: 'water', walkable: false, color: '#277aa0' },
+  '~': { type: 'deep_water', walkable: false, color: '#17507d' },
+  'w': { type: 'shallow_water', walkable: true, color: '#399bcf' },
+  'K': { type: 'kelp', walkable: false, color: '#164a2b' },
+  '_': { type: 'cloudbridge', walkable: true, color: '#e0f0f5' },
+  '^': { type: 'windstream', walkable: true, color: '#a8d8eb' },
   'P': { type: 'floor', walkable: true,  color: '#e0b84f' }, // portal pad (walkable)
   'B': { type: 'floor', walkable: true,  color: '#a63d45' }, // boss floor marker (walkable)
   'V': { type: 'floor', walkable: true,  color: '#3a1a5c' }, // raid boss floor marker (walkable, separate from 'B' so it doesn't stack on the zone guardian)
