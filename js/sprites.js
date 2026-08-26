@@ -85,6 +85,19 @@ export const SPRITES = {
        <rect x='18' y='3' width='12' height='12' rx='2' fill='#8d6e63' stroke='#4e342e' stroke-width='2'/>
        <circle cx='22' cy='9' r='1.7' fill='#ff5b3d'/><circle cx='28' cy='9' r='1.7' fill='#ff5b3d'/>
        <path d='M14 24 L22 22 M28 28 L34 26 M20 30 L26 31' stroke='#4e342e' stroke-width='1' fill='none'/>`),
+    tidecrawler: S(32, SHADOW(16, 28, 11) +
+      `<rect x='8' y='14' width='16' height='10' rx='4' fill='#456b8f' stroke='#29415c' stroke-width='1.5'/>
+       <path d='M8 18 L4 24 M24 18 L28 24' stroke='#456b8f' stroke-width='2'/>
+       <circle cx='12' cy='18' r='1.5' fill='#fff'/><circle cx='20' cy='18' r='1.5' fill='#fff'/>`),
+    abyssal_siren: S(32, SHADOW(16, 28, 9) +
+      `<path d='M16 8 Q24 16 16 28 Q8 16 16 8' fill='#57c2a8' stroke='#2b7562' stroke-width='1.5'/>
+       <circle cx='16' cy='12' r='4' fill='#9be8d4'/>
+       <circle cx='14' cy='11' r='1' fill='#111'/><circle cx='18' cy='11' r='1' fill='#111'/>`),
+    leviathans_shadow: S(48, SHADOW(24, 45, 18) +
+      `<path d='M8 40 Q24 10 40 40 Q24 45 8 40' fill='#1b2c45' stroke='#0d1624' stroke-width='2'/>
+       <path d='M20 25 L16 15 L24 20 Z' fill='#4773a8'/>
+       <path d='M28 25 L32 15 L24 20 Z' fill='#4773a8'/>
+       <circle cx='18' cy='32' r='2' fill='#ff3333'/><circle cx='30' cy='32' r='2' fill='#ff3333'/>`),
   },
 };
 

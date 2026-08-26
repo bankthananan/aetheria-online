@@ -96,9 +96,9 @@ export const DESIGN = {
   // inside this narrow window and use only combat mechanics the engine knows.
   jobBranchBalance: {
     tierStatPointBudgets: {
-      reborn_blade: { 1: 8, 2: 19 }, drifter: { 1: 8, 2: 17 },
-      codeweaver: { 1: 8, 2: 14 }, far_shot: { 1: 8, 2: 14 },
-      lightbringer: { 1: 8, 2: 18 }, iron_fist: { 1: 8, 2: 17 },
+      reborn_blade: { 1: 8, 2: 19 }, drifter: { 1: 8, 2: 17, 3: 25 },
+      codeweaver: { 1: 8, 2: 14, 3: 25 }, far_shot: { 1: 8, 2: 14 },
+      lightbringer: { 1: 8, 2: 18, 3: 25 }, iron_fist: { 1: 8, 2: 17, 3: 25 },
       stormcaller: { 1: 7, 2: 15 },
     },
     thirdJobStatPointBudgets: {

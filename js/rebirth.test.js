@@ -80,7 +80,7 @@ A.equip(sword.uid);
 A.G.guildRankIdx = 6; A.G.guardiansSlain.add('elderwood_treant');
 A.recompute(p, true);
 
-assert.equal(A.doRebirth(), true, 'rebirth must fire at the level cap');
+assert.equal(A.doRebirth(p.classId), true, 'rebirth must fire at the level cap');
 assert.equal(p.rebirths, 1);
 assert.equal(p.level, 1, 'level resets');
 assert.equal(p.jobLevel, 1, 'job level resets');
@@ -109,7 +109,7 @@ assert.equal(p2.stats.str, freshStr + T.rebirthStatBonus, 'stat bonus survives s
 
 // 5) Second rebirth stacks.
 p2.level = A.DESIGN.levelCap;
-assert.equal(A.doRebirth(), true);
+assert.equal(A.doRebirth(p2.classId), true);
 assert.equal(p2.rebirths, 2);
 assert.equal(p2.stats.str, freshStr + 2 * T.rebirthStatBonus, 'bonuses stack per rebirth');
 

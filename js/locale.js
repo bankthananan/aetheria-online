@@ -663,6 +663,8 @@ export const L10N = {
       "Archon of Storms": "อาร์คอนแห่งวาตภัย",
       "Pyroclast": "จอมเวทเศษภูเขาไฟ",
       "Cinder Archon": "อาร์คอนเถ้าคุไฟ",
+      "Hybrid: Spellblade": "ไฮบริด: นักดาบเวทมนตร์",
+      "Hybrid: Vanguard": "ไฮบริด: แนวหน้าทะลวง",
 
       // Class Flavors
       "The salaryman who read every tank guide and finally gets to main one.": "พนักงานออฟฟิศที่อ่านไกด์สายแทงก์มาทุกเล่ม และในที่สุดก็ได้เล่นเป็นตัวหลักเสียที",
@@ -927,7 +929,11 @@ export const L10N = {
       "Seismic Shock": "แผ่นดินไหวสายฟ้า",
       "Stone splits and lightning follows the crack.": "หินแยกออก และสายฟ้าตามรอยแตกนั้นทันที",
       "Storm Sovereign": "จอมราชันพายุ",
-      "Command the charged air itself to shield you.": "สั่งให้อากาศที่มีประจุไฟฟ้าปกป้องตัวคุณเอง"
+      "Command the charged air itself to shield you.": "สั่งให้อากาศที่มีประจุไฟฟ้าปกป้องตัวคุณเอง",
+      "Elemental Strike": "โจมตีผสานธาตุ",
+      "Blade and code unite. The elements obey.": "ดาบและโค้ดผสานรวมกัน ธรรมชาติทั้งมวลต้องจำนน",
+      "Phalanx": "ฟารังซ์หอกโล่",
+      "Impenetrable shield, divine judgment.": "โล่ที่ไม่มีวันถูกทะลวง พ่วงมาด้วยคำพิพากษาแห่งสวรรค์"
     },
     skills_short: {
       "rift_slash": "รอยแยก",
@@ -1229,6 +1235,8 @@ export const L10N = {
       "Complete a rebirth.": "ผ่านการเกิดใหม่หนึ่งครั้ง",
     },
     monsters: {
+      "Void Construct": "อสูรวอยด์คอนสตรัคท์",
+      "A geometric nightmare of hard light and heavy gravity.": "ฝันร้ายรูปทรงเรขาคณิตที่สร้างจากแสงแข็งและแรงโน้มถ่วงมหาศาล",
       "Gel Slime": "เจลสไลม์",
       "A wobbling blob. Your first foe in this new world.": "ก้อนวุ้นกลมดุกดิก ศัตรูตัวแรกของคุณในโลกใหม่นี้",
       "Scrap Goblin": "ก็อบลินเศษเหล็ก",
@@ -1390,6 +1398,10 @@ export const L10N = {
       "Home can wait a little longer. Aetheria is yours to roam.": "บ้านค่อยรออีกหน่อยก็ได้ Aetheria เป็นดินแดนให้คุณได้ออกเดินทางท่องเที่ยวแล้วตอนนี้"
     },
     quests: {
+      "Path of the Spellblade": "เส้นทางสู่นักดาบเวทมนตร์",
+      "Unite the blade and the code. Slay the Void Construct.": "ผสานดาบและโค้ดเข้าด้วยกัน จงสังหาร Void Construct",
+      "Path of the Vanguard": "เส้นทางสู่แนวหน้าทะลวง",
+      "Unite fist and faith. Slay the Void Construct.": "ผสานหมัดและศรัทธาเข้าด้วยกัน จงสังหาร Void Construct",
       "A Strange Awakening": "การตื่นขึ้นที่แปลกประหลาด",
       "You've woken in a world not your own. Speak with Elowen, then step through the town portal into the Whispering Woods and prove you're able by clearing three slimes.": "คุณตื่นขึ้นมาในโลกที่ไม่คุ้นเคย คุยกับอีโลเวน จากนั้นก้าวผ่านประตูมิติของเมืองไปยังป่า Whispering Woods เพื่อพิสูจน์ตนเองด้วยการกำจัดสไลม์ 3 ตัว",
       "Easy, hero. Breathe — crossing the veil is rougher than it looks. The dizziness passes.": "ใจเย็นๆ ฮีโร่เอ๋ย หายใจลึกๆ — การข้ามม่านมิติมันโหดร้ายกว่าที่ตาเห็น อาการเวียนหัวจะค่อยๆ หายไปเอง",

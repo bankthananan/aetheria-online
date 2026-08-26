@@ -53,6 +53,11 @@ export const CONTENT = {
       level: 45, hp: 2100, atk: 125, def: 55, exp: 10500, spriteColor: "#1b2c45", sizeTiles: 2, rare: true,
       drops: [{ itemId: "tide_core", chance: 1.0 }, { itemId: "abyssal_trident", chance: 0.3 }, { itemId: "elixir", chance: 0.8 }, { itemId: "sapphire_shard", chance: 0.2 }], behavior: "aggressive" },
 
+    // ===== Hybrid Job Bosses =====
+    { id: "void_construct", element: "void", name: "Void Construct", flavor: "A geometric nightmare of hard light and heavy gravity.",
+      level: 60, hp: 2800, atk: 180, def: 85, exp: 15000, spriteColor: "#1a1a24", sizeTiles: 2, rare: true,
+      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "shade_dust", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+
     // ===== Expansion monsters (Frostpeak & Dragon Caldera) =====
     { id: "frost_wolf", element: "ice", name: "Frost Wolf", flavor: "A wolf of living ice, hunting the white silence.",
       level: 32, hp: 480, atk: 74, def: 28, exp: 1157, spriteColor: "#9fe6ff", sizeTiles: 1,

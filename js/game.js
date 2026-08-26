@@ -339,8 +339,8 @@ function selfCheck() {
       if (map.band && guard && guard.level > map.band[1]) errs.push(`map ${map.id} guardian above band ceiling`);
     }
   }
-  if (!Array.isArray(PROGRESSION.jobLevelCaps) || PROGRESSION.jobLevelCaps.join(',') !== '15,40,50')
-    errs.push('job level caps must be exactly 15 < 40 < 50');
+  if (!Array.isArray(PROGRESSION.jobLevelCaps) || PROGRESSION.jobLevelCaps.join(',') !== '15,40,50,60')
+    errs.push('job level caps must be exactly 15 < 40 < 50 < 60');
   for (const c of DESIGN.classes) {
     const cfg = advancedJobConfig(c.id);
     if (!cfg || cfg.choices?.length !== 2) errs.push(`class ${c.id} must have exactly two third-job choices`);
@@ -916,10 +916,16 @@ function previewSlotName(id) {
   const s = COMBAT.skills.find(x => x.id === id);
   return s ? T(s.name, 'skills') : T(PROGRESSION.passives[id]?.name || id, 'passives');
 }
+function hybridJobAllowsSkill(p, id) {
+  const node = PROGRESSION.skillTree[id];
+  if (!node || !node.reqHybridJob) return true;
+  return p.hybridJobId === node.reqHybridJob;
+}
 function canLearn(p, id) {
   const node = PROGRESSION.skillTree[id]; if (!node) return false;
   if (!branchAllowsSkill(p, id)) return false;
   if (!advancedJobAllowsSkill(p, id)) return false;
+  if (!hybridJobAllowsSkill(p, id)) return false;
   if (skillLevel(p, id) >= node.maxLevel) return false;
   const gate = skillRankGate(p, id);
   if (p.skillPoints < 1 || (p.jobLevel || p.level) < gate.reqLevel) return false;
@@ -1053,7 +1059,16 @@ function resetSkillPoints(p = G.player) {
 // (promotion is earned by completing it, not automatic).
 function maybeStartAdvance(p) {
   const next = tierForPlayer(p, p.tierIndex + 1);   // branch-aware: picks up a chosen branch's own Tier-2 mastery trial
-  if (next?.advance && !G.advance && p.level >= next.reqLevel) startAdvanceQuest(p.tierIndex + 1);
+  if (!next || !next.advance || G.advance || p.level < next.reqLevel) return;
+  if (next.isHybrid) {
+     const hybridKey = Object.keys(PROGRESSION.hybridJobs).find(k => next.name.includes(PROGRESSION.hybridJobs[k].name));
+     if (hybridKey) {
+        const req = PROGRESSION.hybridJobs[hybridKey].requires;
+        const hasReqs = req.every(r => (p.pastLives || []).includes(r) || p.classId === r);
+        if (!hasReqs) return; // lacking past lives
+     }
+  }
+  startAdvanceQuest(p.tierIndex + 1);
 }
 function startAdvanceQuest(ti) {
   const q = tierForPlayer(G.player, ti).advance;
@@ -1195,6 +1210,17 @@ function doPromote(p, ti, branchId = p.jobBranchId) {
     recompute(p, true);
     toast(T('Advanced calling unlocked! Evolution bonus applied.', 'ui'), 'good');
     logMsg(`✦ Promoted to Tier 2: [${job.role}] ${job.name}. Evolution bonus applied.`, 'good');
+    AUDIO.playSfx('levelup');
+  } else if (ti === 3) {
+    const jobKey = Object.keys(PROGRESSION.hybridJobs).find(k => t[3].name.includes(PROGRESSION.hybridJobs[k].name));
+    const job = PROGRESSION.hybridJobs[jobKey];
+    p.hybridJobId = job.id;
+    p.tierIndex = 3;
+    p.className = job.name;
+    p.skillPoints += PROGRESSION.skillPointsPerLevel * 3; // promotion skill-point bonus
+    recompute(p, true);
+    toast(T('Hybrid Calling unlocked! The cycle completes.', 'ui'), 'good');
+    logMsg(`✦ Promoted to Tier 4: [${job.role}] ${job.name}. Hybrid bonus applied.`, 'good');
     AUDIO.playSfx('levelup');
   }
   G.advance = null;
@@ -2037,7 +2063,7 @@ const liveStatus = (m, id) => m.statuses[id] && m.statuses[id].until > now() ? m
 const monsterDef = m => Math.max(0, Math.round(m.dv * (liveStatus(m, 'sunder')?.defMult || 1)));
 
 // ---- elemental weakness: a defender of element X takes bonus damage from weakness[X] ----
-const monsterElement = m => m.def.element || 'physical';
+const monsterElement = m => (m?.def?.element || (typeof m === 'string' && (monsterById[m]?.element || (CONTENT.monsters.find(x => x.id === m)?.element))) || 'physical');
 // Resolve a skill's damage element. Explicit sk.element wins; otherwise derive
 // from class → name theme → status effect, defaulting to neutral 'physical'.
 // ponytail: name/effect resolver instead of tagging all ~90 skills by hand —
@@ -2605,13 +2631,15 @@ function placeRareBoss() {
 // Gear, zeny, storage, guild rank, and world/story state all survive; only the
 // hero's level/job/skills/stat points start over. ponytail: the active story
 // quest is deliberately left running — a reborn Lv1 simply grinds back to it.
-function doRebirth() {
+function doRebirth(newClassId = null) {
   const p = G.player;
   if (p.level < DESIGN.levelCap) return false;
-  const fresh = makePlayer(p.classId, p.name);   // canonical starting progression for this class
+  newClassId = newClassId || p.classId;
+  const fresh = makePlayer(newClassId, p.name);   // canonical starting progression for this class
   p.rebirths = (p.rebirths || 0) + 1;
-  Object.assign(p, { level: 1, xp: 0, jobLevel: 1, jobXp: 0, tierIndex: 0, jobBranchId: null, advancedJobId: null, className: fresh.className,
-    alloc: fresh.alloc, statPoints: fresh.statPoints, skillPoints: fresh.skillPoints,
+  p.pastLives = [...new Set([...(p.pastLives || []), p.classId])];
+  Object.assign(p, { classId: newClassId, _cls: fresh._cls, level: 1, xp: 0, jobLevel: 1, jobXp: 0, tierIndex: 0, jobBranchId: null, advancedJobId: null, hybridJobId: null, className: fresh.className,
+    combatClass: fresh.combatClass, alloc: fresh.alloc, statPoints: fresh.statPoints, skillPoints: fresh.skillPoints,
     skillLevels: fresh.skillLevels, hotbar: fresh.hotbar, momentum: 0, skillCd: {}, buffs: [] });
   G.advance = null;   // the class-advancement trials will re-offer at their level gates
   G.jobChoiceOpen = false;
@@ -2621,6 +2649,32 @@ function doRebirth() {
   AUDIO.playSfx('levelup');
   checkAchievements(); updateHud(); renderHotbar(); refreshPanel('char'); saveGame();
   return true;
+}
+
+function showRebirthClassChoice() {
+  const p = G.player;
+  let box = document.getElementById('rebirth-choice');
+  if (box) box.remove();
+  box = document.createElement('div');
+  box.id = 'rebirth-choice'; box.className = 'job-choice-overlay';
+  const cards = DESIGN.classes.map(c => {
+    const cc = CLASS_COMBAT[c.id], url = typeof pxDataURL !== 'undefined' ? pxDataURL('player', cc) : '';
+    const portrait = url
+      ? `<span class="cc-portrait"><img src="${url}" width="64" height="64" alt="" class="cc-portrait-img"></span>`
+      : `<span class="cc-portrait cc-portrait-fallback">✦</span>`;
+    return `<button class="job-choice-card" data-rebirth-class="${c.id}" style="--path-color:#e6bd54">
+      ${portrait}
+      <b>${esc(T(c.name, 'classes'))}</b>
+      <em>${esc(T(c.role, 'classes'))}</em>
+      <span class="job-choice-pick">${T('REBORN AS THIS', 'ui')}</span>
+    </button>`;
+  }).join('');
+  box.innerHTML = `<section class="job-choice-shell"><header><small>${T('LEVEL CAP REACHED', 'ui')}</small><h2>${T('Choose your next life', 'ui')}</h2><p>${T('Your past life will be remembered, unlocking new hybrid paths.', 'ui')}</p></header><div class="job-choice-grid">${cards}</div><button class="btn btn--ghost" style="margin-top:20px" onclick="document.getElementById('rebirth-choice').remove()">${T('Cancel', 'ui')}</button></section>`;
+  box.querySelectorAll('[data-rebirth-class]').forEach(button => button.onclick = () => {
+    doRebirth(button.dataset.rebirthClass);
+    if (box) box.remove();
+  });
+  ($('#overlays') || document.body).appendChild(box);
 }
 
 // ---- achievements: declarative lifetime badges, polled every couple seconds ----
@@ -4294,11 +4348,24 @@ function logMsg(text, kind = '') {
   while (log.children.length > 8) log.firstChild.remove();
 }
 function toast(text, kind = '') {
+  const TOAST_MAX = 4;
+  const existing = document.querySelectorAll('.toast') || [];
+  if (existing.length >= TOAST_MAX && existing[0]?.remove) existing[0].remove();
+  const setIndex = (target, idx) => {
+    if (!target?.style) return;
+    if (typeof target.style.setProperty === 'function') target.style.setProperty('--toast-index', idx);
+    else target.style['--toast-index'] = idx;
+  };
+  (document.querySelectorAll('.toast') || []).forEach((t, i) => setIndex(t, i));
   const el = document.createElement('div');
   el.className = 'toast' + (kind ? ` line--${kind}` : '');
   el.textContent = text;
+  setIndex(el, (document.querySelectorAll('.toast') || []).length);
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3200);
+  setTimeout(() => {
+    if (el?.remove) el.remove();
+    (document.querySelectorAll('.toast') || []).forEach((t, i) => setIndex(t, i));
+  }, 3200);
 }
 function showZoneBanner(map, firstVisit) {
   document.querySelector('.zone-banner')?.remove();
@@ -4340,6 +4407,7 @@ function initTouchControls() {
     container.className = 'touch-controls';
     container.style.display = 'none';
     container.innerHTML = `
+      <div class="touch-zone"></div>
       <div class="touch-joystick">
         <div class="touch-joystick-base">
           <div class="touch-joystick-knob"></div>
@@ -4350,6 +4418,8 @@ function initTouchControls() {
         <button class="touch-action-btn touch-btn-s2" data-action="s2">S2</button>
         <button class="touch-action-btn touch-btn-s3" data-action="s3">S3</button>
         <button class="touch-action-btn touch-btn-s4" data-action="s4">S4</button>
+        <button class="touch-action-btn touch-btn-s5" data-action="s5">S5</button>
+        <button class="touch-action-btn touch-btn-s6" data-action="s6">S6</button>
         <button class="touch-action-btn touch-btn-dodge" data-action="dodge">Dodge</button>
         <button class="touch-action-btn touch-btn-atk" data-action="attack">ATK</button>
       </div>
@@ -4364,6 +4434,7 @@ function initTouchControls() {
   }
   container.style.display = 'flex';
 
+  const zoneEl = container.querySelector('.touch-zone') || container;
   const joystickEl = container.querySelector('.touch-joystick');
   const knobEl = container.querySelector('.touch-joystick-knob');
 
@@ -4371,11 +4442,15 @@ function initTouchControls() {
     const handleStart = e => {
       e.preventDefault();
       const touch = e.changedTouches[0];
-      const rect = joystickEl.getBoundingClientRect();
       touchJoystickState.active = true;
       touchJoystickState.touchId = touch.identifier;
-      touchJoystickState.startX = rect.left + rect.width / 2;
-      touchJoystickState.startY = rect.top + rect.height / 2;
+      touchJoystickState.startX = touch.clientX;
+      touchJoystickState.startY = touch.clientY;
+      if (joystickEl.style) {
+        joystickEl.style.left = `${touch.clientX}px`;
+        joystickEl.style.top = `${touch.clientY}px`;
+      }
+      joystickEl.classList.add('active');
       updateJoystickVector(touch.clientX, touch.clientY, knobEl);
     };
     const handleMove = e => {
@@ -4397,7 +4472,8 @@ function initTouchControls() {
           touchJoystickState.touchId = null;
           touchJoystickState.normX = 0;
           touchJoystickState.normY = 0;
-          knobEl.style.transform = 'translate(0px, 0px)';
+          if (knobEl.style) knobEl.style.transform = 'translate(0px, 0px)';
+          joystickEl.classList.remove('active');
           G.keys['a'] = false;
           G.keys['d'] = false;
           G.keys['w'] = false;
@@ -4407,7 +4483,8 @@ function initTouchControls() {
       }
     };
 
-    joystickEl.addEventListener('touchstart', handleStart, { passive: false });
+    zoneEl.addEventListener('touchstart', handleStart, { passive: false });
+    if (zoneEl !== joystickEl) joystickEl.addEventListener('touchstart', handleStart, { passive: false });
     window.addEventListener('touchmove', handleMove, { passive: false });
     window.addEventListener('touchend', handleEnd);
     window.addEventListener('touchcancel', handleEnd);
@@ -4418,11 +4495,14 @@ function initTouchControls() {
     const trigger = e => {
       e.preventDefault();
       AUDIO.playSfx('menu');
+      if (navigator.vibrate) navigator.vibrate(15);
       if (act === 'attack') playerBasicAttack();
       else if (act === 's1') useHotbarSlot(0);
       else if (act === 's2') useHotbarSlot(1);
       else if (act === 's3') useHotbarSlot(2);
       else if (act === 's4') useHotbarSlot(3);
+      else if (act === 's5') useHotbarSlot(4);
+      else if (act === 's6') useHotbarSlot(5);
       else if (act === 'dodge') performDodge();
     };
     btn.addEventListener('touchstart', trigger, { passive: false });
@@ -4437,14 +4517,29 @@ function buildHud() {
   const p = G.player;
   $('#hud').innerHTML = `
     <div class="hud">
+      <div id="danger-vignette" class="danger-vignette"></div>
       <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
-        <div class="bar hp-bar" role="progressbar" aria-label="${T('Health', 'ui')}"><div class="fill" id="hp-fill"></div><div class="label" id="hp-label"></div></div>
+        <div class="bar hp-bar" role="progressbar" aria-label="${T('Health', 'ui')}"><div class="fill" id="hp-fill"></div><div class="shield-fill" id="shield-fill"></div><div class="label" id="hp-label"></div></div>
         <div class="bar mp-bar" role="progressbar" aria-label="${T('Mana', 'ui')}"><div class="fill" id="mp-fill"></div><div class="label" id="mp-label"></div></div>
         <div class="bar stamina-bar" role="progressbar" aria-label="${T('Stamina', 'ui')}" title="${T('Stamina — Space to dodge roll, V to parry', 'ui')}"><div class="fill" id="stamina-fill"></div></div>
         <div class="hud-identity"><span id="hud-name"></span><span class="hud-sep">◆</span><span id="hud-job"></span><span class="hud-sep">◆</span><span class="hud-coin">G</span><span id="hud-zeny"></span></div>
       </div>
+      <div id="boss-frame" class="boss-frame" style="display:none">
+        <div class="boss-portrait"><span id="boss-icon">☠</span></div>
+        <div class="boss-details">
+          <div class="boss-header">
+            <b id="boss-name"></b>
+            <div id="boss-weaknesses" class="boss-weaknesses"></div>
+          </div>
+          <div class="bar boss-hp-bar"><div class="fill" id="boss-hp-fill"></div><div class="label" id="boss-hp-label"></div></div>
+          <div class="bar boss-stagger-bar"><div class="fill" id="boss-stagger-fill"></div></div>
+        </div>
+      </div>
       <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div></div>
+      <button id="mobile-menu-btn" class="mobile-menu-btn btn btn--ghost" type="button" aria-label="${T('Menu', 'ui')}">
+        <span class="m-icon">☰</span> <span class="m-label">${T('Menu', 'ui')}</span><span id="mobile-menu-badge" class="hud-badge-dot" style="display:none"></span>
+      </button>
       <div class="quest-tracker" id="quest-tracker" tabindex="0" role="region" aria-label="${T('Active quests and bounties', 'ui')}"></div>
       <button class="auto-status" id="auto-status" data-panel="automation" type="button" hidden aria-live="polite">
         <span class="auto-status__icon" aria-hidden="true">◎</span><span class="auto-status__copy"><b></b><small></small></span><span class="auto-status__gear" aria-hidden="true">⚙</span>
@@ -4476,9 +4571,23 @@ function buildHud() {
     </div>`;
   renderHotbar();
   initTouchControls();
-  $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => togglePanel(b.dataset.panel));
+  $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => {
+    togglePanel(b.dataset.panel);
+    $('#hud .hud-menu')?.classList.remove('open');
+    $('#mobile-menu-btn')?.classList.remove('active');
+  });
+  const mBtn = $('#mobile-menu-btn');
+  const hMenu = $('#hud .hud-menu');
+  if (mBtn && hMenu) {
+    mBtn.onclick = (e) => {
+      e.stopPropagation();
+      AUDIO.playSfx('menu');
+      hMenu.classList.toggle('open');
+      mBtn.classList.toggle('active', hMenu.classList.contains('open'));
+    };
+  }
   $('#mute-btn').onclick = e => { G.muted = !G.muted; AUDIO.setMuted(G.muted); e.target.textContent = G.muted ? '🔇' : '🔊'; };
-  $('#farm-btn').onclick = () => toggleFarm();
+  $('#farm-btn').onclick = () => { toggleFarm(); $('#hud .hud-menu')?.classList.remove('open'); $('#mobile-menu-btn')?.classList.remove('active'); };
   $('#hotbar-config').onclick = () => togglePanel('hotkeys');
   $('#lang-btn').onclick = () => {
     setLanguage(currentLang === 'th' ? 'en' : 'th');
@@ -4672,8 +4781,27 @@ function updateHud() {
   const need = p.level >= DESIGN.levelCap ? 1 : xpForNext(p.level);
   $('#xp-fill').style.width = (100 * p.xp / need) + '%';
   if ($('#job-fill')) $('#job-fill').style.width = (p.jobLevel >= activeJobLevelCap(p) ? 100 : 100 * p.jobXp / jobXpForNext(p.jobLevel)) + '%';
-  $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}`;
+  const shield = (p.buffs || []).find(b => b.id === 'draconic_shield' || b.shield)?.shield || 0;
+  if ($('#shield-fill')) $('#shield-fill').style.width = (shield > 0 ? Math.min(100, 100 * shield / p.maxHp) : 0) + '%';
+  $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}${shield > 0 ? ` (+${shield})` : ''}`;
   $('#mp-label').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
+  // Boss frame update
+  const boss = (G.monsters || []).find(m => m.alive && (m.def?.sizeTiles >= 2 || m.def?.isRareBoss || m.def?.isZoneGuardian || m.def?.isRaidBoss || G.huntTargetId === m.def?.id));
+  const bFrame = $('#boss-frame');
+  if (bFrame) {
+    if (boss && G.running) {
+      bFrame.style.display = 'flex';
+      const bRatio = clamp(boss.hp / (boss.maxHp || 1), 0, 1);
+      const bName = $('#boss-name'); if (bName) bName.textContent = `Lv${boss.lvl || boss.def.level} ${T(boss.def.name, 'monsters')}`;
+      const bHpFill = $('#boss-hp-fill'); if (bHpFill) bHpFill.style.width = (100 * bRatio) + '%';
+      const bHpLabel = $('#boss-hp-label'); if (bHpLabel) bHpLabel.textContent = `${Math.ceil(100 * bRatio)}%`;
+      const elem = typeof monsterElement === 'function' ? monsterElement(boss) : null;
+      const bWeak = $('#boss-weaknesses');
+      if (bWeak) bWeak.innerHTML = elem ? `<span class="elem-chip">${T(elem, 'ui')}</span>` : '';
+    } else {
+      bFrame.style.display = 'none';
+    }
+  }
   const hpBar = document.querySelector('.hp-bar'), mpBar = document.querySelector('.mp-bar');
   if (hpBar) { hpBar.setAttribute('aria-valuenow', Math.ceil(p.hp)); hpBar.setAttribute('aria-valuemax', p.maxHp); }
   if (mpBar) {
@@ -4710,6 +4838,10 @@ function updateHud() {
   if (cbtn) cbtn.textContent = T('Status (C)', 'ui') + (p.statPoints ? ` +${p.statPoints}` : '');
   const kbtn = $('#hud').querySelector('[data-panel="skills"]');
   if (kbtn) kbtn.textContent = T('Abilities (K)', 'ui') + (p.skillPoints ? ` +${p.skillPoints}` : '');
+  const mBadge = $('#mobile-menu-badge');
+  if (mBadge) mBadge.style.display = (p.statPoints || p.skillPoints) ? 'block' : 'none';
+  const dv = $('#danger-vignette');
+  if (dv) dv.classList.toggle('danger-active', hpRatio > 0 && hpRatio <= 0.25);
   const mpips = $('#momentum-pips');
   if (mpips) {
     const MM = TUNING.momentum, ready = p.momentum >= MM.finisherMin;
@@ -4766,7 +4898,18 @@ function updateQuestTracker() {
         return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${targetName}: ${prog}/${g.count}${ready ? T(' — report to guild!', 'ui') : ''}</span><br>${bountyLevelHtml(g, true)}</button>`;
       }).join('') + `</div>`;
   }
-  el.innerHTML = html;
+  const isCollapsed = el.classList.contains('collapsed');
+  const header = `<div class="tracker-header" id="tracker-toggle"><span>📜 ${T('Objectives', 'ui')}</span><span class="tracker-chevron">${isCollapsed ? '▸' : '▾'}</span></div>`;
+  el.innerHTML = header + `<div class="tracker-body">${html}</div>`;
+  const tToggle = el.querySelector('#tracker-toggle');
+  if (tToggle) {
+    tToggle.onclick = (e) => {
+      e.stopPropagation();
+      el.classList.toggle('collapsed');
+      const chev = el.querySelector('.tracker-chevron');
+      if (chev) chev.textContent = el.classList.contains('collapsed') ? '▸' : '▾';
+    };
+  }
   el.querySelectorAll('[data-task]').forEach(task => task.onclick = () => activateTaskGuide(task.dataset.task, task.dataset.taskId));
   el.querySelectorAll('[data-job-choice]').forEach(button => button.onclick = () => showJobChoice(G.player));
   refreshPanel('quest'); refreshPanel('guild');   // live-update open windows (bg progress/completions)
@@ -5560,7 +5703,11 @@ function panelBody(id) {
         <span>SFX Volume (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
         <input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${v.sfx}" style="width:140px">
       </div>
-      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">♿ Accessibility</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">♿ Accessibility & Scaling</div>
+      <div class="setting-row">
+        <span>UI Scaling (<b id="vol-scale-val">${Math.round((G.uiScale || 1.0) * 100)}%</b>)</span>
+        <input type="range" id="vol-scale" min="0.8" max="1.3" step="0.05" value="${G.uiScale || 1.0}" style="width:140px">
+      </div>
       <div class="setting-row">
         <span>High Contrast Mode</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
@@ -5648,11 +5795,23 @@ function panelBody(id) {
     if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div><i>${T('Bag is empty.', 'ui')}</i>`;
     const tab = G._bagTab || 'all';
     const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
+    const q = (G._invSearch || '').trim().toLowerCase();
     const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory'].includes(it.type)) || (tab === 'use' && ['potion', 'reset'].includes(it.type)) || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
+    const matchesSearch = (e, it) => {
+      if (!q) return true;
+      if (it && it.name && it.name.toLowerCase().includes(q)) return true;
+      if (it && it.desc && it.desc.toLowerCase().includes(q)) return true;
+      if (e.affixes) {
+        for (const a of e.affixes) {
+          if (a.stat && a.stat.toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
+    };
     const cat = ITEM_CAT, ORDER = ITEM_CAT_ORDER;
     const rarRank = e => e.uid ? RARITY_ORDER.indexOf(e.rarity) : -1;
     const groups = {};
-    for (const e of p.inventory) { const it = itemById[e.itemId]; if (!inTab(it)) continue; const c = cat(it); (groups[c] = groups[c] || []).push(e); }
+    for (const e of p.inventory) { const it = itemById[e.itemId]; if (!inTab(it) || !matchesSearch(e, it)) continue; const c = cat(it); (groups[c] = groups[c] || []).push(e); }
     const slotRank = e => e.uid ? EQUIP_SLOTS.indexOf(itemSlot(itemById[e.itemId])) : 99;
     for (const c in groups) groups[c].sort((a, b) => (slotRank(a) - slotRank(b)) || (rarRank(b) - rarRank(a)) || ((b.plus || 0) - (a.plus || 0)) || itemById[a.itemId].name.localeCompare(itemById[b.itemId].name));
 
@@ -5674,9 +5833,14 @@ function panelBody(id) {
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
         <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${act}</div>`;
     };
+    const toolbarHtml = `<div class="inv-toolbar">
+      <input type="search" id="inv-search" class="inv-search-input" placeholder="${T('Search items / affixes...', 'ui')}" value="${esc(G._invSearch || '')}">
+      <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button>
+      <button class="btn btn--ghost" id="inv-deposit-mats" title="${T('Deposit Materials to Storage', 'ui')}">📥 ${T('Deposit Mats', 'ui')}</button>
+    </div>`;
     const tabsHtml = `<div class="bag-tabs">${tabs.map(([k, l]) => `<span class="bag-tab ${tab === k ? 'on' : ''}" data-bagtab="${k}">${l}</span>`).join('')}</div>`;
     const body = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${T(c, 'ui')} (${groups[c].length})</div>${groups[c].map(rowHtml).join('')}`).join('');
-    return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div>${tabsHtml}${body || `<i>${T('Nothing in this tab.', 'ui')}</i>`}`;
+    return `<div style="color:var(--accent-alt);margin-bottom:6px">💰 ${p.zeny} ${T('zeny', 'ui')}</div>${toolbarHtml}${tabsHtml}${body || `<i>${T('Nothing in this tab.', 'ui')}</i>`}`;
   }
   if (id === 'skills') return skillsPanelHtml(p);
   if (id === 'quest') {
@@ -5928,6 +6092,16 @@ function wirePanel(id, el) {
     if (sfxEl) sfxEl.oninput = update;
     const hcEl = el.querySelector('#hc-toggle');
     if (hcEl) hcEl.onchange = () => { applyHighContrast(hcEl.checked); saveGame(); };
+    const scaleEl = el.querySelector('#vol-scale');
+    if (scaleEl) {
+      scaleEl.oninput = () => {
+        G.uiScale = parseFloat(scaleEl.value);
+        document.documentElement.style.setProperty('--ui-scale', G.uiScale);
+        const scVal = el.querySelector('#vol-scale-val');
+        if (scVal) scVal.textContent = `${Math.round(G.uiScale * 100)}%`;
+        saveGame();
+      };
+    }
   }
   el.querySelectorAll('[data-macro-del]').forEach(b => b.onclick = () => {
     const rules = (G.autoConfig.rules || []).slice();
@@ -6036,6 +6210,42 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
+  const invSearch = el.querySelector('#inv-search');
+  if (invSearch) {
+    invSearch.oninput = e => { G._invSearch = e.target.value; refreshPanel('inv'); };
+  }
+  const invSort = el.querySelector('#inv-sort-rarity');
+  if (invSort) {
+    invSort.onclick = () => {
+      const rarRank = e => e.uid ? RARITY_ORDER.indexOf(e.rarity) : -1;
+      G.player.inventory.sort((a, b) => (rarRank(b) - rarRank(a)) || ((b.plus || 0) - (a.plus || 0)));
+      saveGame();
+      refreshPanel('inv');
+    };
+  }
+  const invDep = el.querySelector('#inv-deposit-mats');
+  if (invDep) {
+    invDep.onclick = () => {
+      if (!G.world.storage) G.world.storage = [];
+      let count = 0;
+      const remaining = [];
+      for (const item of G.player.inventory) {
+        const it = itemById[item.itemId];
+        if (it && it.type === 'material') {
+          const existing = G.world.storage.find(s => s.itemId === item.itemId && !s.uid);
+          if (existing) existing.qty += item.qty;
+          else G.world.storage.push({ itemId: item.itemId, qty: item.qty });
+          count += item.qty;
+        } else {
+          remaining.push(item);
+        }
+      }
+      G.player.inventory = remaining;
+      saveGame();
+      refreshPanel('inv');
+      toast(T(`Deposited {n} materials into storage.`, 'ui').replace('{n}', count), 'info');
+    };
+  }
   // rune sockets: click a gem to arm it, then click an empty socket dot to insert it.
   el.querySelectorAll('[data-pick-gem]').forEach(b => b.onclick = () => {
     G._socketPick = G._socketPick === b.dataset.pickGem ? null : b.dataset.pickGem;
@@ -6157,8 +6367,11 @@ function renderSkillGraphLines(root = document) {
 function refreshPanel(id) {
   const el = $('#panel');
   if (el && el.dataset.kind === id) {
-    el.querySelector('.panel__body').innerHTML = panelBody(id);
-    wirePanel(id, el);   // re-attach handlers to the freshly-rendered buttons
+    const body = el.querySelector('.panel__body');
+    const scrollTop = body.scrollTop;
+    body.innerHTML = panelBody(id);
+    wirePanel(id, el);
+    requestAnimationFrame(() => { body.scrollTop = scrollTop; });
   }
 }
 
@@ -6623,8 +6836,8 @@ const extraCss = `
   .zone-banner{top:14%;min-width:0;width:78vw;padding:8px 12px}
 }
 @media (max-width:400px){ .title-h1{font-size:24px} }
-.sk-name{position:absolute;bottom:3px;right:4px;font-size:8px;color:var(--text-muted);max-width:46px;overflow:hidden}
-.skill-btn .lvl{position:absolute;top:2px;right:4px;font-size:9px;color:var(--success);font-weight:700}
+.sk-name{position:absolute;bottom:3px;right:4px;font-size:9px;color:var(--text-muted);max-width:46px;overflow:hidden}
+.skill-btn .lvl{position:absolute;top:2px;right:4px;font-size:10px;color:var(--success);font-weight:700}
 .skill-btn .qty{position:absolute;bottom:2px;right:4px;font-size:11px;color:var(--accent-alt);font-weight:700}
 .skill-btn.locked{opacity:.45;filter:grayscale(.6)}
 .skill-btn.empty{opacity:.4}
@@ -6766,8 +6979,8 @@ const extraCss = `
 #hud .hotbar-shell .hotbar-config{width:34px;border:1px solid #8997aa;background:#101d32;color:#d5b85d;font-size:17px;cursor:pointer;box-shadow:inset 0 0 0 1px #31466a,2px 2px 0 rgba(0,0,0,.55)}
 #hud .hotbar-shell .hotbar-config:hover{border-color:#efd16f;background:#233e66}
 #hud .hotbar-shell .hotbar-glyph{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);font-size:22px;line-height:1;color:#e9edf2;text-shadow:1px 1px #05080d}
-#hud .hotbar-shell .role-mark{position:absolute;right:3px;top:2px;min-width:13px;height:13px;padding:0 2px;border:1px solid currentColor;background:#080d14;font-size:8px;font-weight:800;line-height:11px;text-align:center}
-#hud .hotbar-shell .skill-btn .lvl{top:auto;right:3px;bottom:2px;font-size:8px;color:#b8c3d2}
+#hud .hotbar-shell .role-mark{position:absolute;right:3px;top:2px;min-width:13px;height:13px;padding:0 2px;border:1px solid currentColor;background:#080d14;font-size:9px;font-weight:800;line-height:12px;text-align:center}
+#hud .hotbar-shell .skill-btn .lvl{top:auto;right:3px;bottom:2px;font-size:9px;color:#b8c3d2}
 #hud .hotbar-shell .skill-btn .sk-name{left:3px;right:auto;bottom:2px;max-width:32px;color:#c8d0da;text-align:left;text-overflow:ellipsis;white-space:nowrap}
 #hud .hotbar-shell .role-builder{border-bottom:3px solid #6f9669}
 #hud .hotbar-shell .role-builder .role-mark{color:#9dc19f}
@@ -6896,8 +7109,8 @@ function saveGame() {
   const ls = storage(); if (!ls || !G.player || !G.running) return;   // only persist a live run
   const p = G.player;
   const data = { v: 5,
-    player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId, advancedJobId: p.advancedJobId,
-      level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, zeny: p.zeny, hp: p.hp, mp: p.mp,
+    player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId, advancedJobId: p.advancedJobId, hybridJobId: p.hybridJobId,
+      level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, pastLives: p.pastLives || [], zeny: p.zeny, hp: p.hp, mp: p.mp,
       alloc: p.alloc, statPoints: p.statPoints, skillPoints: p.skillPoints, skillLevels: p.skillLevels,
       equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
@@ -6935,8 +7148,8 @@ function resumeGame() {
   G.jobChoiceOpen = false;
   AUDIO.init();
   const sp = d.player, p = makePlayer(sp.classId, sp.name);
-  Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, advancedJobId: sp.advancedJobId || null, level: sp.level, xp: sp.xp,
-    jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0,
+  Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, advancedJobId: sp.advancedJobId || null, hybridJobId: sp.hybridJobId || null, level: sp.level, xp: sp.xp,
+    jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0, pastLives: sp.pastLives || [],
     zeny: sp.zeny, alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0, ...(sp.alloc || {}) }, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
     skillLevels: sp.skillLevels || p.skillLevels, equip: { ...p.equip, ...(sp.equip || {}) }, inventory: sp.inventory || p.inventory,
     hotbar: Array.isArray(sp.hotbar) ? sp.hotbar.slice(0, 9) : p.hotbar,

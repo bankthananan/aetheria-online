@@ -227,7 +227,7 @@ for (let level = 1; level < DESIGN.levelCap; level++) earnedXp += xpForNext(leve
 let jobLevel = 1;
 while (jobLevel < PROGRESSION.jobLevelCap && earnedXp >= jobXpForNext(jobLevel)) earnedXp -= jobXpForNext(jobLevel++);
 assert.equal(DESIGN.levelCap, 80, 'base level cap must remain 80');
-assert.equal(PROGRESSION.jobLevelCap, 50, 'job level cap must preserve finite skill builds');
+assert.equal(PROGRESSION.jobLevelCap, 60, 'job level cap must preserve finite skill builds');
 assert.equal(jobLevel, PROGRESSION.jobLevelCap, `job track must reach its cap by Base Lv ${DESIGN.levelCap}`);
 
 // The main story follows the same five level bands as the world. Its single

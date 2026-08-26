@@ -153,6 +153,9 @@ export const COMBAT = {
     { id: "world_ender",      classId: "elementalist", name: "World Ender",   flavor: "The firestorm outgrows the battlefield that summoned it.",     mpCost: 34, cooldownMs: 13000, type: "aoe",    power: 3.0, range: 5, radius: 3, hotkey: "6", effect: "burn", detonate: "burn", finisher: true },
     { id: "seismic_shock",    classId: "elementalist", name: "Seismic Shock", flavor: "Stone splits and lightning follows the crack.",                mpCost: 26, cooldownMs: 6500,  type: "ranged", power: 3.0, range: 6, radius: 0, hotkey: "6", effect: "stun", finisher: true },
     { id: "storm_sovereign",  classId: "elementalist", name: "Storm Sovereign",flavor: "Command the charged air itself to shield you.",                mpCost: 20, cooldownMs: 16000, type: "buff",   power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    // hybrid
+    { id: "elemental_strike", classId: "spellblade", name: "Elemental Strike", flavor: "Blade and code unite. The elements obey.", mpCost: 40, cooldownMs: 12000, type: "aoe", power: 4.0, range: 4, radius: 2, hotkey: "7", effect: "burn", finisher: true },
+    { id: "phalanx",          classId: "vanguard",   name: "Phalanx",          flavor: "Impenetrable shield, divine judgment.",  mpCost: 35, cooldownMs: 20000, type: "buff", power: 2.0, range: 0, radius: 0, hotkey: "7", effect: null, finisher: false },
   ],
 
   statusEffects: {

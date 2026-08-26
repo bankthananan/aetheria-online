@@ -5,8 +5,8 @@ export const PROGRESSION = {
   skillPointsPerLevel: 1,
   startStatPoints: 5,
   startSkillPoints: 1,
-  jobLevelCap: 50,          // absolute save/UI ceiling
-  jobLevelCaps: [15, 40, 50], // active cap per tierIndex: base job 15, second job 40, third job 50
+  jobLevelCap: 60,          // absolute save/UI ceiling
+  jobLevelCaps: [15, 40, 50, 60], // active cap per tierIndex: base job 15, second job 40, third job 50, hybrid 60
   skillScale: 0.15,         // ranks 2-5: +15% power each
   masteryScale: 0.08,       // second-job mastery ranks 6-10: +8% power each
 
@@ -177,6 +177,9 @@ export const PROGRESSION = {
     // Remaining original finishers become the default final-job exclusives.
     dragon_kick:        { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'grandmaster', reqSkill: { id: 'rising_dragon', lvl: 2 } },
     cataclysm:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'archon_of_storms', reqSkill: { id: 'thunderstrike', lvl: 2 } },
+    // ---- Hybrid Job (Tier-4) skills ----
+    elemental_strike:   { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'spellblade', reqSkill: null },
+    phalanx:            { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'vanguard', reqSkill: null },
   },
 
   // Passive skills — invest skill points for permanent stat bonuses (RO-style).
@@ -394,6 +397,10 @@ export const PROGRESSION = {
       { id: 'cinder_archon', name: 'Cinder Archon', role: 'Firebrand', focus: 'Burn · Sustain · Finish', color: '#ef7654', bonus: { int: 9, luk: 4, vit: 2 } },
     ] },
   },
+  hybridJobs: {
+    spellblade: { id: 'spellblade', name: 'Spellblade', role: 'Magical Melee', requires: ['drifter', 'codeweaver'], bonus: { str: 10, int: 10, agi: 5 } },
+    vanguard: { id: 'vanguard', name: 'Vanguard', role: 'Heavy Defense', requires: ['iron_fist', 'lightbringer'], bonus: { vit: 12, str: 8, int: 5 } }
+  },
 
   // Class advancement tiers per design classId. Index 0 = starting job.
   // Reaching reqLevel promotes to the next tier: new title + permanent stat bonus.
@@ -409,11 +416,13 @@ export const PROGRESSION = {
       { name: 'Drifter',          reqLevel: 1 },
       { name: 'Bladewind Dancer', reqLevel: 15, bonus: { agi: 4, str: 4 }, advance: { name: 'Dance of the Bladewind', desc: 'Move like the wind — cut down 5 Dire Wolves.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Tempest Reaper',   reqLevel: 40, bonus: { agi: 8, str: 6, luk: 3 }, advance: { name: 'Rite of the Tempest', desc: 'Reap 5 Frost Wolves to become the storm.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
+      { name: 'Hybrid: Spellblade', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Spellblade', desc: 'Unite the blade and the code. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
     codeweaver: [
       { name: 'Codeweaver',       reqLevel: 1 },
       { name: 'Rune Compiler',    reqLevel: 15, bonus: { int: 5, dex: 3 }, advance: { name: 'Compile the Runes', desc: 'Debug the wildlife — defeat 5 Dire Wolves.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Reality Debugger', reqLevel: 40, bonus: { int: 10, dex: 4 }, advance: { name: 'Patch Reality', desc: 'Purge 5 Frost Wolves to rewrite the world.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
+      { name: 'Hybrid: Spellblade', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Spellblade', desc: 'Unite the blade and the code. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
     far_shot: [
       { name: 'Far Shot',         reqLevel: 1 },
@@ -424,11 +433,13 @@ export const PROGRESSION = {
       { name: 'Lightbringer',     reqLevel: 1 },
       { name: 'Dawnguard',        reqLevel: 15, bonus: { vit: 5, str: 3 }, advance: { name: 'Oath of the Dawnguard', desc: 'Protect the weak — slay 5 Dire Wolves that stalk the road.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Seraph Warden',    reqLevel: 40, bonus: { vit: 8, str: 6, int: 4 }, advance: { name: 'Ascension of the Seraph', desc: 'Cleanse 5 Frost Wolves with holy light.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
+      { name: 'Hybrid: Vanguard', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Vanguard', desc: 'Unite fist and faith. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
     iron_fist: [
       { name: 'Iron Fist',        reqLevel: 1 },
       { name: 'Ki Adept',         reqLevel: 15, bonus: { str: 4, agi: 4 }, advance: { name: 'Trial of the Ki Adept', desc: 'Discipline is forged in battle. Fell 5 Dire Wolves with your fists.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Grandmaster',      reqLevel: 40, bonus: { str: 8, agi: 6, vit: 3 }, advance: { name: 'Rite of the Grandmaster', desc: 'Still the storm within — banish 5 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
+      { name: 'Hybrid: Vanguard', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Vanguard', desc: 'Unite fist and faith. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
     stormcaller: [
       { name: 'Stormcaller',      reqLevel: 1 },

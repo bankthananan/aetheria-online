@@ -82,7 +82,7 @@ for (const classId of classIds) {
   assert.ok(advanced.choices.some(job => job.id === advanced.defaultId), `${classId} has a valid third-job migration default`);
   assert.equal(new Set(advanced.choices.map(job => job.id)).size, 2, `${classId} third-job ids are unique`);
 }
-assert.deepEqual(A.PROGRESSION.jobLevelCaps, [15, 40, 50], 'career Job caps are fixed at 15/40/50');
+assert.deepEqual(A.PROGRESSION.jobLevelCaps, [15, 40, 50, 60], 'career Job caps are fixed at 15/40/50/60');
 
 const capped = A.makePlayer('reborn_blade', 'CapTester');
 A.G.player = capped;
