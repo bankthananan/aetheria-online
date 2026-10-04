@@ -16,12 +16,12 @@ python3 -m http.server 8777
 
 Then open `http://localhost:8777/`.
 
-See [ISEKAI_README.md](ISEKAI_README.md) for the full feature and architecture guide.
+See [docs/ISEKAI_README.md](docs/ISEKAI_README.md) for the full feature and architecture guide.
 
 ## Test
 
 ```bash
-npm test
-node js/balance.test.js
-node js/art.test.js
+npm test                              # every suite (auto-discovered)
+node script/run-tests.mjs loot        # only suites whose path contains "loot"
+npm run test:list                     # show discovered suites
 ```

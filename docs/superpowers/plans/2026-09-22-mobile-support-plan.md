@@ -2,7 +2,7 @@
 
 Date: 2026-09-22
 
-Status: Implementation in progress. Persistence/expansion APIs, mobile input and viewport foundations, field-guide goals, loot protection/relevance, and two loadouts are implemented with automated regression coverage. Training/combat-evidence lessons, the Woods event, and the three-wave expedition remain unfinished. The [execution ledger](docs/superpowers/plans/2026-09-23-execution-progress.md) records actual checks and remaining gates for the [implementation plan](docs/superpowers/plans/2026-09-23-full-game-improvements.md). Mobile/browser acceptance has not passed: headless Brave exits 134 before producing screenshots.
+Status: Implementation in progress. Persistence/expansion APIs, mobile input and viewport foundations, field-guide goals, loot protection/relevance, and two loadouts are implemented with automated regression coverage. Training/combat-evidence lessons, the Woods event, and the three-wave expedition remain unfinished. The [execution ledger](2026-09-23-execution-progress.md) records actual checks and remaining gates for the [implementation plan](2026-09-23-full-game-improvements.md). Mobile/browser acceptance has not passed: headless Brave exits 134 before producing screenshots.
 
 ## Goal and constraints
 

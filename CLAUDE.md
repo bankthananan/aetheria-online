@@ -4,8 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Two codebases in one repo
 
-1. **Active game — "Aetheria Online" (isekai RPG)**: `index.html` + `js/*.js`. Zero build step, no dependencies, plain ES modules + Web Audio. This is where all current work happens. Docs: `ISEKAI_README.md`.
-2. **Legacy — Vite "Ragnarok Draconic Expansion"**: `index.legacy.html` + `src/*.js`. Preserved, not actively developed. All `package.json` scripts (`npm run dev/build`, `npm test`) target this legacy project, **not** the active game.
+1. **Active game — "Aetheria Online" (isekai RPG)**: `index.html` + `js/*.js`. Zero build step, no dependencies, plain ES modules + Web Audio. This is where all current work happens. Docs: `docs/ISEKAI_README.md`.
+2. **Legacy — Vite "Ragnarok Draconic Expansion"**: `index.legacy.html` + `src/*.js`. Preserved, not actively developed.
+
+## Tests
+
+`npm test` runs `script/run-tests.mjs`, which auto-discovers every `js/**/*.test.js` plus the legacy `src/test_e2e_suite.js`, runs each in its own Node process, and exits non-zero on any failure. New `*.test.js` files are picked up automatically — no `package.json` edit needed. Filter with `node script/run-tests.mjs <substring|path>`; add `--bail`, `--verbose`, or `--list` as needed.
 
 ## Running the active game
 
@@ -41,7 +45,7 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
 
 ## Architecture of the active game
 
-- `js/game.js` (~2700 lines) is the **engine**: game loop, movement/A* pathing, combat, effects, quests, HUD, panels, shops, save/load. Everything else in `js/` is a **logic-free data module**.
+- `js/game.js` (~7500 lines) is the **engine**: game loop, movement/A* pathing, combat, effects, quests, HUD, panels, shops, save/load. Self-contained runtime systems are being extracted into `js/systems/*.js` (plus `js/input.js`, `js/viewport.js`, `js/*-runtime.js`); `js/zones/` holds per-zone content. The remaining `js/` modules are **logic-free data modules**.
 - **The data modules ARE the database** — a deliberate, settled decision (the user has declined DB migration twice). Do not propose moving content to JSON/SQLite/IndexedDB. Static imports are version-controlled, diff-able, and zero-build; a DB adds a load step for zero gain.
   - `js/design.js` — classes, stat formulas, `xpCurve`, and the `tuning` balance knobs (all balance changes go here, never in engine code)
   - `js/combat.js` — active skills + combat rules
@@ -51,15 +55,15 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/loot.js` — rarity tiers + affix pool
   - `js/pixelart.js` — pixel-matrix sprites + `ITEM_ICON` map; `js/sprites.js` — title-screen portraits; `js/theme.js` — CSS design system; `js/audio.js` — Web Audio chiptune/SFX
 - `selfCheck()` in `js/game.js` runs at load and **fails loudly** on any mis-wiring: spawn/drop/reward pointing at an unknown id, skill without a tree node, monster without a sprite, missing item icon, bad quest difficulty, non-finite formula. When adding content, reload and let it tell you what's missing.
-- Step-by-step recipes for adding monsters/items/skills/quests/maps are in the "Extending the game" section of `ISEKAI_README.md` — each is one data-module edit plus whatever `selfCheck()` demands.
+- Step-by-step recipes for adding monsters/items/skills/quests/maps are in the "Extending the game" section of `docs/ISEKAI_README.md` — each is one data-module edit plus whatever `selfCheck()` demands.
 
 ## Legacy project (src/)
 
 Only touch when explicitly asked. Its test suite runs headlessly in Node with mocked browser globals:
 
 ```bash
-npm test                      # = node src/test_e2e_suite.js
+npm run test:legacy           # = node src/test_e2e_suite.js (also included in npm test)
 node src/test_draconic.js     # or any other src/test_*.js individually
 ```
 
-Exit code 0 = pass, 1 = fail. Test design notes live in `TEST_INFRA.md`.
+Exit code 0 = pass, 1 = fail. Historical test design notes live in `docs/archive/TEST_INFRA.md`.

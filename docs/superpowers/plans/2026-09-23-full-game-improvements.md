@@ -8,7 +8,7 @@
 
 **Tech Stack:** Plain JavaScript ES modules, Canvas 2D, DOM/CSS, localStorage, Node strict assertions, headless Brave; no new product dependency or backend.
 
-**Spec:** [Approved concrete design in plan.md](../../../plan.md#concrete-design-for-the-full-requested-scope). Read the entire concrete design and its preceding research/verification limitations before execution. Written-spec approval was received on 2026-09-23; this execution plan is not yet approved.
+**Spec:** [Approved concrete design in plan.md](2026-09-22-mobile-support-plan.md#concrete-design-for-the-full-requested-scope). Read the entire concrete design and its preceding research/verification limitations before execution. Written-spec approval was received on 2026-09-23; this execution plan is not yet approved.
 
 ## Global Constraints
 
@@ -494,7 +494,7 @@ if (G.expedition?.status === 'active') {
 
 ### Task 13: Release acceptance and final review
 
-**Files:** Modify `autotest.html` for stable scenarios; update `plan.md` and this task ledger with actual evidence. Add no diagnostic files to the repository.
+**Files:** Modify `autotest.html` for stable scenarios; update `2026-09-22-mobile-support-plan.md` and this task ledger with actual evidence. Add no diagnostic files to the repository.
 
 **Interfaces:** Autotest query parameters for the new surfaces are `training=basic_attack`, `loot=1`, `loadouts=1`, `woodsevent=supplies|defending|recovery|complete`, `expedition=1`. They call the real APIs above and validate setup; fixture failures go to the visible error banner instead of displaying fabricated panels. Existing query parameters continue working.
 
