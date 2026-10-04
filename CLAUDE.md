@@ -45,7 +45,15 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
 
 ## Architecture of the active game
 
-- `js/game.js` (~7500 lines) is the **engine**: game loop, movement/A* pathing, combat, effects, quests, HUD, panels, shops, save/load. Self-contained runtime systems are being extracted into `js/systems/*.js` (plus `js/input.js`, `js/viewport.js`, `js/*-runtime.js`); `js/zones/` holds per-zone content. The remaining `js/` modules are **logic-free data modules**.
+- `js/game.js` (~6,800 lines) is the **engine**: game loop, combat, effects, quests, HUD, panels, shops, save/load. Self-contained runtime systems are modularized:
+  - `js/pathing.js` — grid A* pathfinding and nearest-walkable search with windstream directional penalties
+  - `js/selfcheck.js` — comprehensive boot integrity check and content audit
+  - `js/render/tiles.js` — procedural 16×16 pixel tile generation and multi-layer parallax backdrops
+  - `js/systems/guild.js` — Adventurer's Guild bounties, rank ladder, and turn-ins
+  - `js/systems/*.js` (dailies, difficulty, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, subdungeon)
+  - `js/input.js`, `js/viewport.js`, `js/expansion-runtime.js`, `js/guidance-runtime.js`, `js/equipment-features.js`
+  - `js/zones/` holds per-zone content packages.
+  The remaining `js/` modules are **logic-free data modules**.
 - **The data modules ARE the database** — a deliberate, settled decision (the user has declined DB migration twice). Do not propose moving content to JSON/SQLite/IndexedDB. Static imports are version-controlled, diff-able, and zero-build; a DB adds a load step for zero gain.
   - `js/design.js` — classes, stat formulas, `xpCurve`, and the `tuning` balance knobs (all balance changes go here, never in engine code)
   - `js/combat.js` — active skills + combat rules
@@ -54,7 +62,7 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/progression.js` — skill tree nodes, passives, class tiers
   - `js/loot.js` — rarity tiers + affix pool
   - `js/pixelart.js` — pixel-matrix sprites + `ITEM_ICON` map; `js/sprites.js` — title-screen portraits; `js/theme.js` — CSS design system; `js/audio.js` — Web Audio chiptune/SFX
-- `selfCheck()` in `js/game.js` runs at load and **fails loudly** on any mis-wiring: spawn/drop/reward pointing at an unknown id, skill without a tree node, monster without a sprite, missing item icon, bad quest difficulty, non-finite formula. When adding content, reload and let it tell you what's missing.
+- `selfCheck()` in `js/selfcheck.js` (called from `js/game.js`) runs at load and **fails loudly** on any mis-wiring: spawn/drop/reward pointing at an unknown id, skill without a tree node, monster without a sprite, missing item icon, bad quest difficulty, non-finite formula. When adding content, reload and let it tell you what's missing.
 - Step-by-step recipes for adding monsters/items/skills/quests/maps are in the "Extending the game" section of `docs/ISEKAI_README.md` — each is one data-module edit plus whatever `selfCheck()` demands.
 
 ## Legacy project (src/)
