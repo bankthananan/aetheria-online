@@ -12,7 +12,9 @@
 //   const A = globalThis.__AWO;
 //
 // Options (all optional):
-//   now           initial value returned by performance.now()        (1000)
+//   now           initial performance.now() value, or a function returning the
+//                 current time (lets a suite own its clock: `now: () => vnow`),
+//                 or 'real' to keep Node's real performance clock             (1000)
 //   innerWidth    viewport width                                     (1366)
 //   innerHeight   viewport height                                    (768)
 //   storage       initial localStorage contents, e.g. { awo_lang: 'en' }
@@ -21,14 +23,16 @@
 //   nullSelectors selectors for which document.querySelector returns null (['#panel'])
 //   strictIds     getElementById returns null for unknown ids instead of a fresh element (true)
 //   confirm       window.confirm implementation                      (() => true)
+//   ctx2d         extra/overriding 2D-context methods, e.g. a drawImage spy ({})
 //
 // Returned handle:
-//   advance(ms)        move performance.now() forward
+//   advance(ms)        move performance.now() forward (numeric `now` only)
 //   failWrites(bool)   make localStorage.setItem throw (quota simulation)
 //   store              raw backing object for localStorage
 //   readSave(key)      JSON.parse a stored value (default key: awo_save_v1)
 //   element(id)        the pre-created element for an id
 //   dispatch(t, type, event)  fire a synthetic event on window/document/element
+//   makeEl(tag), makeCtx()    factories for extra mock elements / 2D contexts
 
 export const DEFAULT_ELEMENT_IDS = Object.freeze(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas', 'touch-controls']);
 
@@ -42,8 +46,13 @@ export function installBrowserEnv({
   nullSelectors = ['#panel'],
   strictIds = true,
   confirm = () => true,
+  ctx2d: ctxOverrides = {},
 } = {}) {
-  let time = now;
+  const realPerformance = globalThis.performance;
+  let time = typeof now === 'number' ? now : 0;
+  const clock = now === 'real' ? () => realPerformance.now()
+    : typeof now === 'function' ? now
+      : () => time;
   let brokenStorage = false;
 
   // --- events -------------------------------------------------------------
@@ -65,6 +74,7 @@ export function installBrowserEnv({
     createRadialGradient: () => ({ addColorStop() {} }),
     createPattern: () => ({}),
     getImageData: (_x, _y, w = 1, h = 1) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
+    ...ctxOverrides,
   }, { get: (o, k) => (k in o ? o[k] : () => {}) });
 
   const makeEl = (tag = 'div') => {
@@ -99,11 +109,13 @@ export function installBrowserEnv({
   };
 
   const elements = Object.fromEntries(elementIds.map(id => [id, makeEl()]));
+  // match index.html's <canvas id="game-canvas" width="832" height="576">
+  if (elements['game-canvas']) Object.assign(elements['game-canvas'], { tagName: 'CANVAS', width: 832, height: 576 });
   const nulls = new Set(nullSelectors);
 
   globalThis.window = globalThis;
   eventful(globalThis);
-  globalThis.performance = { now: () => time };
+  globalThis.performance = { now: clock };
   globalThis.document = eventful({
     head: makeEl('head'), body: makeEl('body'), documentElement: makeEl('html'),
     hidden: false, visibilityState: 'visible',
@@ -161,5 +173,7 @@ export function installBrowserEnv({
     readSave: (key = 'awo_save_v1') => JSON.parse(store[key]),
     element: id => elements[id],
     dispatch: (target, type, event = {}) => target.dispatchEvent({ type, preventDefault() {}, stopPropagation() {}, ...event }),
+    makeEl,
+    makeCtx: ctx2d,
   };
 }

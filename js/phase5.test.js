@@ -1,28 +1,14 @@
 import assert from 'node:assert/strict';
 
-// DOM/audio shim (copied from phase2.test.js) + real localStorage & rAF stub (phase4 pattern)
-globalThis.localStorage = { getItem() { return 'en'; }, setItem() {}, removeItem() {} };
-globalThis.window = {
-  AudioContext: class {
-    constructor() { this.currentTime = 0; this.destination = {}; }
-    createGain() { return { gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime(v) { this.value = v; }, cancelScheduledValues() {} }, connect() { return this; }, disconnect() {} }; }
-    createBuffer() { return { getChannelData: () => new Float32Array(100) }; }
-    createBufferSource() { return { buffer: null, connect() { return this; }, start() {}, stop() {} }; }
-    createOscillator() { return { type: 'square', frequency: { value: 440, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() { return this; }, start() {}, stop() {} }; }
-    createBiquadFilter() { return { type: 'bandpass', frequency: { value: 1200 }, connect() { return this; } }; }
-  },
-  addEventListener() {}, removeEventListener() {},
-};
-const makeCtx = () => new Proxy({}, { get(t, p) { return p in t ? t[p] : () => {}; } });
-const makeEl = () => ({ style: {}, dataset: {}, children: [], classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } }, appendChild(c) { return c; }, removeChild() {}, remove() {}, querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener() {}, setAttribute() {} });
-const elements = Object.fromEntries(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas', 'touch-controls'].map(id => [`#${id}`, makeEl()]));
-Object.assign(elements['#game-canvas'], { width: 832, height: 576, getContext: () => makeCtx() });
-globalThis.document = {
-  createElement(tag) { const el = makeEl(); if (tag === 'canvas') { el.width = 100; el.height = 100; el.getContext = () => makeCtx(); } return el; },
-  getElementById(id) { return elements[`#${id}`] || makeEl(); },
-  querySelector(sel) { return elements[sel] || makeEl(); }, querySelectorAll() { return []; },
-  body: { ...makeEl(), classList: { add() {}, remove() {}, contains() { return false; } } }, head: makeEl(),
-};
+import { installBrowserEnv } from './test-support/browser-env.js';
+
+installBrowserEnv({
+  now: 'real',
+  realTimers: true,
+  storage: { awo_lang: 'en' },
+  nullSelectors: [],
+  strictIds: false,
+});
 
 const { COMBAT } = await import('./combat.js');
 const { CONTENT } = await import('./content.js');

@@ -1,81 +1,14 @@
 import assert from 'node:assert/strict';
 
-// Mock minimal DOM environment for Node testing (same shim as phase1/phase2 tests)
-globalThis.localStorage = {
-  getItem() { return 'en'; },
-  setItem() {},
-  removeItem() {},
-};
+import { installBrowserEnv } from './test-support/browser-env.js';
 
-globalThis.window = {
-  AudioContext: class {
-    constructor() {
-      this.currentTime = 0;
-      this.destination = {};
-    }
-    createGain() {
-      return {
-        gain: {
-          value: 1,
-          setValueAtTime() {},
-          linearRampToValueAtTime() {},
-          exponentialRampToValueAtTime() {},
-          setTargetAtTime(v) { this.value = v; },
-          cancelScheduledValues() {},
-        },
-        connect() { return this; },
-        disconnect() {},
-      };
-    }
-    createBuffer() {
-      return { getChannelData: () => new Float32Array(100) };
-    }
-    createBufferSource() {
-      return { buffer: null, connect() { return this; }, start() {}, stop() {} };
-    }
-    createOscillator() {
-      return { type: 'square', frequency: { value: 440, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() { return this; }, start() {}, stop() {} };
-    }
-    createBiquadFilter() {
-      return { type: 'bandpass', frequency: { value: 1200 }, connect() { return this; } };
-    }
-  },
-  addEventListener() {},
-  removeEventListener() {},
-};
-
-const makeCtx = () => new Proxy({}, {
-  get(target, prop) {
-    if (prop in target) return target[prop];
-    return () => {};
-  }
+const { makeCtx } = installBrowserEnv({
+  now: 'real',
+  realTimers: true,
+  storage: { awo_lang: 'en' },
+  nullSelectors: [],
+  strictIds: false,
 });
-
-const makeEl = () => ({
-  style: {}, dataset: {}, children: [],
-  classList: { add() {}, remove() {}, contains() { return false; } },
-  appendChild(c) { return c; }, removeChild() {}, remove() {},
-  querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener() {}, setAttribute() {}
-});
-const elements = Object.fromEntries(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas', 'touch-controls'].map(id => [`#${id}`, makeEl()]));
-elements['#game-canvas'].getContext = () => makeCtx(); // resumeGame() re-inits the runtime canvas via startRuntime()
-
-globalThis.document = {
-  createElement(tag) {
-    const el = makeEl();
-    if (tag === 'canvas') {
-      el.width = 100;
-      el.height = 100;
-      el.getContext = () => makeCtx();
-    }
-    return el;
-  },
-  getElementById(id) { return elements[`#${id}`] || makeEl(); },
-  querySelector(sel) { return elements[sel] || makeEl(); },
-  querySelectorAll() { return []; },
-  body: makeEl(),
-  head: makeEl(),
-};
 
 await import('./game.js');
 

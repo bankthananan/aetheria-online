@@ -1,84 +1,13 @@
 import assert from 'node:assert/strict';
 
-// Mock minimal DOM environment for Node testing (same shim as phase1/phase2.test.js,
-// with a real localStorage backing store so saveGame/resumeGame can round-trip).
-const _lsStore = {};
-globalThis.localStorage = {
-  getItem(k) { return k in _lsStore ? _lsStore[k] : 'en'; },
-  setItem(k, v) { _lsStore[k] = String(v); },
-  removeItem(k) { delete _lsStore[k]; },
-};
+import { installBrowserEnv } from './test-support/browser-env.js';
 
-globalThis.window = {
-  AudioContext: class {
-    constructor() {
-      this.currentTime = 0;
-      this.destination = {};
-    }
-    createGain() {
-      return {
-        gain: {
-          value: 1,
-          setValueAtTime() {},
-          linearRampToValueAtTime() {},
-          exponentialRampToValueAtTime() {},
-          setTargetAtTime(v) { this.value = v; },
-          cancelScheduledValues() {},
-        },
-        connect() { return this; },
-        disconnect() {},
-      };
-    }
-    createBuffer() {
-      return { getChannelData: () => new Float32Array(100) };
-    }
-    createBufferSource() {
-      return { buffer: null, connect() { return this; }, start() {}, stop() {} };
-    }
-    createOscillator() {
-      return { type: 'square', frequency: { value: 440, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() { return this; }, start() {}, stop() {} };
-    }
-    createBiquadFilter() {
-      return { type: 'bandpass', frequency: { value: 1200 }, connect() { return this; } };
-    }
-  },
-  addEventListener() {},
-  removeEventListener() {},
-  requestAnimationFrame: () => 0,   // resumeGame ends with this; never invoking frame keeps it synchronous
-};
-globalThis.requestAnimationFrame = globalThis.window.requestAnimationFrame;
-
-const makeCtx = () => new Proxy({}, {
-  get(target, prop) {
-    if (prop in target) return target[prop];
-    return () => {};
-  }
+installBrowserEnv({
+  now: 'real',
+  realTimers: true,
+  nullSelectors: [],
+  strictIds: false,
 });
-
-const makeEl = () => ({
-  style: {}, dataset: {}, children: [],
-  classList: { add() {}, remove() {}, contains() { return false; } },
-  appendChild(c) { return c; }, removeChild() {}, remove() {},
-  querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener() {}, setAttribute() {}
-});
-const elements = Object.fromEntries(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas', 'touch-controls'].map(id => [`#${id}`, makeEl()]));
-
-globalThis.document = {
-  createElement(tag) {
-    const el = makeEl();
-    if (tag === 'canvas') {
-      el.width = 100;
-      el.height = 100;
-      el.getContext = () => makeCtx();
-    }
-    return el;
-  },
-  getElementById(id) { return elements[`#${id}`] || makeEl(); },
-  querySelector(sel) { return elements[sel] || makeEl(); },
-  querySelectorAll() { return []; },
-  body: makeEl(),
-  head: makeEl(),
-};
 
 await import('./combat.js');
 await import('./game.js');

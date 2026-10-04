@@ -4,55 +4,23 @@
 // walk frame 0, while 10 of the 15 animations on every sheet went unused.
 import assert from 'node:assert/strict';
 
+import { installBrowserEnv } from './test-support/browser-env.js';
+
 let vnow = 0;
-globalThis.performance = { now: () => vnow };
 
 // records the 9-arg drawImage source rects so the sheet row/frame math is checkable
 const drawn = [];
-const ctx2d = () => new Proxy({
-  measureText: () => ({ width: 10 }),
-  createLinearGradient: () => ({ addColorStop() {} }),
-  createRadialGradient: () => ({ addColorStop() {} }),
-  drawImage: (...a) => { if (a.length === 9) drawn.push({ sx: a[1], sy: a[2] }); },
-}, { get(target, key) { return key in target ? target[key] : () => {}; } });
-function makeEl() {
-  return {
-    style: { setProperty() {} }, dataset: {}, children: [], textContent: '', innerHTML: '',
-    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
-    appendChild(child) { this.children.push(child); child.parentNode = this; return child; },
-    remove() {}, addEventListener() {}, removeEventListener() {}, setAttribute() {}, focus() {}, click() {},
-    querySelector() { return makeEl(); }, querySelectorAll() { return []; },
-    getContext: ctx2d, toDataURL() { return 'data:image/png;base64,'; },
-  };
-}
-const elements = Object.fromEntries(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas'].map(id => [`#${id}`, makeEl()]));
-globalThis.window = globalThis;
-globalThis.addEventListener = () => {};
-globalThis.document = {
-  head: makeEl(), body: makeEl(), createElement: makeEl,
-  querySelector: s => elements[s] || makeEl(), querySelectorAll: () => [],
-  getElementById: id => elements[`#${id}`] || makeEl(), addEventListener() {}, removeEventListener() {},
-};
-globalThis.localStorage = {
-  _data: {}, getItem(k) { return this._data[k] || null; },
-  setItem(k, v) { this._data[k] = String(v); }, removeItem(k) { delete this._data[k]; },
-};
-const audioParam = { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {} };
-const audioNode = { connect() { return this; }, start() {}, stop() {}, gain: audioParam, frequency: audioParam, Q: audioParam };
-globalThis.AudioContext = class {
-  constructor() { this.currentTime = 0; this.destination = {}; this.state = 'running'; }
-  createOscillator() { return { ...audioNode }; } createGain() { return { ...audioNode }; }
-  createBiquadFilter() { return { ...audioNode }; }
-  createBuffer(_c, size) { return { getChannelData: () => new Float32Array(size) }; }
-  createBufferSource() { return { ...audioNode, buffer: null }; } resume() { return Promise.resolve(); }
-};
-globalThis.webkitAudioContext = globalThis.AudioContext;
-globalThis.requestAnimationFrame = () => 1;
-globalThis.setTimeout = () => 0;
-// report as loaded so drawLpc takes the spritesheet path instead of the matrix fallback
+
+const { makeCtx: ctx2d } = installBrowserEnv({
+  now: () => vnow,
+  innerWidth: 1440,
+  innerHeight: 900,
+  nullSelectors: [],
+  strictIds: false,
+  ctx2d: { drawImage: (...a) => { if (a.length === 9) drawn.push({ sx: a[1], sy: a[2] }); } },
+});
+// LPC sheets must look already loaded so drawLpc takes the sprite-sheet path
 globalThis.Image = class { constructor() { this.complete = true; this.naturalWidth = 832; } };
-globalThis.innerWidth = 1440;
-globalThis.innerHeight = 900;
 
 await import('./game.js');
 const A = globalThis.__AWO;
