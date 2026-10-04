@@ -11,7 +11,7 @@ import { SPRITES } from './sprites.js';
 import { PAL, PX } from './pixelart.js';
 import { RARITY, RARITY_ORDER, AFFIXES, SOCKET_BOUNDS } from './loot.js';
 import { LPC } from './lpc.js';
-import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
+import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward, findGridPath, nearestWalkableTile } from './pathing.js';
 import { T, currentLang, setLanguage } from './locale.js';
 import { SubdungeonSystem } from './systems/subdungeon.js';
 import { DifficultySystem } from './systems/difficulty.js';
@@ -1527,41 +1527,9 @@ function findChar(ch) {
 
 // ---- A* grid pathfinding (routes around trees/walls/water) ----
 const walkTile = (c, r) => { const info = G.legend[tileChar(c, r)]; return info ? info.walkable : false; };
-function nearestWalkable(gc, gr) {
-  if (walkTile(gc, gr)) return { c: gc, r: gr };
-  for (let rad = 1; rad <= 6; rad++)
-    for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
-      if (Math.max(Math.abs(dc), Math.abs(dr)) !== rad) continue;
-      if (walkTile(gc + dc, gr + dr)) return { c: gc + dc, r: gr + dr };
-    }
-  return null;
-}
-const DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-function findPath(sc, sr, gc, gr) {
-  if (sc === gc && sr === gr) return [{ c: sc, r: sr }];
-  const key = (c, r) => c + ',' + r, heur = (c, r) => Math.hypot(c - gc, r - gr);
-  const open = [{ c: sc, r: sr, g: 0, f: heur(sc, sr) }], came = {}, gsc = { [key(sc, sr)]: 0 };
-  let iter = 0;
-  while (open.length && iter++ < 3000) {
-    let bi = 0; for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-    const cur = open.splice(bi, 1)[0];
-    if (cur.c === gc && cur.r === gr) {
-      const path = []; let k = key(gc, gr);
-      while (k !== undefined) { const [c, r] = k.split(',').map(Number); path.unshift({ c, r }); k = came[k]; }
-      return path;
-    }
-    for (const [dc, dr] of DIRS8) {
-      const nc = cur.c + dc, nr = cur.r + dr;
-      if (!walkTile(nc, nr)) continue;
-      if (dc && dr && (!walkTile(cur.c + dc, cur.r) || !walkTile(cur.c, cur.r + dr))) continue; // no corner-cut
-      const isWind = tileChar(nc, nr) === '^';
-      const penalty = (isWind && dr > 0) ? 99 : 0;
-      const ng = cur.g + (dc && dr ? 1.414 : 1) + penalty, nk = key(nc, nr);
-      if (gsc[nk] === undefined || ng < gsc[nk]) { gsc[nk] = ng; came[nk] = key(cur.c, cur.r); open.push({ c: nc, r: nr, g: ng, f: ng + heur(nc, nr) }); }
-    }
-  }
-  return null;
-}
+function nearestWalkable(gc, gr) { return nearestWalkableTile(walkTile, gc, gr); }
+function findPath(sc, sr, gc, gr) { return findGridPath(walkTile, sc, sr, gc, gr, tileChar); }
+
 // build a pixel-waypoint path from the player to a world point (routed around obstacles)
 function pathTo(wx, wy) {
   const p = G.player;

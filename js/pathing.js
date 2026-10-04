@@ -116,3 +116,39 @@ export function nextPortalToward(maps, fromMapId, targetMapId) {
   }
   return null;
 }
+
+export function nearestWalkableTile(isWalkable, gc, gr) {
+  if (isWalkable(gc, gr)) return { c: gc, r: gr };
+  for (let rad = 1; rad <= 6; rad++)
+    for (let dc = -rad; dc <= rad; dc++) for (let dr = -rad; dr <= rad; dr++) {
+      if (Math.max(Math.abs(dc), Math.abs(dr)) !== rad) continue;
+      if (isWalkable(gc + dc, gr + dr)) return { c: gc + dc, r: gr + dr };
+    }
+  return null;
+}
+
+export function findGridPath(isWalkable, sc, sr, gc, gr, getTileChar = () => '') {
+  if (sc === gc && sr === gr) return [{ c: sc, r: sr }];
+  const key = (c, r) => c + ',' + r, heur = (c, r) => Math.hypot(c - gc, r - gr);
+  const open = [{ c: sc, r: sr, g: 0, f: heur(sc, sr) }], came = {}, gsc = { [key(sc, sr)]: 0 };
+  let iter = 0;
+  while (open.length && iter++ < 3000) {
+    let bi = 0; for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
+    const cur = open.splice(bi, 1)[0];
+    if (cur.c === gc && cur.r === gr) {
+      const path = []; let k = key(gc, gr);
+      while (k !== undefined) { const [c, r] = k.split(',').map(Number); path.unshift({ c, r }); k = came[k]; }
+      return path;
+    }
+    for (const [dc, dr] of DIRS8) {
+      const nc = cur.c + dc, nr = cur.r + dr;
+      if (!isWalkable(nc, nr)) continue;
+      if (dc && dr && (!isWalkable(cur.c + dc, cur.r) || !isWalkable(cur.c, cur.r + dr))) continue; // no corner-cut
+      const isWind = getTileChar(nc, nr) === '^';
+      const penalty = (isWind && dr > 0) ? 99 : 0;
+      const ng = cur.g + (dc && dr ? 1.414 : 1) + penalty, nk = key(nc, nr);
+      if (gsc[nk] === undefined || ng < gsc[nk]) { gsc[nk] = ng; came[nk] = key(cur.c, cur.r); open.push({ c: nc, r: nr, g: ng, f: ng + heur(nc, nr) }); }
+    }
+  }
+  return null;
+}
