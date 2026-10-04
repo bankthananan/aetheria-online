@@ -2,47 +2,9 @@
 // complete refunds, safe hotbar cleanup, shop access, and save compatibility.
 import assert from 'node:assert/strict';
 
-globalThis.performance = { now: () => 1000 };
-const ctx2d = () => new Proxy({
-  measureText: () => ({ width: 10 }),
-  createLinearGradient: () => ({ addColorStop() {} }),
-  createRadialGradient: () => ({ addColorStop() {} }),
-}, { get(target, key) { return key in target ? target[key] : () => {}; } });
-function makeEl() {
-  return {
-    style: { setProperty() {} }, dataset: {}, children: [], textContent: '', innerHTML: '',
-    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
-    appendChild(child) { this.children.push(child); child.parentNode = this; return child; },
-    remove() {}, addEventListener() {}, removeEventListener() {}, setAttribute() {}, focus() {}, click() {},
-    querySelector() { return makeEl(); }, querySelectorAll() { return []; },
-    getContext: ctx2d, toDataURL() { return 'data:image/png;base64,'; },
-  };
-}
-const elements = Object.fromEntries(['root', 'hud', 'overlays', 'fx-layer', 'game-canvas'].map(id => [`#${id}`, makeEl()]));
-globalThis.window = globalThis;
-globalThis.addEventListener = () => {};
-globalThis.document = {
-  head: makeEl(), body: makeEl(), createElement: makeEl,
-  querySelector: selector => elements[selector] || makeEl(), querySelectorAll: () => [],
-  getElementById: id => elements[`#${id}`] || makeEl(), addEventListener() {}, removeEventListener() {},
-};
-globalThis.localStorage = { _data: {}, getItem(key) { return this._data[key] || null; }, setItem(key, value) { this._data[key] = String(value); }, removeItem(key) { delete this._data[key]; } };
-const audioParam = { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {} };
-const audioNode = { connect() { return this; }, start() {}, stop() {}, gain: audioParam, frequency: audioParam, Q: audioParam };
-globalThis.AudioContext = class {
-  constructor() { this.currentTime = 0; this.destination = {}; this.state = 'running'; }
-  createOscillator() { return { ...audioNode }; } createGain() { return { ...audioNode }; }
-  createBiquadFilter() { return { ...audioNode }; }
-  createBuffer(_channels, size) { return { getChannelData: () => new Float32Array(size) }; }
-  createBufferSource() { return { ...audioNode, buffer: null }; } resume() { return Promise.resolve(); }
-};
-globalThis.webkitAudioContext = globalThis.AudioContext;
-globalThis.requestAnimationFrame = () => 1;
-globalThis.setTimeout = () => 0;
-globalThis.Image = class {};
-globalThis.innerWidth = 1440;
-globalThis.innerHeight = 1000;
-globalThis.confirm = () => true;
+import { installBrowserEnv } from './test-support/browser-env.js';
+
+installBrowserEnv({ innerWidth: 1440, innerHeight: 1000, nullSelectors: [], strictIds: false });
 
 await import('./game.js');
 const { setLanguage } = await import('./locale.js');
