@@ -57,6 +57,18 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['G5','B5','D6','R','A5','C6','E6','R','F#5','A5','C6','B5','R','D5','G5','R'],
     bass: ['G2','G2','D3','D3','A2','A2','E3','E3'], pad: ['G4','D4','A3'],
   },
+  ww_goblin_cave: { // frantic staccato scraper rhythm in the warrens
+    bpm: 140, leadWave: 'sawtooth', bassWave: 'triangle', padWave: 'square',
+    leadPeak: 0.12, bassPeak: 0.18, padPeak: 0.03, leadGate: 0.45, padEvery: 8, swing: 0.10,
+    lead: ['A4','C5','A4','E5','D5','C5','A4','R','F4','A4','D5','C5','B4','A4','G4','R'],
+    bass: ['A2','A2','F2','F2','D2','D2','E2','E2'], pad: ['A3','E3'],
+  },
+  ww_elder_hollow: { // ethereal corrupted hollow echoes in A-minor
+    bpm: 88, leadWave: 'sine', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.18, padPeak: 0.06, leadGate: 0.80, padEvery: 4, swing: -0.04,
+    lead: ['E5','A5','B5','C6','B5','A5','G5','R','F5','A5','D6','C6','B5','A5','E5','R'],
+    bass: ['A2','A2','F2','F2','D2','D2','E2','E2'], pad: ['A3','C4','D4','E4'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.
@@ -71,6 +83,7 @@ let sfxGain = null;      // sfx gain bus
 let muted = false;
 let volumes = { master: 1.0, music: 0.8, sfx: 1.0 };
 let loop = null;        // { theme, step, timer, gain, stop() }
+let playbackPaused=false;
 
 function init() {
   if (ctx || !AC) return ctx;
@@ -92,8 +105,14 @@ function init() {
 
 function resume() {
   // must be called from a user gesture at least once
-  if (ctx && ctx.state === 'suspended') ctx.resume();
+  if (!playbackPaused && ctx && ctx.state === 'suspended') Promise.resolve(ctx.resume()).catch(()=>{});
 }
+
+function pausePlayback() {
+  playbackPaused=true;
+  if(ctx?.suspend)Promise.resolve(ctx.suspend()).catch(()=>{});
+}
+function resumePlayback() {playbackPaused=false;resume();}
 
 // one enveloped oscillator note
 function tone(dest, f, t, dur, wave, peak) {
@@ -151,6 +170,7 @@ function playMusic(themeId) {
   // schedule one 8th-note step, then chain the next slightly ahead of time.
   function tick() {
     if (cur.retired) return;
+    if(playbackPaused){cur.timer=setTimeout(tick,100);return;}
     const i = cur.step % theme.lead.length;
     const t = ctx.currentTime + 0.02;
     tone(bus, freq(theme.lead[i]), t, spb * (theme.leadGate || 0.9), theme.leadWave, theme.leadPeak);
@@ -281,4 +301,4 @@ function setVolumes(v = {}) {
   }
 }
 
-export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, setVolumes, currentMusicTheme: () => loop?.theme || null };
+export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, setVolumes, pausePlayback, resumePlayback, currentMusicTheme: () => loop?.theme || null };

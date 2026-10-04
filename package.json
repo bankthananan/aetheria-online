@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/automation.test.js && node js/equipment.test.js && node js/rebirth.test.js && node js/monster-system.test.js && node js/skill-system.test.js && node js/job-branch.test.js && node js/phase1.test.js && node js/phase2.test.js && node js/phase3.test.js && node js/phase4.test.js && node js/phase4-audio.test.js && node js/phase5.test.js",
+    "test": "node src/test_e2e_suite.js && node js/balance.test.js && node js/art.test.js && node js/audio.test.js && node js/locale.test.js && node js/heat-guidance.test.js && node js/automation.test.js && node js/equipment.test.js && node js/rebirth.test.js && node js/monster-system.test.js && node js/skill-system.test.js && node js/job-branch.test.js && node js/phase1.test.js && node js/phase2.test.js && node js/phase3.test.js && node js/phase4.test.js && node js/phase4-audio.test.js && node js/phase5.test.js && node js/expansion.test.js && node js/persistence-improvements.test.js && node js/expansion-improvements.test.js && node js/lifecycle-improvements.test.js && node js/input-improvements.test.js && node js/viewport-improvements.test.js && node js/loot-improvements.test.js && node js/loadout-improvements.test.js && node js/guidance-improvements.test.js",
     "test:balance": "node js/balance.test.js",
     "test:art": "node js/art.test.js",
     "test:audio": "node js/audio.test.js",

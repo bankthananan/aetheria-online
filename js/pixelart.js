@@ -2200,6 +2200,11 @@ const recolorMonster = (source, remap) => Object.fromEntries(Object.entries(sour
 ]));
 for (const [id, base, remap] of [
   ['mossback_beetle', 'slime', { l: 'g', c: 'j', z: 'G' }],
+  ['goblin_scout', 'goblin', { g: 'y', G: 'Y', n: 'o' }],
+  ['goblin_chieftain', 'goblin', { g: 'R', G: 'r', n: 'y' }],
+  ['barkskin_warden', 'elderwood_treant', { f: 'N', F: 'n', j: 'G' }],
+  ['blight_sprite', 'slime', { l: 'p', c: 'q', z: 'k' }],
+  ['corrupted_dryad', 'elderwood_treant', { f: 'q', F: 'p', j: 'u' }],
   ['ruin_crawler', 'goblin', { g: 'a', G: 'A', n: 'I' }],
   ['tundra_lurker', 'frost_wolf', { l: 'c', z: 'u', m: 'b' }],
   ['ashwing', 'rime_harpy', { l: 'r', c: 'O', z: 'R' }],

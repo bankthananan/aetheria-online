@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Aetheria Online autotest</title>
 </head>
 <body>
@@ -51,6 +51,7 @@
           ticks++;
           if (!setup) {
             setup = true;
+            if(params.get('touch')){A.G.player.features.touch=params.get('touch');A.initTouchControls();A.syncRuntimeScale();}
             if (params.get('lang')) A.setLanguage(params.get('lang'));
             const warp = params.get('map');
             if (warp) A.loadMap(warp, 2, 2);

@@ -13,9 +13,29 @@ import { RARITY, RARITY_ORDER, AFFIXES, SOCKET_BOUNDS } from './loot.js';
 import { LPC } from './lpc.js';
 import { buildHeatField, connectedWalkableTiles, heatDepthAt, nextPortalToward } from './pathing.js';
 import { T, currentLang, setLanguage } from './locale.js';
+import { SubdungeonSystem } from './systems/subdungeon.js';
+import { DifficultySystem } from './systems/difficulty.js';
+import { ExplorationSystem } from './systems/exploration.js';
+import { RareSpawnsSystem } from './systems/rare-spawns.js';
+import { DailiesSystem } from './systems/dailies.js';
+import { MasterySystem, MASTERY_RANKS } from './systems/mastery.js';
+import * as WhisperingWoods from './zones/whispering-woods/index.js';
+import { normalizeFeatures, normalizeExpansion } from './systems/player-features.js';
+import { createExpansion } from './expansion-runtime.js';
+import { createGameClock } from './systems/game-clock.js';
+import { createInputController } from './input.js';
+import { computeViewport } from './viewport.js';
+import { createEquipmentFeatures } from './equipment-features.js';
+import { matchesLoot } from './systems/loot-preferences.js';
+import { createGuidance } from './guidance-runtime.js';
+
+const ZONE_PACKAGES = {
+  whispering_woods: WhisperingWoods,
+};
 
 const TS = 32;                       // tile size in px
-const CANVAS_W = 832, CANVAS_H = 576;
+let CANVAS_W = 832, CANVAS_H = 576;
+let runtimeViewport=null;
 
 // ---- reconciliation between designers' independent id schemes ----
 const CLASS_COMBAT = { reborn_blade:'blade', drifter:'berserker', codeweaver:'mage', far_shot:'ranger', lightbringer:'paladin', iron_fist:'monk', stormcaller:'elementalist' };
@@ -27,6 +47,8 @@ const MAP_MUSIC = {
   sunken_ruins: 'sunken_ruins', frostpeak_tundra: 'frostpeak_tundra',
   dragon_caldera: 'dragon_caldera', astral_rift: 'astral_rift',
   celestial_rift: 'celestial_rift',
+  ww_goblin_cave: 'ww_goblin_cave',
+  ww_elder_hollow: 'ww_elder_hollow',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.
@@ -142,7 +164,8 @@ const jobXpForNext = new Function('level', `return (${DESIGN.jobXpCurve});`);
 // ---- tiny helpers ----
 const $ = sel => document.querySelector(sel);
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-const now = () => performance.now();
+const gameClock = createGameClock();
+const now = () => gameClock.now();
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -642,6 +665,13 @@ const G = {
   debugAnim: null,      // {state,frame,dir?} freeze override for LPC anim screenshots/tests
   debugTilePhase: null, // deterministic ambient-tile phase for screenshots/tests
   rift: { floor: 0, active: false, best: 0, mutatorId: null, nextBurnAt: 0 }, // Celestial Rift run state
+  dungeonState: SubdungeonSystem.createDefaultState(),
+  exploration: ExplorationSystem.createDefaultState(),
+  rareSpawns: RareSpawnsSystem.createDefaultState(),
+  dailies: DailiesSystem.createDefaultState(),
+  mastery: MasterySystem.createDefaultState(),
+  zoneDifficulty: { whispering_woods: 'normal' },
+  saveStatus: 'saved',
 };
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
@@ -662,6 +692,7 @@ function makePlayer(classId, name) {
     jobLevel: 1, jobXp: 0,     // finite RO-style job track; every level through the cap grants 1 point
     rebirths: 0,               // NG+ count — permanent stat/HP/MP bonuses scale with it
     zeny: 50,
+    features: normalizeFeatures(),
     inventory: [{ itemId: 'minor_potion', qty: 3 }],
     equip: { weapon: null, head: null, body: null, hands: null, cloak: null, feet: null, accessory: null },
     lifesteal: 0,
@@ -1278,6 +1309,7 @@ function recompute(p, fill) {
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
   p.atkDelay = Math.round(COMBAT.attackSpeedMs * (1 - Math.min(0.45, st.agi * TUNING.agiAtkSpeed)));
   p.moveMult = 1 + Math.min(0.5, st.agi * TUNING.agiMoveSpeed);
+  if (G.mastery?.claimedRanks[G.mapId]?.bronze) p.moveMult *= 1 + TUNING.expansion.masterySpeed;
   p.rangeBonus = st.int * TUNING.intRange;                       // extra tiles for ranged/magic
   p.basicRange = MELEE.has(p.combatClass) ? 1.5 : 5 + p.rangeBonus;
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
@@ -1408,6 +1440,7 @@ function removeItem(itemId, qty = 1) {
 // track stops at 50 so no character can simply buy every branch of the tree.
 function gainXp(amount) {
   const p = G.player;
+  if (Object.values(G.mastery?.claimedRanks || {}).some(r=>r.platinum)) amount *= 1 + TUNING.expansion.masteryXp;
   // ---- base level (stat points, capped) ----
   if (p.level < DESIGN.levelCap) {
     p.xp += amount;
@@ -1580,9 +1613,14 @@ function renderBgBuffer() {
 }
 
 function loadMap(mapId, spawnX, spawnY) {
+  if (!MAPS[mapId]) return false;
+  const dungeonDef=[WhisperingWoods.GOBLIN_CAVE,WhisperingWoods.ELDER_HOLLOW].find(d=>d.id===mapId);
+  if(dungeonDef && G.dungeonState.currentDungeonId!==mapId) SubdungeonSystem.enterDungeon(G.dungeonState,dungeonDef,{mapId:G.mapId||'whispering_woods',x:Math.floor(G.player.x/TS),y:Math.floor(G.player.y/TS)},now());
+  else if(!dungeonDef && G.dungeonState.currentDungeonId) SubdungeonSystem.exitDungeon(G.dungeonState);
   const map = MAPS[mapId];
   const wasRift = G.mapId === 'celestial_rift' && mapId !== 'celestial_rift';
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
+  recompute(G.player);
   G.heatField = buildHeatField(map);
   G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = [];   // don't carry paths/spell zones across maps
   if (G.player) G.player.sanctuary = null;
@@ -1637,6 +1675,9 @@ function loadMap(mapId, spawnX, spawnY) {
   }
 
   if (G.rareBossMapId === mapId) placeRareBoss();   // the roaming rare prowls here until slain
+  const activeRare=G.rareSpawns.activeRares[mapId];
+  if(activeRare) spawnZoneRare((ZONE_PACKAGES[mapId]?.WHISPERING_WOODS_RARES||[]).find(r=>r.id===activeRare.id));
+  refreshDailies();
 
   if (!G.guildBoard || !G.guildBoard.length) refreshGuildBoard();
   AUDIO.playMusic(MAP_MUSIC[mapId] || 'whispering_woods');
@@ -1719,9 +1760,10 @@ function monsterStatsFor(def, lvl) {
   const rbHpMult = 1 + rb * TUNING.rebirthMonsterHpMult + retainedGearHp;
   const atk = Math.round(def.atk * scale * TUNING.monsterAtkMult * rbAtkMult);
   const bossMult = def.sizeTiles >= 2 ? TUNING.bossHpMult : 1;
-  return { lvl, atk, atkBase: atk, dv: Math.round(def.def * durabilityScale * levelDefMult * rbDefMult),
-    exp: Math.round(def.exp * scale * TUNING.monsterExpMult * (1 + rb * TUNING.rebirthMonsterExp)),
-    hp: Math.round(def.hp * durabilityScale * TUNING.monsterHpMult * levelHpMult * bossMult * rbHpMult),
+  const difficulty=DifficultySystem.getTier(G.zoneDifficulty?.[G.mapId]);
+  return { lvl, atk:Math.round(atk*difficulty.atkMult), atkBase:Math.round(atk*difficulty.atkMult), dv: Math.round(def.def * durabilityScale * levelDefMult * rbDefMult*difficulty.defMult),
+    exp: Math.round(def.exp * scale * TUNING.monsterExpMult * (1 + rb * TUNING.rebirthMonsterExp)*difficulty.expMult),
+    hp: Math.round(def.hp * durabilityScale * TUNING.monsterHpMult * levelHpMult * bossMult * rbHpMult*difficulty.hpMult),
     flee: 30 + lvl * 1.5, hit: 85 + lvl * 2.5 };
 }
 // HEAT MAP: shortest walkable-path depth selects the habitat; level interpolation
@@ -1742,6 +1784,7 @@ function makeMonster(def, x, y, levelOverride, spawnSpec = null) {
   const { atk, atkBase, dv, exp, hp } = st;
   return {
     def, spawnSpec, x, y, homeX: x, homeY: y,
+    difficultyTier: DifficultySystem.getTier(G.zoneDifficulty?.[G.mapId]).id,
     lvl, atk, atkBase, dv,
     exp,
     hp, maxHp: hp,
@@ -2171,6 +2214,7 @@ function gapHit(monLevel, playerLevel) {
   return Math.max(0, monLevel - playerLevel) * TUNING.combatGapHitPerLvl;
 }
 function killMonster(m) {
+  if (!m.alive) return;
   m.alive = false;
   m.deadUntil = now() + R.respawnMs;
   G.seenMonsters?.add(m.def.id);   // Collection Book discovery
@@ -2188,9 +2232,11 @@ function killMonster(m) {
   const zeny = rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5));
   if (zeny > 0) { p.zeny += zeny; }
   // drops (equipment rolls rarity + affixes, biased by monster level & your LUK)
-  for (const d of m.def.drops) if (chance(d.chance)) {
+  const dropMult = DifficultySystem.getTier(m.difficultyTier).dropChanceMult * (G.mastery.claimedRanks[G.mapId]?.silver ? 1 + TUNING.expansion.masteryDrop : 1);
+  for (const d of m.def.drops) if (chance(Math.min(1,d.chance * dropMult))) {
     const dropId = classWeaponFor(p, d.itemId);
     const got = addItem(dropId, 1, dropBias(m, p)), it = itemById[dropId];
+    if(p.features.loot.quiet&&got&&!matchesLoot(got,it,p.features.loot,p.classId))continue;
     if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
@@ -2201,6 +2247,26 @@ function killMonster(m) {
   checkQuest();
   checkAdvance();
   guildKill(m.def.id);
+
+  // Content Expansion hooks: subdungeons, rare spawn triggers, dailies & mastery
+  if (SubdungeonSystem.isInsideDungeon(G.dungeonState)) {
+    SubdungeonSystem.recordKill(G.dungeonState, m.def.id);
+    const d=[WhisperingWoods.GOBLIN_CAVE,WhisperingWoods.ELDER_HOLLOW].find(d=>d.id===G.mapId);
+    if(d?.boss.monsterId===m.def.id) SubdungeonSystem.completeDungeon(G.dungeonState,d.id,now());
+  }
+  const zonePkg = ZONE_PACKAGES[G.mapId];
+  if (zonePkg?.WHISPERING_WOODS_RARES && !m.zoneRareId) {
+    const spawnedRare = RareSpawnsSystem.registerKill(G.rareSpawns, G.mapId, m.def.id, zonePkg.WHISPERING_WOODS_RARES);
+    if (spawnedRare) {
+      spawnZoneRare(spawnedRare);
+      toast(`⚠ Rare Beast Sighted: ${spawnedRare.name}!`, 'bad');
+      logMsg(`A ferocious presence stirs: ${spawnedRare.name} has appeared!`, 'bad');
+    }
+  }
+  refreshDailies();
+  DailiesSystem.updateProgress(G.dailies, 'hunt', m.def.id, 1);
+  if(m.zoneRareId) { RareSpawnsSystem.clearRare(G.rareSpawns,G.mapId); m.deadUntil=Infinity; }
+  MasterySystem.addPoints(G.mastery, G.mapId, m.def.sizeTiles >= 2 ? 15 : 1);
   if (m.def.id === 'ruin_golem') { toast('The ruins are cleared — a frozen path opens to the north.', 'good'); }
   if (m.def.id === 'flame_dragon') { toast('☠ The Flame Dragon falls — and behind its throne, the sky TEARS OPEN. The Astral Rift awaits.', 'good'); logMsg('A rift portal has opened at the far edge of the caldera.', 'sys'); }
   if (m.def.id === 'nullking') { toast(T('✦☠ The Nullking is unmade!', 'ui'), 'good'); triggerVictory(); }   // the TRUE finale
@@ -3845,6 +3911,16 @@ function render() {
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
+  const target=G.target;
+  if(target?.alive){
+    const x=target.x-cx,y=target.y-cy;
+    if(x<0||y<0||x>CANVAS_W||y>CANVAS_H){
+      const angle=Math.atan2(y-CANVAS_H/2,x-CANVAS_W/2);
+      const radius=Math.min((CANVAS_W/2-18)/Math.max(.001,Math.abs(Math.cos(angle))),(CANVAS_H/2-18)/Math.max(.001,Math.abs(Math.sin(angle))));
+      ctx.save();ctx.translate(CANVAS_W/2+Math.cos(angle)*Math.max(0,radius),CANVAS_H/2+Math.sin(angle)*Math.max(0,radius));ctx.rotate(angle);
+      ctx.fillStyle='#ffd24d';ctx.strokeStyle='#19120d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(-7,-7);ctx.lineTo(-7,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+    }
+  }
 }
 
 // day/night tint riding the world clock: day → amber dusk → blue night → dawn
@@ -4129,7 +4205,8 @@ function drawEffects() {
 let last = 0;
 function frame(t) {
   if (!G.running) return;
-  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  syncModalPause();
+  const dt = Math.max(0,Math.min(0.05, (t - last) / 1000)); last = t;
   step(dt);
   render();
   renderMinimap();
@@ -4138,6 +4215,7 @@ function frame(t) {
 }
 
 function step(dt) {
+  if (gameClock.isPaused()) return;
   if (G.physicsSuspended) return;
   const p = G.player;
   if (G.jobChoiceOpen) return; // the permanent choice is readable because the world is truly paused
@@ -4149,6 +4227,21 @@ function step(dt) {
       p.y -= TS;
     }
     p.windImmunityUntil = now() + 1000;
+  }
+
+  // Exploration tile tracking
+  if (ExplorationSystem.recordStep(G.exploration, G.mapId, tx, ty)) {
+    const zonePkg = ZONE_PACKAGES[G.mapId];
+    if (zonePkg?.WHISPERING_WOODS_EXPLORATION?.pois) {
+      for (const poi of zonePkg.WHISPERING_WOODS_EXPLORATION.pois) {
+        if (Math.abs(poi.x - tx) <= 1 && Math.abs(poi.y - ty) <= 1) {
+          if (ExplorationSystem.unlockPOI(G.exploration, G.mapId, poi.id)) {
+            toast(`📍 Discovered Landmark: ${poi.name}!`, 'good');
+            MasterySystem.addPoints(G.mastery, G.mapId, 20);
+          }
+        }
+      }
+    }
   }
 
   // roaming rare boss world timer (first window arms lazily on the first frame)
@@ -4210,19 +4303,13 @@ function step(dt) {
   p.stamina = Math.min(S.max, (p.stamina ?? S.max) + S.regenPerSec * dt);
 
   // movement — WASD/arrows take priority and cancel any click-to-move
-  if (touchJoystickState.active) {
-    const dz = 0.25;
-    G.keys['a'] = touchJoystickState.normX < -dz;
-    G.keys['d'] = touchJoystickState.normX > dz;
-    G.keys['w'] = touchJoystickState.normY < -dz;
-    G.keys['s'] = touchJoystickState.normY > dz;
-  }
   const k = G.keys;
   let dx = 0, dy = 0;
   if (k['a'] || k['arrowleft']) dx -= 1;
   if (k['d'] || k['arrowright']) dx += 1;
   if (k['w'] || k['arrowup']) dy -= 1;
   if (k['s'] || k['arrowdown']) dy += 1;
+  if(touchJoystickState.active){dx+=touchJoystickState.normX;dy+=touchJoystickState.normY;}
   const spd = 130 * (p.moveMult || 1) * dt;   // AGI quickens the step
   const mx0 = p.x, my0 = p.y;                        // for walk-animation detection
   if (dx || dy) {                                   // WASD/arrows override click-to-move
@@ -4384,129 +4471,72 @@ function isTouchDevice() {
   );
 }
 
-function updateJoystickVector(cx, cy, knobEl) {
-  const dx = cx - touchJoystickState.startX;
-  const dy = cy - touchJoystickState.startY;
-  const distVal = Math.hypot(dx, dy);
-  const maxRadius = 45;
-  const clamped = Math.min(distVal, maxRadius);
-  const angle = Math.atan2(dy, dx);
-  const knobX = Math.cos(angle) * clamped;
-  const knobY = Math.sin(angle) * clamped;
-  if (knobEl) knobEl.style.transform = `translate(${knobX}px, ${knobY}px)`;
-  touchJoystickState.normX = distVal > 5 ? Math.cos(angle) : 0;
-  touchJoystickState.normY = distVal > 5 ? Math.sin(angle) : 0;
+let touchInput=null;
+let touchDisposers=[];
+function clearInput() {
+  G.keys={}; touchInput?.clear();
+  touchJoystickState.active=false;touchJoystickState.normX=touchJoystickState.normY=0;
+  G.path=null;G.manualIntent=null;G.target=null;G.targetSource=null;
 }
-
+function pauseGame(reason) {
+  const wasPaused=gameClock.isPaused();
+  gameClock.pause(reason);
+  if(!wasPaused){clearInput();G.autoFarm=false;AUDIO.pausePlayback();}
+}
+function resumeGameFromPause(reason) {
+  const wasPaused=gameClock.isPaused();
+  gameClock.resume(reason);
+  if(wasPaused&&!gameClock.isPaused()){last=performance.now();AUDIO.resumePlayback();}
+}
+function syncModalPause() {
+  if(!G.running)return;
+  const modal=G.jobChoiceOpen||dlg||document.querySelectorAll('.panel, .slot-picker, .job-choice-overlay, .overlay-cut, #hud .hud-menu.open').length>0;
+  if(modal)pauseGame('modal');else resumeGameFromPause('modal');
+}
+function pauseForInterruption() {
+  if(!G.running)return;
+  G.taskGuide=null;G.huntTargetId=null;
+  pauseGame('interruption');saveGame();
+  let el=document.getElementById('resume-game');
+  if(!el){el=document.createElement('button');el.id='resume-game';el.className='btn';
+    el.style.cssText='position:fixed;z-index:100;top:45%;left:50%;transform:translate(-50%,-50%);min-height:56px;padding:18px 32px';
+    el.onclick=()=>{if(document.hidden)return;el.remove();resumeGameFromPause('interruption');};
+    document.body.appendChild(el);
+  }
+  el.textContent=T('Game paused','ui')+' · '+T('Resume','ui');
+}
+function dispatchPlayerAction(role) {
+  syncModalPause();
+  if(!G.running||!G.player||G.player.hp<=0||gameClock.isPaused())return false;
+  if(role.startsWith('slot:')){
+    const slot=Number(role.slice(5));if(!Number.isInteger(slot)||slot<0||slot>8)return false;
+    if(!G.player.hotbar[slot]){openSlotPicker(slot);syncModalPause();return true;}
+    return useHotbarSlot(slot);
+  }
+  return ({attack:playerBasicAttack,dodge:performDodge,parry:performParry,interact})[role]?.();
+}
 function initTouchControls() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  let container = document.getElementById('touch-controls');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'touch-controls';
-    container.className = 'touch-controls';
-    container.style.display = 'none';
-    container.innerHTML = `
-      <div class="touch-zone"></div>
-      <div class="touch-joystick">
-        <div class="touch-joystick-base">
-          <div class="touch-joystick-knob"></div>
-        </div>
-      </div>
-      <div class="touch-action-buttons">
-        <button class="touch-action-btn touch-btn-s1" data-action="s1">S1</button>
-        <button class="touch-action-btn touch-btn-s2" data-action="s2">S2</button>
-        <button class="touch-action-btn touch-btn-s3" data-action="s3">S3</button>
-        <button class="touch-action-btn touch-btn-s4" data-action="s4">S4</button>
-        <button class="touch-action-btn touch-btn-s5" data-action="s5">S5</button>
-        <button class="touch-action-btn touch-btn-s6" data-action="s6">S6</button>
-        <button class="touch-action-btn touch-btn-dodge" data-action="dodge">Dodge</button>
-        <button class="touch-action-btn touch-btn-atk" data-action="attack">ATK</button>
-      </div>
-    `;
-    const target = document.getElementById('overlays') || document.body;
-    target.appendChild(container);
-  }
-
-  if (!isTouchDevice()) {
-    container.style.display = 'none';
-    return;
-  }
-  container.style.display = 'flex';
-
-  const zoneEl = container.querySelector('.touch-zone') || container;
-  const joystickEl = container.querySelector('.touch-joystick');
-  const knobEl = container.querySelector('.touch-joystick-knob');
-
-  if (joystickEl && knobEl) {
-    const handleStart = e => {
-      e.preventDefault();
-      const touch = e.changedTouches[0];
-      touchJoystickState.active = true;
-      touchJoystickState.touchId = touch.identifier;
-      touchJoystickState.startX = touch.clientX;
-      touchJoystickState.startY = touch.clientY;
-      if (joystickEl.style) {
-        joystickEl.style.left = `${touch.clientX}px`;
-        joystickEl.style.top = `${touch.clientY}px`;
-      }
-      joystickEl.classList.add('active');
-      updateJoystickVector(touch.clientX, touch.clientY, knobEl);
-    };
-    const handleMove = e => {
-      if (!touchJoystickState.active) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === touchJoystickState.touchId) {
-          e.preventDefault();
-          updateJoystickVector(touch.clientX, touch.clientY, knobEl);
-          break;
-        }
-      }
-    };
-    const handleEnd = e => {
-      if (!touchJoystickState.active) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === touchJoystickState.touchId) {
-          touchJoystickState.active = false;
-          touchJoystickState.touchId = null;
-          touchJoystickState.normX = 0;
-          touchJoystickState.normY = 0;
-          if (knobEl.style) knobEl.style.transform = 'translate(0px, 0px)';
-          joystickEl.classList.remove('active');
-          G.keys['a'] = false;
-          G.keys['d'] = false;
-          G.keys['w'] = false;
-          G.keys['s'] = false;
-          break;
-        }
-      }
-    };
-
-    zoneEl.addEventListener('touchstart', handleStart, { passive: false });
-    if (zoneEl !== joystickEl) joystickEl.addEventListener('touchstart', handleStart, { passive: false });
-    window.addEventListener('touchmove', handleMove, { passive: false });
-    window.addEventListener('touchend', handleEnd);
-    window.addEventListener('touchcancel', handleEnd);
-  }
-
-  container.querySelectorAll('.touch-action-btn').forEach(btn => {
-    const act = btn.dataset.action;
-    const trigger = e => {
-      e.preventDefault();
-      AUDIO.playSfx('menu');
-      if (navigator.vibrate) navigator.vibrate(15);
-      if (act === 'attack') playerBasicAttack();
-      else if (act === 's1') useHotbarSlot(0);
-      else if (act === 's2') useHotbarSlot(1);
-      else if (act === 's3') useHotbarSlot(2);
-      else if (act === 's4') useHotbarSlot(3);
-      else if (act === 's5') useHotbarSlot(4);
-      else if (act === 's6') useHotbarSlot(5);
-      else if (act === 'dodge') performDodge();
-    };
-    btn.addEventListener('touchstart', trigger, { passive: false });
-    btn.addEventListener('click', trigger);
+  touchInput?.dispose();touchDisposers.forEach(fn=>fn());touchDisposers=[];
+  let container=document.getElementById('touch-controls');
+  if(!container){container=document.createElement('div');container.id='touch-controls';document.body.appendChild(container);}
+  container.className='touch-controls';
+  const pref=G.player?.features?.touch||'auto';
+  container.style.display=(pref==='on'||pref==='auto'&&isTouchDevice())?'flex':'none';
+  container.innerHTML='<div class="touch-zone" data-role="move" aria-label="Move"><div class="touch-joystick-base"><div class="touch-joystick-knob"></div></div></div><div class="touch-action-buttons">'+
+    Array.from({length:9},(_,i)=>hotbarSlotHtml(G.player.hotbar[i],i).replace('class="','data-role="slot:'+i+'" class="touch-action-btn ')).join('')+
+    ['attack','dodge','parry','interact'].map(role=>'<button type="button" class="touch-action-btn" data-role="'+role+'">'+T({attack:'Attack',dodge:'Dodge',parry:'Parry',interact:'Interact'}[role],'ui')+'</button>').join('')+'</div>';
+  const knob=container.querySelector('.touch-joystick-knob');
+  touchInput=createInputController({
+    move:(x,y)=>{touchJoystickState.active=!!(x||y);touchJoystickState.normX=x;touchJoystickState.normY=y;if(knob)knob.style.transform='translate('+(x*45)+'px,'+(y*45)+'px)';},
+    action:dispatchPlayerAction,
+    blocked:()=>!G.running||G.player.hp<=0||gameClock.isPaused(),
+  });
+  const bind=(el,type,fn)=>{el.addEventListener(type,fn);touchDisposers.push(()=>el.removeEventListener(type,fn));};
+  container.querySelectorAll('[data-role]').forEach(el=>{
+    bind(el,'pointerdown',e=>{e.preventDefault();syncModalPause();el.setPointerCapture?.(e.pointerId);touchInput.pointerDown(e.pointerId,el.dataset.role,e.clientX,e.clientY);});
+    bind(el,'pointermove',e=>touchInput.pointerMove(e.pointerId,e.clientX,e.clientY));
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])bind(el,type,e=>touchInput.pointerUp(e.pointerId));
+    if(el.dataset.role!=='move')bind(el,'click',e=>{if(e.detail===0)dispatchPlayerAction(el.dataset.role);});
   });
 }
 
@@ -4563,6 +4593,9 @@ function buildHud() {
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="guide">${T('Field guide', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="loadouts">${T('Loadouts', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
         ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
@@ -4597,7 +4630,7 @@ function buildHud() {
     if (openPanel) {
       const kind = openPanel.dataset.kind;
       openPanel.querySelector('.panel__head').innerHTML = `${panelTitle(kind)}<button class="panel__close">✕</button>`;
-      openPanel.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); openPanel.remove(); };
+      openPanel.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); if(kind==='guide')closeGuide();else openPanel.remove(); };
       refreshPanel(kind);
     }
   };
@@ -4672,12 +4705,13 @@ function renderHotbar() {
   bar.innerHTML = G.player.hotbar.map((s, i) => hotbarSlotHtml(s, i)).join('');
   bar.querySelectorAll('[data-slot]').forEach(b => {
     const i = +b.dataset.slot;
-    b.onclick = () => G.player.hotbar[i] ? useHotbarSlot(i) : openSlotPicker(i);
+    b.onclick = () => dispatchPlayerAction('slot:'+i);
     b.oncontextmenu = e => { e.preventDefault(); openSlotPicker(i); };
     b.ondragover = e => { if (e.dataTransfer?.types?.includes('text/x-awo-skill')) { e.preventDefault(); b.classList.add('drop-ready'); } };
     b.ondragleave = () => b.classList.remove('drop-ready');
     b.ondrop = e => { const id = e.dataTransfer?.getData('text/x-awo-skill'); b.classList.remove('drop-ready'); if (id) { e.preventDefault(); assignSkillHotbar(id, i); } };
   });
+  initTouchControls();
 }
 // right-click (or click-when-empty) popup to assign/clear a hotbar slot
 function openSlotPicker(i) {
@@ -4785,8 +4819,15 @@ function updateHud() {
   if ($('#shield-fill')) $('#shield-fill').style.width = (shield > 0 ? Math.min(100, 100 * shield / p.maxHp) : 0) + '%';
   $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}${shield > 0 ? ` (+${shield})` : ''}`;
   $('#mp-label').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
-  // Boss frame update
-  const boss = (G.monsters || []).find(m => m.alive && (m.def?.sizeTiles >= 2 || m.def?.isRareBoss || m.def?.isZoneGuardian || m.def?.isRaidBoss || G.huntTargetId === m.def?.id));
+  // Boss frame update: only show when engaged in combat or nearby
+  const boss = (G.monsters || []).find(m => {
+    if (!m.alive) return false;
+    const isSpecial = m.def?.sizeTiles >= 2 || m.def?.isRareBoss || m.def?.isZoneGuardian || m.def?.isRaidBoss || G.huntTargetId === m.def?.id;
+    if (!isSpecial) return false;
+    const d = dist(m.x, m.y, p.x, p.y);
+    const inCombat = (now() - (m.lastCombatAt || 0) < 6000) || m === G.target;
+    return inCombat || d < 12 * TS;
+  });
   const bFrame = $('#boss-frame');
   if (bFrame) {
     if (boss && G.running) {
@@ -4811,7 +4852,7 @@ function updateHud() {
     mpBar.title = `Mana ${Math.floor(p.mp)} / ${p.maxMp} · regenerates over time`;
   }
   // hotbar slots: skill cooldown/level/lock, or item quantity
-  document.querySelectorAll('#hud .hotbar [data-slot]').forEach(b => {
+  document.querySelectorAll('#hud .hotbar [data-slot], #touch-controls [data-slot]').forEach(b => {
     const slot = p.hotbar[+b.dataset.slot]; if (!slot) return;
     if (slot.type === 'skill') {
       const lv = skillLevel(p, slot.id);
@@ -4863,7 +4904,7 @@ function updateHud() {
 
 function updateQuestTracker() {
   const el = $('#quest-tracker'); if (!el) return;
-  let html = '';
+  let html = goalTrackerHtml();
   const typeName = (t) => { if (currentLang === 'th') { return { kill: 'กำจัด', collect: 'รวบรวม', explore: 'สำรวจ', talk: 'คุยกับ' }[t] || t; } return t; };
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
@@ -4901,6 +4942,7 @@ function updateQuestTracker() {
   const isCollapsed = el.classList.contains('collapsed');
   const header = `<div class="tracker-header" id="tracker-toggle"><span>📜 ${T('Objectives', 'ui')}</span><span class="tracker-chevron">${isCollapsed ? '▸' : '▾'}</span></div>`;
   el.innerHTML = header + `<div class="tracker-body">${html}</div>`;
+  bindGuideLinks(el);
   const tToggle = el.querySelector('#tracker-toggle');
   if (tToggle) {
     tToggle.onclick = (e) => {
@@ -4967,7 +5009,7 @@ function togglePanel(id) {
   el.className = 'panel'; el.id = 'panel'; el.dataset.kind = id;
   el.innerHTML = `<div class="panel__head">${panelTitle(id)}<button class="panel__close">✕</button></div><div class="panel__body">${panelBody(id)}</div>`;
   $('#overlays').appendChild(el);
-  el.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); el.remove(); };
+  el.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); if(id==='guide')closeGuide();else el.remove(); };
 
   // Task 1.4: Focus trap cycling inside .panel elements
   el.addEventListener('keydown', e => {
@@ -4994,7 +5036,7 @@ function togglePanel(id) {
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return T({ char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio', book: 'Collection Book' }[id], 'ui'); }
+function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio', book: 'Collection Book' }[id], 'ui'); }
 
 const ADMIN_GROUPS = [
   ['🧍 Character', [
@@ -5010,11 +5052,17 @@ const ADMIN_GROUPS = [
     ['skipquest', 'Complete Current Story Quest'], ['guildpts', '+50 Guild Points'],
     ['bountydone', 'Finish & Claim All Bounties'], ['board', 'Refresh Guild Board & Shop'],
   ]],
-  ['🗺 World', [
+  ['🗺 World & Dungeons', [
     ['town', 'Warp: Town'], ['woods', 'Warp: Woods'], ['ruins', 'Warp: Ruins'],
     ['tundra', 'Warp: Tundra'], ['caldera', 'Warp: Caldera'], ['rift', 'Warp: Rift'],
+    ['warpgoblin', 'Warp: Goblin Cave'], ['warpelder', 'Warp: Elder Hollow'],
     ['warpboss', 'Warp to Zone Guardian'], ['spawnboss', 'Spawn Guardian Here'],
     ['killall', 'Kill All Monsters'], ['respawnall', 'Respawn All Monsters'],
+  ]],
+  ['🌟 Expansion & Mastery', [
+    ['addmastery', '+100 Zone Mastery Pts'], ['chartmap', 'Reveal 100% Map Fog'],
+    ['completedailies', 'Complete All Dailies'], ['rerolldailies', 'Reroll Daily Challenges'],
+    ['spawnrare', 'Spawn Rare Beast (Fang)'], ['cyclediff', 'Cycle Difficulty (N/H/NM)'],
   ]],
 ];
 function adminAction(a) {
@@ -5056,6 +5104,50 @@ function adminAction(a) {
   else if (a === 'tundra') loadMap('frostpeak_tundra', 2, 2);
   else if (a === 'caldera') loadMap('dragon_caldera', 2, 2);
   else if (a === 'rift') loadMap('astral_rift', 2, 2);
+  else if (a === 'warpgoblin') loadMap('ww_goblin_cave', 1, 1);
+  else if (a === 'warpelder') loadMap('ww_elder_hollow', 1, 1);
+  else if (a === 'addmastery') {
+    MasterySystem.addPoints(G.mastery, G.mapId, 100);
+    toast(`+100 Mastery Points added to ${G.map.name}!`, 'good');
+  }
+  else if (a === 'chartmap') {
+    if (G.exploration) {
+      if (!G.exploration.discoveredTiles[G.mapId]) G.exploration.discoveredTiles[G.mapId] = {};
+      for (let r = 0; r < G.map.height; r++) {
+        for (let c = 0; c < G.map.width; c++) {
+          G.exploration.discoveredTiles[G.mapId][`${c},${r}`] = true;
+        }
+      }
+      toast(`Mapped 100% of ${G.map.name}!`, 'good');
+    }
+  }
+  else if (a === 'completedailies') {
+    if (G.dailies && G.dailies.activeDailies) {
+      G.dailies.activeDailies.forEach(c => { c.progress = c.required; c.completed = true; });
+      toast('All daily challenges marked completed!', 'good');
+    }
+  }
+  else if (a === 'rerolldailies') {
+    refreshDailies(true);
+    toast('Rerolled new daily challenges!', 'sys');
+  }
+  else if (a === 'spawnrare') {
+    const rareDef = monById['wolf'] || monById['slime'];
+    const beast = makeMonster(rareDef, p.x + 48, p.y, rareDef.level + 2);
+    beast.name = 'Fang, the Bloodthirsty';
+    beast.hp = beast.maxHp = Math.round(beast.hp * 2.5);
+    beast.atk = Math.round(beast.atk * 1.5);
+    beast.color = '#ff3344';
+    G.monsters.push(beast);
+    toast('Spawned Rare Hunt: Fang, the Bloodthirsty!', 'bad');
+  }
+  else if (a === 'cyclediff') {
+    const tiers = ['NORMAL', 'HARD', 'NIGHTMARE'];
+    const current = (G.zoneDifficulty[G.mapId]||'normal').toUpperCase();
+    const nextIdx = (tiers.indexOf(current) + 1) % tiers.length;
+    setZoneDifficulty(G.mapId, tiers[nextIdx]);
+    toast(`Zone Difficulty set to: ${tiers[nextIdx]}`, 'good');
+  }
   recompute(p); renderHotbar(); updateHud();
 }
 
@@ -5685,11 +5777,16 @@ function bookTabHtml(tab) {
 }
 
 function panelBody(id) {
+  if(id==='guide')return guidePanelHtml();
+  if(id==='loadouts')return loadoutPanelHtml();
   const p = G.player;
+  if(id==='adventure') return adventurePanelHtml();
   if (id === 'book') return collectionBookHtml();
   if (id === 'settings') {
     const v = G.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
     return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
+      <label>${T('Touch controls','ui')} <select id="touch-preference">${['auto','on','off'].map(value=>`<option value="${value}" ${G.player.features.touch===value?'selected':''}>${T({auto:'Automatic',on:'On',off:'Off'}[value],'ui')}</option>`).join('')}</select></label>
+      <div>${T('Assign actions','ui')} ${Array.from({length:9},(_,i)=>`<button class="btn" data-edit-slot="${i}">${i+1}</button>`).join(' ')}</div>
       <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d)">🔊 Volume Controls</div>
       <div class="setting-row">
         <span>Master Volume (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
@@ -5811,7 +5908,7 @@ function panelBody(id) {
     const cat = ITEM_CAT, ORDER = ITEM_CAT_ORDER;
     const rarRank = e => e.uid ? RARITY_ORDER.indexOf(e.rarity) : -1;
     const groups = {};
-    for (const e of p.inventory) { const it = itemById[e.itemId]; if (!inTab(it) || !matchesSearch(e, it)) continue; const c = cat(it); (groups[c] = groups[c] || []).push(e); }
+    for (const e of p.inventory) { const it = itemById[e.itemId]; if (!inTab(it) || !matchesSearch(e, it) || !matchesLoot(e,it,p.features.loot,p.classId)) continue; const c = cat(it); (groups[c] = groups[c] || []).push(e); }
     const slotRank = e => e.uid ? EQUIP_SLOTS.indexOf(itemSlot(itemById[e.itemId])) : 99;
     for (const c in groups) groups[c].sort((a, b) => (slotRank(a) - slotRank(b)) || (rarRank(b) - rarRank(a)) || ((b.plus || 0) - (a.plus || 0)) || itemById[a.itemId].name.localeCompare(itemById[b.itemId].name));
 
@@ -5823,17 +5920,21 @@ function panelBody(id) {
         const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         return `<div class="gear-row">
           <div class="gear-row__copy">${itemIconImg(dispItemId(e))} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${socketDotsHtml(e)} — ${itemMainStatsHtml(e)}
-            ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}</div>
-          <button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
+            ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}<button class="btn" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button></div>
+          <button class="btn" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected?'Unprotect':'Protect','ui')}</button><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
       }
       const act = it.type === 'potion'
         ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>`
         : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>`
         : it.gem ? `<button class="btn ${G._socketPick === it.id ? 'btn--ghost' : ''}" data-pick-gem="${it.id}">${G._socketPick === it.id ? T('Cancel', 'ui') : T('Socket…', 'ui')}</button>` : '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
-        <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${act}</div>`;
+        <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small><button class="btn" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button></span>${act}</div>`;
     };
     const toolbarHtml = `<div class="inv-toolbar">
+      <label>${T('Loot relevance','ui')} <select data-loot-mode>${['all','usable','affixes'].map(mode=>`<option value="${mode}" ${p.features.loot.mode===mode?'selected':''}>${T({all:'All',usable:'Usable',affixes:'Selected affixes'}[mode],'ui')}</option>`).join('')}</select></label>
+      <label><input type="checkbox" data-loot-quiet ${p.features.loot.quiet?'checked':''}>${T('Quiet irrelevant drops','ui')}</label>
+      <span>${p.inventory.filter(e=>!matchesLoot(e,itemById[e.itemId],p.features.loot,p.classId)).length} ${T('hidden','ui')} <button class="btn" data-loot-all>${T('Show all','ui')}</button></span>
+      ${p.features.loot.mode==='affixes'?`<details><summary>${T('Select affixes; none shows all','ui')}</summary>${[...new Set(AFFIXES.map(a=>a.stat))].map(stat=>`<label><input type="checkbox" data-loot-affix="${esc(stat)}" ${p.features.loot.affixes.includes(stat)?'checked':''}>${esc(stat)}</label>`).join(' ')}</details>`:''}
       <input type="search" id="inv-search" class="inv-search-input" placeholder="${T('Search items / affixes...', 'ui')}" value="${esc(G._invSearch || '')}">
       <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button>
       <button class="btn btn--ghost" id="inv-deposit-mats" title="${T('Deposit Materials to Storage', 'ui')}">📥 ${T('Deposit Mats', 'ui')}</button>
@@ -5872,8 +5973,26 @@ function panelBody(id) {
           <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} ${T('pts', 'ui')}</small>
           <div class="bounty-actions">${guildRevokeButton(g)}</div></div>`).join('')
       : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
+
+    // Zone Mastery & Exploration Status
+    const mapKey = G.mapId;
+    const mRank = MasterySystem.getZoneRank(G.mastery, mapKey);
+    const mPts = (G.mastery?.zonePoints && G.mastery.zonePoints[mapKey]) || 0;
+    const discCount = ExplorationSystem.getDiscoveryCount(G.exploration, mapKey);
+    const pois = (G.exploration?.unlockedPOIs && G.exploration.unlockedPOIs[mapKey]) || [];
+
+    const masteryHtml = `<div class="q-cat" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px">
+      <span>🗺 ${T('Zone Mastery & Exploration', 'ui')}</span>
+      <small style="color:var(--accent-alt)">${mRank ? `★ ${mRank.title}` : T('Unranked Explorer', 'ui')} (${mPts} pts)</small>
+    </div>
+    <div class="q-card" style="font-size:12px;line-height:1.5">
+      <div><b>${T(G.map.name, 'maps')}</b> · ${discCount} ${T('tiles charted', 'ui')} · ${pois.length} ${T('Landmarks found', 'ui')}</div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:2px">${T('Chart uncharted territory, conquer sub-dungeons, and slay rare beasts to earn permanent zone bonuses.', 'ui')}</div>
+    </div>`;
+
     return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
       <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
+      ${masteryHtml}
       <div style="color:var(--text-muted);font-size:12px;margin-top:6px">${T('Accept and claim bounties with Elder Maro at the guild hall in town.', 'ui')}</div>`;
   }
   if (id === 'guild') {
@@ -5942,7 +6061,7 @@ function panelBody(id) {
         return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid rgba(201,162,75,.15)">
           <span>${itemIconImg(r.out)} <b>${T(out.name, 'items')}</b> — ${r.cost}z<br>
             <small style="color:var(--text-muted)">${T(out.desc, 'items')}</small><br><small>${mats}</small></span>
-          <button class="btn" data-craft="${r.id}" ${ok ? '' : 'disabled'}>${T('Craft', 'ui')}</button></div>`;
+          <button class="btn" data-guide-kind="recipe" data-guide-id="${r.id}">${T('Source','ui')}</button><button class="btn" data-craft="${r.id}" ${ok ? '' : 'disabled'}>${T('Craft', 'ui')}</button></div>`;
       }).join('');
       return head + `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${T('Turn spare materials into supplies and gear.', 'ui')}</div>${rows}`;
     }
@@ -6063,12 +6182,43 @@ function panelBody(id) {
   return '';
 }
 
+function bindGuideLinks(el) {
+  el.querySelectorAll('[data-guide-kind]').forEach(b=>b.onclick=()=>openGuide(b.dataset.guideKind,b.dataset.guideId));
+}
 function wirePanel(id, el) {
+  bindGuideLinks(el);
+  el.querySelectorAll('[data-pin-kind]').forEach(b=>b.onclick=()=>pinGoal({kind:b.dataset.pinKind,id:b.dataset.pinId}));
+  el.querySelectorAll('[data-unpin]').forEach(b=>b.onclick=()=>pinGoal(null));
+  el.querySelectorAll('[data-guide-back]').forEach(b=>b.onclick=closeGuide);
+  el.querySelectorAll('[data-guide-picker]').forEach(b=>b.onchange=()=>{const [kind,id]=b.value.split(':');if(id)openGuide(kind,id);});
+  el.querySelectorAll('[data-guide-skill]').forEach(b=>b.onchange=()=>{if(b.value)openGuide('skill',b.value);});
+  el.querySelectorAll('[data-guide-route]').forEach(b=>b.onclick=()=>{if(activateWorldRoute(b.dataset.guideRoute)){G.taskGuide.resumeAutoFarm=false;document.getElementById('panel')?.remove();}});
+  el.querySelectorAll('[data-protect]').forEach(b=>b.onclick=()=>{setItemProtection(+b.dataset.protect,b.dataset.protected!=='true');refreshPanel(id);});
+  el.querySelectorAll('[data-loot-mode]').forEach(b=>b.onchange=()=>{if(['all','usable','affixes'].includes(b.value))G.player.features.loot.mode=b.value;saveGame();refreshPanel(id);});
+  el.querySelectorAll('[data-loot-quiet]').forEach(b=>b.onchange=()=>{G.player.features.loot.quiet=b.checked;saveGame();});
+  el.querySelectorAll('[data-loot-all]').forEach(b=>b.onclick=()=>{G.player.features.loot.mode='all';G._invSearch='';G._bagTab='all';saveGame();refreshPanel(id);});
+  el.querySelectorAll('[data-loot-affix]').forEach(b=>b.onchange=()=>{const selected=new Set(G.player.features.loot.affixes);b.checked?selected.add(b.dataset.lootAffix):selected.delete(b.dataset.lootAffix);G.player.features.loot.affixes=[...selected].filter(s=>AFFIXES.some(a=>a.stat===s));saveGame();refreshPanel(id);});
+  el.querySelectorAll('[data-loadout-save]').forEach(b=>b.onclick=()=>{
+    const index=+b.dataset.loadoutSave;
+    if(G.player.features.loadouts[index]&&!window.confirm(T('Overwrite this loadout?','ui')))return;
+    saveLoadout(index,el.querySelector(`[data-loadout-name="${index}"]`).value);refreshPanel(id);
+  });
+  el.querySelectorAll('[data-loadout-rename]').forEach(b=>b.onclick=()=>{const i=+b.dataset.loadoutRename;renameLoadout(i,el.querySelector(`[data-loadout-name="${i}"]`).value);refreshPanel(id);});
+  el.querySelectorAll('[data-loadout-apply]').forEach(b=>b.onclick=()=>{const result=applyLoadout(+b.dataset.loadoutApply);toast(T(result.ok?'Loadout applied':result.reason,'ui'),result.ok?'good':'bad');refreshPanel(id);});
+  el.querySelectorAll('[data-daily-claim]').forEach(b=>b.onclick=()=>{claimDaily(b.dataset.dailyClaim);refreshPanel('adventure');});
+  el.querySelectorAll('[data-mastery-claim]').forEach(b=>b.onclick=()=>{claimMastery(G.mapId,b.dataset.masteryClaim);refreshPanel('adventure');});
+  el.querySelectorAll('[data-mastery-travel]').forEach(b=>b.onclick=()=>{masteryTravel(b.dataset.masteryTravel);refreshPanel('adventure');});
+  el.querySelectorAll('[data-zone-difficulty]').forEach(b=>b.onchange=()=>setZoneDifficulty(G.mapId,b.value));
+  el.querySelectorAll('[data-dungeon-enter]').forEach(b=>b.onclick=()=>{enterSubdungeon(b.dataset.dungeonEnter);refreshPanel('adventure');});
+  el.querySelector('[data-dungeon-exit]')?.addEventListener('click',()=>{exitSubdungeon();refreshPanel('adventure');});
   if (id === 'book') {
     el.querySelectorAll('[data-book-tab]').forEach(b => b.onclick = () => { G._bookTab = b.dataset.bookTab; refreshPanel('book'); });
     el.querySelectorAll('[data-mile-claim]').forEach(b => b.onclick = () => claimMilestone(b.dataset.mileClaim));
   }
   if (id === 'settings') {
+    const touchPref=el.querySelector('#touch-preference');
+    if(touchPref)touchPref.onchange=()=>{G.player.features.touch=touchPref.value;initTouchControls();syncRuntimeScale();saveGame();};
+    el.querySelectorAll('[data-edit-slot]').forEach(b=>b.onclick=()=>openSlotPicker(+b.dataset.editSlot));
     const masterEl = el.querySelector('#vol-master');
     const musicEl = el.querySelector('#vol-music');
     const sfxEl = el.querySelector('#vol-sfx');
@@ -6545,6 +6695,7 @@ function sellItem(ref) {
   if (/^\d+$/.test(ref)) {                                     // equipment instance by uid
     const idx = p.inventory.findIndex(e => e.uid === +ref); if (idx < 0) return;
     const e = p.inventory[idx], price = sellPrice(e);
+    if(e.protected){toast(T('Unprotect this item before selling.','ui'),'sys');return false;}
     p.inventory.splice(idx, 1); p.zeny += price;
     logMsg(`Sold [${itemRarity(e).name}] ${itemById[e.itemId].name} (+${price}z).`, 'good');
   } else {                                                     // one from a stack by item id
@@ -7106,13 +7257,14 @@ function readSave() { const ls = storage(); if (!ls) return null; try { return J
 function hasSave() { return !!readSave(); }
 function deleteSave() { const ls = storage(); try { ls && ls.removeItem(saveKey()); } catch {} }
 function saveGame() {
-  const ls = storage(); if (!ls || !G.player || !G.running) return;   // only persist a live run
+  const ls = storage(); if (!G.player || !G.running) return false;
+  if (!ls) { G.saveStatus = 'unavailable'; showSaveStatus(); return false; }
   const p = G.player;
   const data = { v: 5,
     player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId, advancedJobId: p.advancedJobId, hybridJobId: p.hybridJobId,
       level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, pastLives: p.pastLives || [], zeny: p.zeny, hp: p.hp, mp: p.mp,
       alloc: p.alloc, statPoints: p.statPoints, skillPoints: p.skillPoints, skillLevels: p.skillLevels,
-      equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys },
+      equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys, features: p.features },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
       quest: G.quest, pendingQuest: G.pendingQuest, killCounts: G.killCounts, won: G.won, autoFarm: G.autoFarm,
       huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig, audioVolumes: G.audioVolumes, highContrast: G.highContrast,
@@ -7120,15 +7272,37 @@ function saveGame() {
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
       seenMonsters: [...G.seenMonsters], collectedItems: [...G.collectedItems], claimedMilestones: [...G.claimedMilestones],
-      storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best } };
-  try { ls.setItem(saveKey(), JSON.stringify(data)); } catch {}
+      storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best,
+      expansion: normalizeExpansion(G) } };
+  try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
+  catch { G.saveStatus='failed'; showSaveStatus(); return false; }
+}
+function showSaveStatus() {
+  let el=document.getElementById('save-status');
+  if (!el && G.saveStatus!=='saved') {
+    el=document.createElement('button');el.id='save-status';el.className='btn';
+    el.style.cssText='position:fixed;top:100px;left:8px;z-index:100;max-width:90vw';
+    el.onclick=()=>saveGame();document.body.appendChild(el);
+  }
+  if(el){el.textContent=currentLang==='th'?'ยังไม่ได้บันทึก — แตะเพื่อลองอีกครั้ง':'Progress not saved — tap to retry';el.style.display=G.saveStatus==='saved'?'none':'block';}
 }
 // shared canvas/HUD boot used by both new-game and continue
 let runtimeResizeBound = false;
 function syncRuntimeScale() {
-  const fx = $('#fx-layer'); if (!fx) return;
-  const scale = Math.min(1, innerWidth / CANVAS_W, innerHeight / CANVAS_H);
-  fx.style.transform = `translate(-50%,-50%) scale(${scale})`;
+  if(!canvas)return;
+  clearInput();
+  const pref=G.player?.features?.touch||'auto';
+  const touch=pref==='on'||pref==='auto'&&isTouchDevice();
+  const css=typeof getComputedStyle==='function'?getComputedStyle(document.documentElement):null;
+  const insets=Object.fromEntries(['top','right','bottom','left'].map(k=>[k,parseFloat(css?.getPropertyValue('--safe-'+k))||0]));
+  runtimeViewport=computeViewport({width:window.visualViewport?.width||innerWidth,height:window.visualViewport?.height||innerHeight,touch,insets});
+  const {rect,logical,scale,mode}=runtimeViewport;
+  CANVAS_W=logical.width;CANVAS_H=logical.height;
+  canvas.width=CANVAS_W;canvas.height=CANVAS_H;
+  ctx.imageSmoothingEnabled=false;
+  Object.assign(canvas.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px',transform:'none',maxWidth:'none',maxHeight:'none'});
+  document.body.dataset.viewport=mode;
+  const fx=$('#fx-layer');if(fx)Object.assign(fx.style,{left:rect.x+'px',top:rect.y+'px',width:logical.width+'px',height:logical.height+'px',transformOrigin:'top left',transform:'scale('+scale+')'});
 }
 function startRuntime() {
   canvas = $('#game-canvas');
@@ -7140,14 +7314,17 @@ function startRuntime() {
   const fx = $('#fx-layer');
   fx.style.cssText = `position:fixed;top:50%;left:50%;width:${CANVAS_W}px;height:${CANVAS_H}px;transform:translate(-50%,-50%);pointer-events:none;overflow:hidden;z-index:14`;
   syncRuntimeScale();
-  if (!runtimeResizeBound) { window.addEventListener('resize', syncRuntimeScale); runtimeResizeBound = true; }
+  if (!runtimeResizeBound) { window.addEventListener('resize', syncRuntimeScale); window.visualViewport?.addEventListener('resize',syncRuntimeScale); runtimeResizeBound = true; }
   buildHud();
 }
 function resumeGame() {
   const d = readSave(); if (!d) return false;
+  gameClock.reset();document.getElementById('resume-game')?.remove();AUDIO.resumePlayback();
   G.jobChoiceOpen = false;
   AUDIO.init();
   const sp = d.player, p = makePlayer(sp.classId, sp.name);
+  p.features=normalizeFeatures(sp.features,{items:Object.keys(itemById),skills:COMBAT.skills.map(s=>s.id),recipes:(CONTENT.recipes||[]).map(r=>r.id),affixes:AFFIXES.map(a=>a.stat)});
+  Object.assign(G,normalizeExpansion(d.world?.expansion));
   Object.assign(p, { className: sp.className || p.className, tierIndex: sp.tierIndex || 0, jobBranchId: sp.jobBranchId || null, advancedJobId: sp.advancedJobId || null, hybridJobId: sp.hybridJobId || null, level: sp.level, xp: sp.xp,
     jobLevel: sp.jobLevel ?? sp.level, jobXp: sp.jobXp ?? 0, rebirths: sp.rebirths || 0, pastLives: sp.pastLives || [],
     zeny: sp.zeny, alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0, ...(sp.alloc || {}) }, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
@@ -7217,7 +7394,9 @@ function resumeGame() {
   preloadSprites();
   $('#root').innerHTML = '';
   startRuntime();
-  loadMap(w.mapId || 'town_awakening', w.col, w.row);
+  const savedDungeon=[WhisperingWoods.GOBLIN_CAVE,WhisperingWoods.ELDER_HOLLOW].some(d=>d.id===w.mapId);
+  const entrance=savedDungeon?MAPS.whispering_woods.portals.find(p=>p.toMap===w.mapId):null;
+  loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
   if (G.advance?.choiceReady) {
@@ -7247,7 +7426,9 @@ function resumeGame() {
 }
 
 function begin(classId, name) {
+  gameClock.reset();document.getElementById('resume-game')?.remove();AUDIO.resumePlayback();
   AUDIO.init();
+  Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
   G.won = false; G.autoFarm = false; G.huntTargetId = null; G.taskGuide = null; G.advance = null; G.jobChoiceOpen = false; G.quest = null; G.pendingQuest = null; G.killCounts = {};
@@ -7276,6 +7457,8 @@ function onCanvasClick(e) {
 }
 // world-space click handler (also called by the headless test harness)
 function handleClick(wx, wy) {
+  syncModalPause();
+  if(gameClock.isPaused())return;
   // 1) NPCs get first pick in their tighter sprite hitbox. Remember the
   // interaction so a distant click means "walk there, then talk".
   const n = G.npcs.find(nn => dist(wx, wy, nn.x * TS + TS / 2, nn.y * TS + TS / 2) < TS);
@@ -7307,6 +7490,8 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (G.running && captureHotkeyBinding(e)) return;
+  syncModalPause();
+  if(gameClock.isPaused() && !['escape','c','i','k','m','q','b'].includes(key))return;
   G.keys[key] = true;
   if (!G.running) return;
   const slot = !e.ctrlKey && !e.metaKey && !e.altKey ? G.player.hotkeys.indexOf(code) : -1;
@@ -7332,7 +7517,7 @@ window.addEventListener('keydown', e => {
         topmost.remove();
         dlg = null;
       } else {
-        topmost.remove();
+        if(topmost.dataset.kind==='guide')closeGuide();else topmost.remove();
       }
     }
   }
@@ -7340,6 +7525,8 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
 window.addEventListener('beforeunload', saveGame);   // don't lose the last few seconds on close/refresh
+window.addEventListener('blur',pauseForInterruption);
+document.addEventListener?.('visibilitychange',()=>{if(document.hidden)pauseForInterruption();});
 
 // inject theme + extra css, run checks, show title
 function boot() {
@@ -7362,4 +7549,11 @@ if (typeof window !== 'undefined')
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
 
+const {refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});
+Object.assign(window.__AWO,{refreshDailies,claimDaily,claimMastery,setZoneDifficulty,enterSubdungeon,exitSubdungeon,spawnZoneRare});
+Object.assign(window.__AWO,{gameClock,pauseGame,resumeGameFromPause,clearInput,dispatchPlayerAction,initTouchControls,getViewport:()=>runtimeViewport,syncRuntimeScale,masteryTravel});
+const {saveLoadout,renameLoadout,applyLoadout,setItemProtection,loadoutPanelHtml}=createEquipmentFeatures({G,itemById,itemSlot,canUseItem,canUseSkill:(p,id)=>skillLevel(p,id)>0&&branchAllowsSkill(p,id)&&skillsFor(p.combatClass).some(s=>s.id===id),recompute,saveGame,renderHotbar,esc});
+Object.assign(window.__AWO,{saveLoadout,renameLoadout,applyLoadout,setItemProtection,frame});
+const {pinGoal,openGuide,closeGuide,guidePanelHtml,goalTrackerHtml}=createGuidance({G,CONTENT,COMBAT,PROGRESSION,MAPS,esc,saveGame,updateQuestTracker,togglePanel,skillsFor,skillElement});
+Object.assign(window.__AWO,{pinGoal,openGuide,closeGuide});
 boot();

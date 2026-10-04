@@ -123,6 +123,13 @@ export const DESIGN = {
 
   // ---- central balance knobs (edit here, not scattered through the engine) ----
   tuning: {
+    presentation: {touchScale:.8},
+    zoneDifficulty: {
+      NORMAL: {id:'normal',name:'Normal',hpMult:1,atkMult:1,defMult:1,expMult:1,dropChanceMult:1,affixBonusChance:0,canSpawnCorrupted:false},
+      HARD: {id:'hard',name:'Hard',hpMult:1.5,atkMult:1.35,defMult:1.25,expMult:1.6,dropChanceMult:1.35,affixBonusChance:.25,canSpawnCorrupted:true},
+      NIGHTMARE: {id:'nightmare',name:'Nightmare',hpMult:2.2,atkMult:1.75,defMult:1.5,expMult:2.5,dropChanceMult:1.75,affixBonusChance:.5,canSpawnCorrupted:true},
+    },
+    expansion: { dailyKills: 5, dailyZeny: 50, dailyXp: 75, rareHp: 2.5, rareAtk: 1.5, masterySpeed: 0.05, masteryDrop: 0.10, masteryXp: 0.03 },
     monsterLevelSpread: 2,     // normal mobs roll their base level + 0..spread (bosses fixed)
     heatNursery: 0.20,         // the first this-fraction of a zone past each gate stays at the
                                // band floor — guarantees fair at-level prey for a fresh arrival

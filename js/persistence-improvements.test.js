@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { createRuntime } from './test-support/runtime.js';
+const { A, readSave, failWrites } = await createRuntime();
+A.G.mastery.zonePoints.whispering_woods=123;
+A.G.exploration.unlockedPOIs.whispering_woods=['ww_poi_scout_satchel'];
+A.saveGame();
+assert.equal(readSave().world.expansion?.mastery.zonePoints.whispering_woods,123,'expansion progress survives saving');
+assert.equal(A.saveGame(),true);
+A.resumeGame();
+assert.equal(A.G.mastery.zonePoints.whispering_woods,123);
+failWrites(true);assert.equal(A.saveGame(),false);assert.equal(A.G.saveStatus,'failed');
+failWrites(false);
+const old=readSave();delete old.world.expansion;delete old.player.features;
+localStorage.setItem('awo_save_v1',JSON.stringify(old));A.resumeGame();
+assert.deepEqual(A.G.mastery.zonePoints,{});
+assert.deepEqual(A.G.player.features.loadouts,[null,null]);
+console.log('Persistence improvements passed.');

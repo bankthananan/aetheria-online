@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { createRuntime } from './test-support/runtime.js';
+import { goalProgress } from './systems/guidance.js';
+const {A}=await createRuntime();
+const before=JSON.stringify(A.G.player.inventory);
+assert.equal(A.pinGoal({kind:'item',id:'wolf_fang'}),true);
+assert.equal(JSON.stringify(A.G.player.inventory),before);assert.equal(A.G.autoFarm,false);
+assert.equal(A.pinGoal({kind:'item',id:'missing_item'}),false);
+assert.equal(A.G.player.features.goal.id,'wolf_fang');
+const model=goalProgress({kind:'recipe',id:'r_sharpening'},{...A.CONTENT,player:A.G.player,storage:[{itemId:'wolf_fang',qty:20}],maps:{}});
+assert.equal(model.missing[0].owned,0);assert.equal(model.missing[0].stored,20);assert.equal(model.missing[0].needed,2);
+A.saveGame();A.resumeGame();assert.equal(A.G.player.features.goal.id,'wolf_fang');
+console.log('Pinned guidance passed.');

@@ -535,5 +535,35 @@ body.hc-mode .bar{border-width:2px;border-color:#fff}
 body.hc-mode #hud .bar{border-width:3px}
 body.hc-mode .msg-log .line{color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
 body.hc-mode .toast{color:#fff;border-color:#fff}
+
+/* Shared phone/tablet layout: world and HUD occupy separate safe areas. */
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
+#rotate-hint{display:none!important}
+.touch-zone{top:auto;bottom:calc(35px + var(--safe-bottom));left:calc(12px + var(--safe-left));width:110px;height:110px;border:2px solid var(--gold-deep);border-radius:50%;background:#17110cb3}
+.touch-action-buttons{bottom:calc(12px + var(--safe-bottom));right:calc(8px + var(--safe-right));grid-template-columns:repeat(4,44px);grid-template-rows:none;gap:4px}
+.touch-action-btn{position:relative;width:44px;height:44px;min-width:44px;border-radius:9px;overflow:hidden;touch-action:none;font-size:10px}
+.touch-action-btn .hotbar-glyph{font-size:16px}.touch-action-btn .key,.touch-action-btn .role-mark,.touch-action-btn .lvl{display:none}
+.touch-action-btn .sk-name{font-size:8px;position:absolute;bottom:1px;left:1px;right:1px;white-space:nowrap;overflow:hidden}
+.touch-action-btn .cd{position:absolute;inset:0;background:#000a;align-items:center;justify-content:center;font-size:16px}
+.touch-action-btn .qty{position:absolute;bottom:1px;right:3px}.touch-action-btn.resource-blocked,.touch-action-btn.locked{opacity:.5}
+.touch-action-btn[data-role="attack"]{background:#76303b}.touch-action-btn[data-role="dodge"]{background:#30533c}
+body[data-viewport="portrait"] #hud .hotbar,body[data-viewport="landscape"] #hud .hotbar{display:none!important}
+body[data-viewport="portrait"] #hud .hotbar-shell,body[data-viewport="landscape"] #hud .hotbar-shell{pointer-events:none;bottom:calc(220px + var(--safe-bottom))}
+body[data-viewport="landscape"] #hud .hotbar-shell{bottom:8px}
+body[data-viewport="portrait"] #hud .hotbar-shell .momentum-pips,body[data-viewport="landscape"] #hud .hotbar-shell .momentum-pips{bottom:0}
+body[data-viewport="portrait"] #hud .mobile-menu-btn,body[data-viewport="landscape"] #hud .mobile-menu-btn{display:inline-flex!important;right:calc(8px + var(--safe-right));top:calc(8px + var(--safe-top));min-height:44px}
+body[data-viewport="portrait"] #hud .hud,body[data-viewport="landscape"] #hud .hud{top:var(--safe-top);left:var(--safe-left);right:var(--safe-right);transform:none;max-width:100%}
+body[data-viewport="portrait"] .minimap,body[data-viewport="portrait"] .msg-log,body[data-viewport="landscape"] .msg-log{display:none!important}
+body[data-viewport="portrait"] .quest-tracker{top:84px;left:8px;width:min(220px,65vw);max-height:70px;overflow:auto;font-size:10px}
+body[data-viewport="landscape"] .quest-tracker{display:none}
+body[data-viewport="landscape"] .touch-action-buttons{grid-template-columns:repeat(5,44px)}
+body[data-viewport="landscape"] .touch-action-btn{width:44px}
+body[data-viewport="portrait"] #hud .hud-menu,body[data-viewport="landscape"] #hud .hud-menu{display:none;position:fixed;inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);width:min(320px,90vw);max-height:80vh;overflow:auto;z-index:60;background:#17110cf5;padding:12px;grid-template-columns:repeat(2,1fr)}
+body[data-viewport="portrait"] #hud .hud-menu.open,body[data-viewport="landscape"] #hud .hud-menu.open{display:grid}
+body[data-viewport="portrait"] .panel,body[data-viewport="landscape"] .panel{position:fixed;inset:calc(8px + var(--safe-top)) calc(8px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(8px + var(--safe-left));width:auto!important;height:auto;max-width:none;max-height:none;transform:none;z-index:65}
+body[data-viewport="portrait"] .panel__body,body[data-viewport="landscape"] .panel__body{overflow:auto;touch-action:pan-y;overscroll-behavior:contain}
+body[data-viewport="portrait"] .dialogue,body[data-viewport="landscape"] .dialogue{z-index:66;left:8px;right:8px;bottom:calc(8px + var(--safe-bottom));width:auto;max-height:70vh;overflow:auto;transform:none}
+.slot-picker{z-index:80;max-height:65vh;overflow:auto;touch-action:pan-y}.slot-picker .sp-row{min-height:44px}
+body[data-viewport="portrait"] .btn,body[data-viewport="landscape"] .btn{min-height:44px}
 `,
 };
