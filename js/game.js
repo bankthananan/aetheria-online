@@ -7224,11 +7224,12 @@ function handleClick(wx, wy) {
   // Gathering & Fishing node interaction
   const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
   const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
-  let clickedNode = null;
+  let clickedNode = null, bestDist = TS * 1.5;
   for (const nd of gatherNodes) {
-    if (dist(wx, wy, nd.x, nd.y) < TS * 1.5) {
+    const d = dist(wx, wy, nd.x, nd.y);
+    if (d < bestDist) {
       clickedNode = nd;
-      break;
+      bestDist = d;
     }
   }
   if (clickedNode) {
