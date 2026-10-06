@@ -39,6 +39,8 @@ import { createRelicSystem } from './systems/relics.js';
 import { createWeatherSystem } from './systems/weather.js';
 import { createWeatherRenderer } from './render/weather-fx.js';
 import { createRuneSystem } from './systems/runes.js';
+import { createIncursionSystem, INCURSION_STATES } from './systems/incursions.js';
+import { createRiftRenderer } from './render/rift-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -198,6 +200,11 @@ const weatherSystem = createWeatherSystem({
   rnd: () => Math.random(),
 });
 const runeSystem = createRuneSystem();
+const incursionSystem = createIncursionSystem({
+  now,
+  rnd: () => Math.random(),
+});
+const riftRenderer = createRiftRenderer({ T });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -1452,6 +1459,36 @@ function spawnRiftWave() {
   }
 }
 
+function spawnIncursionWave(inc) {
+  if (!inc || !inc.waveMonsterIds) return;
+  const p = G.player;
+  let champAssigned = false;
+  for (const mid of inc.waveMonsterIds) {
+    const mDef = monById[mid] || monById['void_wisp'] || CONTENT.monsters[0];
+    const angle = Math.random() * Math.PI * 2;
+    const r = (1.5 + Math.random()) * TS;
+    const mx = clamp(inc.x + Math.cos(angle) * r, TS * 2, (G.map.cols - 2) * TS);
+    const my = clamp(inc.y + Math.sin(angle) * r, TS * 2, (G.map.rows - 2) * TS);
+    const mLevel = Math.max(mDef.level, p?.level || 1);
+    const mob = makeMonster(mDef, mx, my, mLevel);
+    mob._incursionMob = true;
+    if (inc.currentWave === 2 && mid === 'void_stalker' && !champAssigned) {
+      champAssigned = true;
+      eliteSystem.assignAffixes(mob, 'champion');
+    }
+    G.monsters.push(mob);
+  }
+}
+
+function triggerIncursionStart() {
+  const inc = incursionSystem.startIncursion();
+  if (!inc) return;
+  toast(`⚡ ${T('Dimensional Incursion', 'ui')}!`, 'bad');
+  logMsg('A Dimensional Incursion has erupted from the tear!', 'bad');
+  AUDIO.playSfx('skill');
+  spawnIncursionWave(inc);
+}
+
 // A spawned monster rolls its own level around the definition's base (bosses are
 // fixed). hp/atk/def/exp scale with the rolled level so a Lv8 wolf really is tougher
 // than a Lv6 one. Instance combat stats live on the monster (m.atk/m.dv/m.exp/m.lvl),
@@ -2078,6 +2115,26 @@ function killMonster(m) {
     G.rift.best = Math.max(G.rift.best, G.rift.floor);
     spawnRiftWave();
     toast(`✦ Celestial Rift — Floor ${G.rift.floor}! Best: ${G.rift.best}`, 'good');
+  }
+  // Dimensional Incursion wave clear check
+  if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
+    const incMobs = G.monsters.filter(mo => mo._incursionMob && mo.alive);
+    if (incMobs.length === 0) {
+      const activeInc = incursionSystem.getActiveIncursion();
+      if (activeInc && activeInc.currentWave >= 3) {
+        incursionSystem.sealIncursion();
+        addItem('rift_cache', 1);
+        AUDIO.playSfx('levelup');
+        toast(`✨ ${T('Rift Sealed!', 'ui')}`, 'good');
+        logMsg('Dimensional Incursion sealed — claimed Dimensional Cache!', 'good');
+      } else {
+        const nextInc = incursionSystem.advanceWave();
+        if (nextInc) {
+          toast(`⚡ ${T('Wave {w}/3', 'ui').replace('{w}', nextInc.currentWave)}`, 'bad');
+          spawnIncursionWave(nextInc);
+        }
+      }
+    }
   }
 }
 
@@ -3309,6 +3366,19 @@ function render() {
     ctx.beginPath(); ctx.arc(x, y, TS / 2 + 2 * Math.sin(now() / 250), 0, 7); ctx.stroke();
   }
 
+  // Dimensional Rift Tear
+  if (incursionSystem.getState() === INCURSION_STATES.TEAR_OPEN) {
+    const tear = incursionSystem.getCurrentTear();
+    if (tear && tear.mapId === G.mapId) {
+      riftRenderer.drawRiftTear(ctx, tear, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+  } else if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
+    const activeInc = incursionSystem.getActiveIncursion();
+    if (activeInc && activeInc.mapId === G.mapId) {
+      riftRenderer.drawRiftTear(ctx, activeInc, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+  }
+
   drawGroundEffects();
   combatFx.drawTelegraphs(cx, cy);
 
@@ -3324,6 +3394,12 @@ function render() {
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
+  if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
+    const activeInc = incursionSystem.getActiveIncursion();
+    if (activeInc && activeInc.mapId === G.mapId) {
+      riftRenderer.drawIncursionHud(ctx, activeInc, CANVAS_W, CANVAS_H, now());
+    }
+  }
   const target=G.target;
   if(target?.alive){
     const x=target.x-cx,y=target.y-cy;
@@ -3648,6 +3724,49 @@ function step(dt) {
   if (G.jobChoiceOpen) return; // the permanent choice is readable because the world is truly paused
   weatherSystem.update(dt, G?.mapId);
   G.weather = weatherSystem.getWeather(G?.mapId);
+
+  // Incursion subsystem update
+  const adventureMaps = ['whispering_woods', 'sunken_ruins', 'frostpeak_tundra', 'dragon_caldera'];
+  const isIntenseWeather = ['cosmic_eclipse', 'stellar_drift', 'ashfall', 'biting_blizzard', 'verdant_rain'].includes(G.weather?.id);
+  incursionSystem.tick(dt, { activeMapId: G.mapId, isIntenseWeather });
+
+  if (incursionSystem.getState() === INCURSION_STATES.IDLE && incursionSystem.getCooldownRemaining() <= 0 && adventureMaps.includes(G.mapId)) {
+    const rx = clamp(p.x + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.cols - 2) * TS);
+    const ry = clamp(p.y + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.rows - 2) * TS);
+    incursionSystem.triggerTear({ mapId: G.mapId, x: rx, y: ry });
+    toast(`⚡ ${T('A Dimensional Tear has ruptured nearby!', 'ui')}`, 'bad');
+  } else if (incursionSystem.getState() === INCURSION_STATES.TEAR_OPEN) {
+    const tear = incursionSystem.getCurrentTear();
+    if (tear && tear.mapId === G.mapId && dist(p.x, p.y, tear.x, tear.y) < TS * 1.5) {
+      triggerIncursionStart();
+    }
+  } else if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
+    const activeInc = incursionSystem.getActiveIncursion();
+    if (activeInc) {
+      if (activeInc.mutator?.id === 'void_decay' && now() >= (activeInc._nextDecayAt || 0)) {
+        activeInc._nextDecayAt = now() + 2000;
+        p.hp = Math.max(1, p.hp - 15);
+        floatText(p.x, p.y, 15, 'enemy');
+      }
+      if (activeInc.mutator?.id === 'graviton_well') {
+        const d = dist(p.x, p.y, activeInc.x, activeInc.y);
+        if (d > TS && d < TS * 8) {
+          const pull = dt * 15;
+          const angle = Math.atan2(activeInc.y - p.y, activeInc.x - p.x);
+          p.x += Math.cos(angle) * pull;
+          p.y += Math.sin(angle) * pull;
+        }
+      }
+    }
+  } else if (incursionSystem.getState() === INCURSION_STATES.COLLAPSED) {
+    G.monsters = G.monsters.filter(mo => !mo._incursionMob);
+    toast(`💀 ${T('The Dimensional Rift has collapsed!', 'ui')}`, 'bad');
+    logMsg('The incursion was not sealed in time — the rift collapsed into oblivion.', 'bad');
+    incursionSystem.resetToIdle();
+  } else if (incursionSystem.getState() === INCURSION_STATES.SEALED) {
+    G.monsters = G.monsters.filter(mo => !mo._incursionMob);
+    incursionSystem.resetToIdle();
+  }
   
   // Windstream environment tick
   const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS);
@@ -3783,6 +3902,17 @@ function step(dt) {
     }
   } else if (G.manualIntent?.type === 'move' && !G.path) {
     G.manualIntent = null;   // next tick Hunt finds the nearest monster from here
+  } else if (G.manualIntent?.type === 'incursion_tear') {
+    const tear = incursionSystem.getCurrentTear();
+    if (!tear || tear.mapId !== G.mapId) {
+      G.manualIntent = null;
+    } else if (dist(p.x, p.y, tear.x, tear.y) < TS * 2) {
+      G.path = null;
+      G.manualIntent = null;
+      triggerIncursionStart();
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
   }
 
   if (G.taskGuide?.mode === 'npc' && G.taskGuide.mapId === G.mapId) {
@@ -4488,6 +4618,7 @@ const ADMIN_GROUPS = [
     ['addmastery', '+100 Zone Mastery Pts'], ['chartmap', 'Reveal 100% Map Fog'],
     ['completedailies', 'Complete All Dailies'], ['rerolldailies', 'Reroll Daily Challenges'],
     ['spawnrare', 'Spawn Rare Beast (Fang)'], ['cyclediff', 'Cycle Difficulty (N/H/NM)'],
+    ['spawnrift', 'Spawn Dimensional Tear'], ['sealrift', 'Seal Active Incursion'],
   ]],
 ];
 function adminAction(a, val) {
@@ -4601,6 +4732,19 @@ function adminAction(a, val) {
     const nextIdx = (tiers.indexOf(current) + 1) % tiers.length;
     setZoneDifficulty(G.mapId, tiers[nextIdx]);
     toast(`Zone Difficulty set to: ${tiers[nextIdx]}`, 'good');
+  }
+  else if (a === 'spawnrift') {
+    const rx = clamp(p.x + 48, TS * 2, (G.map.cols - 2) * TS);
+    const ry = clamp(p.y, TS * 2, (G.map.rows - 2) * TS);
+    incursionSystem.triggerTear({ mapId: G.mapId, x: rx, y: ry });
+    toast('Admin: Spawned Dimensional Tear nearby!', 'bad');
+  }
+  else if (a === 'sealrift') {
+    if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
+      incursionSystem.sealIncursion();
+      addItem('rift_cache', 1);
+      toast('Admin: Sealed Incursion and granted Dimensional Cache!', 'good');
+    }
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -5995,8 +6139,24 @@ function refreshPanel(id) {
 
 function useItem(itemId) {
   const it = itemById[itemId]; if (!it || itemQty(itemId) <= 0) return false;
-  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport) { logMsg('This item cannot be used directly.', 'sys'); return false; }
+  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache') { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
+  if (itemId === 'rift_cache') {
+    removeItem(itemId);
+    AUDIO.playSfx('levelup');
+    const loot = incursionSystem.generateCacheLoot();
+    p.zeny = (p.zeny || 0) + (loot.zeny || 0);
+    for (const mat of (loot.materials || [])) {
+      if (mat?.id && mat?.qty) addItem(mat.id, mat.qty);
+    }
+    for (const rId of (loot.runes || [])) {
+      runeSystem.addRune(p, rId);
+    }
+    toast(`✨ ${T('Dimensional Cache opened!', 'ui')}`, 'good');
+    logMsg(`Opened Dimensional Cache: +${loot.zeny} Zeny, shards, materials, and runes!`, 'good');
+    saveGame();
+    return true;
+  }
   if (it.reset) {
     const hasSpent = it.reset === 'stats'
       ? Object.values(p.alloc || {}).some(value => value > 0)
@@ -6763,6 +6923,7 @@ function saveGame() {
       seenMonsters: [...G.seenMonsters], collectedItems: [...G.collectedItems], claimedMilestones: [...G.claimedMilestones],
       storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best,
       weather: G.weather?.id || 'clear',
+      incursion: incursionSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -6887,6 +7048,7 @@ function resumeGame() {
   const savedDungeon=[WhisperingWoods.GOBLIN_CAVE,WhisperingWoods.ELDER_HOLLOW].some(d=>d.id===w.mapId);
   const entrance=savedDungeon?MAPS.whispering_woods.portals.find(p=>p.toMap===w.mapId):null;
   if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
+  if (w.incursion) incursionSystem.deserialize(w.incursion);
   loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
@@ -6919,6 +7081,7 @@ function resumeGame() {
 function begin(classId, name) {
   gameClock.reset();document.getElementById('resume-game')?.remove();AUDIO.resumePlayback();
   AUDIO.init();
+  incursionSystem.resetToIdle();
   Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
@@ -6950,6 +7113,20 @@ function onCanvasClick(e) {
 function handleClick(wx, wy) {
   syncModalPause();
   if(gameClock.isPaused())return;
+  // Incursion tear click interaction
+  if (incursionSystem.getState() === INCURSION_STATES.TEAR_OPEN) {
+    const tear = incursionSystem.getCurrentTear();
+    if (tear && tear.mapId === G.mapId && dist(wx, wy, tear.x, tear.y) < TS * 1.5) {
+      G.target = null; G.targetSource = null; G.path = null;
+      if (dist(G.player.x, G.player.y, tear.x, tear.y) < TS * 2) {
+        G.manualIntent = null;
+        triggerIncursionStart();
+      } else if (pathTo(tear.x, tear.y)) {
+        G.manualIntent = { type: 'incursion_tear', x: tear.x, y: tear.y };
+      }
+      return;
+    }
+  }
   // 1) NPCs get first pick in their tighter sprite hitbox. Remember the
   // interaction so a distant click means "walk there, then talk".
   const n = G.npcs.find(nn => dist(wx, wy, nn.x * TS + TS / 2, nn.y * TS + TS / 2) < TS);
