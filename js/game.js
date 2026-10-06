@@ -36,6 +36,8 @@ import { createGuild } from './systems/guild.js';
 import { createEliteSystem } from './systems/elite-monsters.js';
 import { drawEliteAura, drawEliteShield, drawMoltenHazards } from './render/elite-fx.js';
 import { createRelicSystem } from './systems/relics.js';
+import { createWeatherSystem } from './systems/weather.js';
+import { createWeatherRenderer } from './render/weather-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -186,6 +188,10 @@ const relicSystem = createRelicSystem({
   now,
   dist: (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2),
   TS,
+  rnd: () => Math.random(),
+});
+const weatherSystem = createWeatherSystem({
+  now,
   rnd: () => Math.random(),
 });
 const chance = p => Math.random() < p;
@@ -415,6 +421,7 @@ const G = {
   dailies: DailiesSystem.createDefaultState(),
   mastery: MasterySystem.createDefaultState(),
   zoneDifficulty: { whispering_woods: 'normal' },
+  weather: null,
   saveStatus: 'saved',
 };
 const GUILD_MAX_ACTIVE = 3;
@@ -1043,14 +1050,15 @@ function recompute(p, fill) {
   // ---- passive skills: permanent % bonuses ----
   const ps = passiveBonuses(p);
   const relicMods = relicSystem.getPassiveModifiers(p);
+  const weatherMods = weatherSystem.getCombatModifiers(G?.mapId);
   p.maxHp = Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100));
   p.maxMp = Math.round(p.maxMp * (1 + ps.mpPct / 100));
   p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100));
   p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100));
-  p.magicAtk = Math.round(p.magicAtk * (1 + ps.atkPct / 100));
-  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct) / 100));
-  p.critChance = Math.min(100, p.critChance + ps.critPct);
-  p.flee += ps.fleeFlat;
+  p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100));
+  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100));
+  p.critChance = Math.min(100, p.critChance + ps.critPct + (weatherMods.critPct || 0));
+  p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0);
   p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0);
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
@@ -1336,6 +1344,7 @@ function loadMap(mapId, spawnX, spawnY) {
   const map = MAPS[mapId];
   const wasRift = G.mapId === 'celestial_rift' && mapId !== 'celestial_rift';
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
+  G.weather = weatherSystem.getWeather(mapId);
   recompute(G.player);
   G.heatField = buildHeatField(map);
   G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = []; combatFx.clearTelegraphs(); eliteSystem.clearHazards();   // don't carry paths/spell zones across maps
@@ -1877,7 +1886,9 @@ function elementMult(attackEl, m) {
 function applyElement(attackEl, m, dmg) {
   const mult = elementMult(attackEl, m);
   if (mult > 1) floatText(m.x, m.y - 12, 'WEAK!', 'crit');
-  return Math.round(dmg * mult);
+  const weatherMult = weatherSystem.getAffinityMultiplier(attackEl, G?.mapId);
+  if (weatherMult > 1) floatText(m.x, m.y - 20, 'SURGE!', 'magic');
+  return Math.round(dmg * mult * weatherMult);
 }
 
 // ---- cross-class combos: a primer status (from any source) consumed by the named detonator skill ----
@@ -2373,7 +2384,7 @@ function updateMonsters(dt) {
     }
 
     const aggro = m.def.behavior === 'aggressive' || m.provoked;
-    const aggroTiles = Math.max(R.aggroRangeTiles, (m.def.attackRange || 0) + 1);
+    const aggroTiles = Math.max(R.aggroRangeTiles * weatherSystem.getAggroRangeMult(G?.mapId), (m.def.attackRange || 0) + 1);
     if (aggro && d < aggroTiles * TS * (m.def.id === 'ruin_golem' ? 4 : 1)) {
       const range = (m.size / 2) + TS * (m.def.attackRange || 0.6);
       if (d > range) followMonsterPath(m, p.x, p.y, speed, dt);       // route around trees/walls
@@ -3208,6 +3219,13 @@ const combatFx = createCombatFx({
   floatColor: (k) => floatColor(k),
 });
 const bossMechanics = createBossMechanics();
+const weatherRenderer = createWeatherRenderer({
+  getCtx: () => ctx,
+  now,
+  prefersReducedMotion,
+  CANVAS_W,
+  CANVAS_H,
+});
 function preloadSprites() {
   for (const [group, set] of Object.entries(PX)) for (const [name, rows] of Object.entries(set)) {
     if (!rows) continue;                                        // malformed — selfCheck reports it cleanly, don't throw here
@@ -3313,6 +3331,11 @@ function drawDayNight() {
 // Region weather uses crisp pixel clusters and streaks so the scene keeps its
 // SNES-era readability instead of becoming a soft particle overlay.
 function drawAtmosphere() {
+  const curWeather = weatherSystem.getWeather(G?.mapId);
+  if (curWeather && curWeather.id !== 'clear') {
+    weatherRenderer.drawWeather(G?.mapId, curWeather);
+    return;
+  }
   const t = now() / 1000;
   ctx.save();
   if (G.mapId === 'whispering_woods') {
@@ -3606,6 +3629,8 @@ function step(dt) {
   if (G.physicsSuspended) return;
   const p = G.player;
   if (G.jobChoiceOpen) return; // the permanent choice is readable because the world is truly paused
+  weatherSystem.update(dt, G?.mapId);
+  G.weather = weatherSystem.getWeather(G?.mapId);
   
   // Windstream environment tick
   const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS);
@@ -3940,7 +3965,7 @@ function buildHud() {
           <div class="bar boss-stagger-bar"><div class="fill" id="boss-stagger-fill"></div></div>
         </div>
       </div>
-      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div></div>
+      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div><div id="minimap-weather" style="position:absolute;top:2px;right:6px;font-size:10px;font-weight:600;pointer-events:auto;cursor:help"></div></div>
       <button id="mobile-menu-btn" class="mobile-menu-btn btn btn--ghost" type="button" aria-label="${T('Menu', 'ui')}">
         <span class="m-icon">☰</span> <span class="m-label">${T('Menu', 'ui')}</span><span id="mobile-menu-badge" class="hud-badge-dot" style="display:none"></span>
       </button>
@@ -4273,6 +4298,14 @@ function updateHud() {
     flowMomentum.querySelectorAll('.pip').forEach((pip, i) => { pip.classList.toggle('on', i < p.momentum); pip.classList.toggle('ready', ready); });
     const count = flowMomentum.querySelector('b'); if (count) count.textContent = `${p.momentum}/${TUNING.momentum.max}`;
   }
+  const weatherEl = $('#minimap-weather');
+  if (weatherEl) {
+    const curW = weatherSystem.getWeather(G?.mapId);
+    if (curW) {
+      weatherEl.textContent = `${curW.icon} ${T(curW.name, 'ui')}`;
+      weatherEl.title = `${T(curW.name, 'ui')}: ${T(curW.desc, 'ui')}`;
+    }
+  }
   updateAutomationHud();
 }
 
@@ -4439,9 +4472,17 @@ const ADMIN_GROUPS = [
     ['spawnrare', 'Spawn Rare Beast (Fang)'], ['cyclediff', 'Cycle Difficulty (N/H/NM)'],
   ]],
 ];
-function adminAction(a) {
+function adminAction(a, val) {
   const p = G.player;
-  if (a === 'lvl5') { for (let i = 0; i < 5; i++) { if (p.level < DESIGN.levelCap) { p.level++; p.statPoints += PROGRESSION.statPointsPerLevel; } if (p.jobLevel < activeJobLevelCap(p)) { p.jobLevel++; p.skillPoints += PROGRESSION.skillPointsPerLevel; } } recompute(p, true); maybeStartAdvance(p); maybeStartPendingQuest(); }
+  if (a === 'setweather' || a?.startsWith?.('setweather:')) {
+    const wId = val || (a.startsWith('setweather:') ? a.slice('setweather:'.length) : 'clear');
+    weatherSystem.setWeatherOverride(G.mapId, wId);
+    G.weather = weatherSystem.getWeather(G.mapId);
+    recompute(p);
+    updateHud();
+    toast(`Weather set to: ${wId}`, 'good');
+  }
+  else if (a === 'lvl5') { for (let i = 0; i < 5; i++) { if (p.level < DESIGN.levelCap) { p.level++; p.statPoints += PROGRESSION.statPointsPerLevel; } if (p.jobLevel < activeJobLevelCap(p)) { p.jobLevel++; p.skillPoints += PROGRESSION.skillPointsPerLevel; } } recompute(p, true); maybeStartAdvance(p); maybeStartPendingQuest(); }
   else if (a === 'job5') { const gained = Math.min(5, activeJobLevelCap(p) - p.jobLevel); p.jobLevel += gained; p.skillPoints += gained; if (p.jobLevel >= activeJobLevelCap(p)) p.jobXp = 0; toast(`Job Lv ${p.jobLevel}/${activeJobLevelCap(p)} (+${gained} skill points).`, 'good'); }
   else if (a === 'zeny') p.zeny += 5000;
   else if (a === 'points') { p.statPoints += 10; p.skillPoints += 10; }
@@ -6647,6 +6688,7 @@ function saveGame() {
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
       seenMonsters: [...G.seenMonsters], collectedItems: [...G.collectedItems], claimedMilestones: [...G.claimedMilestones],
       storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best,
+      weather: G.weather?.id || 'clear',
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -6770,6 +6812,7 @@ function resumeGame() {
   startRuntime();
   const savedDungeon=[WhisperingWoods.GOBLIN_CAVE,WhisperingWoods.ELDER_HOLLOW].some(d=>d.id===w.mapId);
   const entrance=savedDungeon?MAPS.whispering_woods.portals.find(p=>p.toMap===w.mapId):null;
+  if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
   loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();

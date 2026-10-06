@@ -275,6 +275,26 @@ export const L10N = {
       "Relic": "วัตถุโบราณ",
       "Relic Perk": "ความสามารถวัตถุโบราณ",
 
+      // Weather System
+      "Clear Skies": "ท้องฟ้าแจ่มใส",
+      "Mild atmospheric conditions across the realm.": "สภาพอากาศปลอดโปร่งทั่วทั้งดินแดน",
+      "Verdant Downpour": "ฝนเทแห่งพงไพร",
+      "Heavy rains empower nature and lightning.": "สายฝนกระหน่ำเสริมพลังให้ธรรมชาติและสายฟ้า",
+      "Whispering Mist": "หมอกกระซิบ",
+      "Dense fog conceals movement and obscures vision.": "หมอกหนาทึบพรางการเคลื่อนไหวและบดบังสายตา",
+      "Biting Blizzard": "พายุหิมะเสียดแทง",
+      "Freezing gales empower ice and chill foes.": "ลมหนาวเหน็บเสริมพลังน้ำแข็งและแช่แข็งศัตรู",
+      "Diamond Dust": "ละอองเพชร",
+      "Crystalline air heightens magical focus and critical strikes.": "อากาศผลึกแก้วเพิ่มสมาธิเวทมนตร์และการโจมตีคริติคอล",
+      "Volcanic Ashfall": "เถ้าภูเขาไฟโปรยปราย",
+      "Choking ash empowers flames and amplifies burns.": "เถ้าถ่านคละคลุ้งเสริมพลังไฟและเร่งความเสียหายเผาไหม้",
+      "Solar Flare": "เปลวสุริยะ",
+      "Blistering solar heat ignites foes and stifles ice.": "ความร้อนสุริยะแผดเผาจุดไฟศัตรูและลดทอนพลังน้ำแข็ง",
+      "Cosmic Eclipse": "สุริยุปราคาคอสมิก",
+      "Cosmic shadows strengthen void arts and awaken rare horrors.": "เงามืดคอสมิกเสริมพลังศาสตร์ความว่างเปล่าและปลุกสัตว์หายาก",
+      "Stellar Drift": "กระแสดาราเลื่อนลอย",
+      "Starlight showers accelerate physical and spiritual recovery.": "ประกายแสงดาวเร่งการฟื้นฟูร่างกายและวิญญาณ",
+
       // Quest / Bounty System
       "Main Story · Base Lv 1–": "📖 เนื้อเรื่องหลัก · เลเวล 1–",
       "Main Story": "เนื้อเรื่องหลัก",
