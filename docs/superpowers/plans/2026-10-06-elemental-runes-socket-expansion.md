@@ -49,15 +49,15 @@ graph TD
 - Produces: `createRuneSystem()`, `RUNE_CATALOG`, `EXPANSION_COSTS`
 - Methods: `getSocketExpansionCost(currentCount)`, `expandSockets(inst, zeny, inventory, removeItemFn)`, `getWeaponRuneElement(weaponInst, itemById)`, `getRuneCombatModifiers(equip, itemById)`
 
-- [ ] **Step 1: Write unit tests in `js/runes.test.js`**
+- [x] **Step 1: Write unit tests in `js/runes.test.js`**
   Cover cost scaling for 1st, 2nd, 3rd, and 4th sockets, maximum socket clamp (cap 4), inventory/Zeny deduction on expansion, weapon rune element detection, and gear defensive warding bonuses.
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
   Run `node js/runes.test.js` (expect module missing).
-- [ ] **Step 3: Implement `js/systems/runes.js`**
+- [x] **Step 3: Implement `js/systems/runes.js`**
   Implement rune catalog, expansion cost tiers, socket expansion logic, weapon rune element lookup, and warding stat accumulation.
-- [ ] **Step 4: Verify unit tests pass**
+- [x] **Step 4: Verify unit tests pass**
   Run `node js/runes.test.js`.
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
   `git add js/systems/runes.js js/runes.test.js && git commit -m "feat(runes): implement rune subsystem core and unit tests"`
 
 ---
@@ -68,13 +68,13 @@ graph TD
 - Modify: `js/content.js`
 - Modify: `js/locale.js`
 
-- [ ] **Step 1: Register 6 primal runes in `js/content.js`**
+- [x] **Step 1: Register 6 primal runes in `js/content.js`**
   Add `rune_ember`, `rune_glacial`, `rune_storm`, `rune_verdant`, `rune_luminous`, `rune_umbral` with `type: "material"`, `gem: { isRune: true, element: "...", stat: "...", value: ... }`.
-- [ ] **Step 2: Add Thai & English translations in `js/locale.js`**
+- [x] **Step 2: Add Thai & English translations in `js/locale.js`**
   Add all 6 runes and socket expansion labels to items and UI dictionary.
-- [ ] **Step 3: Verify localization test**
+- [x] **Step 3: Verify localization test**
   Run `node js/locale.test.js`.
-- [ ] **Step 4: Commit Task 2**
+- [x] **Step 4: Commit Task 2**
   `git add js/content.js js/locale.js && git commit -m "feat(runes): register primal rune items and localization"`
 
 ---
@@ -84,7 +84,7 @@ graph TD
 **Files:**
 - Modify: `js/game.js`
 
-- [ ] **Step 1: Wire rune system and weapon infusion in `js/game.js`**
+- [x] **Step 1: Wire rune system and weapon infusion in `js/game.js`**
   - Import `createRuneSystem` and instantiate `runeSystem`.
   - In `attackElement(p, sk)`: if basic attack or physical skill, check `runeSystem.getWeaponRuneElement(p.equip.weapon, itemById)` and convert to rune element.
   - In `playerBasicAttack(p, m)`: apply elemental on-hit status procs (Fire: burn, Ice: slow, Lightning: stun, Nature: poison).
@@ -93,9 +93,9 @@ graph TD
   - Add `expandSockets(uid)` engine function.
   - In Refine Panel (`refineItemHtml`): add `[Expand Socket (N/4)]` button when `inst.sockets.length < 4` displaying materials/Zeny requirements.
   - In `adminAction`: add `expandall` (adds 4 sockets to all worn gear) and `runes` (gives +5 of each rune).
-- [ ] **Step 2: Run surface characterization**
+- [x] **Step 2: Run surface characterization**
   Run `node js/engine-surface.test.js` (confirm 255 keys preserved and golden render fingerprints match).
-- [ ] **Step 3: Commit Task 3**
+- [x] **Step 3: Commit Task 3**
   `git add js/game.js && git commit -m "feat(runes): wire weapon infusion, socket expansion UI, and engine integration"`
 
 ---
@@ -106,15 +106,15 @@ graph TD
 - Create: `js/runes-integration.test.js`
 - Modify: `CLAUDE.md`
 
-- [ ] **Step 1: Create `js/runes-integration.test.js`**
+- [x] **Step 1: Create `js/runes-integration.test.js`**
   Verify live engine boot, socket expansion from 1 to 4 sockets, socketing Storm Rune into weapon, converting basic attack to Lightning, dealing 1.5x weakness damage to water/beast foes, triggering 1.2x `SURGE!` damage under `verdant_rain`, zero camera shake, and save/resume persistence.
-- [ ] **Step 2: Run engine surface test**
+- [x] **Step 2: Run engine surface test**
   Run `node js/engine-surface.test.js`.
-- [ ] **Step 3: Run full test suite**
-  Run `npm test` (all 44+ suites pass).
-- [ ] **Step 4: Update `CLAUDE.md`**
+- [x] **Step 3: Run full test suite**
+  Run `npm test` (all 45 suites pass).
+- [x] **Step 4: Update `CLAUDE.md`**
   Document `js/systems/runes.js` and socket expansion mechanics.
-- [ ] **Step 5: Merge into `main`**
+- [x] **Step 5: Merge into `main`**
   Fast-forward merge feature branch into `main` and delete feature branch.
-- [ ] **Step 6: Run `npm test` on `main`**
+- [x] **Step 6: Run `npm test` on `main`**
   Final regression verification.
