@@ -135,6 +135,12 @@ export const CONTENT = {
     { id: "nullking", element: "void", name: "The Nullking", flavor: "The crowned end of all things. It does not roar — it simply unmakes.",
       level: 80, hp: 3500, atk: 198, def: 79, exp: 25208, spriteColor: "#7a4fd0", sizeTiles: 2,
       drops: [{ itemId: "null_core", chance: 1.0 }, { itemId: "vampiric_grail", chance: 0.20 }, { itemId: "astral_glaive", chance: 0.7 }, { itemId: "astral_signet", chance: 0.6 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+    { id: "void_stalker", element: "void", name: "Void Stalker", flavor: "A predatory entity slipped through the dimensional seams.",
+      level: 35, hp: 650, atk: 75, def: 28, exp: 1200, spriteColor: "#6c3483", sizeTiles: 1,
+      drops: [{ itemId: "dimensional_shard", chance: 0.5 }, { itemId: "star_iron", chance: 0.35 }, { itemId: "blessed_ore", chance: 0.1 }], behavior: "aggressive" },
+    { id: "void_herald", element: "void", name: "Dimensional Herald", flavor: "The harbinger of the rift, commanding the dimensional incursion.",
+      level: 45, hp: 2200, atk: 110, def: 42, exp: 4500, spriteColor: "#4a148c", sizeTiles: 2,
+      drops: [{ itemId: "dimensional_shard", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.5 }, { itemId: "rift_cache", chance: 1.0 }], behavior: "aggressive" },
 
     // ===== World boss: 3-phase raid (Voidmaw Sovereign, Astral Rift) =====
     { id: "voidmaw_sovereign", element: "void", name: "Voidmaw Sovereign", flavor: "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.",
@@ -237,6 +243,8 @@ export const CONTENT = {
     { id: "astral_signet", name: "Astral Signet", type: "accessory", slot: "accessory", desc: "A ring that remembers the shape of stars.", atk: 12, value: 5000, classReq: null },
     { id: "celestial_draught", name: "Celestial Draught", type: "potion", desc: "Starlight in a vial — restores body and mind fully.", hpRestore: 900, mpRestore: 400, value: 700, classReq: null },
     { id: "void_shard", name: "Void Shard", type: "material", desc: "A splinter of nothing. It hurts to look at.", value: 120, classReq: null },
+    { id: "dimensional_shard", name: "Dimensional Shard", type: "material", desc: "A shimmering crystal formed where two realities collided.", value: 180, classReq: null },
+    { id: "rift_cache", name: "Dimensional Cache", type: "usable", desc: "A sealed cosmic chest pulsating with otherworldly energy. Open to claim rewards.", value: 500, classReq: null },
     { id: "star_iron", name: "Star Iron", type: "material", desc: "Metal that fell from the sky, still humming.", value: 160, classReq: null },
     { id: "null_core", name: "Null Core", type: "material", desc: "The heart of the Nullking. The end of a legend, in your hand.", value: 1500, classReq: null },
     { id: "sovereign_core", name: "Sovereign Core", type: "accessory", slot: "accessory", desc: "The still-beating heart of a world-eating tide. Exclusive to whoever fells the Voidmaw Sovereign.", atk: 20, def: 20, value: 20000, classReq: null, rankReq: "S" },

@@ -300,7 +300,18 @@ export const L10N = {
       "Cosmic Eclipse": "สุริยุปราคาคอสมิก",
       "Cosmic shadows strengthen void arts and awaken rare horrors.": "เงามืดคอสมิกเสริมพลังศาสตร์ความว่างเปล่าและปลุกสัตว์หายาก",
       "Stellar Drift": "กระแสดาราเลื่อนลอย",
-      "Starlight showers accelerate physical and spiritual recovery.": "ประกายแสงดาวเร่งการฟื้นฟูร่างกายและวิญญาณ",
+      // Dimensional Incursions
+      "Dimensional Incursion": "การรุกรานข้ามมิติ",
+      "Dimensional Tear": "รอยแยกมิติ",
+      "Touch to stabilize the rift": "แตะเพื่อทำให้รอยแยกคงที่",
+      "Wave {w}/3": "เวฟ {w}/3",
+      "Wave 3/3 — HERALD": "เวฟ 3/3 — ทูตมิติ",
+      "Rift Sealed!": "ปิดรอยแยกสำเร็จ!",
+      "Rift Collapsed": "รอยแยกล่มสลาย",
+      "Void Decay": "การเสื่อมสลายแห่งความว่างเปล่า",
+      "Graviton Well": "บ่อแรงโน้มถ่วง",
+      "Primal Instability": "ความไม่เสถียรของธาตุ",
+      "Phase Shift": "การสลับเฟสมิติ",
 
       // Quest / Bounty System
       "Main Story · Base Lv 1–": "📖 เนื้อเรื่องหลัก · เลเวล 1–",
@@ -1319,7 +1330,11 @@ export const L10N = {
       "Frostbite Pendant": "จี้กัดกร่อนเยือกแข็ง",
       "A shard of permafrost that chills everything it nears.": "เศษเสี้ยวน้ำแข็งนิรันดร์ที่แช่แข็งทุกสิ่งที่เข้าใกล้",
       "Chalice of the Undying": "จอกแห่งความเป็นอมตะ",
-      "An obsidian goblet brimming with stolen starlight.": "จอกหินออบซิเดียนที่เปี่ยมล้นไปด้วยแสงดาวที่ถูกขโมยมา"
+      "An obsidian goblet brimming with stolen starlight.": "จอกหินออบซิเดียนที่เปี่ยมล้นไปด้วยแสงดาวที่ถูกขโมยมา",
+      "Dimensional Shard": "เศษเสี้ยวมิติ",
+      "A shimmering crystal formed where two realities collided.": "ผลึกระยิบระยับที่ก่อตัวขึ้นเมื่อสองมิติชนกัน",
+      "Dimensional Cache": "หีบสมบัติมิติ",
+      "A sealed cosmic chest pulsating with otherworldly energy. Open to claim rewards.": "หีบผนึกแห่งจักรวาลที่เต้นเป็นจังหวะด้วยพลังงานต่างมิติ เปิดเพื่อรับรางวัล"
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -1431,7 +1446,11 @@ export const L10N = {
       "The Nullking": "ราชันความดับสูญ",
       "The crowned end of all things. It does not roar — it simply unmakes.": "จุดจบของสรรพสิ่งผู้สวมมงกุฎ มันไม่ส่งเสียงคำราม — มันเพียงแต่ลบเลือน",
       "Voidmaw Sovereign": "ราชันปากมืด",
-      "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.": "กระแสน้ำผู้กลืนกินโลกที่ได้รับมงกุฎ แม้แต่ห้องบัลลังก์ของนัลคิงยังต้องถอยห่าง"
+      "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.": "กระแสน้ำผู้กลืนกินโลกที่ได้รับมงกุฎ แม้แต่ห้องบัลลังก์ของนัลคิงยังต้องถอยห่าง",
+      "Void Stalker": "ผู้ล่าแห่งความว่างเปล่า",
+      "A predatory entity slipped through the dimensional seams.": "สิ่งมีชีวิตนักล่าที่เล็ดลอดผ่านรอยแยกมิติ",
+      "Dimensional Herald": "ทูตแห่งรอยแยกมิติ",
+      "The harbinger of the rift, commanding the dimensional incursion.": "ผู้ส่งสารแห่งรอยแยก ผู้นำการรุกรานข้ามมิติ"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",

@@ -161,6 +161,7 @@ const ITEM_ICON = {
   phoenix_feather: 'gem_red', midas_touch: 'gloves', storm_conduit: 'storm_core',
   thornmail_carapace: 'crawler_shell', frostbite_pendant: 'gem_blue', vampiric_grail: 'tide_core',
   rune_ember: 'gem_red', rune_glacial: 'gem_blue', rune_storm: 'gem', rune_verdant: 'gem_green', rune_luminous: 'core', rune_umbral: 'gem',
+  dimensional_shard: 'gem', rift_cache: 'core',
 };
 // equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];

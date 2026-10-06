@@ -2209,6 +2209,8 @@ for (const [id, base, remap] of [
   ['tundra_lurker', 'frost_wolf', { l: 'c', z: 'u', m: 'b' }],
   ['ashwing', 'rime_harpy', { l: 'r', c: 'O', z: 'R' }],
   ['constellation_mite', 'void_wisp', { p: 'u', q: 'U', c: 'x' }],
+  ['void_stalker', 'star_reaver', { p: 'u', q: 'U', c: 'x' }],
+  ['void_herald', 'void_construct', { p: 'u', q: 'U', c: 'x' }],
 ]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
 
 export const PX = { player, playerWalk, npc, monster, item };
