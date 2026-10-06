@@ -52,10 +52,10 @@ export const CONTENT = {
       drops: [{ itemId: "ice_core", chance: 1.0 }, { itemId: "frost_brand", chance: 0.2 }, { itemId: "blessed_ore", chance: 0.6 }, { itemId: "greater_potion", chance: 0.8 }], behavior: "aggressive" },
     { id: "gilded_ravager", name: "Gilded Ravager", flavor: "A nomad tyrant crowned in stolen gold. It answers to no zone and fears no guardian.",
       level: 45, hp: 1700, atk: 116, def: 45, exp: 9000, spriteColor: "#f2ca59", sizeTiles: 2, rare: true,
-      drops: [{ itemId: "blessed_ore", chance: 1.0 }, { itemId: "elixir", chance: 0.65 }, { itemId: "gold_ring", chance: 0.35 }, { itemId: "star_pendant", chance: 0.2 }, { itemId: "frost_brand", chance: 0.08 }], behavior: "aggressive" },
+      drops: [{ itemId: "blessed_ore", chance: 1.0 }, { itemId: "midas_touch", chance: 0.25 }, { itemId: "elixir", chance: 0.65 }, { itemId: "gold_ring", chance: 0.35 }, { itemId: "star_pendant", chance: 0.2 }, { itemId: "frost_brand", chance: 0.08 }], behavior: "aggressive" },
     { id: "ruin_golem", name: "Ruin Golem", flavor: "An ancient guardian of stone. The trial that seals your arrival.",
       level: 28, hp: 1150, atk: 74, def: 29, exp: 3616, spriteColor: "#795548", sizeTiles: 2,
-      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "hero_blade", chance: 0.5 }, { itemId: "vitality_amulet", chance: 0.4 }, { itemId: "mid_potion", chance: 1.0 }], behavior: "aggressive" },
+      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "thornmail_carapace", chance: 0.12 }, { itemId: "hero_blade", chance: 0.5 }, { itemId: "vitality_amulet", chance: 0.4 }, { itemId: "mid_potion", chance: 1.0 }], behavior: "aggressive" },
 
     // ===== Whispering Depths =====
     { id: "tidecrawler", element: "nature", name: "Tidecrawler", flavor: "A heavily armored crustacean guarding the abyssal shallows.",
@@ -79,7 +79,7 @@ export const CONTENT = {
       drops: [{ itemId: "frost_shard", chance: 0.6 }, { itemId: "knight_plate", chance: 0.04 }, { itemId: "wolf_pelt", chance: 0.4 }, { itemId: "greater_potion", chance: 0.15 }, { itemId: "blessed_ore", chance: 0.08 }], behavior: "aggressive" },
     { id: "ice_wraith", element: "ice", name: "Ice Wraith", flavor: "A frozen soul that drifts the peaks, chilling to the bone.",
       level: 37, hp: 548, atk: 86, def: 32, exp: 1513, spriteColor: "#bfe6ff", sizeTiles: 1,
-      drops: [{ itemId: "frost_shard", chance: 0.5 }, { itemId: "ice_core", chance: 0.3 }, { itemId: "silver_amulet", chance: 0.04 }, { itemId: "aurora_cloak", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#bfe6ff" },
+      drops: [{ itemId: "frost_shard", chance: 0.5 }, { itemId: "ice_core", chance: 0.3 }, { itemId: "frostbite_pendant", chance: 0.05 }, { itemId: "silver_amulet", chance: 0.04 }, { itemId: "aurora_cloak", chance: 0.05 }, { itemId: "mana_potion", chance: 0.25 }, { itemId: "sapphire_shard", chance: 0.04 }], behavior: "aggressive", attackRange: 4, attackCooldownMult: 1.3, projectileColor: "#bfe6ff" },
     // lightning, not ice: the tundra's fourth ice mob was redundant, and the wheel
     // needs a lightning-element species or nature attacks have nothing to exploit.
     { id: "rime_harpy", element: "lightning", name: "Storm Harpy", flavor: "It rides the storm-front, and the wind it rides answers with thunder.",
@@ -102,7 +102,7 @@ export const CONTENT = {
       drops: [{ itemId: "ember_ash", chance: 0.4 }, { itemId: "drakescale_boots", chance: 0.03 }], behavior: "aggressive", attackRange: 3.5, projectileColor: "#ff9b5c" },
     { id: "flame_dragon", element: "fire", name: "Flame Dragon", flavor: "The tyrant of the caldera. Its roar is the last thing many hear.",
       level: 60, hp: 2250, atk: 150, def: 60, exp: 14804, spriteColor: "#e2551f", sizeTiles: 2,
-      drops: [{ itemId: "dragon_heart", chance: 1.0 }, { itemId: "dawn_edge", chance: 0.6 }, { itemId: "dragon_helm", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+      drops: [{ itemId: "dragon_heart", chance: 1.0 }, { itemId: "phoenix_feather", chance: 0.15 }, { itemId: "dawn_edge", chance: 0.6 }, { itemId: "dragon_helm", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
 
     // ===== Sky-Shattered Peaks (expansion biome, Lv 50-65) =====
     { id: "zephyr_hawk", element: "nature", name: "Zephyr Hawk", flavor: "It dances on the windstreams, striking with blinding speed.",
@@ -113,7 +113,7 @@ export const CONTENT = {
       drops: [{ itemId: "storm_core", chance: 0.55 }, { itemId: "elixir", chance: 0.1 }], behavior: "aggressive", attackRange: 4, projectileColor: "#f2e07a" },
     { id: "zenith_warden", element: "lightning", name: "The Zenith Warden", flavor: "An ancient construct appointed to guard the highest peaks from intruders.",
       level: 65, hp: 2500, atk: 165, def: 62, exp: 16500, spriteColor: "#d9c18f", sizeTiles: 2,
-      drops: [{ itemId: "zenith_core", chance: 1.0 }, { itemId: "windwalker_boots", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+      drops: [{ itemId: "zenith_core", chance: 1.0 }, { itemId: "storm_conduit", chance: 0.15 }, { itemId: "windwalker_boots", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
 
 
     // ===== Astral Rift (endgame biome, Lv 61-80) =====
@@ -134,7 +134,7 @@ export const CONTENT = {
       drops: [{ itemId: "star_iron", chance: 0.35 }, { itemId: "void_shard", chance: 0.3 }], behavior: "aggressive" },
     { id: "nullking", element: "void", name: "The Nullking", flavor: "The crowned end of all things. It does not roar — it simply unmakes.",
       level: 80, hp: 3500, atk: 198, def: 79, exp: 25208, spriteColor: "#7a4fd0", sizeTiles: 2,
-      drops: [{ itemId: "null_core", chance: 1.0 }, { itemId: "astral_glaive", chance: 0.7 }, { itemId: "astral_signet", chance: 0.6 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
+      drops: [{ itemId: "null_core", chance: 1.0 }, { itemId: "vampiric_grail", chance: 0.20 }, { itemId: "astral_glaive", chance: 0.7 }, { itemId: "astral_signet", chance: 0.6 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
 
     // ===== World boss: 3-phase raid (Voidmaw Sovereign, Astral Rift) =====
     { id: "voidmaw_sovereign", element: "void", name: "Voidmaw Sovereign", flavor: "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.",
@@ -233,6 +233,14 @@ export const CONTENT = {
     { id: "star_iron", name: "Star Iron", type: "material", desc: "Metal that fell from the sky, still humming.", value: 160, classReq: null },
     { id: "null_core", name: "Null Core", type: "material", desc: "The heart of the Nullking. The end of a legend, in your hand.", value: 1500, classReq: null },
     { id: "sovereign_core", name: "Sovereign Core", type: "accessory", slot: "accessory", desc: "The still-beating heart of a world-eating tide. Exclusive to whoever fells the Voidmaw Sovereign.", atk: 20, def: 20, value: 20000, classReq: null, rankReq: "S" },
+
+    // ===== Relics & Legendary Artifacts =====
+    { id: "phoenix_feather", name: "Phoenix Feather", type: "relic", slot: "relic", desc: "A blazing plume that refuses to let its bearer turn to ash.", value: 3500, relicPerk: "lethal_revive", rarity: "epic", classReq: null },
+    { id: "midas_touch", name: "Hand of Midas", type: "relic", slot: "relic", desc: "A gilded glove from a forgotten king whose touch turned greed into gold.", value: 3000, relicPerk: "gilded_strike", rankReq: "C+", rarity: "epic", classReq: null },
+    { id: "storm_conduit", name: "Storm Conduit", type: "relic", slot: "relic", desc: "A humming capacitor holding captive lightning.", value: 3200, relicPerk: "chain_lightning", rarity: "epic", classReq: null },
+    { id: "thornmail_carapace", name: "Bramble Carapace", type: "relic", slot: "relic", desc: "Hardened chitin bristling with venomous barbs.", value: 2400, relicPerk: "thorns", rarity: "rare", classReq: null },
+    { id: "frostbite_pendant", name: "Frostbite Pendant", type: "relic", slot: "relic", desc: "A shard of permafrost that chills everything it nears.", value: 2600, relicPerk: "glacial_touch", rarity: "rare", classReq: null },
+    { id: "vampiric_grail", name: "Chalice of the Undying", type: "relic", slot: "relic", desc: "An obsidian goblet brimming with stolen starlight.", value: 5000, relicPerk: "blood_pact", rarity: "legendary", classReq: null },
 
     // ===== Buff foods, teleport, refinement material =====
     { id: "sharpening_stone", name: "Sharpening Stone", type: "potion", desc: "Hones your edge — +15% ATK for 60s.", buff: { stat: "atk", mult: 1.15, durationMs: 60000 }, value: 80, classReq: null },
@@ -607,6 +615,9 @@ export const CONTENT = {
     { id: "r_celestial", out: "celestial_draught", cost: 200, mats: [{ itemId: "null_core", qty: 1 }, { itemId: "ice_core", qty: 2 }] },
     { id: "r_blessed", out: "blessed_ore", cost: 150, mats: [{ itemId: "star_iron", qty: 2 }, { itemId: "void_shard", qty: 1 }] },
     { id: "r_seraph", out: "seraph_ward", cost: 1500, mats: [{ itemId: "dragon_heart", qty: 1 }, { itemId: "star_iron", qty: 3 }] },
+    { id: "r_phoenix", out: "phoenix_feather", cost: 2500, mats: [{ itemId: "dragon_heart", qty: 1 }, { itemId: "ember_ash", qty: 3 }] },
+    { id: "r_storm", out: "storm_conduit", cost: 2500, mats: [{ itemId: "zenith_core", qty: 1 }, { itemId: "storm_core", qty: 2 }] },
+    { id: "r_thornmail", out: "thornmail_carapace", cost: 1500, mats: [{ itemId: "golem_core", qty: 1 }, { itemId: "crawler_shell", qty: 3 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()
