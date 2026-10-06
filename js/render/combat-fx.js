@@ -12,6 +12,7 @@ export function createCombatFx({
   getFloaties: customGetFloaties,
   setFloaties: customSetFloaties,
   floatColor: customFloatColor,
+  enableScreenShake = false,
 }) {
   let trauma = 0;
   let telegraphs = [];
@@ -25,12 +26,12 @@ export function createCombatFx({
   const maxAngle = 0.03;
 
   function addScreenShake(amount) {
-    if (prefersReducedMotion()) return;
+    if (!enableScreenShake || prefersReducedMotion()) return;
     trauma = Math.min(1.0, trauma + amount);
   }
 
   function getScreenShakeOffset() {
-    if (prefersReducedMotion() || trauma <= 0) return { x: 0, y: 0, angle: 0 };
+    if (!enableScreenShake || prefersReducedMotion() || trauma <= 0) return { x: 0, y: 0, angle: 0 };
     const shake = trauma * trauma;
     const t = now();
     return {

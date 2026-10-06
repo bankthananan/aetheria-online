@@ -2,12 +2,26 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createCombatFx } from './render/combat-fx.js';
 
-test('combat-fx: screen shake trauma accumulation and decay', () => {
+test('combat-fx: screen shake is disabled by default', () => {
+  const fx = createCombatFx({
+    getCtx: () => null,
+    prefersReducedMotion: () => false,
+    now: () => 1000,
+  });
+
+  fx.addScreenShake(1.0);
+  const offset = fx.getScreenShakeOffset();
+  assert.equal(offset.x, 0);
+  assert.equal(offset.y, 0);
+});
+
+test('combat-fx: screen shake trauma accumulation and decay when explicitly enabled', () => {
   let currentTime = 1000;
   const fx = createCombatFx({
     getCtx: () => null,
     prefersReducedMotion: () => false,
     now: () => currentTime,
+    enableScreenShake: true,
   });
 
   fx.addScreenShake(0.5);

@@ -3144,9 +3144,8 @@ function render() {
   // camera — a narrow overscan reveals the parallax beyond authored map edges.
   const mapW = G.map.width * TS, mapH = G.map.height * TS;
   const edgeReveal = TS * 2;
-  const shake = combatFx.getScreenShakeOffset();
-  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal) + shake.x;
-  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal) + shake.y;
+  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal);
+  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal);
   const cx = G.cam.x, cy = G.cam.y;
 
   ctx.imageSmoothingEnabled = false;   // crisp pixel-art upscaling
