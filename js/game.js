@@ -41,6 +41,8 @@ import { createWeatherRenderer } from './render/weather-fx.js';
 import { createRuneSystem } from './systems/runes.js';
 import { createIncursionSystem, INCURSION_STATES } from './systems/incursions.js';
 import { createRiftRenderer } from './render/rift-fx.js';
+import { createGatheringSystem } from './systems/gathering.js';
+import { createGatheringRenderer } from './render/gathering-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -211,6 +213,11 @@ const incursionSystem = createIncursionSystem({
   rnd: () => Math.random(),
 });
 const riftRenderer = createRiftRenderer({ T });
+const gatheringSystem = createGatheringSystem({
+  now,
+  rnd: () => Math.random(),
+});
+const gatheringRenderer = createGatheringRenderer({ T });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -1032,8 +1039,14 @@ function equippedItem(p, slot) { return p.equip[slot] ? itemById[p.equip[slot].i
 
 function buffMult(p, stat) {
   let m = 1;
-  for (const b of p.buffs) if (b.stat === stat && b.until > now()) m *= b.mult;
+  for (const b of (p.buffs || [])) if (b.until > now() && (b.stat === stat || b.stat === 'all')) m *= (b.mult || 1);
   return m;
+}
+
+function buffFlat(p, stat) {
+  let f = 0;
+  for (const b of (p.buffs || [])) if (b.until > now() && b.stat === stat) f += (b.flat || 0);
+  return f;
 }
 
 function recompute(p, fill) {
@@ -1070,12 +1083,12 @@ function recompute(p, fill) {
   const relicMods = relicSystem.getPassiveModifiers(p);
   const weatherMods = weatherSystem.getCombatModifiers(G?.mapId);
   const runeMods = runeSystem.getRuneCombatModifiers(p.equip, itemById);
-  p.maxHp = Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0);
-  p.maxMp = Math.round(p.maxMp * (1 + ps.mpPct / 100));
-  p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100));
-  p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100));
-  p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100));
-  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100)) + (runeMods.defFlat || 0);
+  p.maxHp = Math.round((Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0) + buffFlat(p, 'hp')) * buffMult(p, 'hp'));
+  p.maxMp = Math.round((Math.round(p.maxMp * (1 + ps.mpPct / 100)) + buffFlat(p, 'mp')) * buffMult(p, 'mp'));
+  p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100)) + buffFlat(p, 'atk');
+  p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100)) + buffFlat(p, 'atk');
+  p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100)) + buffFlat(p, 'atk');
+  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100)) + (runeMods.defFlat || 0) + buffFlat(p, 'def');
   p.critChance = Math.min(100, p.critChance + ps.critPct + (weatherMods.critPct || 0));
   p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0) + (runeMods.fleeFlat || 0);
   p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0);
@@ -1083,7 +1096,7 @@ function recompute(p, fill) {
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
   p.atkDelay = Math.round(COMBAT.attackSpeedMs * (1 - Math.min(0.45, st.agi * TUNING.agiAtkSpeed)));
-  p.moveMult = 1 + Math.min(0.5, st.agi * TUNING.agiMoveSpeed);
+  p.moveMult = (1 + Math.min(0.5, st.agi * TUNING.agiMoveSpeed)) * buffMult(p, 'speed');
   if (G.mastery?.claimedRanks[G.mapId]?.bronze) p.moveMult *= 1 + TUNING.expansion.masterySpeed;
   p.rangeBonus = st.int * TUNING.intRange;                       // extra tiles for ranged/magic
   p.basicRange = MELEE.has(p.combatClass) ? 1.5 : 5 + p.rangeBonus;
@@ -1833,7 +1846,8 @@ function rollHit(atkHit, defFlee) {
 }
 function calcDamage(atk, def) {
   const isCrit = Math.random() * 100 < (arguments[2] || 0);
-  const dmg = F.damage({ attackerAtk: atk, defenderDef: def, isCrit });
+  let dmg = F.damage({ attackerAtk: atk, defenderDef: def, isCrit });
+  if (isCrit && arguments[3]) dmg = Math.round(dmg * arguments[3]);
   return { dmg, isCrit };
 }
 
@@ -1881,7 +1895,7 @@ function playerBasicAttack() {
 // one hit resolution vs a monster (hit/miss, crit, damage, floaty)
 function strike(m, atk, p, silent) {
   if (!rollHit(p.hit, m.flee)) { floatText(m.x, m.y, 'miss', 'miss'); return; }
-  const { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
+  const { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance, buffMult(p, 'critDmg'));
   const el = attackElement(p, null);
   damageMonster(m, applyElement(el, m, dmg), isCrit, silent);
   if (el === 'fire' && Math.random() < 0.15) applyStatus(m, 'burn', 1);
@@ -2319,7 +2333,7 @@ function castSkillById(id) {
     skillFx(sk, cx, cy);
     let hit = false, lastDmg = 0;
     for (const m of G.monsters) if (m.alive && dist(cx, cy, m.x, m.y) <= sk.radius * TS + m.size / 2) {
-      let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
+      let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance, buffMult(p, 'critDmg'));
       if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) {
         dmg = Math.round(dmg * (1 + M.detonateBonus));
         delete m.statuses[sk.detonate];
@@ -2348,7 +2362,7 @@ function castSkillById(id) {
   faceToward(p, t.x, t.y);
   skillFx(sk, t.x, t.y);
   if (!rollHit(p.hit + 20, t.flee)) { floatText(t.x, t.y, 'miss', 'miss'); return; }
-  let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance);
+  let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance, buffMult(p, 'critDmg'));
   if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) {
     dmg = Math.round(dmg * (1 + M.detonateBonus));
     delete t.statuses[sk.detonate];
@@ -3385,6 +3399,11 @@ function render() {
     }
   }
 
+  // Gathering & Fishing nodes
+  const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+  const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
+  gatheringRenderer.drawGatherNodes(ctx, gatherNodes, G.cam, now(), CANVAS_W, CANVAS_H);
+
   drawGroundEffects();
   combatFx.drawTelegraphs(cx, cy);
 
@@ -3405,6 +3424,10 @@ function render() {
     if (activeInc && activeInc.mapId === G.mapId) {
       riftRenderer.drawIncursionHud(ctx, activeInc, CANVAS_W, CANVAS_H, now());
     }
+  }
+  const activeFishing = gatheringSystem.getActiveFishing();
+  if (activeFishing?.active) {
+    gatheringRenderer.drawFishingHud(ctx, activeFishing, CANVAS_W, CANVAS_H, now());
   }
   const target=G.target;
   if(target?.alive){
@@ -3773,6 +3796,10 @@ function step(dt) {
     G.monsters = G.monsters.filter(mo => !mo._incursionMob);
     incursionSystem.resetToIdle();
   }
+
+  // Gathering & Fishing subsystem tick
+  const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+  gatheringSystem.tick(dt, { activeMapId: G.mapId, dayPhase: curDayPhase, weatherId: G.weather?.id });
   
   // Windstream environment tick
   const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS);
@@ -3916,6 +3943,33 @@ function step(dt) {
       G.path = null;
       G.manualIntent = null;
       triggerIncursionStart();
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
+  } else if (G.manualIntent?.type === 'fishing_ripple') {
+    const intent = G.manualIntent;
+    if (dist(p.x, p.y, intent.x, intent.y) < TS * 2.5) {
+      G.path = null;
+      G.manualIntent = null;
+      gatheringSystem.startFishing(intent.id, { mapId: G.mapId, weatherId: G.weather?.id });
+      toast(`🎣 ${T('Cast line! Press SPACE or tap to reel in!', 'ui')}`, 'good');
+      AUDIO.playSfx('pickup');
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
+  } else if (G.manualIntent?.type === 'gather_node') {
+    const intent = G.manualIntent;
+    if (dist(p.x, p.y, intent.x, intent.y) < TS * 2.0) {
+      G.path = null;
+      G.manualIntent = null;
+      const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+      const res = gatheringSystem.harvestNode(intent.id, { dayPhase: curDayPhase });
+      if (res?.items) {
+        for (const it of res.items) addItem(it.id, it.qty);
+        const firstDef = itemById[res.items[0]?.id];
+        toast(`🌿 ${T('Harvested', 'ui')} ${firstDef ? T(firstDef.name, 'items') : 'resource'}!`, 'good');
+        AUDIO.playSfx('pickup');
+      }
     } else if (!G.path) {
       G.manualIntent = null;
     }
@@ -4625,6 +4679,7 @@ const ADMIN_GROUPS = [
     ['completedailies', 'Complete All Dailies'], ['rerolldailies', 'Reroll Daily Challenges'],
     ['spawnrare', 'Spawn Rare Beast (Fang)'], ['cyclediff', 'Cycle Difficulty (N/H/NM)'],
     ['spawnrift', 'Spawn Dimensional Tear'], ['sealrift', 'Seal Active Incursion'],
+    ['resetgather', 'Reset Gather Nodes'], ['catchfish', '+1 of All Fish'],
   ]],
 ];
 function adminAction(a, val) {
@@ -4751,6 +4806,16 @@ function adminAction(a, val) {
       addItem('rift_cache', 1);
       toast('Admin: Sealed Incursion and granted Dimensional Cache!', 'good');
     }
+  }
+  else if (a === 'resetgather' || a === 'spawngather') {
+    gatheringSystem.deserialize(null);
+    toast('Resource nodes reset!', 'good');
+  }
+  else if (a === 'catchfish') {
+    for (const fid of ['glowing_trout', 'abyssal_bass', 'glacial_salmon', 'magma_koi', 'stormfin', 'golden_carp']) {
+      addItem(fid, 1);
+    }
+    toast('Granted 1 of every fish!', 'good');
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -6192,7 +6257,11 @@ function useItem(itemId) {
   }
   if (it.hpRestore) { p.hp = clamp(p.hp + it.hpRestore, 0, p.maxHp); }
   if (it.mpRestore) { p.mp = clamp(p.mp + it.mpRestore, 0, p.maxMp); }
-  if (it.buff) { p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult, until: now() + it.buff.durationMs }); toast(`${it.name} — ${it.buff.stat.toUpperCase()} up!`, 'good'); }
+  if (it.buff) {
+    p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult || 1, flat: it.buff.flat || 0, until: now() + it.buff.durationMs, name: it.name });
+    recompute(p);
+    toast(`${it.name} — ${it.buff.stat.toUpperCase()} up!`, 'good');
+  }
   if (it.teleport) { removeItem(itemId); AUDIO.playSfx('menu'); loadMap(it.teleport); logMsg('The scroll crumbles — town swims into view.', 'sys'); return true; }
   removeItem(itemId); AUDIO.playSfx('pickup'); logMsg(`Used ${it.name}.`, 'good');
   return true;
@@ -6919,7 +6988,8 @@ function saveGame() {
     player: { classId: p.classId, name: p.name, className: p.className, tierIndex: p.tierIndex, jobBranchId: p.jobBranchId, advancedJobId: p.advancedJobId, hybridJobId: p.hybridJobId,
       level: p.level, xp: p.xp, jobLevel: p.jobLevel, jobXp: p.jobXp, rebirths: p.rebirths || 0, pastLives: p.pastLives || [], zeny: p.zeny, hp: p.hp, mp: p.mp,
       alloc: p.alloc, statPoints: p.statPoints, skillPoints: p.skillPoints, skillLevels: p.skillLevels,
-      equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys, features: p.features },
+      equip: p.equip, inventory: p.inventory, hotbar: p.hotbar, hotkeys: p.hotkeys, features: p.features,
+      buffs: (p.buffs || []).filter(b => b.until > now()) },
     world: { mapId: G.mapId, col: Math.floor(p.x / TS), row: Math.floor(p.y / TS),
       quest: G.quest, pendingQuest: G.pendingQuest, killCounts: G.killCounts, won: G.won, autoFarm: G.autoFarm,
       huntTargetId: G.huntTargetId, taskGuide: G.taskGuide, autoConfig: G.autoConfig, audioVolumes: G.audioVolumes, highContrast: G.highContrast,
@@ -6930,6 +7000,7 @@ function saveGame() {
       storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best,
       weather: G.weather?.id || 'clear',
       incursion: incursionSystem.serialize(),
+      gathering: gatheringSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -6987,7 +7058,8 @@ function resumeGame() {
     zeny: sp.zeny, alloc: { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0, ...(sp.alloc || {}) }, statPoints: sp.statPoints, skillPoints: sp.skillPoints,
     skillLevels: sp.skillLevels || p.skillLevels, equip: { ...p.equip, ...(sp.equip || {}) }, inventory: sp.inventory || p.inventory,
     hotbar: Array.isArray(sp.hotbar) ? sp.hotbar.slice(0, 9) : p.hotbar,
-    hotkeys: normaliseHotkeys(sp.hotkeys) });
+    hotkeys: normaliseHotkeys(sp.hotkeys),
+    buffs: (sp.buffs || []).filter(b => b.until > now()) });
   normalisePlayerProgression(p); // migrate old uncapped-job saves without deleting learned ranks
   while (p.hotbar.length < 9) p.hotbar.push(null);
   // restore the uid counter past every saved instance so fresh drops don't collide
@@ -7055,6 +7127,7 @@ function resumeGame() {
   const entrance=savedDungeon?MAPS.whispering_woods.portals.find(p=>p.toMap===w.mapId):null;
   if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
   if (w.incursion) incursionSystem.deserialize(w.incursion);
+  if (w.gathering) gatheringSystem.deserialize(w.gathering);
   loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
@@ -7088,6 +7161,7 @@ function begin(classId, name) {
   gameClock.reset();document.getElementById('resume-game')?.remove();AUDIO.resumePlayback();
   AUDIO.init();
   incursionSystem.resetToIdle();
+  gatheringSystem.deserialize(null);
   Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
@@ -7119,6 +7193,20 @@ function onCanvasClick(e) {
 function handleClick(wx, wy) {
   syncModalPause();
   if(gameClock.isPaused())return;
+  // Fishing active: reel in!
+  if (gatheringSystem.getActiveFishing()?.active) {
+    const res = gatheringSystem.resolveFishingCast();
+    if (res.success) {
+      addItem(res.fishId, 1);
+      const fishDef = itemById[res.fishId];
+      toast(`🎣 ${T('Caught', 'ui')} ${fishDef ? T(fishDef.name, 'items') : 'Fish'}!`, 'good');
+      AUDIO.playSfx('pickup');
+    } else {
+      toast(`💨 ${T('The fish got away...', 'ui')}`, 'bad');
+      AUDIO.playSfx('miss');
+    }
+    return;
+  }
   // Incursion tear click interaction
   if (incursionSystem.getState() === INCURSION_STATES.TEAR_OPEN) {
     const tear = incursionSystem.getCurrentTear();
@@ -7129,6 +7217,48 @@ function handleClick(wx, wy) {
         triggerIncursionStart();
       } else if (pathTo(tear.x, tear.y)) {
         G.manualIntent = { type: 'incursion_tear', x: tear.x, y: tear.y };
+      }
+      return;
+    }
+  }
+  // Gathering & Fishing node interaction
+  const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+  const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
+  let clickedNode = null;
+  for (const nd of gatherNodes) {
+    if (dist(wx, wy, nd.x, nd.y) < TS * 1.5) {
+      clickedNode = nd;
+      break;
+    }
+  }
+  if (clickedNode) {
+    G.target = null; G.targetSource = null; G.path = null;
+    if (clickedNode.harvested || (clickedNode.cooldownRemainingMs || 0) > 0) {
+      toast(T('Resource node is depleted.', 'ui'), 'bad');
+      return;
+    }
+    if (clickedNode.type === 'water_ripple') {
+      if (dist(G.player.x, G.player.y, clickedNode.x, clickedNode.y) <= TS * 2.5) {
+        G.manualIntent = null;
+        gatheringSystem.startFishing(clickedNode.id, { mapId: G.mapId, weatherId: G.weather?.id });
+        toast(`🎣 ${T('Cast line! Press SPACE or tap to reel in!', 'ui')}`, 'good');
+        AUDIO.playSfx('pickup');
+      } else if (pathTo(clickedNode.x, clickedNode.y)) {
+        G.manualIntent = { type: 'fishing_ripple', id: clickedNode.id, x: clickedNode.x, y: clickedNode.y };
+      }
+      return;
+    } else {
+      if (dist(G.player.x, G.player.y, clickedNode.x, clickedNode.y) <= TS * 2.0) {
+        G.manualIntent = null;
+        const res = gatheringSystem.harvestNode(clickedNode.id, { dayPhase: curDayPhase });
+        if (res?.items) {
+          for (const it of res.items) addItem(it.id, it.qty);
+          const firstDef = itemById[res.items[0]?.id];
+          toast(`🌿 ${T('Harvested', 'ui')} ${firstDef ? T(firstDef.name, 'items') : 'resource'}!`, 'good');
+          AUDIO.playSfx('pickup');
+        }
+      } else if (pathTo(clickedNode.x, clickedNode.y)) {
+        G.manualIntent = { type: 'gather_node', id: clickedNode.id, x: clickedNode.x, y: clickedNode.y };
       }
       return;
     }
@@ -7161,6 +7291,22 @@ window.addEventListener('keydown', e => {
   if (G.running && dlg && (key === ' ' || code === 'Space')) {
     e.preventDefault();
     if (!e.repeat) advanceDialogue();
+    return;
+  }
+  if (G.running && gatheringSystem.getActiveFishing()?.active && (key === ' ' || code === 'Space')) {
+    e.preventDefault();
+    if (!e.repeat) {
+      const res = gatheringSystem.resolveFishingCast();
+      if (res.success) {
+        addItem(res.fishId, 1);
+        const fishDef = itemById[res.fishId];
+        toast(`🎣 ${T('Caught', 'ui')} ${fishDef ? T(fishDef.name, 'items') : 'Fish'}!`, 'good');
+        AUDIO.playSfx('pickup');
+      } else {
+        toast(`💨 ${T('The fish got away...', 'ui')}`, 'bad');
+        AUDIO.playSfx('miss');
+      }
+    }
     return;
   }
   if (G.running && captureHotkeyBinding(e)) return;

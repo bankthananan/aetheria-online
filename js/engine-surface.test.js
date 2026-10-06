@@ -285,8 +285,8 @@ assert.deepEqual(Object.keys(A).sort(), AWO_KEYS, 'window.__AWO key set unchange
 // (whispering_woods and sunken_ruins include Champion/Elite badges & affix text under seed 42)
 const RENDER = {
   town_awakening: { calls: 557, hash: '1556944fc678a798' },
-  whispering_woods: { calls: 842, hash: 'f74f120464539daf' },
-  sunken_ruins: { calls: 506, hash: 'ce4320ac970e318b' },
+  whispering_woods: { calls: 846, hash: '2cfed3884aa78f15' },
+  sunken_ruins: { calls: 509, hash: 'dda5cea2130d8021' },
 };
 for (const [mapId, want] of Object.entries(RENDER)) {
   seed = 42;
