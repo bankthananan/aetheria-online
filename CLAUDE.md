@@ -56,8 +56,9 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/systems/elite-monsters.js` — procedural Champion & Elite affixes (Molten, Frost Nova, Vortex, Shielding, Avenger), hazard lifecycle, damage mitigation, and bonus loot/gem multipliers
   - `js/systems/relics.js` — Relic & Legendary Artifact equipment system (8th paper-doll slot, on-hit procs, blood shield absorption, thorns, and Phoenix Feather lethal revive)
   - `js/systems/weather.js` — Dynamic World Weather cycling, elemental damage affinities, combat modifiers, and monster aggro range scaling
+  - `js/systems/runes.js` — Elemental Rune Socketing & Socket Expansion subsystem (Blacksmith socket expansion up to 4 sockets, primal elemental runes, weapon elemental infusion, and defensive warding stats)
   - `js/systems/guild.js` — Adventurer's Guild bounties, rank ladder, and turn-ins
-  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, relics, subdungeon, weather)
+  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, relics, runes, subdungeon, weather)
   - `js/input.js`, `js/viewport.js`, `js/expansion-runtime.js`, `js/guidance-runtime.js`, `js/equipment-features.js`
   - `js/zones/` holds per-zone content packages.
   The remaining `js/` modules are **logic-free data modules**.
