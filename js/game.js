@@ -30,6 +30,8 @@ import { matchesLoot } from './systems/loot-preferences.js';
 import { createGuidance } from './guidance-runtime.js';
 import { runSelfCheck } from './selfcheck.js';
 import { createTileRenderer } from './render/tiles.js';
+import { createCombatFx } from './render/combat-fx.js';
+import { createBossMechanics } from './systems/boss-mechanics.js';
 import { createGuild } from './systems/guild.js';
 
 const ZONE_PACKAGES = {
@@ -1315,7 +1317,7 @@ function loadMap(mapId, spawnX, spawnY) {
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
   recompute(G.player);
   G.heatField = buildHeatField(map);
-  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = [];   // don't carry paths/spell zones across maps
+  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = []; combatFx.clearTelegraphs();   // don't carry paths/spell zones across maps
   if (G.player) G.player.sanctuary = null;
 
   // NPCs: map gives position/identity, content gives behavior
@@ -1858,7 +1860,8 @@ function applyCrossCombo(sk, m, dmg, isCrit) {
     if (combo.critMult) { dmg = Math.round(dmg * combo.critMult); isCrit = true; }
     if (combo.aoeStatus) for (const o of G.monsters)
       if (o.alive && dist(m.x, m.y, o.x, o.y) <= combo.aoeRadiusTiles * TS + o.size / 2) applyStatus(o, combo.aoeStatus, 1);
-    floatText(m.x, m.y - 20, combo.name + '!', 'crit');
+    combatFx.addScreenShake(0.35);
+    floatText(m.x, m.y - 20, combo.name + '!', 'crit', 'COMBO!');
     logMsg(`✦ ${combo.name} — ${combo.description}`, 'good');
     spawnRing(m.x, m.y, TS * 1.4, '#b9e2ff');
   }
@@ -1870,8 +1873,12 @@ function damageMonster(m, dmg, isCrit, silent) {
   if (mark) dmg = Math.max(1, Math.round(dmg * (1 + mark.damageTaken)));
   m.hp -= dmg;
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
-  if (!silent) AUDIO.playSfx('hit');
-  floatText(m.x, m.y, dmg, isCrit ? 'crit' : 'dmg');
+  if (isCrit) {
+    combatFx.addScreenShake(0.25);
+    floatText(m.x, m.y, dmg, 'crit', 'CRIT!');
+  } else {
+    floatText(m.x, m.y, dmg, 'dmg');
+  }
   const p = G.player;   // lifesteal affix: heal a fraction of damage dealt
   if (p.lifesteal) { const heal = Math.max(1, Math.round(dmg * p.lifesteal / 100)); p.hp = clamp(p.hp + heal, 0, p.maxHp); }
   // Reflective Void (rift mutator): monsters return a slice of damage taken
@@ -1909,6 +1916,10 @@ function gapHit(monLevel, playerLevel) {
 function killMonster(m) {
   if (!m.alive) return;
   m.alive = false;
+  if (m.def.sizeTiles >= 2) {
+    bossMechanics.clearBossState(m);
+    combatFx.clearTelegraphs(m.def.id);
+  }
   m.deadUntil = now() + R.respawnMs;
   G.seenMonsters?.add(m.def.id);   // Collection Book discovery
   // rift waves are cleared explicitly (see below), never respawned on the normal timer
@@ -2104,7 +2115,11 @@ function castSkillById(id) {
   if (!targetsInRange()) return;
 
   let momentumMult = 1;
-  if (sk.finisher) { momentumMult = 1 + M.powerPerPoint * p.momentum; p.momentum = 0; }
+  if (sk.finisher) {
+    momentumMult = 1 + M.powerPerPoint * p.momentum;
+    p.momentum = 0;
+    combatFx.addScreenShake(0.55);
+  }
   else { p.mp -= sk.mpCost; }
   p.skillCd[sk.id] = now() + sk.cooldownMs;
   // Buffs and heals are channelled; damage skills use the class's own attack
@@ -2161,7 +2176,12 @@ function castSkillById(id) {
     let hit = false, lastDmg = 0;
     for (const m of G.monsters) if (m.alive && dist(cx, cy, m.x, m.y) <= sk.radius * TS + m.size / 2) {
       let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
-      if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete m.statuses[sk.detonate]; }
+      if (sk.detonate && m.statuses[sk.detonate] && m.statuses[sk.detonate].until > now()) {
+        dmg = Math.round(dmg * (1 + M.detonateBonus));
+        delete m.statuses[sk.detonate];
+        combatFx.addScreenShake(0.35);
+        floatText(m.x, m.y - 12, 'DETONATE!', 'detonate');
+      }
       dmg = applyElement(attackElement(p, sk), m, dmg);
       ({ dmg, isCrit } = applyCrossCombo(sk, m, dmg, isCrit));
       damageMonster(m, dmg, isCrit); applyStatus(m, sk.effect, lvl);
@@ -2185,7 +2205,12 @@ function castSkillById(id) {
   skillFx(sk, t.x, t.y);
   if (!rollHit(p.hit + 20, t.flee)) { floatText(t.x, t.y, 'miss', 'miss'); return; }
   let { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, t.lvl), monsterDef(t), p.critChance);
-  if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) { dmg = Math.round(dmg * (1 + M.detonateBonus)); delete t.statuses[sk.detonate]; }
+  if (sk.detonate && t.statuses[sk.detonate] && t.statuses[sk.detonate].until > now()) {
+    dmg = Math.round(dmg * (1 + M.detonateBonus));
+    delete t.statuses[sk.detonate];
+    combatFx.addScreenShake(0.35);
+    floatText(t.x, t.y - 12, 'DETONATE!', 'detonate');
+  }
   dmg = branchDetonateBonus(p, sk, t, dmg);
   dmg = applyElement(attackElement(p, sk), t, dmg);
   ({ dmg, isCrit } = applyCrossCombo(sk, t, dmg, isCrit));
@@ -2206,6 +2231,12 @@ function faceToward(e, tx, ty) {
 // =====================================================================
 function updateMonsters(dt) {
   const p = G.player;
+  bossMechanics.updateHazards(p, dt, {
+    now,
+    floatText,
+    playerDeath,
+  });
+  if (p.hp <= 0) return;
   for (const m of G.monsters) {
     if (!m.alive) { if (now() >= m.deadUntil) respawn(m); continue; }
 
@@ -2236,7 +2267,8 @@ function updateMonsters(dt) {
       else if (bossDist < 13 * TS) m.leashing = false;
       if (m.leashing) {
         m.provoked = false;
-        m.enraged = false; m.phase = 0; m.atk = m.atkBase; m.slamAt = null; // full reset while leashed
+        bossMechanics.clearBossState(m);
+        combatFx.clearTelegraphs(m.def.id);
         if (m.hp < m.maxHp) {
           m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.06 * dt);       // slow regen only while reset
           if (now() >= (m._healAt || 0)) { floatText(m.x, m.y, '+' + Math.round(m.maxHp * 0.06), 'heal'); m._healAt = now() + 800; }
@@ -2245,63 +2277,35 @@ function updateMonsters(dt) {
         else m.path = null;
         continue;
       }
-      // ---- boss mechanics: enrage + telegraphed ground slam (dodge by moving) ----
-      if (!m.phase && m.hp < m.maxHp * 0.70) {
-        m.phase = 1; m.atk = Math.round(m.atkBase * 1.1); m.nextSlamAt = now() + 1400;
-        spawnRing(m.x, m.y, TS * 2.2, '#ffb347');
-        toast(`⚠ ${m.def.name} awakens — slams accelerate!`, 'bad');
-      }
-      if (!m.enraged && m.hp < m.maxHp * TUNING.bossEnrageAt) {
-        m.enraged = true; m.atk = Math.round(m.atkBase * 1.4);
-        AUDIO.playSfx('playerHurt');
-        toast(`☠ ${m.def.name} is ENRAGED!`, 'bad');
-      }
-      // ---- raid-only: 3-phase HP gates (100/66/33%). Phase 1 is the slam/enrage
-      // above; phase 2 summons adds once; phase 3 flags the slam to grow into an
-      // expanding ground hazard (reuses the same telegraph fx, bigger radius).
-      if (m.def.raid) {
-        if (!m.raidAddsSpawned && m.hp < m.maxHp * 0.66) {
-          m.raidAddsSpawned = true;
+      // ---- boss mechanics: tactical telegraphs, geometric attacks & screen shake ----
+      bossMechanics.updateBoss(m, p, dt, {
+        now,
+        TUNING,
+        COMBAT,
+        ANIM,
+        TS,
+        dist,
+        playerAvoidsHit,
+        calcDamage,
+        buffMult,
+        playerDeath,
+        floatText,
+        playSfx: AUDIO.playSfx,
+        addScreenShake: combatFx.addScreenShake,
+        addTelegraph: combatFx.addTelegraph,
+        spawnCrack,
+        spawnRing,
+        spawnRaidAdds: (boss) => {
           const addDef = monById['void_wisp'], n = rndInt(2, 3);
           for (let i = 0; i < n; i++) {
             const a = (i / n) * Math.PI * 2;
-            G.monsters.push(makeMonster(addDef, m.x + Math.cos(a) * TS * 2, m.y + Math.sin(a) * TS * 2));
+            G.monsters.push(makeMonster(addDef, boss.x + Math.cos(a) * TS * 2, boss.y + Math.sin(a) * TS * 2));
           }
-          spawnRing(m.x, m.y, TS * 2.5, '#7a4fd0');
-          toast(`⚠ ${m.def.name} calls forth ${n} rift wisps!`, 'bad');
-        }
-        if (!m.raidPhase3 && m.hp < m.maxHp * 0.33) {
-          m.raidPhase3 = true;
-          toast(`☠ ${m.def.name} tears the ground open!`, 'bad');
-        }
-      }
-      const inCombat = now() - (m.lastCombatAt || 0) < 6000;
-      if (inCombat && d < 8 * TS) {
-        const slamInterval = TUNING.bossSlamEveryMs * (m.phase ? 0.8 : 1) * (m.enraged ? 0.7 : 1);
-        // phase-3 raid hazard: each slam impact grows the next ring's radius, capped at ~2.6x
-        const slamR = TS * 1.8 * (m.raidPhase3 ? Math.min(2.6, 1 + 0.2 * (m.raidHazardTicks || 0)) : 1);
-        if (!m.slamAt && now() >= (m.nextSlamAt || (m.nextSlamAt = now() + slamInterval))) {
-          m.slamX = p.x; m.slamY = p.y; m.slamAt = now() + 1100;      // mark the ground under the hero
-          fx({ kind: 'ring', x: m.slamX, y: m.slamY, r: slamR, color: '#ff4433', life: 1100 });
-          fx({ kind: 'crack', x: m.slamX, y: m.slamY, r: slamR / 1.64, color: '#ff8866', life: 1100 });
-        }
-        if (m.slamAt && now() >= m.slamAt) {                          // impact
-          m.slamAt = null; m.nextSlamAt = now() + slamInterval;
-          if (m.raidPhase3) m.raidHazardTicks = (m.raidHazardTicks || 0) + 1;
-          spawnCrack(m.slamX, m.slamY, slamR, '#ff5533'); spawnRing(m.slamX, m.slamY, slamR, '#ff5533');
-          AUDIO.playSfx('hit');
-          if (dist(p.x, p.y, m.slamX, m.slamY) <= slamR && !playerAvoidsHit(m)) {
-            const { dmg } = calcDamage(m.atk * 1.6, p.physDef * buffMult(p, 'def'), 0);
-            if (!p.godMode) p.hp -= dmg;
-            p.hurtUntil = now() + ANIM.hurtMs;
-            AUDIO.playSfx('playerHurt');
-            floatText(p.x, p.y, p.godMode ? '0' : dmg, 'enemy');
-            // Death replaces the map and monster roster. Stop this old roster's
-            // update immediately so another queued hit cannot kill the revived hero.
-            if (p.hp <= 0) { playerDeath(); return; }
-          } else floatText(m.slamX, m.slamY, 'dodged!', 'heal');
-        }
-      }
+          spawnRing(boss.x, boss.y, TS * 2.5, '#7a4fd0');
+        },
+        toast,
+      });
+      if (p.hp <= 0) return;
     }
 
     const aggro = m.def.behavior === 'aggressive' || m.provoked;
@@ -3109,6 +3113,15 @@ const {
   getCanvasH: () => CANVAS_H,
   now,
 });
+const combatFx = createCombatFx({
+  getCtx: () => ctx,
+  prefersReducedMotion,
+  now,
+  getFloaties: () => G.floaties,
+  setFloaties: (f) => { G.floaties = f; },
+  floatColor: (k) => floatColor(k),
+});
+const bossMechanics = createBossMechanics();
 function preloadSprites() {
   for (const [group, set] of Object.entries(PX)) for (const [name, rows] of Object.entries(set)) {
     if (!rows) continue;                                        // malformed — selfCheck reports it cleanly, don't throw here
@@ -3131,8 +3144,9 @@ function render() {
   // camera — a narrow overscan reveals the parallax beyond authored map edges.
   const mapW = G.map.width * TS, mapH = G.map.height * TS;
   const edgeReveal = TS * 2;
-  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal);
-  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal);
+  const shake = combatFx.getScreenShakeOffset();
+  G.cam.x = clamp(p.x - CANVAS_W / 2, -edgeReveal, Math.max(0, mapW - CANVAS_W) + edgeReveal) + shake.x;
+  G.cam.y = clamp(p.y - CANVAS_H / 2, -edgeReveal, Math.max(0, mapH - CANVAS_H) + edgeReveal) + shake.y;
   const cx = G.cam.x, cy = G.cam.y;
 
   ctx.imageSmoothingEnabled = false;   // crisp pixel-art upscaling
@@ -3176,6 +3190,7 @@ function render() {
   }
 
   drawGroundEffects();
+  combatFx.drawTelegraphs(cx, cy);
 
   // ---- entities: depth-sorted (2.5D overlap) with ground shadows ----
   const drawables = [];
@@ -3641,6 +3656,7 @@ function step(dt) {
     }
   }
 
+  combatFx.update(dt);
   if (G.autoFarm && !G.manualIntent && !dlg) autoFarmActions();
   playerBasicAttack();
   updateMonsters(dt);
@@ -3668,9 +3684,8 @@ function handlePortals() {
 const FLOAT_CAP = 80, FLOAT_LIFE_MS = 850, FLOAT_RISE_PX = 24;
 // ponytail: fixed cap + drop-oldest, no pooling — 80 concurrent floaties never happens outside a screenshot stress test
 const FLOAT_FONT_STACK = 'ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace';
-function floatText(worldX, worldY, text, kind) {
-  G.floaties.push({ x: worldX, y: worldY, text, kind, born: now() });
-  if (G.floaties.length > FLOAT_CAP) G.floaties.shift();
+function floatText(worldX, worldY, text, kind, tag = '') {
+  combatFx.addFloatText(worldX, worldY, text, kind, tag);
 }
 function floatColor(kind) {
   const dt = G.highContrast ? COMBAT.damageTextHC : COMBAT.damageText;
@@ -3678,30 +3693,15 @@ function floatColor(kind) {
   if (kind === 'crit') return dt.critColor;
   if (kind === 'dmg') return dt.playerColor;
   if (kind === 'heal') return dt.healColor;
+  if (kind === 'weakness') return '#5bc0de';
+  if (kind === 'resist') return '#aaaaaa';
+  if (kind === 'detonate') return '#ff8800';
+  if (kind === 'status') return '#e0a0ff';
   if (kind === 'miss') return '#bbb';
   return '#fff';
 }
 function drawFloaties() {
-  if (!G.floaties.length) return;
-  const cx = G.cam.x, cy = G.cam.y, keep = [], reduced = prefersReducedMotion();
-  for (const f of G.floaties) {
-    const t = (now() - f.born) / FLOAT_LIFE_MS;
-    if (t >= 1) continue;
-    keep.push(f);
-    const rise = reduced ? 0 : t * FLOAT_RISE_PX;
-    const x = f.x - cx, y = f.y - cy - 20 - rise;
-    const alpha = t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.4);
-    const crit = f.kind === 'crit';
-    const txt = String(crit ? f.text + '!' : f.text);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.font = `800 ${crit ? 22 : 17}px ${FLOAT_FONT_STACK}`;
-    ctx.textAlign = 'center';
-    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, x, y);
-    ctx.fillStyle = floatColor(f.kind); ctx.fillText(txt, x, y);
-    ctx.restore();
-  }
-  G.floaties = keep;
+  combatFx.drawFloaties(G.cam.x, G.cam.y);
 }
 
 function logMsg(text, kind = '') {

@@ -9,10 +9,16 @@ export function createCombatFx({
   getCtx,
   prefersReducedMotion = () => false,
   now = () => performance.now(),
+  getFloaties: customGetFloaties,
+  setFloaties: customSetFloaties,
+  floatColor: customFloatColor,
 }) {
   let trauma = 0;
   let telegraphs = [];
-  let floaties = [];
+  let internalFloaties = [];
+
+  const getFloatList = customGetFloaties || (() => internalFloaties);
+  const setFloatList = customSetFloaties || ((newList) => { internalFloaties = newList; });
 
   const maxOffsetX = 12;
   const maxOffsetY = 12;
@@ -63,7 +69,7 @@ export function createCombatFx({
 
     const t = now();
     telegraphs = telegraphs.filter(tg => t < tg.expiresAt);
-    floaties = floaties.filter(f => (t - f.born) < FLOAT_LIFE_MS);
+    setFloatList(getFloatList().filter(f => (t - f.born) < FLOAT_LIFE_MS));
   }
 
   function drawTelegraphs(camX, camY) {
@@ -162,19 +168,20 @@ export function createCombatFx({
   }
 
   function addFloatText(worldX, worldY, text, kind = 'dmg', tag = '') {
-    floaties.push({
+    const list = getFloatList();
+    list.push({
       x: worldX,
       y: worldY,
-      text: String(text),
+      text: text,
       kind,
       tag,
       born: now(),
     });
-    if (floaties.length > FLOAT_CAP) floaties.shift();
+    if (list.length > FLOAT_CAP) list.shift();
   }
 
   function getFloaties() {
-    return floaties;
+    return getFloatList();
   }
 
   function floatColor(kind) {
@@ -192,13 +199,16 @@ export function createCombatFx({
 
   function drawFloaties(camX, camY) {
     const ctx = getCtx();
-    if (!ctx || !floaties.length) return;
+    const list = getFloatList();
+    if (!ctx || !list.length) return;
     const t = now();
     const reduced = prefersReducedMotion();
+    const keep = [];
 
-    for (const f of floaties) {
+    for (const f of list) {
       const elapsed = (t - f.born) / FLOAT_LIFE_MS;
       if (elapsed >= 1) continue;
+      keep.push(f);
 
       // Spring-scale pop curve: rapid scale to 1.35x, settles to 1.0x
       let scale = 1.0;
@@ -216,7 +226,8 @@ export function createCombatFx({
       const alpha = elapsed < 0.6 ? 1 : Math.max(0, 1 - (elapsed - 0.6) / 0.4);
 
       const isSpecial = f.kind === 'crit' || f.kind === 'weakness' || f.kind === 'detonate';
-      const displayText = f.tag ? `${f.tag} ${f.text}` : f.text;
+      const rawText = f.text;
+      const displayText = f.tag ? `${f.tag} ${rawText}` : (f.kind === 'crit' ? `${rawText}!` : String(rawText));
 
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -227,11 +238,13 @@ export function createCombatFx({
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(0,0,0,.85)';
       ctx.strokeText(displayText, 0, 0);
-      ctx.fillStyle = floatColor(f.kind);
+      ctx.fillStyle = (customFloatColor || floatColor)(f.kind);
       ctx.fillText(displayText, 0, 0);
       ctx.restore();
     }
+    setFloatList(keep);
   }
+
 
   return {
     addScreenShake,
