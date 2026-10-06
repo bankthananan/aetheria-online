@@ -33,6 +33,8 @@ import { createTileRenderer } from './render/tiles.js';
 import { createCombatFx } from './render/combat-fx.js';
 import { createBossMechanics } from './systems/boss-mechanics.js';
 import { createGuild } from './systems/guild.js';
+import { createEliteSystem } from './systems/elite-monsters.js';
+import { drawEliteAura, drawEliteShield, drawMoltenHazards } from './render/elite-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -171,6 +173,12 @@ const $ = sel => document.querySelector(sel);
 const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 const gameClock = createGameClock();
 const now = () => gameClock.now();
+const eliteSystem = createEliteSystem({
+  rnd: () => Math.random(),
+  now,
+  dist: (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2),
+  TS,
+});
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -1317,7 +1325,7 @@ function loadMap(mapId, spawnX, spawnY) {
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
   recompute(G.player);
   G.heatField = buildHeatField(map);
-  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = []; combatFx.clearTelegraphs();   // don't carry paths/spell zones across maps
+  G.target = null; G.targetSource = null; G.path = null; G.manualIntent = null; G.effects = []; G.floaties = []; combatFx.clearTelegraphs(); eliteSystem.clearHazards();   // don't carry paths/spell zones across maps
   if (G.player) G.player.sanctuary = null;
 
   // NPCs: map gives position/identity, content gives behavior
@@ -1473,11 +1481,11 @@ function heatLevel(map, col, row, spawn, field = G.map === map ? G.heatField : b
   const progress = clamp((depth - minDepth) / Math.max(0.001, maxDepth - minDepth), 0, 1);
   return clamp(Math.round(lo + progress * (hi - lo)) + rndInt(0, TUNING.monsterLevelSpread), lo, hi);
 }
-function makeMonster(def, x, y, levelOverride, spawnSpec = null) {
+function makeMonster(def, x, y, levelOverride, spawnSpec = null, eliteTierOverride = null) {
   const lvl = levelOverride != null ? levelOverride : rollMonsterLevel(def);
   const st = monsterStatsFor(def, lvl);
   const { atk, atkBase, dv, exp, hp } = st;
-  return {
+  const mob = {
     def, spawnSpec, x, y, homeX: x, homeY: y,
     difficultyTier: DifficultySystem.getTier(G.zoneDifficulty?.[G.mapId]).id,
     lvl, atk, atkBase, dv,
@@ -1488,6 +1496,13 @@ function makeMonster(def, x, y, levelOverride, spawnSpec = null) {
     size: (def.sizeTiles || 1) * TS,
     flee: st.flee, hit: st.hit,
   };
+  const tier = (eliteTierOverride !== null && eliteTierOverride !== undefined)
+    ? (eliteTierOverride || null)
+    : eliteSystem.rollTier(def);
+  if (tier) {
+    eliteSystem.applyEliteMods(mob, tier);
+  }
+  return mob;
 }
 
 // =====================================================================
@@ -1871,6 +1886,7 @@ function applyCrossCombo(sk, m, dmg, isCrit) {
 function damageMonster(m, dmg, isCrit, silent) {
   const mark = liveStatus(m, 'mark');
   if (mark) dmg = Math.max(1, Math.round(dmg * (1 + mark.damageTaken)));
+  dmg = eliteSystem.mitigateDamage(m, dmg);
   m.hp -= dmg;
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
   if (isCrit) {
@@ -1928,22 +1944,37 @@ function killMonster(m) {
   if (G.target === m) { G.target = null; G.targetSource = null; G.path = null; }
   if (G.autoFarm) setAutoState('search', T('Finding next encounter', 'ui'), T(m.def.name, 'monsters'));
   const p = G.player;
-  const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl)));
+  const eliteReward = eliteSystem.handleEliteDeath(m, G.monsters, p, {
+    floatText,
+  });
+  const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl) * (eliteReward?.xpMult || 1)));
   gainXp(xpGain);
   G.killCounts[m.def.id] = (G.killCounts[m.def.id] || 0) + 1;
   // zeny drop scaled by monster level (bosses pay a jackpot)
   const zBase = m.lvl * TUNING.zenyPerLevel * (m.def.sizeTiles >= 2 ? 6 : 1);
-  const zeny = rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5));
+  const zeny = Math.round(rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5)) * (eliteReward?.zenyMult || 1));
   if (zeny > 0) { p.zeny += zeny; }
   // drops (equipment rolls rarity + affixes, biased by monster level & your LUK)
   const dropMult = DifficultySystem.getTier(m.difficultyTier).dropChanceMult * (G.mastery.claimedRanks[G.mapId]?.silver ? 1 + TUNING.expansion.masteryDrop : 1);
+  const dropBiasBonus = eliteReward?.dropBiasBonus || 0;
   for (const d of m.def.drops) if (chance(Math.min(1,d.chance * dropMult))) {
     const dropId = classWeaponFor(p, d.itemId);
-    const got = addItem(dropId, 1, dropBias(m, p)), it = itemById[dropId];
+    const got = addItem(dropId, 1, dropBias(m, p) + dropBiasBonus), it = itemById[dropId];
     if(p.features.loot.quiet&&got&&!matchesLoot(got,it,p.features.loot,p.classId))continue;
     if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
+  }
+  if (eliteReward?.gemDrop) {
+    addItem(eliteReward.gemDrop, 1);
+    const gemItem = itemById[eliteReward.gemDrop];
+    toast(`💎 Bonus Gem Shard: ${gemItem?.name || eliteReward.gemDrop}!`, 'good');
+    logMsg(`Found bonus gem shard: ${gemItem?.name || eliteReward.gemDrop}!`, 'good');
+  }
+  if (m.eliteTier) {
+    const tierName = m.eliteTier === 'elite' ? 'Elite' : 'Champion';
+    toast(`★ ${tierName} ${m.def.name} defeated!`, 'good');
+    AUDIO.playSfx('quest');
   }
   logMsg(`Defeated Lv${m.lvl} ${m.def.name} (+${xpGain} xp, +${zeny}z).`);
   // class-advancement quest progress (kill objective)
@@ -2236,6 +2267,17 @@ function updateMonsters(dt) {
     floatText,
     playerDeath,
   });
+  eliteSystem.updateElites(G.monsters, p, dt, {
+    now,
+    floatText,
+    addTelegraph: combatFx.addTelegraph,
+    playerDeath,
+    applyPlayerStatus: (type, durationMs) => {
+      if (type === 'slow') {
+        p.slowUntil = Math.max(p.slowUntil || 0, now() + durationMs);
+      }
+    },
+  });
   if (p.hp <= 0) return;
   for (const m of G.monsters) {
     if (!m.alive) { if (now() >= m.deadUntil) respawn(m); continue; }
@@ -2366,6 +2408,13 @@ function respawn(m) {
   m.hp = m.maxHp; m.alive = true; m.statuses = {}; m.provoked = false; m.path = null; m.leashing = false;
   m.enraged = false; m.phase = 0; m.atk = m.atkBase; m.slamAt = null; m.nextSlamAt = 0;
   m.raidAddsSpawned = false; m.raidPhase3 = false; m.raidHazardTicks = 0;   // raid-only 3-phase state reset
+  delete m.eliteTier;
+  delete m.eliteAffixes;
+  delete m.shieldActive;
+  const tier = eliteSystem.rollTier(m.def);
+  if (tier) {
+    eliteSystem.applyEliteMods(m, tier);
+  }
 }
 
 // ---- roaming rare boss: an MVP-style world event announced on a timer ----
@@ -3298,6 +3347,7 @@ function monsterNameColor(m) {
 function drawMonster(m, cx, cy) {
   const x = m.x - cx, y = m.y - cy, s = m.size * 1.15;
   groundShadow(x, y + s * 0.42, s * 0.4);
+  drawEliteAura(ctx, m, x, y, s, now());
   if (m.enraged) {   // pulsing red aura while enraged
     ctx.strokeStyle = '#ff3b2f'; ctx.lineWidth = 2 + Math.abs(Math.sin(now() / 110)) * 2;
     ctx.globalAlpha = 0.75; ctx.beginPath(); ctx.arc(x, y, s * 0.62, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
@@ -3307,17 +3357,24 @@ function drawMonster(m, cx, cy) {
   // art (Tasks 5-9) is drawn flip-aware; flipping a legacy monster would visibly mirror it.
   const flip = Array.isArray(PX.monster[m.def.id]) ? false : m.facingLeft;
   if (!drawPx('monster', m.def.id, x, y, s, flip, a.state, a.frame)) { ctx.fillStyle = m.def.spriteColor; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
+  drawEliteShield(ctx, m, x, y, s, now());
   if (m === G.target) { ctx.strokeStyle = THEME.palette.danger; ctx.lineWidth = 2; ctx.strokeRect(x - s / 2 - 3, y - s / 2 - 3, s + 6, s + 6); }
   const w = s, hpw = w * (m.hp / m.maxHp);
   ctx.fillStyle = '#000'; ctx.fillRect(x - w / 2, y - s / 2 - 8, w, 4);
   ctx.fillStyle = THEME.palette.hpRed; ctx.fillRect(x - w / 2, y - s / 2 - 8, hpw, 4);
   // name label — level prefix + boss/elite colour-coding
   const boss = m.def.sizeTiles >= 2;
-  const label = `Lv${m.lvl} ${boss ? '☠ ' : ''}${T(m.def.name, 'monsters')}`;
-  labelText(label, x, y - s / 2 - 12, monsterNameColor(m), boss ? 'bold 12px sans-serif' : '10px sans-serif');
+  const eliteBadge = m.eliteTier === 'elite' ? ' [★ ELITE]' : (m.eliteTier === 'champion' ? ' [★ CHAMPION]' : '');
+  const label = `Lv${m.lvl} ${boss ? '☠ ' : ''}${T(m.def.name, 'monsters')}${eliteBadge}`;
+  const nameColor = m.eliteTier === 'elite' ? '#ffcc00' : (m.eliteTier === 'champion' ? '#5bc0de' : monsterNameColor(m));
+  labelText(label, x, y - s / 2 - 12, nameColor, (boss || m.eliteTier) ? 'bold 12px sans-serif' : '10px sans-serif');
   const statusName = { stun: 'STUN', burn: 'BURN', slow: 'SLOW', mark: 'MARK', sunder: 'BROKEN' };
   const statuses = Object.keys(m.statuses).filter(id => liveStatus(m, id) && statusName[id]).map(id => statusName[id]);
   if (statuses.length) labelText(statuses.join(' · '), x, y - s / 2 - 24, '#9fe6ff', 'bold 8px sans-serif');
+  const affixLabels = m.eliteAffixes?.map(a => a.toUpperCase().replace('_', ' '));
+  if (affixLabels?.length) {
+    labelText(affixLabels.join(' · '), x, y - s / 2 - (statuses.length ? 34 : 24), '#ffd54f', 'bold 8px sans-serif');
+  }
 }
 function drawPlayer(p, cx, cy) {
   const px = p.x - cx, py = p.y - cy;
@@ -3401,6 +3458,7 @@ function skillFx(sk, tx, ty) {
 
 function drawGroundEffects() {
   const cx = G.cam.x, cy = G.cam.y;
+  drawMoltenHazards(ctx, eliteSystem.getHazards(), cx, cy, now());
   for (const e of G.effects) {
     if (e.kind !== 'aura') continue;
     const t = (now() - e.born) / e.life; if (t < 0 || t >= 1) continue;
@@ -3602,7 +3660,8 @@ function step(dt) {
   if (k['w'] || k['arrowup']) dy -= 1;
   if (k['s'] || k['arrowdown']) dy += 1;
   if(touchJoystickState.active){dx+=touchJoystickState.normX;dy+=touchJoystickState.normY;}
-  const spd = 130 * (p.moveMult || 1) * dt;   // AGI quickens the step
+  const isSlowed = Boolean(p.slowUntil && now() < p.slowUntil);
+  const spd = 130 * (p.moveMult || 1) * (isSlowed ? 0.6 : 1) * dt;   // AGI quickens the step
   const mx0 = p.x, my0 = p.y;                        // for walk-animation detection
   if (dx || dy) {                                   // WASD/arrows override click-to-move
     G.path = null;

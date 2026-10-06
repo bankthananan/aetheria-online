@@ -282,10 +282,11 @@ assert.ok(logs.some(l => l.includes('[selfcheck] OK')), 'selfCheck ran and passe
 assert.deepEqual(Object.keys(A).sort(), AWO_KEYS, 'window.__AWO key set unchanged');
 
 // 3. deterministic render fingerprint per map
+// (whispering_woods and sunken_ruins include Champion/Elite badges & affix text under seed 42)
 const RENDER = {
   town_awakening: { calls: 557, hash: '1556944fc678a798' },
-  whispering_woods: { calls: 839, hash: '03fb5eac4c5025a8' },
-  sunken_ruins: { calls: 503, hash: 'e7f1cf72b2634883' },
+  whispering_woods: { calls: 842, hash: 'f74f120464539daf' },
+  sunken_ruins: { calls: 506, hash: 'ce4320ac970e318b' },
 };
 for (const [mapId, want] of Object.entries(RENDER)) {
   seed = 42;
