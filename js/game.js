@@ -1416,7 +1416,7 @@ function spawnRiftWave() {
   for (let i = 0; i < T_.waveSize; i++) {
     const def = monById[pool[i % pool.length]];
     const t = G.spawnTiles.length ? G.spawnTiles[rndInt(0, G.spawnTiles.length - 1)] : { col: 2, row: 2 };
-    const m = makeMonster(def, t.col * TS + TS / 2, t.row * TS + TS / 2, def.level);
+    const m = makeMonster(def, t.col * TS + TS / 2, t.row * TS + TS / 2, def.level, null, false);
     m.hp = m.maxHp = Math.round(m.maxHp * scale);
     m.atk = m.atkBase = Math.round(m.atk * scale);
     G.monsters.push(m);
@@ -1496,9 +1496,10 @@ function makeMonster(def, x, y, levelOverride, spawnSpec = null, eliteTierOverri
     size: (def.sizeTiles || 1) * TS,
     flee: st.flee, hit: st.hit,
   };
+  const isRift = Boolean(G.rift?.active && G.mapId === 'celestial_rift');
   const tier = (eliteTierOverride !== null && eliteTierOverride !== undefined)
     ? (eliteTierOverride || null)
-    : eliteSystem.rollTier(def);
+    : (isRift ? null : eliteSystem.rollTier(def));
   if (tier) {
     eliteSystem.applyEliteMods(mob, tier);
   }
