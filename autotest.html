@@ -119,6 +119,16 @@
               const rb = A.G.monsters.find(m => m.def.rare && m.alive);
               if (rb) { A.G.player.x = rb.x - 70; A.G.player.y = rb.y; }
             }
+            if (params.get('elite')) {                // stage elite monster with aura and shield
+              const mob = A.G.monsters.find(m => m.alive && m.def.sizeTiles < 2);
+              if (mob) {
+                mob.eliteTier = params.get('elite') === 'champion' ? 'champion' : 'elite';
+                mob.eliteAffixes = ['molten', 'shielding'];
+                mob.shieldActive = true;
+                A.G.player.x = mob.x - 70;
+                A.G.player.y = mob.y;
+              }
+            }
             if (warp === 'dragon_caldera') { const d = A.G.monsters.find(m => m.def.id === 'flame_dragon'); if (d) { A.G.player.x = d.x - 60; A.G.player.y = d.y; } }
             if (warp === 'astral_rift') { const d = A.G.monsters.find(m => m.def.id === 'nullking'); if (d) { A.G.player.x = d.x - 64; A.G.player.y = d.y; } }
             if (params.get('raid')) {               // world boss screenshot: god mode so the endgame roster can't one-shot a low-level test hero
