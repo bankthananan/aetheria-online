@@ -35,6 +35,7 @@ import { createBossMechanics } from './systems/boss-mechanics.js';
 import { createGuild } from './systems/guild.js';
 import { createEliteSystem } from './systems/elite-monsters.js';
 import { drawEliteAura, drawEliteShield, drawMoltenHazards } from './render/elite-fx.js';
+import { createRelicSystem } from './systems/relics.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -121,7 +122,7 @@ for (const map of Object.values(MAPS)) for (const sp of (map.spawns || [])) if (
 const itemDropSource = itemId => { for (const m of CONTENT.monsters) if (m.drops.some(d => d.itemId === itemId)) return { mon: m.name, monsterId: m.id, map: monsterMapName[m.id], mapId: monsterMapId[m.id] }; return null; };
 const npcLocation = npcId => { for (const map of Object.values(MAPS)) { const npc = (map.npcs || []).find(n => n.id === npcId); if (npc) return { mapId: map.id, npc }; } return null; };
 // shared item-category grouping (inventory + shop buy/sell)
-const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
+const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory' || it.type === 'relic') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
 const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Reset Manuals': 3, 'Materials': 4, 'Quest Items': 5 };
 const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
 // item id -> pixel icon key (see pixelart.js PX.item)
@@ -154,12 +155,14 @@ const ITEM_ICON = {
   steel_sword: 'sword', knight_plate: 'plate',
   mythril_gauntlets: 'gloves', drakescale_boots: 'boots', aurora_cloak: 'cloak',
   titan_grips: 'gloves', astral_greaves: 'boots', voidweave_cloak: 'cloak',
+  phoenix_feather: 'gem_red', midas_touch: 'gloves', storm_conduit: 'storm_core',
+  thornmail_carapace: 'crawler_shell', frostbite_pendant: 'gem_blue', vampiric_grail: 'tide_core',
 };
 // equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
-const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory'];
-const SLOT_LABEL = { weapon: 'Weapon', head: 'Head', body: 'Body', hands: 'Hands', cloak: 'Cloak', feet: 'Feet', accessory: 'Accessory' };
-const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring' };
-const itemSlot = it => it.type === 'weapon' ? 'weapon' : it.type === 'accessory' ? 'accessory' : (it.slot || 'body');
+const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
+const SLOT_LABEL = { weapon: 'Weapon', head: 'Head', body: 'Body', hands: 'Hands', cloak: 'Cloak', feet: 'Feet', accessory: 'Accessory', relic: 'Relic' };
+const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
+const itemSlot = it => it.type === 'weapon' ? 'weapon' : it.type === 'accessory' ? 'accessory' : it.type === 'relic' ? 'relic' : (it.slot || 'body');
 
 // ---- compile formula strings (strict mode: no `with`, so destructure a scope) ----
 const VARS = ['baseHp','vit','level','int','str','dex','weaponAtk','armorDef','agi','luk','attackerAtk','defenderDef','isCrit'];
@@ -178,6 +181,12 @@ const eliteSystem = createEliteSystem({
   now,
   dist: (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2),
   TS,
+});
+const relicSystem = createRelicSystem({
+  now,
+  dist: (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2),
+  TS,
+  rnd: () => Math.random(),
 });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -209,7 +218,7 @@ function eventHotkeyCode(e) {
 // ---- loot: rarity + affix rolls (higher rarity → stronger base + more affixes) ----
 let _uid = 0;
 const rndInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-const isEquip = itemId => ['weapon', 'armor', 'accessory'].includes(itemById[itemId]?.type);
+const isEquip = itemId => ['weapon', 'armor', 'accessory', 'relic'].includes(itemById[itemId]?.type);
 function pickRarity(bias = 0) {
   const weighted = RARITY_ORDER.map(k => { let w = RARITY[k].weight; if (bias > 0 && RARITY[k].affixes > 0) w *= (1 + bias * RARITY[k].affixes * 0.6); return [k, w]; });
   const total = weighted.reduce((s, [, w]) => s + w, 0);
@@ -429,7 +438,8 @@ function makePlayer(classId, name) {
     zeny: 50,
     features: normalizeFeatures(),
     inventory: [{ itemId: 'minor_potion', qty: 3 }],
-    equip: { weapon: null, head: null, body: null, hands: null, cloak: null, feet: null, accessory: null },
+    equip: { weapon: null, head: null, body: null, hands: null, cloak: null, feet: null, accessory: null, relic: null },
+    bloodShield: 0,
     lifesteal: 0,
     x: 0, y: 0, facing: { x: 0, y: 1 },
     hp: 1, mp: 1,
@@ -1004,8 +1014,8 @@ function buffMult(p, stat) {
 function recompute(p, fill) {
   const st = statBlock(p);
   p.stats = st;
-  const weaponAtk = effAtk(p.equip.weapon) + effAtk(p.equip.accessory);   // rarity-scaled
-  const armorDef = ['head', 'body', 'hands', 'cloak', 'feet', 'accessory'].reduce((s, k) => s + effDef(p.equip[k]), 0);
+  const weaponAtk = effAtk(p.equip.weapon) + effAtk(p.equip.accessory) + effAtk(p.equip.relic);   // rarity-scaled
+  const armorDef = ['head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'].reduce((s, k) => s + effDef(p.equip[k]), 0);
   const base = { ...st, level: p.level, baseHp: 100, weaponAtk, armorDef, isCrit: false };
   p.maxHp = F.maxHp(base);
   p.maxMp = F.maxMp(base);
@@ -1032,14 +1042,16 @@ function recompute(p, fill) {
   p.lifesteal = af.lifesteal || 0;
   // ---- passive skills: permanent % bonuses ----
   const ps = passiveBonuses(p);
-  p.maxHp = Math.round(p.maxHp * (1 + ps.hpPct / 100));
+  const relicMods = relicSystem.getPassiveModifiers(p);
+  p.maxHp = Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100));
   p.maxMp = Math.round(p.maxMp * (1 + ps.mpPct / 100));
   p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100));
   p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100));
   p.magicAtk = Math.round(p.magicAtk * (1 + ps.atkPct / 100));
-  p.physDef = Math.round(p.physDef * (1 + ps.defPct / 100));
+  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct) / 100));
   p.critChance = Math.min(100, p.critChance + ps.critPct);
   p.flee += ps.fleeFlat;
+  p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0);
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
   p.atkDelay = Math.round(COMBAT.attackSpeedMs * (1 - Math.min(0.45, st.agi * TUNING.agiAtkSpeed)));
@@ -1107,6 +1119,7 @@ function itemMainStatsHtml(inst) {
   const it = itemById[inst.itemId], out = [];
   if (it.atk) out.push(`${T('ATK', 'ui')} <b>${effAtk(inst)}</b>`);
   if (it.def) out.push(`${T('DEF', 'ui')} <b>${effDef(inst)}</b>`);
+  if (it.relicPerk) out.push(`<b style="color:var(--text-accent, #38bdf8)">${T('Relic Perk', 'ui')}</b>`);
   return out.join(' · ') || `<span style="color:var(--text-muted)">${T('no base stat', 'ui')}</span>`;
 }
 function itemAffixesHtml(inst, p = G.player) {
@@ -1147,8 +1160,8 @@ function equippedGearSummaryHtml(p) {
   const totals = equippedAffixes(p);
   const active = Object.entries(totals).filter(([, value]) => value > 0)
     .map(([stat, value]) => `<span class="gear-bonus">${affixValueText(stat, value)}</span>`).join('');
-  const weaponAtk = effAtk(p.equip.weapon) + effAtk(p.equip.accessory);
-  const armorDef = ['head', 'body', 'hands', 'cloak', 'feet', 'accessory'].reduce((sum, slot) => sum + effDef(p.equip[slot]), 0);
+  const weaponAtk = effAtk(p.equip.weapon) + effAtk(p.equip.accessory) + effAtk(p.equip.relic);
+  const armorDef = ['head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'].reduce((sum, slot) => sum + effDef(p.equip[slot]), 0);
   return `<div class="gear-summary"><b>${T('Equipment contribution', 'ui')}</b><div>${T('Base gear', 'ui')}: +${weaponAtk} ${T('weapon ATK', 'ui')} · +${armorDef} ${T('armor DEF', 'ui')}</div><div class="gear-bonuses">${active || `<span class="gear-bonus gear-bonus--muted">${T('No active substats', 'ui')}</span>`}</div></div>`;
 }
 
@@ -1896,8 +1909,15 @@ function damageMonster(m, dmg, isCrit, silent) {
   } else {
     floatText(m.x, m.y, dmg, 'dmg');
   }
-  const p = G.player;   // lifesteal affix: heal a fraction of damage dealt
-  if (p.lifesteal) { const heal = Math.max(1, Math.round(dmg * p.lifesteal / 100)); p.hp = clamp(p.hp + heal, 0, p.maxHp); }
+  const p = G.player;
+  relicSystem.onHit(p, m, dmg, isCrit, {
+    monsters: G.monsters,
+    floatText: (x, y, t, col) => floatText(x, y, t, col || 'crit'),
+    spawnZap: (src, dst) => spawnBolt(src.x, src.y, dst.x, dst.y, '#fef08a', '#ffffff', true),
+  });
+  const relic = relicSystem.getEquippedRelic(p);
+  const baseLifesteal = relic?.id === 'vampiric_grail' ? Math.max(0, p.lifesteal - 6) : p.lifesteal;
+  if (baseLifesteal > 0) { const heal = Math.max(1, Math.round(dmg * baseLifesteal / 100)); p.hp = clamp(p.hp + heal, 0, p.maxHp); }
   // Reflective Void (rift mutator): monsters return a slice of damage taken
   if (G.rift.active && G.mapId === 'celestial_rift' && G.rift.mutatorId === 'reflective_void' && !p.godMode) {
     const reflect = Math.max(1, Math.round(dmg * TUNING.rift.reflectPct));
@@ -1948,12 +1968,13 @@ function killMonster(m) {
   const eliteReward = eliteSystem.handleEliteDeath(m, G.monsters, p, {
     floatText,
   });
+  const relicKill = relicSystem.onKill(p, m);
   const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl) * (eliteReward?.xpMult || 1)));
   gainXp(xpGain);
   G.killCounts[m.def.id] = (G.killCounts[m.def.id] || 0) + 1;
   // zeny drop scaled by monster level (bosses pay a jackpot)
   const zBase = m.lvl * TUNING.zenyPerLevel * (m.def.sizeTiles >= 2 ? 6 : 1);
-  const zeny = Math.round(rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5)) * (eliteReward?.zenyMult || 1));
+  const zeny = Math.round(rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5)) * (eliteReward?.zenyMult || 1) * (relicKill?.zenyMult || 1));
   if (zeny > 0) { p.zeny += zeny; }
   // drops (equipment rolls rarity + affixes, biased by monster level & your LUK)
   const dropMult = DifficultySystem.getTier(m.difficultyTier).dropChanceMult * (G.mastery.claimedRanks[G.mapId]?.silver ? 1 + TUNING.expansion.masteryDrop : 1);
@@ -2365,10 +2386,16 @@ function updateMonsters(dt) {
         if (rollHit(m.hit + gapHit(m.lvl, p.level), p.flee) && !playerAvoidsHit(m)) {
           const { dmg, isCrit } = calcDamage(m.atk, p.physDef * buffMult(p, 'def'), 5);
           if (m.def.attackRange) spawnBolt(m.x, m.y, p.x, p.y, m.def.projectileColor || '#ffffff', '#ffffff');
-          if (!p.godMode) p.hp -= dmg;                                  // admin god mode
+          const isMelee = !m.def.attackRange || m.def.attackRange <= 1.5;
+          const relicDef = relicSystem.onTakeDamage(p, m, dmg, {
+            isMelee,
+            floatText: (x, y, t, col) => floatText(x, y, t, col || 'status'),
+          });
+          const actualDmg = Math.max(0, dmg - (relicDef.absorbed || 0));
+          if (!p.godMode) p.hp -= actualDmg;                                  // admin god mode
           p.hurtUntil = now() + ANIM.hurtMs;
           AUDIO.playSfx('playerHurt');
-          floatText(p.x, p.y, p.godMode ? '0' : dmg, p.godMode ? 'heal' : 'enemy');
+          floatText(p.x, p.y, p.godMode ? '0' : actualDmg, p.godMode ? 'heal' : 'enemy');
           const matchesFocus = !G.huntTargetId || m.def.id === G.huntTargetId;
           if ((!G.target || !G.target.alive) && matchesFocus && (!G.autoFarm || autoHuntEligible(m, p))) {
             G.target = m; G.targetSource = 'retaliate';
@@ -2600,6 +2627,15 @@ function stopAutomationOnDeath() {
 
 function playerDeath() {
   const p = G.player;
+  if (relicSystem.onLethalDamage(p, p.maxHp, {
+    monsters: G.monsters,
+    floatText: (x, y, t, col) => floatText(x, y, t, col || 'crit'),
+    spawnRing,
+    playSfx: (id) => AUDIO.playSfx(id || 'heal'),
+  })) {
+    recompute(p, false);
+    return;
+  }
   // dying inside the rift returns to its portal source map, not town — same penalty either way
   const inRift = G.rift.active && G.mapId === 'celestial_rift';
   const automationStopped = stopAutomationOnDeath();
@@ -3747,6 +3783,7 @@ function floatText(worldX, worldY, text, kind, tag = '') {
   combatFx.addFloatText(worldX, worldY, text, kind, tag);
 }
 function floatColor(kind) {
+  if (typeof kind === 'string' && (kind.startsWith('#') || kind.startsWith('rgb'))) return kind;
   const dt = G.highContrast ? COMBAT.damageTextHC : COMBAT.damageText;
   if (kind === 'enemy') return dt.enemyColor;
   if (kind === 'crit') return dt.critColor;
@@ -4152,7 +4189,7 @@ function updateHud() {
   const need = p.level >= DESIGN.levelCap ? 1 : xpForNext(p.level);
   $('#xp-fill').style.width = (100 * p.xp / need) + '%';
   if ($('#job-fill')) $('#job-fill').style.width = (p.jobLevel >= activeJobLevelCap(p) ? 100 : 100 * p.jobXp / jobXpForNext(p.jobLevel)) + '%';
-  const shield = (p.buffs || []).find(b => b.id === 'draconic_shield' || b.shield)?.shield || 0;
+  const shield = ((p.buffs || []).find(b => b.id === 'draconic_shield' || b.shield)?.shield || 0) + (p.bloodShield || 0);
   if ($('#shield-fill')) $('#shield-fill').style.width = (shield > 0 ? Math.min(100, 100 * shield / p.maxHp) : 0) + '%';
   $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}${shield > 0 ? ` (+${shield})` : ''}`;
   $('#mp-label').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
@@ -5230,7 +5267,7 @@ function panelBody(id) {
     const tab = G._bagTab || 'all';
     const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
     const q = (G._invSearch || '').trim().toLowerCase();
-    const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory'].includes(it.type)) || (tab === 'use' && ['potion', 'reset'].includes(it.type)) || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
+    const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory', 'relic'].includes(it.type)) || (tab === 'use' && ['potion', 'reset'].includes(it.type)) || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
     const matchesSearch = (e, it) => {
       if (!q) return true;
       if (it && it.name && it.name.toLowerCase().includes(q)) return true;

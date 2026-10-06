@@ -272,6 +272,8 @@ export const L10N = {
       "Cloak": "ผ้าคลุม",
       "Feet": "รองเท้า",
       "Accessory": "เครื่องประดับ",
+      "Relic": "วัตถุโบราณ",
+      "Relic Perk": "ความสามารถวัตถุโบราณ",
 
       // Quest / Bounty System
       "Main Story · Base Lv 1–": "📖 เนื้อเรื่องหลัก · เลเวล 1–",
@@ -1266,7 +1268,19 @@ export const L10N = {
       "Astral Greaves": "รองเท้าเกราะดารา",
       "Each step rings like a struck bell in the void.": "รองเท้าเกราะดารา ทุกย่างก้าวดังสะท้อนราวกับระฆังในความว่างเปล่า",
       "Voidweave Cloak": "ผ้าคลุมใยว่างเปล่า",
-      "A cut of the rift itself; blades slide into nothing.": "ผ้าคลุมมิติรอยแยก ใบดาบที่ฟันเข้ามาจะลื่นไหลหายไปในความว่างเปล่า"
+      "A cut of the rift itself; blades slide into nothing.": "ผ้าคลุมมิติรอยแยก ใบดาบที่ฟันเข้ามาจะลื่นไหลหายไปในความว่างเปล่า",
+      "Phoenix Feather": "ขนนกฟีนิกซ์",
+      "A blazing plume that refuses to let its bearer turn to ash.": "ขนนกเพลิงลุกโชนที่ไม่ยอมให้ผู้ครอบครองกลายเป็นเถ้าถ่าน",
+      "Hand of Midas": "หัตถ์ไมดาส",
+      "A gilded glove from a forgotten king whose touch turned greed into gold.": "ถุงมือทองคำของกษัตริย์ที่ถูกลืม ผู้เปลี่ยนความโลภให้กลายเป็นทองคำ",
+      "Storm Conduit": "ท่อประจุพายุสายฟ้า",
+      "A humming capacitor holding captive lightning.": "ตัวเก็บประจุที่ส่งเสียงฮัมและกักขังสายฟ้าเอาไว้ข้างใน",
+      "Bramble Carapace": "เกราะกระดองหนาม",
+      "Hardened chitin bristling with venomous barbs.": "กระดองไคตินแข็งแกร่งที่เต็มไปด้วยหนามแหลมพิษ",
+      "Frostbite Pendant": "จี้กัดกร่อนเยือกแข็ง",
+      "A shard of permafrost that chills everything it nears.": "เศษเสี้ยวน้ำแข็งนิรันดร์ที่แช่แข็งทุกสิ่งที่เข้าใกล้",
+      "Chalice of the Undying": "จอกแห่งความเป็นอมตะ",
+      "An obsidian goblet brimming with stolen starlight.": "จอกหินออบซิเดียนที่เปี่ยมล้นไปด้วยแสงดาวที่ถูกขโมยมา"
     },
     achievements: {
       "First Blood": "เลือดแรก",
