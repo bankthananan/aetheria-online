@@ -170,6 +170,7 @@
           }
           if (params.get('admin') && ticks > 4 && !document.getElementById('panel')) A.togglePanel('admin');
           if (params.get('slam')) {                 // keep the boss slam telegraph live for the screenshot
+            A.G.player.godMode = true;
             const b = A.G.monsters.find(m => m.def.sizeTiles >= 2 && m.alive);
             if (b) { A.G.player.x = b.x - 90; A.G.player.y = b.y; b.lastCombatAt = performance.now(); if (!b.slamAt) b.nextSlamAt = 0; }
           }

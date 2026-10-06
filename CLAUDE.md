@@ -49,8 +49,10 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/pathing.js` — grid A* pathfinding and nearest-walkable search with windstream directional penalties
   - `js/selfcheck.js` — comprehensive boot integrity check and content audit
   - `js/render/tiles.js` — procedural 16×16 pixel tile generation and multi-layer parallax backdrops
+  - `js/render/combat-fx.js` — trauma screen shake engine, geometric boss telegraph renderers (circle, fissure, cone, vortex), and spring-scaled combat floaties
+  - `js/systems/boss-mechanics.js` — Guardian encounter state machine, telegraph patterns, lingering ground hazards, and geometric collision tests (oriented box, cone, circle)
   - `js/systems/guild.js` — Adventurer's Guild bounties, rank ladder, and turn-ins
-  - `js/systems/*.js` (dailies, difficulty, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, subdungeon)
+  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, subdungeon)
   - `js/input.js`, `js/viewport.js`, `js/expansion-runtime.js`, `js/guidance-runtime.js`, `js/equipment-features.js`
   - `js/zones/` holds per-zone content packages.
   The remaining `js/` modules are **logic-free data modules**.
