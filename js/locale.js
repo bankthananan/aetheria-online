@@ -275,6 +275,13 @@ export const L10N = {
       "Relic": "วัตถุโบราณ",
       "Relic Perk": "ความสามารถวัตถุโบราณ",
 
+      // Socket Expansion & Rune System
+      "Expand Sockets": "เจาะช่องอัญมณี",
+      "Expand Sockets ({n}/4)": "เจาะช่องอัญมณี ({n}/4)",
+      "Socket expanded!": "เจาะช่องอัญมณีสำเร็จ!",
+      "Max sockets reached (4/4)": "ช่องอัญมณีเต็มแล้ว (4/4)",
+      "Elemental Infusion": "การผสานพลังธาตุ",
+
       // Weather System
       "Clear Skies": "ท้องฟ้าแจ่มใส",
       "Mild atmospheric conditions across the realm.": "สภาพอากาศปลอดโปร่งทั่วทั้งดินแดน",
@@ -1171,6 +1178,18 @@ export const L10N = {
       "A raw azure gem. Socket it into rare-or-better gear for a permanent Max HP boost.": "อัญมณีสีฟ้าดิบ ฝังลงในอุปกรณ์ระดับหายากขึ้นไปเพื่อเพิ่มพลังชีวิตสูงสุดถาวร",
       "Emerald Shard": "เศษมรกต",
       "A raw verdant gem. Socket it into rare-or-better gear for a permanent DEF boost.": "อัญมณีสีเขียวดิบ ฝังลงในอุปกรณ์ระดับหายากขึ้นไปเพื่อเพิ่มพลังป้องกันถาวร",
+      "Ember Rune": "รูนเพลิง",
+      "A fiery primal rune. Socket into weapons to infuse basic attacks with Fire, or armor for +12% Fire Resistance.": "รูนแห่งเปลวไฟโบราณ ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุไฟ หรือฝังในชุดเกราะเพื่อต้านทานไฟ +12%",
+      "Glacial Rune": "รูนน้ำแข็ง",
+      "A frozen primal rune. Socket into weapons to infuse basic attacks with Ice, or armor for +12% Ice Resistance.": "รูนแห่งน้ำแข็งเยือกแข็ง ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุน้ำแข็ง หรือฝังในชุดเกราะเพื่อต้านทานน้ำแข็ง +12%",
+      "Storm Rune": "รูนสายฟ้า",
+      "A crackling primal rune. Socket into weapons to infuse basic attacks with Lightning, or armor for +12% Lightning Resistance.": "รูนแห่งสายฟ้าคำราม ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุสายฟ้า หรือฝังในชุดเกราะเพื่อต้านทานสายฟ้า +12%",
+      "Verdant Rune": "รูนพงไพร",
+      "A living primal rune. Socket into weapons to infuse basic attacks with Nature, or armor for +12% Nature Resistance.": "รูนแห่งพงไพรมีชีวิต ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุธรรมชาติ หรือฝังในชุดเกราะเพื่อต้านทานธรรมชาติ +12%",
+      "Luminous Rune": "รูนแสงศักดิ์สิทธิ์",
+      "A radiant primal rune. Socket into weapons to infuse basic attacks with Holy, or armor for +12% Holy Resistance.": "รูนแห่งแสงศักดิ์สิทธิ์ ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุศักดิ์สิทธิ์ หรือฝังในชุดเกราะเพื่อต้านทานธาตุศักดิ์สิทธิ์ +12%",
+      "Umbral Rune": "รูนความมืด",
+      "A dark primal rune. Socket into weapons to infuse basic attacks with Void, or armor for +12% Void Resistance.": "รูนแห่งความว่างเปล่ามืดมิด ฝังในอาวุธเพื่อผสานการโจมตีปกติด้วยธาตุความว่างเปล่า หรือฝังในชุดเกราะเพื่อต้านทานความว่างเปล่า +12%",
       "Guide's Letter": "จดหมายของผู้นำทาง",
       "A sealed note from the one who summoned you.": "จดหมายปิดผนึกจากผู้ที่อัญเชิญคุณมายังโลกนี้",
       "Ancient Seal": "ตราประทับโบราณ",
