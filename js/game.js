@@ -38,6 +38,7 @@ import { drawEliteAura, drawEliteShield, drawMoltenHazards } from './render/elit
 import { createRelicSystem } from './systems/relics.js';
 import { createWeatherSystem } from './systems/weather.js';
 import { createWeatherRenderer } from './render/weather-fx.js';
+import { createRuneSystem } from './systems/runes.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -159,6 +160,7 @@ const ITEM_ICON = {
   titan_grips: 'gloves', astral_greaves: 'boots', voidweave_cloak: 'cloak',
   phoenix_feather: 'gem_red', midas_touch: 'gloves', storm_conduit: 'storm_core',
   thornmail_carapace: 'crawler_shell', frostbite_pendant: 'gem_blue', vampiric_grail: 'tide_core',
+  rune_ember: 'gem_red', rune_glacial: 'gem_blue', rune_storm: 'gem', rune_verdant: 'gem_green', rune_luminous: 'core', rune_umbral: 'gem',
 };
 // equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
@@ -194,6 +196,7 @@ const weatherSystem = createWeatherSystem({
   now,
   rnd: () => Math.random(),
 });
+const runeSystem = createRuneSystem();
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -298,11 +301,12 @@ function transmogItem(uid, newItemId) {
   return true;
 }
 const GEM_DOT_COLOR = { atkPct: '#e2695f', hpFlat: '#4a90d9', defPct: '#5fbf7a' };
+const RUNE_DOT_COLOR = { fire: '#ff6b4a', ice: '#64c8ff', lightning: '#ffd24d', nature: '#66dd66', holy: '#fff080', void: '#ba68c8' };
 function socketDotsHtml(inst) {
   if (!inst?.sockets?.length) return '';
   const dots = inst.sockets.map((gid, i) => {
     const gem = gid && itemById[gid]?.gem;
-    const color = gem ? (GEM_DOT_COLOR[gem.stat] || '#888') : 'transparent';
+    const color = gem ? (gem.isRune ? (RUNE_DOT_COLOR[gem.element] || '#ffd24d') : (GEM_DOT_COLOR[gem.stat] || '#888')) : 'transparent';
     const title = esc(gem ? T(itemById[gid].name, 'items') : T('Empty socket', 'ui'));
     const pick = !gem ? ` data-socket-slot="${inst.uid}:${i}"` : '';
     return `<i${pick} title="${title}" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;border:1px solid ${gem ? color : 'var(--text-muted)'};background:${color};${pick ? 'cursor:pointer' : ''}"></i>`;
@@ -1051,15 +1055,17 @@ function recompute(p, fill) {
   const ps = passiveBonuses(p);
   const relicMods = relicSystem.getPassiveModifiers(p);
   const weatherMods = weatherSystem.getCombatModifiers(G?.mapId);
-  p.maxHp = Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100));
+  const runeMods = runeSystem.getRuneCombatModifiers(p.equip, itemById);
+  p.maxHp = Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0);
   p.maxMp = Math.round(p.maxMp * (1 + ps.mpPct / 100));
   p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100));
   p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100));
   p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100));
-  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100));
+  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100)) + (runeMods.defFlat || 0);
   p.critChance = Math.min(100, p.critChance + ps.critPct + (weatherMods.critPct || 0));
-  p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0);
+  p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0) + (runeMods.fleeFlat || 0);
   p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0);
+  p.runeMods = runeMods;
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
   p.atkDelay = Math.round(COMBAT.attackSpeedMs * (1 - Math.min(0.45, st.agi * TUNING.agiAtkSpeed)));
@@ -1832,7 +1838,12 @@ function playerBasicAttack() {
 function strike(m, atk, p, silent) {
   if (!rollHit(p.hit, m.flee)) { floatText(m.x, m.y, 'miss', 'miss'); return; }
   const { dmg, isCrit } = calcDamage(atk * combatGapFactor(p.level, m.lvl), monsterDef(m), p.critChance);
-  damageMonster(m, applyElement(attackElement(p, null), m, dmg), isCrit, silent);
+  const el = attackElement(p, null);
+  damageMonster(m, applyElement(el, m, dmg), isCrit, silent);
+  if (el === 'fire' && Math.random() < 0.15) applyStatus(m, 'burn', 1);
+  else if (el === 'ice' && Math.random() < 0.20) applyStatus(m, 'slow', 1);
+  else if (el === 'lightning' && Math.random() < 0.10) applyStatus(m, 'stun', 1);
+  else if (el === 'nature' && Math.random() < 0.15) applyStatus(m, 'poison', 1);
 }
 
 const liveStatus = (m, id) => m.statuses[id] && m.statuses[id].until > now() ? m.statuses[id] : null;
@@ -1874,7 +1885,12 @@ const elementMeta = el => ELEMENT_META[el] || ELEMENT_META.physical;
 const imbueElement = p => (p?.imbue && now() < p.imbue.until) ? p.imbue.element : null;
 function attackElement(p, sk) {
   const base = sk ? skillElement(sk) : 'physical';   // sk omitted = basic attack
-  if (base === 'physical') { const im = imbueElement(p); if (im) return im; }
+  if (base === 'physical') {
+    const im = imbueElement(p);
+    if (im) return im;
+    const runeEl = runeSystem.getWeaponRuneElement(p?.equip?.weapon, itemById);
+    if (runeEl) return runeEl;
+  }
   return base;
 }
 const elementChip = el => { const m = elementMeta(el); return `<span class="elem-chip" style="color:${m.color};border-color:${m.color}">${m.icon} ${m.label}</span>`; };
@@ -2082,9 +2098,9 @@ function applyStatus(m, effect, skillLvl = 1) {
   if (!effect) return;
   const def = COMBAT.statusEffects[effect];
   if (!def) return;
-  // burn scales with the caster's ATK, so it must obey the same level-gap
+  // burn/poison scales with the caster's ATK, so it must obey the same level-gap
   // penalty as every other player damage source — else DOTs bypass the wall
-  const tickDamage = effect === 'burn'
+  const tickDamage = (effect === 'burn' || effect === 'poison')
     ? Math.max(def.tickDamage, Math.round((G.player?.atkStat || 0) * (def.powerRatio || 0)
         * combatGapFactor(G.player?.level || 1, m.lvl)))
     : def.tickDamage;
@@ -2321,9 +2337,9 @@ function updateMonsters(dt) {
       if (now() > s.until) { delete m.statuses[k]; continue; }
       if (k === 'stun') stunned = true;
       if (k === 'slow') slowed = true;
-      if (k === 'burn' && now() >= s.nextTick) {
+      if ((k === 'burn' || k === 'poison') && now() >= s.nextTick) {
         s.nextTick += 1000;
-        const tickDamage = s.tickDamage ?? COMBAT.statusEffects.burn.tickDamage;
+        const tickDamage = s.tickDamage ?? (COMBAT.statusEffects[k]?.tickDamage || 6);
         m.hp -= tickDamage;
         floatText(m.x, m.y, tickDamage, 'dmg');
         if (m.hp <= 0) { killMonster(m); continue; }
@@ -4454,6 +4470,7 @@ const ADMIN_GROUPS = [
   ['💰 Wealth & Gear', [
     ['zeny', '+5000 Zeny'], ['legw', 'Legendary Weapon'], ['lega', 'Legendary Armor'],
     ['potions', '+10 of each Potion'], ['frags', '+20 Refine Fragments & Ore'], ['refineworn', 'Max-refine Worn Gear (+9)'],
+    ['expandall', 'Expand All Sockets (4)'], ['runes', '+5 of each Elemental Rune'],
   ]],
   ['🏰 Quests & Guild', [
     ['skipquest', 'Complete Current Story Quest'], ['guildpts', '+50 Guild Points'],
@@ -4481,6 +4498,27 @@ function adminAction(a, val) {
     recompute(p);
     updateHud();
     toast(`Weather set to: ${wId}`, 'good');
+  }
+  else if (a === 'expandall') {
+    for (const slot of EQUIP_SLOTS) {
+      const it = p.equip[slot];
+      if (it) {
+        if (!Array.isArray(it.sockets)) it.sockets = [];
+        while (it.sockets.length < 4) it.sockets.push(null);
+      }
+    }
+    recompute(p);
+    updateHud();
+    toast('Expanded all worn gear to 4 sockets.', 'good');
+  }
+  else if (a === 'runes') {
+    for (const rid of ['rune_ember', 'rune_glacial', 'rune_storm', 'rune_verdant', 'rune_luminous', 'rune_umbral']) {
+      addStack(rid, 5);
+    }
+    toast('+5 of each Elemental Rune added.', 'good');
+  }
+  else if (a === 'expandsocket') {
+    expandSockets(val);
   }
   else if (a === 'lvl5') { for (let i = 0; i < 5; i++) { if (p.level < DESIGN.levelCap) { p.level++; p.statPoints += PROGRESSION.statPointsPerLevel; } if (p.jobLevel < activeJobLevelCap(p)) { p.jobLevel++; p.skillPoints += PROGRESSION.skillPointsPerLevel; } } recompute(p, true); maybeStartAdvance(p); maybeStartPendingQuest(); }
   else if (a === 'job5') { const gained = Math.min(5, activeJobLevelCap(p) - p.jobLevel); p.jobLevel += gained; p.skillPoints += gained; if (p.jobLevel >= activeJobLevelCap(p)) p.jobXp = 0; toast(`Job Lv ${p.jobLevel}/${activeJobLevelCap(p)} (+${gained} skill points).`, 'good'); }
@@ -5566,10 +5604,23 @@ function panelBody(id) {
       const fuelTxt = plus >= REFINE_MAX ? 'MAX' : (currentLang === 'th'
         ? `ต้องการ <b>${T(fragName, 'items')}</b> ×${nFrags} <b style="color:${frags >= nFrags ? 'var(--success)' : 'var(--danger)'}">(มีอยู่ ${frags})</b> — หรือ Blessed Ore ${nOre} ชิ้น`
         : `needs ${nFrags}× <b>${fragName}</b> <b style="color:${frags >= nFrags ? 'var(--success)' : 'var(--danger)'}">(have ${frags})</b> — or ${nOre}× Blessed Ore`);
+      const sCount = Array.isArray(inst.sockets) ? inst.sockets.length : 0;
+      const expCost = runeSystem.getSocketExpansionCost(sCount);
+      const expCheck = expCost ? runeSystem.canExpandSockets({ inst, zeny: p.zeny, inventory: p.inventory }) : null;
+      let expBtn = '';
+      if (sCount < 4 && expCost) {
+        const matDesc = expCost.materials.map(m => `${m.qty}× ${T(itemById[m.id]?.name || m.id, 'items')}`).join(' + ');
+        const expTitle = `${matDesc} + ${expCost.zeny}z`;
+        const expLabel = `+ ${T('Expand Sockets ({n}/4)', 'ui').replace('{n}', sCount)}`;
+        expBtn = `<button class="btn btn--ghost" data-expand-socket="${ref}" ${expCheck?.canExpand ? '' : 'disabled'} title="${expTitle}" style="font-size:11px;padding:3px 8px">${expLabel}</button>`;
+      }
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')}<br>
+        <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')} ${socketDotsHtml(inst)}<br>
           <small style="color:var(--text-muted)">${fuelTxt}</small></span>
-        <button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} (${cost}z)</button></div>`;
+        <div style="display:flex;gap:6px;align-items:center">
+          ${expBtn}
+          <button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} (${cost}z)</button>
+        </div></div>`;
     };
     const wornRows = EQUIP_SLOTS.filter(slot => p.equip[slot]).map(slot => enhRow(p.equip[slot], slot, slot)).join('');
     const bagRows = p.inventory.filter(e => e.uid).map(e => enhRow(e, e.uid, null)).join('');
@@ -5749,6 +5800,7 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { buy(b.dataset.buy); refreshPanel('shop'); });
   el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { sellItem(b.dataset.sell); refreshPanel('shop'); });
   el.querySelectorAll('[data-refine]').forEach(b => b.onclick = () => { refineItem(b.dataset.refine); refreshPanel('shop'); });
+  el.querySelectorAll('[data-expand-socket]').forEach(b => b.onclick = () => { expandSockets(b.dataset.expandSocket); refreshPanel('shop'); });
   el.querySelectorAll('[data-deposit]').forEach(b => b.onclick = () => depositItem(+b.dataset.deposit));
   el.querySelectorAll('[data-withdraw]').forEach(b => b.onclick = () => withdrawItem(+b.dataset.withdraw));
   el.querySelectorAll('[data-craft]').forEach(b => b.onclick = () => craftItem(b.dataset.craft));
@@ -6102,6 +6154,27 @@ function refineItem(ref) {
     AUDIO.playSfx('playerHurt');
     toast(`The ${useFrags ? 'fragments shatter' : 'ore shatters'}... ${instName(inst)} is unharmed.`, 'bad'); logMsg(`Refine failed — ${fuel} lost, ${instName(inst)} unharmed.`, 'bad');
   }
+}
+function expandSockets(ref) {
+  const p = G.player;
+  const inst = /^\d+$/.test(ref) ? p.inventory.find(e => e.uid === +ref) : p.equip[ref];
+  if (!inst) return false;
+  const res = runeSystem.expandSockets({
+    inst,
+    zeny: p.zeny,
+    inventory: p.inventory,
+    deductZeny: amt => { p.zeny -= amt; },
+    removeItem: (id, qty) => removeItem(id, qty),
+  });
+  if (!res.success) {
+    toast(res.reason || 'Cannot expand sockets.', 'bad');
+    return false;
+  }
+  AUDIO.playSfx('levelup');
+  recompute(p);
+  toast(`✨ ${T('Socket expanded!', 'ui')} (${res.newSockets}/4)`, 'good');
+  logMsg(`${instName(inst)} sockets expanded to ${res.newSockets}.`, 'good');
+  return true;
 }
 function sellItem(ref) {
   const p = G.player;

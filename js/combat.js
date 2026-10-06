@@ -161,6 +161,7 @@ export const COMBAT = {
   statusEffects: {
     stun: { name: "Stunned", durationMs: 1500, tickDamage: 0,  description: "Cannot act or attack." },
     burn: { name: "Burning", durationMs: 4000, tickDamage: 8, powerRatio: 0.10, description: "Takes scaling fire damage every second." },
+    poison: { name: "Poisoned", durationMs: 4000, tickDamage: 6, powerRatio: 0.08, description: "Takes scaling nature damage every second." },
     slow: { name: "Slowed",  durationMs: 3000, tickDamage: 0,  description: "Move and attack speed halved." },
     mark: { name: "Marked", durationMs: 10000, tickDamage: 0, damageTaken: 0.20, perLevel: 0.05, description: "Takes increased damage from every attack." },
     sunder: { name: "Sundered", durationMs: 7000, tickDamage: 0, defReduction: 0.20, perLevel: 0.05, description: "Armor is reduced." },
