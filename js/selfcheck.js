@@ -311,7 +311,7 @@ export function runSelfCheck(engine) {
   for (const fid of REFINE_FRAG) if (!itemById[fid]) errs.push(`refine fragment unknown item ${fid}`);
   for (const mid of ZONE_ORDER) if (!MAPS[mid] || !zoneGuardian(mid)) errs.push(`zone order entry ${mid} missing map/guardian`);
   for (const [mid, m] of Object.entries(MAPS)) m.tiles.forEach((row, y) => { if (row.length !== m.width) errs.push(`map ${mid} row ${y} width ${row.length} != ${m.width}`); });
-  for (const it of CONTENT.items) if (it.buff && !(['atk', 'def'].includes(it.buff.stat) && Number.isFinite(it.buff.mult) && it.buff.durationMs > 0)) errs.push(`item ${it.id} bad buff spec`);
+  for (const it of CONTENT.items) if (it.buff && !(['atk', 'def', 'hp', 'speed', 'critDmg', 'all'].includes(it.buff.stat) && (Number.isFinite(it.buff.mult) || Number.isFinite(it.buff.flat)) && it.buff.durationMs > 0)) errs.push(`item ${it.id} bad buff spec`);
   for (const it of CONTENT.items) if (it.teleport && !MAPS[it.teleport]) errs.push(`item ${it.id} teleport → unknown map ${it.teleport}`);
   for (const [id, profile] of Object.entries(TUNING.automationProfiles || {})) {
     if (!(profile.healSkillAt > profile.hpPotionAt && profile.hpPotionAt > profile.mpPotionAt && profile.mpPotionAt > 0 && profile.healSkillAt < 1)) errs.push(`automation profile ${id} thresholds invalid`);

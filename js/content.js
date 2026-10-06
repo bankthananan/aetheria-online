@@ -283,7 +283,35 @@ export const CONTENT = {
     { id: "aurora_cloak", name: "Aurora Cloak", type: "armor", slot: "cloak", desc: "Woven from the tundra's night sky.", def: 11, value: 1000, classReq: null, rankReq: "D-" },
     { id: "titan_grips", name: "Titan Grips", type: "armor", slot: "hands", desc: "Gauntlets of a rift sentinel, still humming with starlight.", def: 18, value: 3500, classReq: ["reborn_blade", "lightbringer"], rankReq: "B-" },
     { id: "astral_greaves", name: "Astral Greaves", type: "armor", slot: "feet", desc: "Each step rings like a struck bell in the void.", def: 18, value: 3500, classReq: ["reborn_blade", "lightbringer"], rankReq: "B-" },
-    { id: "voidweave_cloak", name: "Voidweave Cloak", type: "armor", slot: "cloak", desc: "A cut of the rift itself; blades slide into nothing.", def: 16, value: 3800, classReq: null, rankReq: "B-" }
+    { id: "voidweave_cloak", name: "Voidweave Cloak", type: "armor", slot: "cloak", desc: "A cut of the rift itself; blades slide into nothing.", def: 16, value: 3800, classReq: null, rankReq: "B-" },
+
+    // ===== Biome Gatherable Resources & Fish =====
+    { id: "silverleaf", name: "Silverleaf", type: "material", desc: "A fragrant herb glowing with pale silver vitality.", price: 25, value: 25, rarity: "common" },
+    { id: "frost_lily", name: "Frost Lily", type: "material", desc: "An arctic blossom preserved in glacial ice.", price: 50, value: 50, rarity: "uncommon" },
+    { id: "ember_blossom", name: "Ember Blossom", type: "material", desc: "A fiery flower that thrives alongside volcanic magma.", price: 65, value: 65, rarity: "uncommon" },
+    { id: "sunken_kelp", name: "Sunken Kelp", type: "material", desc: "Deep aquatic kelp that absorbs tidal currents.", price: 40, value: 40, rarity: "common" },
+    { id: "moonlight_lotus", name: "Moonlight Lotus", type: "material", desc: "A luminescent midnight bloom that only blossoms under starlight.", price: 120, value: 120, rarity: "rare" },
+
+    { id: "copper_ore", name: "Copper Ore", type: "material", desc: "Raw copper mined from surface rock veins.", price: 30, value: 30, rarity: "common" },
+    { id: "iron_vein", name: "Iron Ore", type: "material", desc: "Dense iron ore smelted for sturdy equipment and plating.", price: 60, value: 60, rarity: "uncommon" },
+    { id: "caldera_crystal", name: "Caldera Crystal", type: "material", desc: "A crystalline prism formed under volcanic pressure.", price: 150, value: 150, rarity: "rare" },
+
+    { id: "glowing_trout", name: "Glowing Trout", type: "material", desc: "A vibrant river fish shimmering with freshwater essence.", price: 45, value: 45, rarity: "common" },
+    { id: "abyssal_bass", name: "Abyssal Bass", type: "material", desc: "A heavy deep-sea fish from sunken ruins.", price: 75, value: 75, rarity: "uncommon" },
+    { id: "glacial_salmon", name: "Glacial Salmon", type: "material", desc: "A prized fatty salmon from sub-zero mountain rivers.", price: 90, value: 90, rarity: "uncommon" },
+    { id: "magma_koi", name: "Magma Koi", type: "material", desc: "A resilient fish swimming in subterranean thermal pools.", price: 130, value: 130, rarity: "rare" },
+    { id: "stormfin", name: "Stormfin", type: "material", desc: "An electric fish that only surfaces during atmospheric storms.", price: 200, value: 200, rarity: "epic" },
+    { id: "golden_carp", name: "Golden Carp", type: "material", desc: "A legendary golden fish said to bring boundless fortune.", price: 500, value: 500, rarity: "legendary" },
+
+    // ===== Consumables / Elixirs / Feasts =====
+    { id: "draught_vitality", name: "Draught of Vitality", type: "consumable", desc: "Increases Max HP by +200 for 5 minutes.", buff: { stat: "hp", flat: 200, durationMs: 300000 }, price: 120, value: 120, rarity: "uncommon" },
+    { id: "tonic_swiftness", name: "Tonic of Swiftness", type: "consumable", desc: "Increases Speed & Haste by +15% for 3 minutes.", buff: { stat: "speed", mult: 1.15, durationMs: 180000 }, price: 140, value: 140, rarity: "uncommon" },
+    { id: "brew_berserker", name: "Berserker's Brew", type: "consumable", desc: "Increases ATK by +25% for 2 minutes.", buff: { stat: "atk", mult: 1.25, durationMs: 120000 }, price: 180, value: 180, rarity: "rare" },
+    { id: "elixir_ironbark", name: "Ironbark Elixir", type: "consumable", desc: "Increases DEF by +30% for 3 minutes.", buff: { stat: "def", mult: 1.30, durationMs: 180000 }, price: 160, value: 160, rarity: "rare" },
+    { id: "essence_night", name: "Essence of Midnight", type: "consumable", desc: "Increases Critical Damage by +20% for 4 minutes.", buff: { stat: "critDmg", mult: 1.20, durationMs: 240000 }, price: 250, value: 250, rarity: "epic" },
+    { id: "grilled_trout", name: "Grilled Trout", type: "consumable", desc: "Savory grilled fish. Restores 400 HP and grants +10 ATK for 5 minutes.", hpRestore: 400, buff: { stat: "atk", flat: 10, durationMs: 300000 }, price: 80, value: 80, rarity: "common" },
+    { id: "smoked_salmon", name: "Smoked Salmon", type: "consumable", desc: "Rich smoked salmon. Restores 600 HP and grants +15 DEF for 5 minutes.", hpRestore: 600, buff: { stat: "def", flat: 15, durationMs: 300000 }, price: 120, value: 120, rarity: "uncommon" },
+    { id: "golden_carp_sashimi", name: "Golden Carp Sashimi", type: "consumable", desc: "Delicacy fit for emperors. Fully restores HP/MP and grants +10% to all stats for 10 minutes.", hpRestore: 99999, mpRestore: 99999, buff: { stat: "all", mult: 1.10, durationMs: 600000 }, price: 1000, value: 1000, rarity: "legendary" }
   ],
 
   npcs: [
@@ -633,6 +661,14 @@ export const CONTENT = {
     { id: "r_phoenix", out: "phoenix_feather", cost: 2500, mats: [{ itemId: "dragon_heart", qty: 1 }, { itemId: "ember_ash", qty: 3 }] },
     { id: "r_storm", out: "storm_conduit", cost: 2500, mats: [{ itemId: "zenith_core", qty: 1 }, { itemId: "storm_core", qty: 2 }] },
     { id: "r_thornmail", out: "thornmail_carapace", cost: 1500, mats: [{ itemId: "golem_core", qty: 1 }, { itemId: "crawler_shell", qty: 3 }] },
+    { id: "r_vitality", out: "draught_vitality", cost: 100, mats: [{ itemId: "silverleaf", qty: 2 }, { itemId: "frost_lily", qty: 1 }] },
+    { id: "r_swiftness", out: "tonic_swiftness", cost: 120, mats: [{ itemId: "silverleaf", qty: 2 }, { itemId: "sunken_kelp", qty: 2 }] },
+    { id: "r_berserker", out: "brew_berserker", cost: 200, mats: [{ itemId: "ember_blossom", qty: 2 }, { itemId: "magma_koi", qty: 1 }] },
+    { id: "r_ironbark", out: "elixir_ironbark", cost: 150, mats: [{ itemId: "silverleaf", qty: 2 }, { itemId: "copper_ore", qty: 3 }] },
+    { id: "r_essence_night", out: "essence_night", cost: 350, mats: [{ itemId: "moonlight_lotus", qty: 1 }, { itemId: "abyssal_bass", qty: 1 }] },
+    { id: "r_grilled_trout", out: "grilled_trout", cost: 50, mats: [{ itemId: "glowing_trout", qty: 1 }, { itemId: "silverleaf", qty: 1 }] },
+    { id: "r_smoked_salmon", out: "smoked_salmon", cost: 80, mats: [{ itemId: "glacial_salmon", qty: 1 }, { itemId: "frost_lily", qty: 1 }] },
+    { id: "r_golden_carp_sashimi", out: "golden_carp_sashimi", cost: 500, mats: [{ itemId: "golden_carp", qty: 1 }, { itemId: "moonlight_lotus", qty: 1 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()

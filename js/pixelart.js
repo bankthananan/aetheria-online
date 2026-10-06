@@ -2213,4 +2213,46 @@ for (const [id, base, remap] of [
   ['void_herald', 'void_construct', { p: 'u', q: 'U', c: 'x' }],
 ]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
 
+// item id -> pixel icon key (see PX.item)
+export const ITEM_ICON = {
+  worn_dagger: 'dagger', iron_sword: 'sword', hero_blade: 'greatsword',
+  training_greatsword: 'greatsword', scrap_scythe: 'dagger', hunter_bow: 'sword',
+  apprentice_staff: 'sword', leather_knuckles: 'gloves', novice_mace: 'sword',
+  mythril_greatsword: 'greatsword', crimson_scythe: 'dagger', frost_bow: 'sword',
+  rune_staff: 'sword', dragon_claws: 'gloves', dawn_mace: 'sword',
+  astral_greatsword: 'greatsword', void_scythe: 'dagger', starhawk_bow: 'sword',
+  astral_staff: 'sword', star_knuckles: 'gloves', seraph_mace: 'sword',
+  cloth_tunic: 'tunic', leather_vest: 'vest', guardian_plate: 'plate',
+  minor_potion: 'potred', mid_potion: 'potred', mana_potion: 'potblue',
+  slime_gel: 'gem', goblin_ear: 'gem', wolf_pelt: 'gem', wolf_fang: 'gem', shade_dust: 'gem', golem_core: 'core',
+  guide_letter: 'scroll', ancient_seal: 'scroll',
+  mythril_sword: 'sword', frost_brand: 'sword', dawn_edge: 'greatsword',
+  mythril_plate: 'plate', seraph_ward: 'plate',
+  greater_potion: 'potred', elixir: 'potblue',
+  frost_shard: 'gem', ice_core: 'core', sand_fang: 'gem', ember_ash: 'gem', dragon_heart: 'core',
+  crawler_shell: 'crawler_shell', siren_scale: 'siren_scale', tide_core: 'tide_core', abyssal_trident: 'abyssal_trident',
+  cloud_feather: 'cloud_feather', storm_core: 'storm_core', zenith_core: 'zenith_core', windwalker_boots: 'windwalker_boots',
+  iron_helm: 'helm', dragon_helm: 'helm', iron_gauntlets: 'gloves', iron_boots: 'boots',
+  warding_cloak: 'cloak', power_ring: 'ring', vitality_amulet: 'ring',
+  void_edge: 'sword', astral_glaive: 'greatsword', astral_plate: 'plate', void_helm: 'helm',
+  astral_signet: 'ring', celestial_draught: 'potblue', void_shard: 'gem', star_iron: 'gem', null_core: 'core', sovereign_core: 'ring',
+  sharpening_stone: 'gem', iron_tonic: 'potblue', teleport_scroll: 'scroll', blessed_ore: 'core',
+  soul_ledger: 'scroll', memory_prism: 'gem',
+  ruby_shard: 'gem_red', sapphire_shard: 'gem_blue', emerald_shard: 'gem_green',
+  bronze_ring: 'ring', silver_amulet: 'ring', gold_ring: 'ring', star_pendant: 'ring', comet_ring: 'ring', transcendent_sigil: 'ring',
+  steel_sword: 'sword', knight_plate: 'plate',
+  mythril_gauntlets: 'gloves', drakescale_boots: 'boots', aurora_cloak: 'cloak',
+  titan_grips: 'gloves', astral_greaves: 'boots', voidweave_cloak: 'cloak',
+  phoenix_feather: 'gem_red', midas_touch: 'gloves', storm_conduit: 'storm_core',
+  thornmail_carapace: 'crawler_shell', frostbite_pendant: 'gem_blue', vampiric_grail: 'tide_core',
+  rune_ember: 'gem_red', rune_glacial: 'gem_blue', rune_storm: 'gem', rune_verdant: 'gem_green', rune_luminous: 'core', rune_umbral: 'gem',
+  dimensional_shard: 'gem', rift_cache: 'core',
+  // Gathering: herbs, ores, fish, elixirs, feasts
+  silverleaf: 'gem_green', frost_lily: 'gem_blue', ember_blossom: 'gem_red', sunken_kelp: 'gem_green', moonlight_lotus: 'gem_blue',
+  copper_ore: 'gem_red', iron_vein: 'gem', caldera_crystal: 'gem_red',
+  glowing_trout: 'gem_blue', abyssal_bass: 'tide_core', glacial_salmon: 'gem_blue', magma_koi: 'gem_red', stormfin: 'storm_core', golden_carp: 'core',
+  draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
+  grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
+};
+
 export const PX = { player, playerWalk, npc, monster, item };

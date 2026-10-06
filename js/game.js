@@ -164,6 +164,12 @@ const ITEM_ICON = {
   thornmail_carapace: 'crawler_shell', frostbite_pendant: 'gem_blue', vampiric_grail: 'tide_core',
   rune_ember: 'gem_red', rune_glacial: 'gem_blue', rune_storm: 'gem', rune_verdant: 'gem_green', rune_luminous: 'core', rune_umbral: 'gem',
   dimensional_shard: 'gem', rift_cache: 'core',
+  // Gathering: herbs, ores, fish, elixirs, feasts
+  silverleaf: 'gem_green', frost_lily: 'gem_blue', ember_blossom: 'gem_red', sunken_kelp: 'gem_green', moonlight_lotus: 'gem_blue',
+  copper_ore: 'gem_red', iron_vein: 'gem', caldera_crystal: 'gem_red',
+  glowing_trout: 'gem_blue', abyssal_bass: 'tide_core', glacial_salmon: 'gem_blue', magma_koi: 'gem_red', stormfin: 'storm_core', golden_carp: 'core',
+  draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
+  grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
 };
 // equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
