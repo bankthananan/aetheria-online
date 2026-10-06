@@ -53,8 +53,9 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/render/elite-fx.js` — rotating dashed cyan ring for Champions, radiant golden halo for Elites, hexagonal kinetic shield, and magma hazard pools
   - `js/systems/boss-mechanics.js` — Guardian encounter state machine, telegraph patterns, lingering ground hazards, and geometric collision tests (oriented box, cone, circle)
   - `js/systems/elite-monsters.js` — procedural Champion & Elite affixes (Molten, Frost Nova, Vortex, Shielding, Avenger), hazard lifecycle, damage mitigation, and bonus loot/gem multipliers
+  - `js/systems/relics.js` — Relic & Legendary Artifact equipment system (8th paper-doll slot, on-hit procs, blood shield absorption, thorns, and Phoenix Feather lethal revive)
   - `js/systems/guild.js` — Adventurer's Guild bounties, rank ladder, and turn-ins
-  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, subdungeon)
+  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, guidance, loadouts, loot-preferences, mastery, player-features, rare-spawns, relics, subdungeon)
   - `js/input.js`, `js/viewport.js`, `js/expansion-runtime.js`, `js/guidance-runtime.js`, `js/equipment-features.js`
   - `js/zones/` holds per-zone content packages.
   The remaining `js/` modules are **logic-free data modules**.
