@@ -190,6 +190,20 @@ export const L10N = {
       "Empty action slot, key 8": "ช่องลัดว่าง, ปุ่ม 8",
       "Empty action slot, key 9": "ช่องลัดว่าง, ปุ่ม 9",
 
+      // Bestiary Codex & Monster Cards UI
+      "Bestiary Codex": "สมุดภาพมอนสเตอร์",
+      "Zone Milestones": "เป้าหมายภูมิภาค",
+      "Card Album": "สมุดสะสมการ์ด",
+      "Monster Lore": "ตำนานมอนสเตอร์",
+      "Kills": "จำนวนที่กำจัด",
+      "Mastery": "ระดับความชำนาญ",
+      "Drops": "ไอเทมดรอป",
+      "Weaknesses": "จุดอ่อนธาตุ",
+      "Socket Card": "ติดตั้งการ์ด",
+      "Unsocket Card": "ถอดการ์ด",
+      "Old Card Album": "อัลบั้มการ์ดโบราณ",
+      "Opened Old Card Album!": "เปิดอัลบั้มการ์ดโบราณสำเร็จ!",
+
       // Sign In Screen
       "Adventurer ID": "รหัสนักผจญภัย",
       "Enter your account name": "พิมพ์ชื่อบัญชีของคุณ",
@@ -1427,6 +1441,140 @@ export const L10N = {
       "Rich smoked salmon. Restores 600 HP and grants +15 DEF for 5 minutes.": "แซลมอนรมควันรสเข้มข้น ฟื้นฟู 600 HP และเพิ่ม DEF +15 เป็นเวลา 5 นาที",
       "Golden Carp Sashimi": "ซาชิมิปลาคาร์ปทองคำ",
       "Delicacy fit for emperors. Fully restores HP/MP and grants +10% to all stats for 10 minutes.": "อาหารเลิศรสคู่ควรจักรพรรดิ ฟื้นฟู HP/MP จนเต็ม และเพิ่มสเตตัสทั้งหมด +10% เป็นเวลา 10 นาที",
+
+      // Monster Cards & Old Card Album
+      "Old Card Album": "อัลบั้มการ์ดโบราณ",
+      "A mysterious worn album containing a forgotten monster card. Open to reveal a card!": "อัลบั้มเก่าแก่ลึกลับที่บรรจุการ์ดมอนสเตอร์ที่ถูกลืม เปิดเพื่อรับการ์ดสุ่มหนึ่งใบ!",
+
+      "Gel Slime Card": "การ์ดเจลสไลม์",
+      "A wobbling blob. In armor, grants +60 Max HP.": "ก้อนวุ้นกลมดุกดิก ติดตั้งในชุดเกราะมอบ Max HP +60",
+
+      "Scrap Goblin Card": "การ์ดก็อบลินเศษเหล็ก",
+      "A scrawny raider. In weapon, grants +6 ATK and +5% Zeny gained from kills.": "นักปล้นผอมแห้ง ติดตั้งในอาวุธมอบ ATK +6 และเซนีจากการกำจัดศัตรู +5%",
+
+      "Goblin Scout Card": "การ์ดก็อบลินลาดตระเวน",
+      "A quick-footed skirmisher. In accessory, grants +6 Flee and +3% Move Speed.": "หน่วยลาดตระเวนเท้าไว ติดตั้งในเครื่องประดับมอบ Flee +6 และความเร็วเคลื่อนที่ +3%",
+
+      "Goblin Chieftain Card": "การ์ดหัวหน้าก็อบลิน",
+      "The crowned scrap-king of the warrens. In weapon, grants +12 ATK and +4% Melee Cleave radius.": "ราชาเศษเหล็กแห่งถ้ำ ติดตั้งในอาวุธมอบ ATK +12 และรัศมีการโจมตีประชิดกวาดล้าง +4%",
+
+      "Barkskin Warden Card": "การ์ดผู้พิทักษ์เปลือกไม้",
+      "Living wood animated to guard the elder grove. In armor, grants +10 DEF and +5% Nature Resistance.": "พฤกษาโบราณมีชีวิต ติดตั้งในชุดเกราะมอบ DEF +10 และความต้านทานธรรมชาติ +5%",
+
+      "Blight Sprite Card": "การ์ดภูติติดเชื้อสปอร์",
+      "A fluttering spirit warped by corrupted spores. In accessory, grants +8 MATK and -5% Mana cost.": "วิญญาณผีเสื้อปีกบาง ติดตั้งในเครื่องประดับมอบ MATK +8 และลดการใช้มานา -5%",
+
+      "Corrupted Dryad Card": "การ์ดดรายแอดผู้แปดเปื้อน",
+      "A weeping guardian entangled in shadow roots. In armor, grants +80 Max HP and +2% HP Regen per 5s.": "ผู้พิทักษ์ที่ร้องไห้ใต้รากเงา ติดตั้งในชุดเกราะมอบ Max HP +80 และฟื้นฟู HP +2% ทุก 5 วินาที",
+
+      "Dire Wolf Card": "การ์ดไดร์วูลฟ์",
+      "Lean, fast, and always hunting. In weapon, grants +8 ATK and +4% Critical Chance.": "ว่องไว ปราดเปรียว รักการล่า ติดตั้งในอาวุธมอบ ATK +8 และโอกาสคริติคอล +4%",
+
+      "Thornback Boar Card": "การ์ดหมูป่าหลังหนาม",
+      "Bramble roots armor its hide. In armor, grants +12 DEF and reflects 5% physical damage taken.": "รากไม้หนามหุ้มหนัง ติดตั้งในชุดเกราะมอบ DEF +12 และสะท้อนความเสียหายกายภาพ 5%",
+
+      "Mossback Beetle Card": "การ์ดด้วงหลังมอส",
+      "A patient shell-creeper. In armor, grants +15 DEF and +50 Max HP.": "นักคลานกระดองใจเย็น ติดตั้งในชุดเกราะมอบ DEF +15 และ Max HP +50",
+
+      "Woodland Shade Card": "การ์ดวิญญาณผืนป่า",
+      "A restless spirit bound to the ruins edge. In accessory, grants +10 Flee and +5% Void Resistance.": "วิญญาณเร่ร่อนชายขอบโบราณสถาน ติดตั้งในเครื่องประดับมอบ Flee +10 และความต้านทานความว่างเปล่า +5%",
+
+      "Elderwood Treant Card": "การ์ดเทรนท์พฤกษาโบราณ",
+      "The forest’s oldest warden. In armor, grants +180 Max HP, +15% Nature Resistance, and 10% chance to entangle attackers.": "ผู้พิทักษ์เก่าแก่ที่สุดของผืนป่า ติดตั้งในชุดเกราะมอบ Max HP +180, ต้านทานธรรมชาติ +15% และโอกาส 10% ที่จะพันธนาการผู้โจมตี",
+      "The forest's oldest warden. In armor, grants +180 Max HP, +15% Nature Resistance, and 10% chance to entangle attackers.": "ผู้พิทักษ์เก่าแก่ที่สุดของผืนป่า ติดตั้งในชุดเกราะมอบ Max HP +180, ต้านทานธรรมชาติ +15% และโอกาส 10% ที่จะพันธนาการผู้โจมตี",
+
+      "Mire Leech Card": "การ์ดปลิงโคลนความทรงจำ",
+      "A pale feeder swollen on memories. In weapon, grants +2% Physical Lifesteal.": "ปรสิตสีซีดพองโตจากความทรงจำ ติดตั้งในอาวุธมอบดูดเลือดกายภาพ +2%",
+
+      "Drowned Acolyte Card": "การ์ดนักบวชฝึกหัดจมน้ำ",
+      "An abbey novice still chanting through water. In accessory, grants +12 MATK and +8% Water/Ice Resistance.": "นักบวชฝึกหัดสวดมนต์ใต้น้ำ ติดตั้งในเครื่องประดับมอบ MATK +12 และต้านทานน้ำ/น้ำแข็ง +8%",
+
+      "Ruin Crawler Card": "การ์ดนักคลานโบราณสถาน",
+      "Stone plates clicking beneath drowned halls. In armor, grants +14 DEF and +6% Stun Resistance.": "แผ่นหินกระทบกันใต้โถงจมน้ำ ติดตั้งในชุดเกราะมอบ DEF +14 และต้านทานสตัน +6%",
+
+      "Tidecrawler Card": "การ์ดไทด์ครอว์เลอร์",
+      "A heavily armored crustacean guarding shallows. In weapon, grants +10 ATK and +5% damage against Aquatic monsters.": "สัตว์น้ำหุ้มเกราะหนา ติดตั้งในอาวุธมอบ ATK +10 และความเสียหายต่อมอนสเตอร์สัตว์น้ำ +5%",
+
+      "Abyssal Siren Card": "การ์ดไซเรนห้วงลึก",
+      "Her song draws you into crushing depths. In accessory, grants +15 MATK and +5% Cast Speed.": "บทเพลงดึงดูดสู่ห้วงลึก ติดตั้งในเครื่องประดับมอบ MATK +15 และความเร็วร่ายเวท +5%",
+
+      "Leviathan Shadow Card": "การ์ดเงาเลเวียธาน",
+      "A fraction of abyssal terror made manifest. In armor, grants +100 Max HP and +10% Water Resistance.": "เสี้ยวความสะพรึงกลัวแห่งห้วงลึก ติดตั้งในชุดเกราะมอบ Max HP +100 และต้านทานน้ำ +10%",
+
+      "Void Construct Card": "การ์ดอสูรวอยด์คอนสตรัคท์",
+      "A geometric nightmare of hard light and heavy gravity. In armor, grants +18 DEF and +8% Void Resistance.": "ฝันร้ายเรขาคณิตจากแสงแข็ง ติดตั้งในชุดเกราะมอบ DEF +18 และต้านทานความว่างเปล่า +8%",
+
+      "Ruin Golem Card": "การ์ดโกเลมโบราณสถาน",
+      "An ancient guardian of stone. In armor, grants +28 DEF, +150 Max HP, and reduces incoming physical damage by 5%.": "ผู้พิทักษ์หินโบราณ ติดตั้งในชุดเกราะมอบ DEF +28, Max HP +150 และลดความเสียหายกายภาพที่ได้รับลง 5%",
+
+      "Frost Wolf Card": "การ์ดหมาป่าเยือกแข็ง",
+      "A wolf of living ice. In weapon, grants +12 ATK and 10% chance on hit to inflict Slow.": "หมาป่าแห่งน้ำแข็งมีชีวิต ติดตั้งในอาวุธมอบ ATK +12 และโอกาส 10% เมื่อโจมตีที่จะทำให้ศัตรูช้าลง",
+
+      "Ice Wraith Card": "การ์ดวิญญาณเรธน้ำแข็ง",
+      "A frozen soul that drifts the peaks. In accessory, grants +15 MATK and +10% Ice Damage.": "วิญญาณเยือกแข็งล่องลอยยอดเขา ติดตั้งในเครื่องประดับมอบ MATK +15 และความเสียหายน้ำแข็ง +10%",
+
+      "Storm Harpy Card": "การ์ดฮาร์ปีสายพายุ",
+      "Rides the storm-front with thunder. In weapon, grants +8 ATK and +6% Attack Speed.": "โต้แนวพายุพร้อมสายฟ้าคำราม ติดตั้งในอาวุธมอบ ATK +8 และความเร็วโจมตี +6%",
+
+      "Tundra Lurker Card": "การ์ดผู้ซุ่มซ่อนทุนดรา",
+      "Vanishes beneath powder snow. In armor, grants +16 DEF and +10% Ice Resistance.": "หายตัวใต้หิมะฟู ติดตั้งในชุดเกราะมอบ DEF +16 และต้านทานน้ำแข็ง +10%",
+
+      "Frost Revenant Card": "การ์ดราชาเยือกแข็งคืนชีพ",
+      "A king who froze on his throne. In weapon, grants +22 ATK, +15% Ice Damage, and 12% chance on hit to trigger Frost Nova.": "ราชาผู้ถูกแช่แข็งบนบัลลังก์ ติดตั้งในอาวุธมอบ ATK +22, ความเสียหายน้ำแข็ง +15% และโอกาส 12% เมื่อโจมตีที่จะระเบิดฟรอสต์โนวา",
+
+      "Sand Stalker Card": "การ์ดผู้ซุ่มซ่อนใต้เนินทราย",
+      "Waits beneath the dunes. In weapon, grants +14 ATK and +8% Hit Rate.": "กบดานใต้เนินทราย ติดตั้งในอาวุธมอบ ATK +14 และความแม่นยำ +8%",
+
+      "Ember Imp Card": "การ์ดอิมป์ขี้เถ้าเพลิง",
+      "A gleeful little devil made of coals. In accessory, grants +15 MATK and +10% Fire Damage.": "ปีศาจตัวจ้อยจากถ่านหินร้อน ติดตั้งในเครื่องประดับมอบ MATK +15 และความเสียหายไฟ +10%",
+
+      "Magma Beetle Card": "การ์ดด้วงแมกมา",
+      "Its basalt shell seals a furnace core. In armor, grants +20 DEF and +12% Fire Resistance.": "เปลือกหินบะซอลต์กักแกนเตาหลอม ติดตั้งในชุดเกราะมอบ DEF +20 และต้านทานไฟ +12%",
+
+      "Ashwing Card": "การ์ดปีกเถ้าถ่าน",
+      "Soot-feathered flier nesting in vents. In accessory, grants +12 Flee and +4% Move Speed.": "นักบินขนเขม่าทำรังในปล่อง ติดตั้งในเครื่องประดับมอบ Flee +12 และความเร็วเคลื่อนที่ +4%",
+
+      "Flame Dragon Card": "การ์ดมังกรเพลิงพิโรธ",
+      "The tyrant of the caldera. In weapon, grants +28 ATK, +20% Fire Damage, and 8% chance to call down Meteor.": "ทรราชแห่งแอ่งภูเขาไฟ ติดตั้งในอาวุธมอบ ATK +28, ความเสียหายไฟ +20% และโอกาส 8% ที่จะเรียกอุกกาบาตดาวตก",
+
+      "Zephyr Hawk Card": "การ์ดเหยี่ยวสายลมวายุ",
+      "Dances on windstreams with blinding speed. In weapon, grants +10 ATK and +8% Attack Speed.": "เริงระบำบนกระแสลมรวดเร็ว ติดตั้งในอาวุธมอบ ATK +10 และความเร็วโจมตี +8%",
+
+      "Storm Elemental Card": "การ์ดภูตวายุหินผา",
+      "A coalesced tempest of sparks and fury. In accessory, grants +18 MATK and +12% Lightning Damage.": "พายุสายฟ้าที่รวมตัวกัน ติดตั้งในเครื่องประดับมอบ MATK +18 และความเสียหายสายฟ้า +12%",
+
+      "The Zenith Warden Card": "การ์ดผู้พิทักษ์ยอดเขาเซนิท",
+      "An ancient construct guarding highest peaks. In armor, grants +25 DEF, +180 Max HP, and +15% Holy Resistance.": "โครงสร้างโบราณพิทักษ์ยอดเขาสูง ติดตั้งในชุดเกราะมอบ DEF +25, Max HP +180 และต้านทานแสงศักดิ์สิทธิ์ +15%",
+
+      "Void Wisp Card": "การ์ดดวงไฟว่างเปล่า",
+      "A mote of unmade reality. In accessory, grants +16 MATK and +60 Max MP.": "ละอองแห่งความว่างเปล่า ติดตั้งในเครื่องประดับมอบ MATK +16 และ Max MP +60",
+
+      "Star Reaver Card": "การ์ดผู้ทำลายดวงดาว",
+      "A warrior swinging a blade of cold starlight. In weapon, grants +16 ATK and +6% Critical Damage.": "นักรบแกว่งดาบแสงดาวอันเยือกเย็น ติดตั้งในอาวุธมอบ ATK +16 และความเสียหายคริติคอล +6%",
+
+      "Astral Knight Card": "การ์ดอัศวินดวงดารา",
+      "Armored in condensed moonlight. In armor, grants +22 DEF and +120 Max HP.": "สวมเกราะแสงจันทร์ควบแน่น ติดตั้งในชุดเกราะมอบ DEF +22 และ Max HP +120",
+
+      "Rift Manta Card": "การ์ดกระเบนรอยแยก",
+      "Swims between broken constellations. In accessory, grants +14 Flee and +10% Void Resistance.": "ว่ายผ่านกลุ่มดาวแตกร้าว ติดตั้งในเครื่องประดับมอบ Flee +14 และต้านทานความว่างเปล่า +10%",
+
+      "Constellation Mite Card": "การ์ดไรกลุ่มดาว",
+      "A tiny star-eater skittering across broken paths. In armor, grants +15 DEF and +10% All Elemental Resistance.": "นักกินดาวตัวจ้อยข้ามเส้นทางแตกร้าว ติดตั้งในชุดเกราะมอบ DEF +15 และต้านทานทุกธาตุ +10%",
+
+      "The Nullking Card": "การ์ดราชันความดับสูญ",
+      "The crowned end of all things. In any slot, grants +35 ATK, +35 MATK, +15% All Elemental Damage, and 20% DEF Penetration.": "จุดจบแห่งสรรพสิ่งผู้สวมมงกุฎ ติดตั้งในช่องใดก็ได้มอบ ATK +35, MATK +35, ความเสียหายทุกธาตุ +15% และเจาะเกราะ 20%",
+
+      "Void Stalker Card": "การ์ดผู้ล่าแห่งความว่างเปล่า",
+      "A predatory entity from dimensional seams. In weapon, grants +18 ATK and 8% chance to inflict Void Vulnerability.": "สิ่งมีชีวิตนักล่าจากรอยต่อมิติ ติดตั้งในอาวุธมอบ ATK +18 และโอกาส 8% ที่จะสร้างสถานะเปราะบางต่อความว่างเปล่า",
+
+      "Dimensional Herald Card": "การ์ดทูตแห่งรอยแยกมิติ",
+      "The harbinger of the rift. In weapon, grants +25 ATK, +20 MATK, and 10% chance to trigger Void Tear.": "ผู้ส่งสารแห่งรอยแยกมิติ ติดตั้งในอาวุธมอบ ATK +25, MATK +20 และโอกาส 10% ที่จะเปิดรอยฉีกมิติ",
+
+      "Voidmaw Sovereign Card": "การ์ดราชันปากมืด",
+      "A world-eating tide given a crown. In armor, grants +30 DEF, +220 Max HP, and -10% damage taken in Incursions.": "กระแสน้ำกลืนกินโลกสวมมงกุฎ ติดตั้งในชุดเกราะมอบ DEF +30, Max HP +220 และลดความเสียหายในศึกรุกรานลง 10%",
+
+      "Gilded Ravager Card": "การ์ดจอมพิฆาตเกราะทอง",
+      "A nomad tyrant crowned in stolen gold. In accessory, grants +15% Zeny gain, +5 LUK, and +10% Item Drop Rarity.": "ทรราชเร่ร่อนสวมมงกุฎทองคำ ติดตั้งในเครื่องประดับมอบเซนี +15%, LUK +5 และโอกาสได้ไอเทมหายาก +10%",
     },
     achievements: {
       "First Blood": "เลือดแรก",

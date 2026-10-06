@@ -1825,6 +1825,20 @@ const playerWalk = {
 
 // ---- 16x16 item / equipment icons ----
 const item = {
+  card: matrix(16, 16,
+    '',
+    '    kkkkkkkk',
+    '   kyyyyyyyyk',
+    '   kyxxwwxxyk',
+    '   kyxwwyyxyk',
+    '   kyxxwwxxyk',
+    '   kyxkkkkyyk',
+    '   kyxkyykyyk',
+    '   kyxkkkkyyk',
+    '   kyyyyyyyyk',
+    '    kkkkkkkk',
+    '', '', '', '', ''),
+
   sword: matrix(16, 16,
     '       kwk',
     '      kwxk',
@@ -2253,6 +2267,21 @@ export const ITEM_ICON = {
   glowing_trout: 'gem_blue', abyssal_bass: 'tide_core', glacial_salmon: 'gem_blue', magma_koi: 'gem_red', stormfin: 'storm_core', golden_carp: 'core',
   draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
   grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
+  // Monster cards & card album
+  old_card_album: 'scroll',
+  card_slime: 'card', card_goblin: 'card', card_goblin_scout: 'card', card_goblin_chieftain: 'card',
+  card_barkskin_warden: 'card', card_blight_sprite: 'card', card_corrupted_dryad: 'card', card_wolf: 'card',
+  card_thornback_boar: 'card', card_mossback_beetle: 'card', card_shade: 'card', card_elderwood_treant: 'card',
+  card_mire_leech: 'card', card_drowned_acolyte: 'card', card_ruin_crawler: 'card', card_tidecrawler: 'card',
+  card_abyssal_siren: 'card', card_leviathans_shadow: 'card', card_void_construct: 'card', card_ruin_golem: 'card',
+  card_frost_wolf: 'card', card_ice_wraith: 'card', card_rime_harpy: 'card', card_tundra_lurker: 'card',
+  card_frost_revenant: 'card', card_sand_stalker: 'card', card_ember_imp: 'card', card_magma_beetle: 'card',
+  card_ashwing: 'card', card_flame_dragon: 'card', card_zephyr_hawk: 'card', card_storm_elemental: 'card',
+  card_zenith_warden: 'card', card_void_wisp: 'card', card_star_reaver: 'card', card_astral_knight: 'card',
+  card_rift_manta: 'card', card_constellation_mite: 'card', card_nullking: 'card', card_void_stalker: 'card',
+  card_void_herald: 'card', card_voidmaw_sovereign: 'card', card_gilded_ravager: 'card',
 };
+
+export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
 
 export const PX = { player, playerWalk, npc, monster, item };

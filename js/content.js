@@ -1,5 +1,7 @@
 // Game content for "Isekai Adventure" — data only, no logic.
 // Balanced for the full Base Lv 1 -> 80 journey.
+import { CARD_CATALOG } from './systems/cards.js';
+
 export const CONTENT = {
   monsters: [
     { id: "slime", element: "nature", name: "Gel Slime", flavor: "A wobbling blob. Your first foe in this new world.",
@@ -669,6 +671,17 @@ export const CONTENT = {
     { id: "r_grilled_trout", out: "grilled_trout", cost: 50, mats: [{ itemId: "glowing_trout", qty: 1 }, { itemId: "silverleaf", qty: 1 }] },
     { id: "r_smoked_salmon", out: "smoked_salmon", cost: 80, mats: [{ itemId: "glacial_salmon", qty: 1 }, { itemId: "frost_lily", qty: 1 }] },
     { id: "r_golden_carp_sashimi", out: "golden_carp_sashimi", cost: 500, mats: [{ itemId: "golden_carp", qty: 1 }, { itemId: "moonlight_lotus", qty: 1 }] },
+    {
+      id: "r_old_card_album",
+      out: "old_card_album",
+      cost: 500,
+      mats: [
+        { itemId: "caldera_crystal", qty: 1 },
+        { itemId: "essence_night", qty: 1 },
+        { itemId: "blessed_ore", qty: 2 },
+        { itemId: "golem_core", qty: 1 }
+      ]
+    },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()
@@ -717,3 +730,35 @@ export const CONTENT = {
     ]
   }
 };
+
+// Register Monster Cards and Old Card Album into CONTENT.items
+for (const cardId in CARD_CATALOG) {
+  const c = CARD_CATALOG[cardId];
+  const cardPrice = c.rarity === 'legendary' ? 5000 : (c.rarity === 'epic' ? 1200 : (c.rarity === 'rare' ? 500 : (c.rarity === 'uncommon' ? 250 : 100)));
+  const cardItem = {
+    id: cardId,
+    name: c.name,
+    type: 'card',
+    cardId: c.id,
+    monsterId: c.monsterId,
+    targetSlot: c.targetSlot,
+    rarity: c.rarity,
+    desc: c.flavor,
+    price: cardPrice,
+    value: cardPrice,
+  };
+  CONTENT.items.push(cardItem);
+  CONTENT.items[cardId] = cardItem;
+}
+
+const ocaItem = {
+  id: 'old_card_album',
+  name: 'Old Card Album',
+  type: 'consumable',
+  desc: 'A mysterious worn album containing a forgotten monster card. Open to reveal a card!',
+  price: 1500,
+  value: 1500,
+  rarity: 'rare',
+};
+CONTENT.items.push(ocaItem);
+CONTENT.items.old_card_album = ocaItem;
