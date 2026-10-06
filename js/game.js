@@ -1467,14 +1467,14 @@ function spawnIncursionWave(inc) {
     const mDef = monById[mid] || monById['void_wisp'] || CONTENT.monsters[0];
     const angle = Math.random() * Math.PI * 2;
     const r = (1.5 + Math.random()) * TS;
-    const mx = clamp(inc.x + Math.cos(angle) * r, TS * 2, (G.map.cols - 2) * TS);
-    const my = clamp(inc.y + Math.sin(angle) * r, TS * 2, (G.map.rows - 2) * TS);
+    const mx = clamp(inc.x + Math.cos(angle) * r, TS * 2, (G.map.width - 2) * TS);
+    const my = clamp(inc.y + Math.sin(angle) * r, TS * 2, (G.map.height - 2) * TS);
     const mLevel = Math.max(mDef.level, p?.level || 1);
     const mob = makeMonster(mDef, mx, my, mLevel);
     mob._incursionMob = true;
     if (inc.currentWave === 2 && mid === 'void_stalker' && !champAssigned) {
       champAssigned = true;
-      eliteSystem.assignAffixes(mob, 'champion');
+      eliteSystem.applyEliteMods(mob, 'champion');
     }
     G.monsters.push(mob);
   }
@@ -3731,8 +3731,8 @@ function step(dt) {
   incursionSystem.tick(dt, { activeMapId: G.mapId, isIntenseWeather });
 
   if (incursionSystem.getState() === INCURSION_STATES.IDLE && incursionSystem.getCooldownRemaining() <= 0 && adventureMaps.includes(G.mapId)) {
-    const rx = clamp(p.x + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.cols - 2) * TS);
-    const ry = clamp(p.y + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.rows - 2) * TS);
+    const rx = clamp(p.x + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.width - 2) * TS);
+    const ry = clamp(p.y + (Math.random() < 0.5 ? 1 : -1) * (4 + Math.floor(Math.random() * 3)) * TS, TS * 2, (G.map.height - 2) * TS);
     incursionSystem.triggerTear({ mapId: G.mapId, x: rx, y: ry });
     toast(`⚡ ${T('A Dimensional Tear has ruptured nearby!', 'ui')}`, 'bad');
   } else if (incursionSystem.getState() === INCURSION_STATES.TEAR_OPEN) {
@@ -4734,8 +4734,8 @@ function adminAction(a, val) {
     toast(`Zone Difficulty set to: ${tiers[nextIdx]}`, 'good');
   }
   else if (a === 'spawnrift') {
-    const rx = clamp(p.x + 48, TS * 2, (G.map.cols - 2) * TS);
-    const ry = clamp(p.y, TS * 2, (G.map.rows - 2) * TS);
+    const rx = clamp(p.x + 48, TS * 2, (G.map.width - 2) * TS);
+    const ry = clamp(p.y, TS * 2, (G.map.height - 2) * TS);
     incursionSystem.triggerTear({ mapId: G.mapId, x: rx, y: ry });
     toast('Admin: Spawned Dimensional Tear nearby!', 'bad');
   }
@@ -6150,7 +6150,7 @@ function useItem(itemId) {
       if (mat?.id && mat?.qty) addItem(mat.id, mat.qty);
     }
     for (const rId of (loot.runes || [])) {
-      runeSystem.addRune(p, rId);
+      addItem(rId, 1);
     }
     toast(`✨ ${T('Dimensional Cache opened!', 'ui')}`, 'good');
     logMsg(`Opened Dimensional Cache: +${loot.zeny} Zeny, shards, materials, and runes!`, 'good');
