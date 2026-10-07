@@ -255,9 +255,35 @@ assert.equal(activePet.loyalty, 60, 'Loyalty increased by 25 to 60');
 assert.equal(activePet.exp, 170, 'EXP increased by 120 to 170');
 assert.equal(activePet.bondLevel, 2, 'Bond level advances across Lv 2 threshold (100)');
 
-// Feed 3: golden_carp_sashimi (+50 loyalty, +300 EXP)
-const feed3 = A.G.petsSystem.feedPet(activePet, 'golden_carp_sashimi');
-assert.equal(feed3.success, true);
+assert.equal(A.G.petFollower.devoted, false, 'Follower is not devoted before reaching 80 loyalty');
+
+// Feed 3: golden_carp_sashimi (+50 loyalty, +300 EXP) via World Chronicle companions panel
+A.addItem('golden_carp_sashimi', 1);
+A.G._chronicleTab = 'companions';
+
+let wiredFeedBtn = null;
+const origCreateElement = document.createElement;
+document.createElement = function(tag) {
+  const el = origCreateElement.call(this, tag);
+  const origQuerySelectorAll = el.querySelectorAll;
+  el.querySelectorAll = function(sel) {
+    if (sel === '[data-feed-pet-id]') {
+      wiredFeedBtn = origCreateElement('button');
+      wiredFeedBtn.dataset = { feedPetId: 'pet_slime', feastId: 'golden_carp_sashimi' };
+      return [wiredFeedBtn];
+    }
+    return origQuerySelectorAll.call(this, sel);
+  };
+  return el;
+};
+
+A.togglePanel('world');
+document.createElement = origCreateElement;
+
+assert.ok(wiredFeedBtn, 'Feed button for golden_carp_sashimi wired in World Chronicle companions tab');
+wiredFeedBtn.click();
+A.togglePanel('world');
+
 assert.equal(activePet.loyalty, 100, 'Loyalty clamped at 100');
 assert.equal(activePet.exp, 470, 'EXP increased by 300 to 470');
 assert.ok(activePet.bondLevel >= 3, 'Bond level advances across Lv 3 threshold (250)');
@@ -272,11 +298,35 @@ const devotedAura = A.G.petsSystem.computeAuraStats(activePet);
 // With Devoted 1.10x: 15 * 1.10 = 16.5.
 assert.equal(devotedAura.hpRegen, 16.5, 'Devoted 1.10x multiplier applied to computed aura stats');
 
-// Verify Devoted status on follower entity
-if (A.G.petFollower) {
-  A.G.petFollower.devoted = (activePet.loyalty >= 80);
-}
-assert.equal(A.G.petFollower.devoted, true, 'G.petFollower.devoted is true when loyalty >= 80');
+// Verify Devoted status on follower entity is automatically true without any manual override
+assert.equal(A.G.petFollower.devoted, true, 'G.petFollower.devoted is automatically true when loyalty >= 80');
+
+// Verify defensive guard on [data-summon-pet]: clicking summon on an unowned companion is safely ignored
+let wiredSummonBtn = null;
+const origCreateElementSummon = document.createElement;
+document.createElement = function(tag) {
+  const el = origCreateElementSummon.call(this, tag);
+  const origQuerySelectorAll = el.querySelectorAll;
+  el.querySelectorAll = function(sel) {
+    if (sel === '[data-summon-pet]') {
+      wiredSummonBtn = origCreateElementSummon('button');
+      wiredSummonBtn.dataset = { summonPet: 'pet_dragon' }; // unowned!
+      return [wiredSummonBtn];
+    }
+    return origQuerySelectorAll.call(this, sel);
+  };
+  return el;
+};
+
+A.togglePanel('world');
+document.createElement = origCreateElementSummon;
+
+assert.ok(wiredSummonBtn, 'Summon button wired');
+assert.equal(Boolean(A.G.pets.owned.pet_dragon), false, 'pet_dragon is unowned');
+A.G.pets.activePetId = 'pet_slime';
+wiredSummonBtn.click();
+assert.equal(A.G.pets.activePetId, 'pet_slime', 'activePetId unchanged when attempting to summon unowned pet');
+A.togglePanel('world');
 
 console.log('Testing d) Passive aura stat boosts in recompute(p)...');
 // ============================================================================

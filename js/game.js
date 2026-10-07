@@ -6155,12 +6155,13 @@ function wirePanel(id, el) {
       refreshPanel('world');
     });
     el.querySelectorAll('[data-summon-pet]').forEach(b => b.onclick = () => {
-      if (!G.pets) G.pets = { activePetId: null, owned: {} };
-      G.pets.activePetId = b.dataset.summonPet;
-      syncPetFollower();
-      recompute(G.player);
-      saveGame();
-      refreshPanel('world');
+      if (G.pets?.owned?.[b.dataset.summonPet]) {
+        G.pets.activePetId = b.dataset.summonPet;
+        syncPetFollower();
+        recompute(G.player);
+        saveGame();
+        refreshPanel('world');
+      }
     });
     el.querySelectorAll('[data-dismiss-pet]').forEach(b => b.onclick = () => {
       if (!G.pets) G.pets = { activePetId: null, owned: {} };
@@ -6176,6 +6177,7 @@ function wirePanel(id, el) {
       if (itemQty(feastId) > 0 && G.pets?.owned?.[petId]) {
         removeItem(feastId, 1);
         petsSystem.feedPet(G.pets.owned[petId], feastId);
+        syncPetFollower();
         if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
         AUDIO.playSfx('pickup');
         recompute(G.player);
