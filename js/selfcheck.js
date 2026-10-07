@@ -6,7 +6,7 @@ import { CONTENT } from './content.js';
 import { MAPS } from './maps.js';
 import { COMBAT } from './combat.js';
 import { PROGRESSION } from './progression.js';
-import { PX } from './pixelart.js';
+import { PX, ITEM_ICON, SLOT_ICON } from './pixelart.js';
 import { LPC } from './lpc.js';
 
 export function runSelfCheck(engine) {
@@ -319,3 +319,63 @@ export function runSelfCheck(engine) {
   if (errs.length) { console.error('[selfcheck] FAILED:\n' + errs.join('\n')); throw new Error('data self-check failed'); }
   console.log('[selfcheck] OK — classes/skills/maps/drops/quests/formulas all resolve');
 }
+
+export function selfCheck(engine) {
+  if (engine) return runSelfCheck(engine);
+  const monById = Object.fromEntries(CONTENT.monsters.map(m => [m.id, m]));
+  const itemById = Object.fromEntries(CONTENT.items.map(i => [i.id, i]));
+  const npcById = Object.fromEntries(CONTENT.npcs.map(n => [n.id, n]));
+  const questById = Object.fromEntries(CONTENT.quests.map(q => [q.id, q]));
+  const monsterMapName = {};
+  const monsterMapId = {};
+  for (const map of Object.values(MAPS)) {
+    for (const sp of (map.spawns || [])) {
+      if (!(sp.monsterId in monsterMapName)) {
+        monsterMapName[sp.monsterId] = map.name;
+        monsterMapId[sp.monsterId] = map.id;
+      }
+    }
+  }
+  const itemDropSource = itemId => {
+    for (const m of CONTENT.monsters) {
+      if (m.drops.some(d => d.itemId === itemId)) {
+        return { mon: m.name, monsterId: m.id, map: monsterMapName[m.id], mapId: monsterMapId[m.id] };
+      }
+    }
+    return null;
+  };
+  const VARS = ['baseHp','vit','level','int','str','dex','weaponAtk','armorDef','agi','luk','attackerAtk','defenderDef','isCrit'];
+  const compile = expr => new Function('a', `const {${VARS.join(',')}}=a; return (${expr});`);
+  const F = Object.fromEntries(Object.entries(DESIGN.formulas).map(([k, e]) => [k, compile(e)]));
+  const defaultEngine = {
+    CLASS_COMBAT: { reborn_blade: 'blade', drifter: 'berserker', codeweaver: 'mage', far_shot: 'ranger', lightbringer: 'paladin', iron_fist: 'monk', stormcaller: 'elementalist' },
+    DIFFICULTY: {
+      easy:   { name: 'Easy',   color: '#7bd88f', mult: 0.8, band: [1, 5] },
+      normal: { name: 'Normal', color: '#e0c351', mult: 1.0, band: [6, 12] },
+      hard:   { name: 'Hard',   color: '#e8963c', mult: 1.4, band: [13, 18] },
+      elite:  { name: 'Elite',  color: '#e0574b', mult: 2.0, band: [18, 99] },
+    },
+    F,
+    GUILD_RANKS: ['F', 'E-', 'E', 'E+', 'D-', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S'],
+    ITEM_ICON,
+    NPC_BY_ROLE: { shop: 'npc_shopkeeper', guild: 'elder', quest: 'npc_guide', story: 'npc_storyteller' },
+    REFINE_FRAG: ['wolf_fang', 'shade_dust', 'star_iron'],
+    SLOT_ICON,
+    ZONE_ORDER: ['whispering_woods', 'sunken_ruins', 'frostpeak_tundra', 'dragon_caldera', 'astral_rift'],
+    advancedJobConfig: classId => PROGRESSION.advancedJobs?.[classId] || null,
+    chance: p => Math.random() < p,
+    itemById,
+    itemDropSource,
+    jobBranchConfig: classId => PROGRESSION.jobBranches?.[classId] || null,
+    jobXpForNext: new Function('level', `return (${DESIGN.jobXpCurve});`),
+    monById,
+    npcById,
+    questById,
+    questSuccessorIds: q => q.nextQuestByClass ? Object.values(q.nextQuestByClass) : (q.nextQuestId ? [q.nextQuestId] : []),
+    skillsFor: cc => COMBAT.skills.filter(s => s.classId === cc),
+    xpForNext: new Function('level', `return (${DESIGN.xpCurve});`),
+    zoneGuardian: mid => MAPS[mid].spawns.map(sp => monById[sp.monsterId]).find(d => d?.sizeTiles >= 2)?.id,
+  };
+  return runSelfCheck(defaultEngine);
+}
+

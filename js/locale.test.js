@@ -218,4 +218,36 @@ for (const key of [
   'Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.',
 ]) assert.notEqual(T(key, 'ui'), key, `Missing translation for runtime guidance: ${key}`);
 
+// Test 15: Check Companions & Pet Familiars UI strings and companion catalog
+const petUiKeys = [
+  'Companions & Familiars',
+  'Active Companion',
+  'Summon',
+  'Dismiss',
+  'Bond Level',
+  'Loyalty',
+  'Devoted',
+  'Feed Feast',
+  'Auto-Loot Radius',
+  'Sweet Gelatin',
+  'Tender Jerky',
+  'Luminous Nectar',
+  'Glacial Salmon Nibble',
+  'Magma Berry Cluster',
+  'Creature must be weakened below 30% HP!',
+  'This creature rejects this bait!',
+  'Successfully tamed',
+  'The creature resisted taming!',
+  'Fed',
+];
+for (const key of petUiKeys) {
+  assert.notEqual(T(key, 'ui'), key, `Missing UI translation for: ${key}`);
+}
+
+const { PET_CATALOG } = await import('./systems/pets.js');
+for (const pet of Object.values(PET_CATALOG)) {
+  assert.notEqual(T(pet.name, 'ui'), pet.name, `Missing translation for companion name: ${pet.name}`);
+  assert.notEqual(T(pet.desc, 'ui'), pet.desc, `Missing translation for companion desc: ${pet.desc}`);
+}
+
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

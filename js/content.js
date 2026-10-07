@@ -313,7 +313,14 @@ export const CONTENT = {
     { id: "essence_night", name: "Essence of Midnight", type: "consumable", desc: "Increases Critical Damage by +20% for 4 minutes.", buff: { stat: "critDmg", mult: 1.20, durationMs: 240000 }, price: 250, value: 250, rarity: "epic" },
     { id: "grilled_trout", name: "Grilled Trout", type: "consumable", desc: "Savory grilled fish. Restores 400 HP and grants +10 ATK for 5 minutes.", hpRestore: 400, buff: { stat: "atk", flat: 10, durationMs: 300000 }, price: 80, value: 80, rarity: "common" },
     { id: "smoked_salmon", name: "Smoked Salmon", type: "consumable", desc: "Rich smoked salmon. Restores 600 HP and grants +15 DEF for 5 minutes.", hpRestore: 600, buff: { stat: "def", flat: 15, durationMs: 300000 }, price: 120, value: 120, rarity: "uncommon" },
-    { id: "golden_carp_sashimi", name: "Golden Carp Sashimi", type: "consumable", desc: "Delicacy fit for emperors. Fully restores HP/MP and grants +10% to all stats for 10 minutes.", hpRestore: 99999, mpRestore: 99999, buff: { stat: "all", mult: 1.10, durationMs: 600000 }, price: 1000, value: 1000, rarity: "legendary" }
+    { id: "golden_carp_sashimi", name: "Golden Carp Sashimi", type: "consumable", desc: "Delicacy fit for emperors. Fully restores HP/MP and grants +10% to all stats for 10 minutes.", hpRestore: 99999, mpRestore: 99999, buff: { stat: "all", mult: 1.10, durationMs: 600000 }, price: 1000, value: 1000, rarity: "legendary" },
+
+    // ===== Taming Baits =====
+    { id: "bait_sweet_gelatin", name: "Sweet Gelatin", type: "taming_bait", targetPet: "pet_slime", targetMonster: "slime", desc: "A sugary, bouncy gelatin favored by forest slimes.", price: 60, value: 60, rarity: "common" },
+    { id: "bait_tender_jerky", name: "Tender Jerky", type: "taming_bait", targetPet: "pet_wolf", targetMonster: "wolf", desc: "Savory dried meat seasoned with wild herbs that wolves love.", price: 100, value: 100, rarity: "uncommon" },
+    { id: "bait_luminous_nectar", name: "Luminous Nectar", type: "taming_bait", targetPet: "pet_sprite", targetMonster: "blight_sprite", desc: "Shimmering distilled floral nectar irresistible to sprites.", price: 150, value: 150, rarity: "rare" },
+    { id: "bait_glacial_salmon", name: "Glacial Salmon Nibble", type: "taming_bait", targetPet: "pet_bear", targetMonster: "tundra_lurker", desc: "Fatty mountain salmon chunks treated with frost lily pollen.", price: 180, value: 180, rarity: "rare" },
+    { id: "bait_magma_fruit", name: "Magma Berry Cluster", type: "taming_bait", targetPet: "pet_dragon", targetMonster: "ember_imp", desc: "Spicy volcanic berries harvested near boiling lava springs.", price: 250, value: 250, rarity: "epic" }
   ],
 
   npcs: [
@@ -682,6 +689,11 @@ export const CONTENT = {
         { itemId: "golem_core", qty: 1 }
       ]
     },
+    { id: "r_bait_sweet_gelatin", out: "bait_sweet_gelatin", cost: 40, mats: [{ itemId: "silverleaf", qty: 2 }, { itemId: "glowing_trout", qty: 1 }] },
+    { id: "r_bait_tender_jerky", out: "bait_tender_jerky", cost: 75, mats: [{ itemId: "silverleaf", qty: 2 }, { itemId: "iron_vein", qty: 1 }, { itemId: "abyssal_bass", qty: 1 }] },
+    { id: "r_bait_luminous_nectar", out: "bait_luminous_nectar", cost: 120, mats: [{ itemId: "moonlight_lotus", qty: 1 }, { itemId: "sunken_kelp", qty: 2 }] },
+    { id: "r_bait_glacial_salmon", out: "bait_glacial_salmon", cost: 150, mats: [{ itemId: "glacial_salmon", qty: 1 }, { itemId: "frost_lily", qty: 2 }] },
+    { id: "r_bait_magma_fruit", out: "bait_magma_fruit", cost: 200, mats: [{ itemId: "magma_koi", qty: 1 }, { itemId: "ember_blossom", qty: 2 }, { itemId: "caldera_crystal", qty: 1 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()

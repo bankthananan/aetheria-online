@@ -767,7 +767,41 @@ export const L10N = {
       "Objective": "เป้าหมาย",
       "Next ·": "ถัดไป ·",
       "success": "สำเร็จ",
-      "Save could not be loaded — start a new game (🗑 clears it).": "โหลดเซฟไม่สำเร็จ — เริ่มเกมใหม่ได้เลย (🗑 เพื่อลบเซฟ)"
+      "Save could not be loaded — start a new game (🗑 clears it).": "โหลดเซฟไม่สำเร็จ — เริ่มเกมใหม่ได้เลย (🗑 เพื่อลบเซฟ)",
+
+      // Companions & Pet Familiars
+      "Companions & Familiars": "สัตว์เลี้ยง & ผู้ติดตาม",
+      "Active Companion": "สัตว์เลี้ยงที่ร่วมทาง",
+      "Summon": "เรียกใช้",
+      "Dismiss": "เก็บกลับ",
+      "Bond Level": "ระดับความผูกพัน",
+      "Loyalty": "ความภักดี",
+      "Devoted": "ภักดีสูงสุด",
+      "Feed Feast": "ให้อาหารเลิศรส",
+      "Auto-Loot Radius": "ระยะเก็บไอเทมอัตโนมัติ",
+      "Sweet Gelatin": "เยลลี่หวาน",
+      "Tender Jerky": "เนื้อเค็มเนื้อนุ่ม",
+      "Luminous Nectar": "น้ำหวานเรืองแสง",
+      "Glacial Salmon Nibble": "ชิ้นปลาแซลมอนน้ำแข็ง",
+      "Magma Berry Cluster": "พวงเบอร์รี่แมกมา",
+      "Creature must be weakened below 30% HP!": "ต้องทำให้สัตว์อ่อนแอจน HP ต่ำกว่า 30% ก่อนจับ!",
+      "This creature rejects this bait!": "สัตว์ตัวนี้ไม่สนใจเหยื่อล่อนี้!",
+      "Successfully tamed": "จับสัตว์เลี้ยงสำเร็จ",
+      "The creature resisted taming!": "สัตว์ตัวนี้ขัดขืนการจับ!",
+      "Fed": "ให้อาหาร",
+      "Invalid target creature!": "เป้าหมายไม่ใช่สัตว์ที่จับได้!",
+      "No companion specified!": "ไม่ได้เลือกสัตว์เลี้ยง!",
+      // Companion archetypes
+      "Gel Slime": "สไลม์เจล",
+      "A bouncy, friendly slime companion that rejuvenates your vitality and picks up nearby spoils.": "สไลม์แสนเป็นมิตรเด้งดึ๋งที่ช่วยฟื้นฟูพลังชีวิตและช่วยเก็บไอเทมใกล้เคียง",
+      "Timber Wolf Pup": "ลูกหมาป่าทิมเบอร์",
+      "A spirited wolf pup whose loyal hunting instincts bolster your attack strength and precision.": "ลูกหมาป่าผู้กระตือรือร้น สัญชาตญาณการล่าอันภักดีช่วยเพิ่มพลังโจมตีและความแม่นยำ",
+      "Blight Sprite": "สไปรท์มลพิษ",
+      "A fluttering fae sprite suffused with arcane light, replenishing mana and accelerating invocations.": "ภูตสไปรท์กระพือปีกเปล่งแสงเวทมนตร์ ช่วยฟื้นฟูมานาและเร่งการร่ายคาถา",
+      "Glacial Bear Cub": "ลูกหมีขั้วโลกน้ำแข็ง",
+      "A sturdy polar bear cub whose thick pelt shields against frost and brutal blows.": "ลูกหมีขั้วโลกขนหนาแข็งแกร่ง ช่วยป้องกันความเย็นและการโจมตีที่รุนแรง",
+      "Magma Hatchling": "ลูกมังกรแมกมา",
+      "A fiery wyrmling breathing embers of destruction and hoarding sparkling zeny.": "ลูกมังกรไฟพ่นสะเก็ดไฟแห่งการทำลายล้างและชอบสะสมเหรียญเซนีเป็นประกาย"
     },
     classes: {
       // Classes
@@ -1575,6 +1609,23 @@ export const L10N = {
 
       "Gilded Ravager Card": "การ์ดจอมพิฆาตเกราะทอง",
       "A nomad tyrant crowned in stolen gold. In accessory, grants +15% Zeny gain, +5 LUK, and +10% Item Drop Rarity.": "ทรราชเร่ร่อนสวมมงกุฎทองคำ ติดตั้งในเครื่องประดับมอบเซนี +15%, LUK +5 และโอกาสได้ไอเทมหายาก +10%",
+
+      // Taming Baits & Companions
+      "Sweet Gelatin": "เยลลี่หวาน",
+      "A sugary, bouncy gelatin favored by forest slimes.": "เยลลี่หวานหยุ่นรสหวานที่สไลม์แห่งป่าโปรดปราน",
+      "Tender Jerky": "เนื้อเค็มเนื้อนุ่ม",
+      "Savory dried meat seasoned with wild herbs that wolves love.": "เนื้อตากแห้งรสกลมกล่อมหมักสมุนไพรป่าที่หมาป่าชื่นชอบ",
+      "Luminous Nectar": "น้ำหวานเรืองแสง",
+      "Shimmering distilled floral nectar irresistible to sprites.": "น้ำหวานดอกไม้กลั่นเป็นประกายที่สไปรท์ไม่อาจต้านทาน",
+      "Glacial Salmon Nibble": "ชิ้นปลาแซลมอนน้ำแข็ง",
+      "Fatty mountain salmon chunks treated with frost lily pollen.": "เนื้อปลาแซลมอนภูเขาติดมันคลุกละอองเกสรลิลลี่น้ำแข็ง",
+      "Magma Berry Cluster": "พวงเบอร์รี่แมกมา",
+      "Spicy volcanic berries harvested near boiling lava springs.": "เบอร์รี่ภูเขาไฟรสเผ็ดร้อนที่เก็บจากริมบ่อน้ำพุลาวาเดือด",
+      "Gel Slime": "สไลม์เจล",
+      "Timber Wolf Pup": "ลูกหมาป่าทิมเบอร์",
+      "Blight Sprite": "สไปรท์มลพิษ",
+      "Glacial Bear Cub": "ลูกหมีขั้วโลกน้ำแข็ง",
+      "Magma Hatchling": "ลูกมังกรแมกมา",
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -1690,7 +1741,10 @@ export const L10N = {
       "Void Stalker": "ผู้ล่าแห่งความว่างเปล่า",
       "A predatory entity slipped through the dimensional seams.": "สิ่งมีชีวิตนักล่าที่เล็ดลอดผ่านรอยแยกมิติ",
       "Dimensional Herald": "ทูตแห่งรอยแยกมิติ",
-      "The harbinger of the rift, commanding the dimensional incursion.": "ผู้ส่งสารแห่งรอยแยก ผู้นำการรุกรานข้ามมิติ"
+      "The harbinger of the rift, commanding the dimensional incursion.": "ผู้ส่งสารแห่งรอยแยก ผู้นำการรุกรานข้ามมิติ",
+      "Timber Wolf Pup": "ลูกหมาป่าทิมเบอร์",
+      "Glacial Bear Cub": "ลูกหมีขั้วโลกน้ำแข็ง",
+      "Magma Hatchling": "ลูกมังกรแมกมา"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
