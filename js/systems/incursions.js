@@ -42,6 +42,7 @@ export const WAVE_TEMPLATES = [
   { wave: 1, monsters: ['void_wisp', 'void_wisp', 'void_wisp'] },
   { wave: 2, monsters: ['void_stalker', 'void_stalker', 'void_stalker'] },
   { wave: 3, monsters: ['void_herald', 'void_stalker', 'void_stalker'] },
+  { wave: 4, monsters: ['voidmaw_sovereign'] },
 ];
 
 const PRIMAL_RUNES = [
@@ -141,6 +142,16 @@ export function createIncursionSystem({
       activeIncursion.waveMonsterIds = [...WAVE_TEMPLATES[activeIncursion.currentWave - 1].monsters];
     }
     return activeIncursion;
+  }
+
+  function triggerClimax() {
+    if (activeIncursion && activeIncursion.currentWave >= 3) {
+      activeIncursion.currentWave = 4;
+      activeIncursion.isClimax = true;
+      activeIncursion.waveMonsterIds = ['voidmaw_sovereign'];
+      return activeIncursion;
+    }
+    return null;
   }
 
   function generateCacheLoot() {
@@ -252,6 +263,7 @@ export function createIncursionSystem({
     startIncursion,
     checkWaveClear,
     advanceWave,
+    triggerClimax,
     generateCacheLoot,
     sealIncursion,
     collapseIncursion,

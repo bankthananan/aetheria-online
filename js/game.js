@@ -48,6 +48,8 @@ import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
 import { createPetsSystem } from './systems/pets.js';
 import { createPetsRenderer } from './render/pets-fx.js';
 import { createPetsUIRenderer } from './render/pets-ui.js';
+import { createRaidsSystem, RAID_STATES, CONTRIBUTION_TIERS, WORLD_BOSS_CATALOG } from './systems/raids.js';
+import { createRaidsRenderer } from './render/raids-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -193,6 +195,8 @@ const petsSystem = createPetsSystem({
 });
 const petsFx = createPetsRenderer({ T, PX });
 const petsUI = createPetsUIRenderer({ T });
+const raidsSystem = createRaidsSystem({ now, rnd: () => Math.random() });
+const raidsFx = createRaidsRenderer({ T, PX });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -444,6 +448,11 @@ const G = {
   petsFx,
   petsUI,
   petFollower: null,
+  raids: raidsSystem.serialize(),
+  raidsSystem,
+  raidsFx,
+  raidState: null,
+  raidBossMob: null,
   saveStatus: 'saved',
 };
 
@@ -1578,6 +1587,23 @@ function triggerIncursionStart() {
   spawnIncursionWave(inc);
 }
 
+function spawnWorldBossRaid(bossId, { mapId = G.mapId, x = (G.player?.x ?? 0) + 80, y = (G.player?.y ?? 0) } = {}) {
+  const clampX = G.map ? clamp(x, TS * 2, (G.map.width - 2) * TS) : x;
+  const clampY = G.map ? clamp(y, TS * 2, (G.map.height - 2) * TS) : y;
+  raidsSystem.startRaid(bossId, { mapId, x: clampX, y: clampY, durationMs: 180000 });
+  G.raidState = raidsSystem.getActiveRaid();
+  const bossDef = monById[bossId] || CONTENT.monsters.find(m => m.id === bossId);
+  const mob = makeMonster(bossDef, clampX, clampY, bossDef?.level || 80);
+  mob._raidBoss = true;
+  mob.maxHp = G.raidState.maxHp;
+  mob.hp = G.raidState.hp;
+  G.monsters.push(mob);
+  G.raidBossMob = mob;
+  AUDIO.playSfx('skill');
+  toast(`☠ ${T('WORLD BOSS RAID ENGAGED!', 'ui')} ${T(G.raidState.bossDef.name, 'monsters')}`, 'bad');
+  return G.raidState;
+}
+
 // A spawned monster rolls its own level around the definition's base (bosses are
 // fixed). hp/atk/def/exp scale with the rolled level so a Lv8 wolf really is tougher
 // than a Lv6 one. Instance combat stats live on the monster (m.atk/m.dv/m.exp/m.lvl),
@@ -2056,7 +2082,27 @@ function damageMonster(m, dmg, isCrit, silent) {
   const mark = liveStatus(m, 'mark');
   if (mark) dmg = Math.max(1, Math.round(dmg * (1 + mark.damageTaken)));
   dmg = eliteSystem.mitigateDamage(m, dmg);
-  m.hp -= dmg;
+  if (m._raidBoss && G.raidState?.active) {
+    const raidDmgRes = raidsSystem.applyDamage(dmg);
+    if (raidDmgRes.staggered) {
+      raidsFx.triggerStaggerBurst(m.x, m.y, 24);
+      toast(`⚡ ${T('STAGGERED! Boss Vulnerable!', 'ui')}`, 'good');
+    }
+    // If Phase 2 transitioned and adds spawned by raidsSystem:
+    if (G.raidState.phase === 2 && G.raidState.adds?.length && !G.raidState._addsSpawned) {
+      G.raidState._addsSpawned = true;
+      for (const add of G.raidState.adds) {
+        const addDef = monById[add.id] || CONTENT.monsters[0];
+        const addMob = makeMonster(addDef, m.x + (add.index - 1) * 32, m.y + 32, addDef.level || 40);
+        addMob._raidAdd = true;
+        addMob._raidAddIndex = add.index;
+        G.monsters.push(addMob);
+      }
+    }
+    m.hp = G.raidState.hp;
+  } else {
+    m.hp -= dmg;
+  }
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
   if (isCrit) {
     combatFx.addScreenShake(0.25);
@@ -2299,18 +2345,57 @@ function killMonster(m) {
     spawnRiftWave();
     toast(`✦ Celestial Rift — Floor ${G.rift.floor}! Best: ${G.rift.best}`, 'good');
   }
+  if (m._raidAdd) {
+    raidsSystem.recordAddKill(m._raidAddIndex);
+  }
+  if (m._raidBoss && (G.raidState?.active || G.raidState?.state === RAID_STATES.DEFEATED)) {
+    m.deadUntil = Infinity;
+    const vic = raidsSystem.resolveVictory();
+    if (vic?.success) {
+      // Award cache spoils
+      const cache = vic.cache;
+      if (cache.zeny) p.zeny = (p.zeny || 0) + cache.zeny;
+      if (cache.dimensional_shard) addItem('dimensional_shard', cache.dimensional_shard);
+      for (const trop of (cache.trophies || [])) addItem(trop, 1);
+      for (const rune of (cache.runes || [])) addItem(rune, 1);
+      if (cache.feast) addItem(cache.feast, 1);
+      if (cache.gems > 0) addItem('blessed_ore', cache.gems);
+      if (Math.random() < cache.cardChance) {
+        const bossCard = 'card_' + G.raidState.bossId;
+        if (CONTENT.items.some(it => it.id === bossCard)) addItem(bossCard, 1);
+      }
+      AUDIO.playSfx('levelup');
+      toast(`🏆 ${T('Raid Victory!', 'ui')} (${T(vic.tier.toUpperCase() + ' Tier', 'ui')})`, 'good');
+      logMsg(`World Boss vanquished! Tier: ${vic.tier}, Score: ${vic.score}`, 'good');
+      // Clean up raid adds
+      G.monsters = G.monsters.filter(mo => !mo._raidAdd);
+      G.raidState = null;
+      G.raidBossMob = null;
+    }
+  }
+
   // Dimensional Incursion wave clear check
   if (incursionSystem.getState() === INCURSION_STATES.INCURSION_ACTIVE) {
     const incMobs = G.monsters.filter(mo => mo._incursionMob && mo.alive);
     if (incMobs.length === 0) {
       const activeInc = incursionSystem.getActiveIncursion();
-      if (activeInc && activeInc.currentWave >= 3) {
-        incursionSystem.sealIncursion();
-        addItem('rift_cache', 1);
-        AUDIO.playSfx('levelup');
-        toast(`✨ ${T('Rift Sealed!', 'ui')}`, 'good');
-        logMsg('Dimensional Incursion sealed — claimed Dimensional Cache!', 'good');
-      } else {
+      if (activeInc && activeInc.currentWave === 3) {
+        const isCelestialMap = G.mapId === 'astral_rift';
+        const isCelestialWeather = ['cosmic_eclipse', 'stellar_drift'].includes(G.weather?.id);
+        const shouldClimax = isCelestialMap && (isCelestialWeather || Math.random() < 0.35);
+        if (shouldClimax) {
+          incursionSystem.triggerClimax();
+          spawnWorldBossRaid('voidmaw_sovereign', { mapId: activeInc.mapId, x: activeInc.x, y: activeInc.y });
+          toast(`🌌 ${T('DIMENSIONAL RUPTURE! The Voidmaw Sovereign emerges!', 'ui')}`, 'bad');
+          logMsg('The rift shattered space-time — Voidmaw Sovereign has arrived!', 'bad');
+        } else {
+          incursionSystem.sealIncursion();
+          addItem('rift_cache', 1);
+          AUDIO.playSfx('levelup');
+          toast(`✨ ${T('Rift Sealed!', 'ui')}`, 'good');
+          logMsg('Dimensional Incursion sealed — claimed Dimensional Cache!', 'good');
+        }
+      } else if (activeInc && activeInc.currentWave < 3) {
         const nextInc = incursionSystem.advanceWave();
         if (nextInc) {
           toast(`⚡ ${T('Wave {w}/3', 'ui').replace('{w}', nextInc.currentWave)}`, 'bad');
@@ -3580,6 +3665,14 @@ function render() {
   for (const d2 of drawables) d2.draw();
 
   drawEffects();   // attack/spell visual effects on top
+  if (G.raidState?.active && G.raidBossMob && G.raidState.mapId === G.mapId) {
+    raidsFx.drawBossAura(ctx, G.raidBossMob, G.cam, now(), CANVAS_W, CANVAS_H);
+    if (G.raidState.breakShield > 0) {
+      raidsFx.drawAegisBarrier(ctx, G.raidBossMob, G.cam, now(), CANVAS_W, CANVAS_H);
+      raidsFx.drawBreakGauge(ctx, G.raidState, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+  }
+  raidsFx.drawStaggerBursts(ctx, null, G.cam, now(), CANVAS_W, CANVAS_H);
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
@@ -3962,6 +4055,19 @@ function step(dt) {
   } else if (incursionSystem.getState() === INCURSION_STATES.SEALED) {
     G.monsters = G.monsters.filter(mo => !mo._incursionMob);
     incursionSystem.resetToIdle();
+  }
+
+  // Raid subsystem & fx update
+  if (G.raidState?.active) {
+    raidsSystem.update(dt);
+    raidsFx.updateFx(dt);
+    if (G.raidState.state === RAID_STATES.COLLAPSED || !G.raidState.active) {
+      toast(`💀 ${T('Raid Collapsed!', 'ui')}`, 'bad');
+      logMsg('The raid boss departed into the ether.', 'bad');
+      G.monsters = G.monsters.filter(mo => !mo._raidBoss && !mo._raidAdd);
+      G.raidState = null;
+      G.raidBossMob = null;
+    }
   }
 
   // Gathering & Fishing subsystem tick
@@ -4846,6 +4952,7 @@ const ADMIN_GROUPS = [
     ['completedailies', 'Complete All Dailies'], ['rerolldailies', 'Reroll Daily Challenges'],
     ['spawnrare', 'Spawn Rare Beast (Fang)'], ['cyclediff', 'Cycle Difficulty (N/H/NM)'],
     ['spawnrift', 'Spawn Dimensional Tear'], ['sealrift', 'Seal Active Incursion'],
+    ['spawnraid', 'Spawn World Boss Raid'], ['endraid', 'End World Boss Raid'],
     ['resetgather', 'Reset Gather Nodes'], ['catchfish', '+1 of All Fish'],
   ]],
   ['🎴 Monster Cards & Bestiary', [
@@ -4854,7 +4961,8 @@ const ADMIN_GROUPS = [
     ['resetbestiary', 'Reset Bestiary'],
   ]],
 ];
-function adminAction(a, val) {
+function adminAction(a, extra) {
+  const val = extra;
   const p = G.player;
   if (a === 'setweather' || a?.startsWith?.('setweather:')) {
     const wId = val || (a.startsWith('setweather:') ? a.slice('setweather:'.length) : 'clear');
@@ -4977,6 +5085,20 @@ function adminAction(a, val) {
       incursionSystem.sealIncursion();
       addItem('rift_cache', 1);
       toast('Admin: Sealed Incursion and granted Dimensional Cache!', 'good');
+    }
+  }
+  else if (a === 'spawnraid') {
+    const bId = (typeof extra === 'object' && extra?.bossId) || (typeof extra === 'string' && extra ? extra : 'voidmaw_sovereign');
+    spawnWorldBossRaid(bId);
+    toast(`Admin: Spawned World Boss Raid ${bId}`, 'good');
+  }
+  else if (a === 'endraid') {
+    if (G.raidState) {
+      raidsSystem.collapseRaid();
+      G.monsters = G.monsters.filter(mo => !mo._raidBoss && !mo._raidAdd);
+      G.raidState = null;
+      G.raidBossMob = null;
+      toast('Admin: Ended World Boss Raid', 'bad');
     }
   }
   else if (a === 'resetgather' || a === 'spawngather') {
@@ -6499,7 +6621,7 @@ function refreshPanel(id) {
 
 function useItem(itemId) {
   const it = itemById[itemId]; if (!it || itemQty(itemId) <= 0) return false;
-  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album' && it.type !== 'taming_bait') { logMsg('This item cannot be used directly.', 'sys'); return false; }
+  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album' && itemId !== 'titan_horn' && it.type !== 'taming_bait') { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
   if (it.type === 'taming_bait') {
     if (!G.target || !G.target.alive) {
@@ -6578,6 +6700,16 @@ function useItem(itemId) {
     toast(`✨ ${T('Dimensional Cache opened!', 'ui')}`, 'good');
     logMsg(`Opened Dimensional Cache: +${loot.zeny} Zeny, shards, materials, and runes!`, 'good');
     saveGame();
+    return true;
+  }
+  if (itemId === 'titan_horn') {
+    removeItem('titan_horn', 1);
+    AUDIO.playSfx('levelup');
+    let targetTitan = 'caldera_colossus';
+    if (G.mapId === 'whispering_woods') targetTitan = 'ancient_behemoth';
+    else if (G.mapId === 'astral_rift') targetTitan = 'voidmaw_sovereign';
+    else if (G.mapId === 'dragon_caldera') targetTitan = 'caldera_colossus';
+    spawnWorldBossRaid(targetTitan);
     return true;
   }
   if (it.reset) {
@@ -7355,6 +7487,7 @@ function saveGame() {
       gathering: gatheringSystem.serialize(),
       bestiary: cardsSystem.serialize(G.bestiary),
       pets: petsSystem.serialize(G.pets),
+      raids: raidsSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -7482,6 +7615,7 @@ function resumeGame() {
   if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
   if (w.incursion) incursionSystem.deserialize(w.incursion);
   if (w.gathering) gatheringSystem.deserialize(w.gathering);
+  if (w.raids) raidsSystem.deserialize(w.raids);
   G.bestiary = cardsSystem.deserialize(w.bestiary);
   G.pets = petsSystem.deserialize(w.pets);
   syncPetFollower();
@@ -7518,6 +7652,9 @@ function begin(classId, name) {
   gameClock.reset();document.getElementById('resume-game')?.remove();AUDIO.resumePlayback();
   AUDIO.init();
   incursionSystem.resetToIdle();
+  raidsSystem.resetToIdle();
+  G.raidState = null;
+  G.raidBossMob = null;
   gatheringSystem.deserialize(null);
   G.bestiary = cardsSystem.deserialize(null);
   G.pets = petsSystem.deserialize(null);
