@@ -43,6 +43,8 @@ import { createIncursionSystem, INCURSION_STATES } from './systems/incursions.js
 import { createRiftRenderer } from './render/rift-fx.js';
 import { createGatheringSystem } from './systems/gathering.js';
 import { createGatheringRenderer } from './render/gathering-fx.js';
+import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './systems/cards.js';
+import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -177,6 +179,11 @@ const gatheringSystem = createGatheringSystem({
   rnd: () => Math.random(),
 });
 const gatheringRenderer = createGatheringRenderer({ T });
+const cardsSystem = createCardsSystem({
+  now,
+  rnd: () => Math.random(),
+});
+const cardsUI = createCardsUIRenderer({ T });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -264,6 +271,16 @@ function socketGem(uid, idx, gemItemId) {
   const inst = findGearInstance(uid);
   if (!inst || !Array.isArray(inst.sockets) || idx < 0 || idx >= inst.sockets.length) return false;
   if (inst.sockets[idx]) return false;                    // already filled
+  if (itemById[gemItemId]?.type === 'card') {
+    const cardCheck = cardsSystem.canSocketCard(inst, gemItemId, idx);
+    if (!cardCheck.canSocket || itemQty(gemItemId) < 1) return false;
+    removeItem(gemItemId, 1);
+    inst.sockets[idx] = gemItemId;
+    cardsSystem.recordCardAcquired(G.bestiary, gemItemId);
+    recompute(G.player);
+    saveGame();
+    return true;
+  }
   if (!itemById[gemItemId]?.gem || itemQty(gemItemId) < 1) return false;
   removeItem(gemItemId, 1);
   inst.sockets[idx] = gemItemId;
@@ -286,10 +303,13 @@ function socketDotsHtml(inst) {
   if (!inst?.sockets?.length) return '';
   const dots = inst.sockets.map((gid, i) => {
     const gem = gid && itemById[gid]?.gem;
-    const color = gem ? (gem.isRune ? (RUNE_DOT_COLOR[gem.element] || '#ffd24d') : (GEM_DOT_COLOR[gem.stat] || '#888')) : 'transparent';
-    const title = esc(gem ? T(itemById[gid].name, 'items') : T('Empty socket', 'ui'));
-    const pick = !gem ? ` data-socket-slot="${inst.uid}:${i}"` : '';
-    return `<i${pick} title="${title}" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;border:1px solid ${gem ? color : 'var(--text-muted)'};background:${color};${pick ? 'cursor:pointer' : ''}"></i>`;
+    const cardDef = gid && cardsSystem.getCardDef(gid);
+    const color = gem ? (gem.isRune ? (RUNE_DOT_COLOR[gem.element] || '#ffd24d') : (GEM_DOT_COLOR[gem.stat] || '#888'))
+      : cardDef ? (RARITY_COLORS[cardDef.rarity] || '#ffd54f')
+      : 'transparent';
+    const title = esc(gem ? T(itemById[gid].name, 'items') : cardDef ? T(cardDef.name, 'items') : T('Empty socket', 'ui'));
+    const pick = (!gem && !cardDef) ? ` data-socket-slot="${inst.uid}:${i}"` : '';
+    return `<i${pick} title="${title}" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;border:1px solid ${gem || cardDef ? color : 'var(--text-muted)'};background:${color};${pick ? 'cursor:pointer' : ''}"></i>`;
   }).join('');
   return `<span class="gear-sockets" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">${dots}</span>`;
 }
@@ -406,6 +426,9 @@ const G = {
   mastery: MasterySystem.createDefaultState(),
   zoneDifficulty: { whispering_woods: 'normal' },
   weather: null,
+  bestiary: cardsSystem.deserialize(null),
+  cardsSystem,
+  cardsUI,
   saveStatus: 'saved',
 };
 const GUILD_MAX_ACTIVE = 3;
@@ -1042,21 +1065,55 @@ function recompute(p, fill) {
   const relicMods = relicSystem.getPassiveModifiers(p);
   const weatherMods = weatherSystem.getCombatModifiers(G?.mapId);
   const runeMods = runeSystem.getRuneCombatModifiers(p.equip, itemById);
-  p.maxHp = Math.round((Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0) + buffFlat(p, 'hp')) * buffMult(p, 'hp'));
-  p.maxMp = Math.round((Math.round(p.maxMp * (1 + ps.mpPct / 100)) + buffFlat(p, 'mp')) * buffMult(p, 'mp'));
-  p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100)) + buffFlat(p, 'atk');
-  p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100)) + buffFlat(p, 'atk');
-  p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100)) + buffFlat(p, 'atk');
-  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100)) + (runeMods.defFlat || 0) + buffFlat(p, 'def');
-  p.critChance = Math.min(100, p.critChance + ps.critPct + (weatherMods.critPct || 0));
-  p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0) + (runeMods.fleeFlat || 0);
-  p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0);
+  // Cards: socketed cards stat modifiers & bestiary collection milestones
+  const cardMods = {};
+  if (p.equip) {
+    for (const slot of Object.keys(p.equip)) {
+      const inst = p.equip[slot];
+      if (inst && Array.isArray(inst.sockets)) {
+        for (const cardId of inst.sockets) {
+          if (!cardId) continue;
+          const cDef = cardsSystem.getCardDef(cardId);
+          if (cDef?.statMods) {
+            for (const [k, v] of Object.entries(cDef.statMods)) {
+              cardMods[k] = (cardMods[k] || 0) + v;
+            }
+          }
+        }
+      }
+    }
+  }
+  const milestoneBonuses = cardsSystem.calculateCollectionBonuses(G?.bestiary);
+  for (const [k, v] of Object.entries(milestoneBonuses)) {
+    cardMods[k] = (cardMods[k] || 0) + v;
+  }
+  p.maxHp = Math.round((Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0) + (cardMods.maxHp || 0) + buffFlat(p, 'hp')) * buffMult(p, 'hp'));
+  p.maxMp = Math.round((Math.round(p.maxMp * (1 + ps.mpPct / 100)) + (cardMods.maxMp || 0) + buffFlat(p, 'mp')) * buffMult(p, 'mp'));
+  p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100)) + (cardMods.physAtk || 0) + buffFlat(p, 'atk');
+  p.rangedAtk = Math.round(p.rangedAtk * (1 + ps.atkPct / 100)) + (cardMods.physAtk || 0) + buffFlat(p, 'atk');
+  p.magicAtk = Math.round(p.magicAtk * (1 + (ps.atkPct + (weatherMods.magicAtkPct || 0)) / 100)) + (cardMods.magicAtk || 0) + buffFlat(p, 'atk');
+  p.physDef = Math.round(p.physDef * (1 + (ps.defPct + relicMods.defPct + (weatherMods.defPct || 0)) / 100)) + (runeMods.defFlat || 0) + (cardMods.physDef || 0) + buffFlat(p, 'def');
+  p.critChance = Math.min(100, p.critChance + ps.critPct + (weatherMods.critPct || 0) + (cardMods.critChance || 0));
+  p.flee += ps.fleeFlat + (weatherMods.fleeFlat || 0) + (runeMods.fleeFlat || 0) + (cardMods.flee || 0);
+  p.hit += (cardMods.hit || 0);
+  p.lifesteal = (af.lifesteal || 0) + (relicMods.lifesteal || 0) + (cardMods.lifesteal || 0);
+  if (cardMods.allStatPct) {
+    p.physAtk = Math.round(p.physAtk * (1 + cardMods.allStatPct));
+    p.rangedAtk = Math.round(p.rangedAtk * (1 + cardMods.allStatPct));
+    p.magicAtk = Math.round(p.magicAtk * (1 + cardMods.allStatPct));
+    p.physDef = Math.round(p.physDef * (1 + cardMods.allStatPct));
+    p.maxHp = Math.round(p.maxHp * (1 + cardMods.allStatPct));
+    p.maxMp = Math.round(p.maxMp * (1 + cardMods.allStatPct));
+  }
+  p.cardMods = cardMods;
   p.runeMods = runeMods;
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
   // ---- stat-driven combat feel: AGI = attack + walk speed · INT = reach ----
   p.atkDelay = Math.round(COMBAT.attackSpeedMs * (1 - Math.min(0.45, st.agi * TUNING.agiAtkSpeed)));
   p.moveMult = (1 + Math.min(0.5, st.agi * TUNING.agiMoveSpeed)) * buffMult(p, 'speed');
   if (G.mastery?.claimedRanks[G.mapId]?.bronze) p.moveMult *= 1 + TUNING.expansion.masterySpeed;
+  if (cardMods.moveMult) p.moveMult *= (1 + cardMods.moveMult);
+  if (cardMods.moveSpeedPct) p.moveMult *= (1 + cardMods.moveSpeedPct / 100);
   p.rangeBonus = st.int * TUNING.intRange;                       // extra tiles for ranged/magic
   p.basicRange = MELEE.has(p.combatClass) ? 1.5 : 5 + p.rangeBonus;
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
@@ -1959,6 +2016,58 @@ function damageMonster(m, dmg, isCrit, silent) {
     floatText: (x, y, t, col) => floatText(x, y, t, col || 'crit'),
     spawnZap: (src, dst) => spawnBolt(src.x, src.y, dst.x, dst.y, '#fef08a', '#ffffff', true),
   });
+  // Card on-hit procs (strict ZERO screen shake)
+  if (p?.equip) {
+    for (const slot of Object.keys(p.equip)) {
+      const inst = p.equip[slot];
+      if (!inst?.sockets) continue;
+      for (const cardId of inst.sockets) {
+        if (!cardId) continue;
+        const cardDef = cardsSystem.getCardDef(cardId);
+        if (cardDef?.onHit && Math.random() < (cardDef.onHit.chance || 0)) {
+          const hit = cardDef.onHit;
+          if (hit.effect === 'entangle' || hit.effect === 'slow') {
+            applyStatus(m, hit.effect, hit.duration || 2.0);
+            floatText(m.x, m.y - 14, hit.effect.toUpperCase() + '!', 'magic');
+          } else if (hit.effect === 'void_vuln') {
+            applyStatus(m, 'sunder', hit.duration || 4.0);
+            floatText(m.x, m.y - 14, 'VOID VULN!', 'magic');
+          } else if (hit.effect === 'frost_nova') {
+            const novaDmg = Math.round(dmg * ((hit.dmgPct || 120) / 100));
+            floatText(m.x, m.y - 16, 'FROST NOVA!', 'crit');
+            spawnRing(m.x, m.y, TS * 1.5, '#80d8ff');
+            for (const o of G.monsters) {
+              if (o.alive && dist(m.x, m.y, o.x, o.y) <= 2 * TS + o.size / 2) {
+                o.hp -= novaDmg;
+                floatText(o.x, o.y, novaDmg, 'dmg');
+                applyStatus(o, 'slow', 2.0);
+                if (o.hp <= 0) killMonster(o);
+              }
+            }
+          } else if (hit.effect === 'meteor') {
+            const meteorDmg = Math.round(dmg * ((hit.dmgPct || 150) / 100));
+            floatText(m.x, m.y - 16, 'METEOR!', 'crit');
+            spawnSlash(m.x, m.y, '#ff5722', 32);
+            for (const o of G.monsters) {
+              if (o.alive && dist(m.x, m.y, o.x, o.y) <= 1.5 * TS + o.size / 2) {
+                o.hp -= meteorDmg;
+                floatText(o.x, o.y, meteorDmg, 'dmg');
+                applyStatus(o, 'burn', 2.0);
+                if (o.hp <= 0) killMonster(o);
+              }
+            }
+          } else if (hit.effect === 'void_tear') {
+            const tearDmg = Math.round(dmg * ((hit.dmgPct || 140) / 100));
+            floatText(m.x, m.y - 16, 'VOID TEAR!', 'crit');
+            spawnRing(m.x, m.y, TS * 1.2, '#ab47bc');
+            m.hp -= tearDmg;
+            floatText(m.x, m.y, tearDmg, 'dmg');
+            if (m.hp <= 0) killMonster(m);
+          }
+        }
+      }
+    }
+  }
   const relic = relicSystem.getEquippedRelic(p);
   const baseLifesteal = relic?.id === 'vampiric_grail' ? Math.max(0, p.lifesteal - 6) : p.lifesteal;
   if (baseLifesteal > 0) { const heal = Math.max(1, Math.round(dmg * baseLifesteal / 100)); p.hp = clamp(p.hp + heal, 0, p.maxHp); }
@@ -2016,6 +2125,7 @@ function killMonster(m) {
   const xpGain = Math.max(1, Math.round(m.exp * expGapFactor(p.level, m.lvl) * (eliteReward?.xpMult || 1)));
   gainXp(xpGain);
   G.killCounts[m.def.id] = (G.killCounts[m.def.id] || 0) + 1;
+  cardsSystem.recordBestiaryKill(G.bestiary, m.def.id);
   // zeny drop scaled by monster level (bosses pay a jackpot)
   const zBase = m.lvl * TUNING.zenyPerLevel * (m.def.sizeTiles >= 2 ? 6 : 1);
   const zeny = Math.round(rndInt(Math.round(zBase * 0.5), Math.round(zBase * 1.5)) * (eliteReward?.zenyMult || 1) * (relicKill?.zenyMult || 1));
@@ -2025,11 +2135,27 @@ function killMonster(m) {
   const dropBiasBonus = eliteReward?.dropBiasBonus || 0;
   for (const d of m.def.drops) if (chance(Math.min(1,d.chance * dropMult))) {
     const dropId = classWeaponFor(p, d.itemId);
+    cardsSystem.recordBestiaryDrop(G.bestiary, m.def.id, dropId);
     const got = addItem(dropId, 1, dropBias(m, p) + dropBiasBonus), it = itemById[dropId];
     if(p.features.loot.quiet&&got&&!matchesLoot(got,it,p.features.loot,p.classId))continue;
     if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
+  }
+  // Card drop roll (strict ZERO camera shake)
+  const rolledCard = cardsSystem.rollCardDrop(m.def, {
+    isElite: Boolean(m.eliteTier),
+    isBoss: Boolean(m.def.sizeTiles >= 2 || m.def.raid),
+    luck: p.stats?.luk || 0,
+  });
+  if (rolledCard) {
+    addItem(rolledCard, 1);
+    cardsSystem.recordCardAcquired(G.bestiary, rolledCard);
+    const cardDef = cardsSystem.getCardDef(rolledCard);
+    const cardName = cardDef ? T(cardDef.name, 'items') : rolledCard;
+    toast(`🎴 ${T('Monster Card Drop', 'ui')}: [${cardName}]!`, 'good');
+    logMsg(`Acquired rare monster card: [${cardName}]!`, 'good');
+    AUDIO.playSfx('quest');
   }
   if (eliteReward?.gemDrop) {
     addItem(eliteReward.gemDrop, 1);
@@ -4640,6 +4766,11 @@ const ADMIN_GROUPS = [
     ['spawnrift', 'Spawn Dimensional Tear'], ['sealrift', 'Seal Active Incursion'],
     ['resetgather', 'Reset Gather Nodes'], ['catchfish', '+1 of All Fish'],
   ]],
+  ['🎴 Monster Cards & Bestiary', [
+    ['givecardalbum', '+1 Old Card Album'], ['givecard:card_slime', '+1 Slime Card'],
+    ['givecard:card_nullking', '+1 Nullking Card'], ['giveallcards', '+1 All Cards'],
+    ['resetbestiary', 'Reset Bestiary'],
+  ]],
 ];
 function adminAction(a, val) {
   const p = G.player;
@@ -4775,6 +4906,29 @@ function adminAction(a, val) {
       addItem(fid, 1);
     }
     toast('Granted 1 of every fish!', 'good');
+  }
+  else if (a === 'givecardalbum') {
+    addItem('old_card_album', 1);
+    toast('+1 Old Card Album added.', 'good');
+  }
+  else if (a === 'givecard' || a?.startsWith?.('givecard:')) {
+    const cardId = val || (a.startsWith('givecard:') ? a.slice('givecard:'.length) : 'card_slime');
+    if (CONTENT.items[cardId]) {
+      addItem(cardId, 1);
+      cardsSystem.recordCardAcquired(G.bestiary, cardId);
+      toast(`+1 ${cardId} added.`, 'good');
+    }
+  }
+  else if (a === 'giveallcards') {
+    for (const cardId of Object.keys(CARD_CATALOG)) {
+      addItem(cardId, 1);
+      cardsSystem.recordCardAcquired(G.bestiary, cardId);
+    }
+    toast('Added 1 of every monster card.', 'good');
+  }
+  else if (a === 'resetbestiary') {
+    G.bestiary = cardsSystem.deserialize(null);
+    toast('Bestiary reset.', 'good');
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -5188,6 +5342,34 @@ const WORLD_SIGIL = {
   frostpeak_tundra: '▲', dragon_caldera: '♨', astral_rift: '✦',
 };
 function worldChronicleHtml() {
+  const currentTab = G._chronicleTab || 'road';
+  const tabNav = `
+    <div class="chronicle-tabs" style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:8px">
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'road' ? 'active' : ''}" data-chronicle-tab="road" style="font-weight:bold;${currentTab === 'road' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        🗺 ${T('Roads of the Outworlder', 'ui')}
+      </button>
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'bestiary' ? 'active' : ''}" data-chronicle-tab="bestiary" style="font-weight:bold;${currentTab === 'bestiary' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        📖 ${T('Bestiary Codex', 'ui')}
+      </button>
+    </div>
+  `;
+
+  if (currentTab === 'bestiary') {
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · ECOLOGICAL ARCHIVES', 'ui')}</small>
+          <h2>${T('Bestiary Codex', 'ui')}</h2>
+          <p>${T('Documented species, hunting mastery, drop records, and monster card affinities.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="bestiary-body">
+        ${cardsUI.renderBestiaryTab(G.bestiary, { selectedZone: G._bestiaryZone || 'woods', selectedMonsterId: G._bestiaryMonsterId || null })}
+      </div>
+    </section>`;
+  }
+
   const knownCount = WORLD_ORDER.filter(id => G.visited.has(id)).length;
   const nodes = WORLD_ORDER.map((id, index) => {
     const map = MAPS[id], known = G.visited.has(id), current = G.mapId === id;
@@ -5221,6 +5403,7 @@ function worldChronicleHtml() {
   return `<section class="world-chronicle">
     <header class="world-head"><div><small>${T('AETHERIA · THE THIRD VEIL AGE', 'ui')}</small><h2>${T('Roads of the Outworlder', 'ui')}</h2><p>${T('Places become history only after you walk them. Recorded roads can be plotted, but never skipped.', 'ui')}</p></div>
       <div class="world-seal" role="progressbar" aria-label="${T('Regions discovered', 'ui')}" aria-valuemin="0" aria-valuemax="${WORLD_ORDER.length}" aria-valuenow="${knownCount}"><b>${knownCount}/${WORLD_ORDER.length}</b><span>${T('CHARTED', 'ui')}</span></div></header>
+    ${tabNav}
     <div class="world-road">${nodes}</div>
     <footer class="world-foot"><span>◆ ${T('current location', 'ui')}</span><span>✓ ${T('guardian conquered', 'ui')}</span><span>${T('Route guidance follows real portals', 'ui')}</span></footer>
   </section>`;
@@ -5856,6 +6039,21 @@ function wirePanel(id, el) {
     el.querySelectorAll('[data-book-tab]').forEach(b => b.onclick = () => { G._bookTab = b.dataset.bookTab; refreshPanel('book'); });
     el.querySelectorAll('[data-mile-claim]').forEach(b => b.onclick = () => claimMilestone(b.dataset.mileClaim));
   }
+  if (id === 'world') {
+    el.querySelectorAll('[data-chronicle-tab]').forEach(b => b.onclick = () => {
+      G._chronicleTab = b.dataset.chronicleTab;
+      refreshPanel('world');
+    });
+    el.querySelectorAll('[data-zone]').forEach(b => b.onclick = () => {
+      G._bestiaryZone = b.dataset.zone;
+      G._bestiaryMonsterId = null;
+      refreshPanel('world');
+    });
+    el.querySelectorAll('[data-monster-id]').forEach(b => b.onclick = () => {
+      G._bestiaryMonsterId = b.dataset.monsterId;
+      refreshPanel('world');
+    });
+  }
   if (id === 'settings') {
     const touchPref=el.querySelector('#touch-preference');
     if(touchPref)touchPref.onchange=()=>{G.player.features.touch=touchPref.value;initTouchControls();syncRuntimeScale();saveGame();};
@@ -6169,8 +6367,24 @@ function refreshPanel(id) {
 
 function useItem(itemId) {
   const it = itemById[itemId]; if (!it || itemQty(itemId) <= 0) return false;
-  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache') { logMsg('This item cannot be used directly.', 'sys'); return false; }
+  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album') { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
+  if (itemId === 'old_card_album') {
+    removeItem(itemId);
+    AUDIO.playSfx('levelup');
+    const rolledCardId = cardsSystem.rollOldCardAlbum();
+    addItem(rolledCardId, 1);
+    cardsSystem.recordCardAcquired(G.bestiary, rolledCardId);
+    const cardDef = cardsSystem.getCardDef(rolledCardId);
+    const cardName = cardDef ? T(cardDef.name, 'items') : rolledCardId;
+    toast(`🎴 ${T('Opened Old Card Album!', 'ui')}: [${cardName}]`, 'good');
+    logMsg(`Opened Old Card Album: Acquired [${cardName}]!`, 'good');
+    if (ctx) {
+      cardsUI.drawAlbumOpeningFanfare(ctx, CANVAS_W, CANVAS_H, 1.0);
+    }
+    saveGame();
+    return true;
+  }
   if (itemId === 'rift_cache') {
     removeItem(itemId);
     AUDIO.playSfx('levelup');
@@ -6960,6 +7174,7 @@ function saveGame() {
       weather: G.weather?.id || 'clear',
       incursion: incursionSystem.serialize(),
       gathering: gatheringSystem.serialize(),
+      bestiary: cardsSystem.serialize(G.bestiary),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -7087,6 +7302,7 @@ function resumeGame() {
   if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
   if (w.incursion) incursionSystem.deserialize(w.incursion);
   if (w.gathering) gatheringSystem.deserialize(w.gathering);
+  G.bestiary = cardsSystem.deserialize(w.bestiary);
   loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
@@ -7121,6 +7337,7 @@ function begin(classId, name) {
   AUDIO.init();
   incursionSystem.resetToIdle();
   gatheringSystem.deserialize(null);
+  G.bestiary = cardsSystem.deserialize(null);
   Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools

@@ -31,6 +31,7 @@ assert.ok(charPanelHtml.includes('Relic'), 'Character paper-doll must display Re
 // 3. Roll and equip Bramble Carapace (+12% Max HP)
 const hpBefore = p.maxHp;
 const thornmail = A.addItem('thornmail_carapace', 1);
+thornmail.affixes = [];
 assert.ok(thornmail.uid, 'Relic added as equipment instance with uid');
 assert.equal(A.itemSlot(A.CONTENT.items.find(i => i.id === 'thornmail_carapace')), 'relic', 'itemSlot resolves to relic');
 
@@ -40,6 +41,7 @@ assert.equal(p.maxHp, Math.round(hpBefore * 1.12), 'Bramble Carapace grants +12%
 
 // 4. Compare equipment on another relic (Chalice of the Undying)
 const chalice = A.addItem('vampiric_grail', 1);
+chalice.affixes = [];
 const comp = A.compareEquipment(chalice, p);
 assert.equal(comp.slot, 'relic', 'compareEquipment identifies relic slot');
 assert.equal(comp.current.uid, thornmail.uid, 'compareEquipment identifies current relic');
