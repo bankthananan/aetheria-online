@@ -1141,6 +1141,9 @@ function recompute(p, fill) {
   for (const [k, v] of Object.entries(milestoneBonuses)) {
     cardMods[k] = (cardMods[k] || 0) + v;
   }
+  for (const elem of ['fire', 'water', 'nature', 'light', 'void', 'ice', 'lightning']) {
+    p['res_' + elem] = (cardMods['res_' + elem] || 0) + (cardMods.res_all || 0);
+  }
   p.maxHp = Math.round((Math.round(p.maxHp * (1 + (ps.hpPct + relicMods.hpPct) / 100)) + (runeMods.hpFlat || 0) + (cardMods.maxHp || 0) + buffFlat(p, 'hp')) * buffMult(p, 'hp'));
   p.maxMp = Math.round((Math.round(p.maxMp * (1 + ps.mpPct / 100)) + (cardMods.maxMp || 0) + buffFlat(p, 'mp')) * buffMult(p, 'mp'));
   p.physAtk = Math.round(p.physAtk * (1 + ps.atkPct / 100)) + (cardMods.physAtk || 0) + buffFlat(p, 'atk');
@@ -1189,6 +1192,13 @@ function recompute(p, fill) {
   if (G.mastery?.claimedRanks[G.mapId]?.bronze) p.moveMult *= 1 + TUNING.expansion.masterySpeed;
   if (cardMods.moveMult) p.moveMult *= (1 + cardMods.moveMult);
   if (cardMods.moveSpeedPct) p.moveMult *= (1 + cardMods.moveSpeedPct / 100);
+  if (relicMods.fleePct) p.flee += relicMods.fleePct;
+  if (relicMods.moveSpdPct) p.moveMult = (p.moveMult || 1) * (1 + relicMods.moveSpdPct / 100);
+  if (relicMods.allResPct) {
+    for (const elem of ['fire', 'water', 'nature', 'light', 'void', 'ice', 'lightning']) {
+      p['res_' + elem] = (p['res_' + elem] || 0) + relicMods.allResPct;
+    }
+  }
   p.rangeBonus = st.int * TUNING.intRange;                       // extra tiles for ranged/magic
   p.basicRange = MELEE.has(p.combatClass) ? 1.5 : 5 + p.rangeBonus;
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
@@ -1695,6 +1705,26 @@ function spawnSpireWave() {
   }
 }
 
+function advanceSpireFloor() {
+  if (!G.spireState?.cleared) return;
+  if (G.spireState.currentFloor >= 100) {
+    toast(`🏆 ${T('The Abyssal Spire has been fully conquered!', 'ui')}`, 'good');
+    AUDIO.playSfx('levelup');
+    loadMap('town_awakening', 12, 10);
+    return;
+  }
+  const adv = spireSystem.advanceFloor();
+  if (adv) {
+    const p = G.player;
+    p.x = 2 * TS;
+    p.y = 2 * TS;
+    AUDIO.playSfx('stairs');
+    toast(`🌀 ${T('Ascending to Floor', 'ui')} ${adv.currentFloor}...`, 'good');
+    spawnSpireWave();
+    saveGame();
+  }
+}
+
 // A spawned monster rolls its own level around the definition's base (bosses are
 // fixed). hp/atk/def/exp scale with the rolled level so a Lv8 wolf really is tougher
 // than a Lv6 one. Instance combat stats live on the monster (m.atk/m.dv/m.exp/m.lvl),
@@ -2170,6 +2200,13 @@ function applyCrossCombo(sk, m, dmg, isCrit) {
 }
 
 function damageMonster(m, dmg, isCrit, silent) {
+  const p = G.player;
+  if (G.mapId === 'abyssal_spire') {
+    const rMods = relicSystem.getPassiveModifiers(p);
+    if (rMods.spireDmgPct) {
+      dmg = Math.round(dmg * (1 + rMods.spireDmgPct / 100));
+    }
+  }
   const mark = liveStatus(m, 'mark');
   if (mark) dmg = Math.max(1, Math.round(dmg * (1 + mark.damageTaken)));
   dmg = eliteSystem.mitigateDamage(m, dmg);
@@ -2201,7 +2238,6 @@ function damageMonster(m, dmg, isCrit, silent) {
   } else {
     floatText(m.x, m.y, dmg, 'dmg');
   }
-  const p = G.player;
   relicSystem.onHit(p, m, dmg, isCrit, {
     monsters: G.monsters,
     floatText: (x, y, t, col) => floatText(x, y, t, col || 'crit'),
@@ -4461,17 +4497,7 @@ function handlePortals() {
   const p = G.player, col = Math.floor(p.x / TS), row = Math.floor(p.y / TS);
   if (G.mapId === 'abyssal_spire' && G.spireState?.cleared) {
     if (dist(p.x, p.y, 12 * TS, 9 * TS) < TS * 1.5) {
-      const adv = spireSystem.advanceFloor();
-      if (adv) {
-        AUDIO.playSfx('stairs');
-        spawnSpireWave();
-      } else {
-        toast(`👑 ${T('The Abyssal Spire has been fully conquered!', 'ui')}`, 'good');
-        spireSystem.endRun('victory');
-        G.spireState = null;
-        G.spireBossMob = null;
-        loadMap('town_awakening');
-      }
+      advanceSpireFloor();
       return;
     }
   }
@@ -5834,7 +5860,7 @@ function worldChronicleHtml() {
       </header>
       ${tabNav}
       <div class="spire-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;display:flex;flex-direction:column;gap:16px;">
-        ${spireUI.renderElevatorModalHtml(spireSystem.serialize())}
+        ${spireUI.renderElevatorModalHtml(spireSystem.serialize(), { inline: true })}
         ${spireUI.renderSpireReliquaryTabHtml(spireSystem.serialize(), G.player?.inventory || [])}
       </div>
     </section>`;
@@ -8012,17 +8038,7 @@ function handleClick(wx, wy) {
   if(gameClock.isPaused())return;
   if (G.mapId === 'abyssal_spire' && G.spireState?.cleared) {
     if (dist(wx, wy, 12 * TS, 9 * TS) < TS * 2) {
-      const adv = spireSystem.advanceFloor();
-      if (adv) {
-        AUDIO.playSfx('stairs');
-        spawnSpireWave();
-      } else {
-        toast(`👑 ${T('The Abyssal Spire has been fully conquered!', 'ui')}`, 'good');
-        spireSystem.endRun('victory');
-        G.spireState = null;
-        G.spireBossMob = null;
-        loadMap('town_awakening');
-      }
+      advanceSpireFloor();
       return;
     }
   }

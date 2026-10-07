@@ -44,6 +44,18 @@ export const RELIC_DEFINITIONS = {
     lifestealPct: 6,
     maxShieldHpPct: 0.15,
   },
+  crown_of_the_ascendant: {
+    id: 'crown_of_the_ascendant',
+    perk: 'ascendant_might',
+    spireDmgPct: 15,
+    allResPct: 10,
+  },
+  abyssal_compass: {
+    id: 'abyssal_compass',
+    perk: 'spire_navigation',
+    fleePct: 15,
+    moveSpdPct: 10,
+  },
 };
 
 export function createRelicSystem({
@@ -66,8 +78,10 @@ export function createRelicSystem({
     return RELIC_DEFINITIONS[id] || null;
   }
 
+  const RELIC_PASSIVE_DEFAULTS = { fleePct: 0, moveSpdPct: 0, allResPct: 0, spireDmgPct: 0 };
+
   function getPassiveModifiers(player) {
-    const mods = { hpPct: 0, defPct: 0, lifesteal: 0 };
+    const mods = Object.assign(Object.create(RELIC_PASSIVE_DEFAULTS), { hpPct: 0, defPct: 0, lifesteal: 0 });
     const relic = getEquippedRelic(player);
     if (!relic) return mods;
 
@@ -75,6 +89,12 @@ export function createRelicSystem({
       mods.hpPct = relic.hpPct || 12;
     } else if (relic.id === 'vampiric_grail') {
       mods.lifesteal = relic.lifestealPct || 6;
+    } else if (relic.id === 'crown_of_the_ascendant') {
+      mods.spireDmgPct = relic.spireDmgPct || 15;
+      mods.allResPct = relic.allResPct || 10;
+    } else if (relic.id === 'abyssal_compass') {
+      mods.fleePct = relic.fleePct || 15;
+      mods.moveSpdPct = relic.moveSpdPct || 10;
     }
     return mods;
   }

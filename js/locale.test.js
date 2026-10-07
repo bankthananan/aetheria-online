@@ -368,7 +368,25 @@ const spireUiStrings = [
   { en: 'Floors Cleared', th: 'ชั้นที่พิชิตได้' },
   { en: 'Highest Floor', th: 'ชั้นสูงสุดที่เคยพิชิต' },
   { en: 'Spire Archon', th: 'อาร์คอนแห่งหอคอย' },
-  { en: 'Requires Floor {f} Cleared', th: 'ต้องพิชิตชั้นที่ {f} ก่อน' }
+  { en: 'Requires Floor {f} Cleared', th: 'ต้องพิชิตชั้นที่ {f} ก่อน' },
+  { en: 'MILESTONE BOSS', th: 'บอสประจำหลักกิโลเมตร' },
+  { en: 'Ascendance Portal', th: 'ประตูมิติสู่หอคอยชั้นถัดไป' },
+  { en: 'Spire Reliquary', th: 'คลังวัตถุโบราณหอคอย' },
+  { en: 'Exchange', th: 'แลกเปลี่ยน' },
+  { en: 'Need More Emblems', th: 'เหรียญตราไม่เพียงพอ' },
+  { en: 'Emblems', th: 'เหรียญตรา' },
+  { en: 'Highest Floor Cleared', th: 'ชั้นสูงสุดที่เคยพิชิต' },
+  { en: 'Total Emblems', th: 'เหรียญตราทั้งหมด' },
+  { en: 'Prestige Titles', th: 'ฉายาเกียรติยศ' },
+  { en: 'Exchange earned Spire Emblems for ascendant relics and transmogs.', th: 'แลกเปลี่ยนเหรียญตราหอคอยที่ได้รับเพื่อรับวัตถุโบราณและสกินอาวุธระดับก้าวข้าม' },
+  { en: 'The Abyssal Spire has been fully conquered!', th: 'หอคอยแห่งอบิสถูกพิชิตอย่างสมบูรณ์แบบแล้ว!' },
+  { en: 'Floor Cleared!', th: 'พิชิตชั้นสำเร็จ!' },
+  { en: 'Milestone Boss Floor', th: 'ชั้นบอสประจำหลักกิโลเมตร' },
+  { en: 'Spire Floor', th: 'หอคอยชั้นที่' },
+  { en: 'Title Unlocked', th: 'ปลดล็อกฉายาใหม่' },
+  { en: 'Item purchased!', th: 'ซื้อไอเทมสำเร็จ!' },
+  { en: 'Ascending to Floor', th: 'กำลังขึ้นสู่ชั้นที่' },
+  { en: 'None', th: 'ไม่มี' }
 ];
 
 // Verify English mode

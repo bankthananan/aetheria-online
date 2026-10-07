@@ -214,6 +214,18 @@ assert.equal(
   'Slaying monsters cleared Floor 1'
 );
 
+// Advancing floor resets player coordinates to (2*TS, 2*TS), away from portal and boss spawn center
+p.x = 12 * TS;
+p.y = 9 * TS;
+A.onCanvasClick(12 * TS, 9 * TS);
+assert.equal(A.G.spireState.currentFloor, 2, 'Spire advanced to Floor 2');
+assert.equal(p.x, 2 * TS, 'Player X reset to 2 * TS on floor advance');
+assert.equal(p.y, 2 * TS, 'Player Y reset to 2 * TS on floor advance');
+assert.ok(
+  Math.hypot(p.x - 12 * TS, p.y - 9 * TS) > 5 * TS,
+  'Player repositioned safely away from portal & boss spawn center'
+);
+
 // 2. Milestone boss encounter on Floor 10
 A.adminAction('spirefloor', 10);
 assert.ok(A.G.spireBossMob, 'A.G.spireBossMob exists on Floor 10');
@@ -301,6 +313,81 @@ assert.equal(
   p.inventory.filter(it => it.itemId === reliquaryItem.id).length,
   itemQtyBefore + 1,
   'Item added to inventory upon purchase'
+);
+
+// Relic Perks Verification: Crown of the Ascendant & Abyssal Compass
+A.adminAction('spirefloor', 1);
+assert.equal(A.G.mapId, 'abyssal_spire', 'Active in Abyssal Spire');
+
+// Equipping crown_of_the_ascendant applies +10 all elemental resistances and +15% damage bonus in Abyssal Spire
+A.unequip('relic');
+A.recompute(p);
+const elements = ['fire', 'water', 'nature', 'light', 'void', 'ice', 'lightning'];
+const baseRes = {};
+for (const elem of elements) {
+  baseRes[elem] = p['res_' + elem] || 0;
+}
+
+const crown = A.addItem('crown_of_the_ascendant', 1);
+crown.affixes = [];
+A.equip(crown.uid);
+A.recompute(p);
+
+for (const elem of elements) {
+  assert.equal(
+    p['res_' + elem],
+    baseRes[elem] + 10,
+    `Crown of the Ascendant applies +10 ${elem} resistance`
+  );
+}
+
+const dummyMonster = A.makeMonster(CONTENT.monsters[0], 200, 200, 10);
+dummyMonster.dv = 0;
+dummyMonster.statuses = {};
+dummyMonster.hp = 1000;
+dummyMonster.maxHp = 1000;
+A.G.monsters.push(dummyMonster);
+
+const hpBeforeHit = dummyMonster.hp;
+A.damageMonster(dummyMonster, 100, false);
+const damageDealtInSpire = hpBeforeHit - dummyMonster.hp;
+assert.equal(
+  damageDealtInSpire,
+  115,
+  'Crown of the Ascendant applies +15% damage bonus in Abyssal Spire'
+);
+
+A.unequip('relic');
+A.recompute(p);
+for (const elem of elements) {
+  assert.equal(
+    p['res_' + elem],
+    baseRes[elem],
+    `Resistances reset after unequipping Crown for ${elem}`
+  );
+}
+
+// Equipping abyssal_compass applies +15 flee and +10% moveMult
+const fleeBefore = p.flee;
+const moveMultBefore = p.moveMult;
+
+const compass = A.addItem('abyssal_compass', 1);
+compass.affixes = [];
+A.equip(compass.uid);
+A.recompute(p);
+
+assert.equal(p.flee, fleeBefore + 15, 'Abyssal Compass applies +15 flee');
+assert.ok(
+  Math.abs(p.moveMult - moveMultBefore * 1.10) < 0.001,
+  'Abyssal Compass applies +10% moveMult'
+);
+
+A.unequip('relic');
+A.recompute(p);
+assert.equal(p.flee, fleeBefore, 'Flee resets after unequipping Abyssal Compass');
+assert.ok(
+  Math.abs(p.moveMult - moveMultBefore) < 0.001,
+  'moveMult resets after unequipping Abyssal Compass'
 );
 
 console.log('--- f) STRICT ZERO SCREEN SHAKE ---');
