@@ -269,4 +269,43 @@ for (const pet of Object.values(PET_CATALOG)) {
   assert.notEqual(T(pet.desc, 'ui'), pet.desc, `Missing translation for companion desc: ${pet.desc}`);
 }
 
+// Test 16: Check World Boss Raid monsters, items, and UI translations in EN and TH
+setLanguage('en');
+assert.equal(T('Caldera Colossus', 'monsters'), 'Caldera Colossus');
+assert.equal(T('Ancient Behemoth', 'monsters'), 'Ancient Behemoth');
+assert.equal(T('Voidmaw Sovereign', 'monsters'), 'Voidmaw Sovereign');
+assert.equal(T('Titan Horn', 'items'), 'Titan Horn');
+assert.equal(T('Heart of the Colossus', 'items'), 'Heart of the Colossus');
+assert.equal(T('Eye of the Voidmaw', 'items'), 'Eye of the Voidmaw');
+assert.equal(T('Titanheart Pendant', 'items'), 'Titanheart Pendant');
+assert.equal(T('Voidmaw Edge', 'items'), 'Voidmaw Edge');
+assert.equal(T('World Boss Raid', 'ui'), 'World Boss Raid');
+
+setLanguage('th');
+assert.equal(T('Caldera Colossus', 'monsters'), 'ยักษ์ศิลาลาวาแมกมา');
+assert.equal(T('Ancient Behemoth', 'monsters'), 'เบเฮมอธดึกดำบรรพ์');
+assert.equal(T('Voidmaw Sovereign', 'monsters'), 'จอมราชันย์แห่งมิติว่างเปล่า');
+assert.equal(T('Titan Horn', 'items'), 'เขาสัตว์ยักษ์ไททัน');
+assert.equal(T('Heart of the Colossus', 'items'), 'หัวใจแห่งยักษ์ศิลา');
+assert.equal(T('Eye of the Voidmaw', 'items'), 'เนตรแห่งวอยด์มอว์');
+assert.equal(T('Titanheart Pendant', 'items'), 'จี้หัวใจไททัน');
+assert.equal(T('Voidmaw Edge', 'items'), 'ดาบประกายมิติว่างเปล่า');
+assert.equal(T('World Boss Raid', 'ui'), 'การจู่โจมบอสโลก');
+assert.equal(T('Phase 1: Guardian Tactics', 'ui'), 'เฟส 1: ยุทธวิธีผู้พิทักษ์');
+assert.equal(T('Phase 2: Break Shield!', 'ui'), 'เฟส 2: ทำลายเกราะสกัด!');
+assert.equal(T('Phase 3: APEX ENRAGE', 'ui'), 'เฟส 3: คลุ้มคลั่งขั้นสุดยอด');
+assert.equal(T('Staggered!', 'ui'), 'ชะงักงัน!');
+assert.equal(T('Barrier Detonated!', 'ui'), 'เกราะระเบิดคลื่นพลัง!');
+assert.equal(T('Raid Victory!', 'ui'), 'ชัยชนะการจู่โจมบอสโลก!');
+assert.equal(T('Raid Collapsed!', 'ui'), 'การจู่โจมสิ้นสุดลง!');
+assert.equal(T('Contribution Score', 'ui'), 'คะแนนการมีส่วนร่วม');
+assert.equal(T('Contribution Tier', 'ui'), 'ระดับการมีส่วนร่วม');
+assert.equal(T('Bronze Tier', 'ui'), 'ระดับเหรียญทองแดง');
+assert.equal(T('Silver Tier', 'ui'), 'ระดับเหรียญเงิน');
+assert.equal(T('Gold Tier', 'ui'), 'ระดับเหรียญทอง');
+assert.equal(T('Paragon Tier', 'ui'), 'ระดับบรรพชนขั้นสูงสุด');
+assert.equal(T('Claim Spoils', 'ui'), 'รับของรางวัล');
+assert.equal(T('Break Shield', 'ui'), 'เกราะสกัด');
+assert.equal(T('Break Timer', 'ui'), 'เวลาสกัดเกราะ');
+
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

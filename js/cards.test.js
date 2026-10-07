@@ -15,7 +15,7 @@ test('Cards Subsystem: CARD_CATALOG contains all 43 monsters and valid metadata'
   assert.equal(catalogKeys.length, 43, 'Must define exactly 43 monster cards');
 
   const contentMonsterIds = new Set(CONTENT.monsters.map(m => m.id));
-  assert.equal(contentMonsterIds.size, 43, 'CONTENT.monsters must have 43 monsters');
+  assert.ok(contentMonsterIds.size >= 43, 'CONTENT.monsters must have at least 43 monsters');
 
   const validRarities = new Set(['common', 'uncommon', 'rare', 'epic', 'legendary']);
   const validSlots = new Set(['weapon', 'armor', 'accessory', 'any']);

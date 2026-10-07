@@ -147,7 +147,17 @@ export const CONTENT = {
     // ===== World boss: 3-phase raid (Voidmaw Sovereign, Astral Rift) =====
     { id: "voidmaw_sovereign", element: "void", name: "Voidmaw Sovereign", flavor: "A world-eating tide given a crown. Even the Nullking's throne room keeps its distance.",
       level: 80, hp: 4300, atk: 205, def: 82, exp: 42000, spriteColor: "#3a1a5c", sizeTiles: 2, raid: true,
-      drops: [{ itemId: "sovereign_core", chance: 1.0 }, { itemId: "null_core", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }, { itemId: "astral_signet", chance: 0.3 }], behavior: "aggressive" }
+      drops: [{ itemId: "sovereign_core", chance: 1.0 }, { itemId: "null_core", chance: 0.5 }, { itemId: "elixir", chance: 1.0 }, { itemId: "astral_signet", chance: 0.3 }], behavior: "aggressive" },
+    {
+      id: "caldera_colossus", element: "fire", name: "Caldera Colossus", flavor: "A magma titan sculpted by subterranean pressure and volcanic rage.",
+      level: 80, hp: 5000, atk: 220, def: 95, exp: 45000, spriteColor: "#d35400", sizeTiles: 2, raid: true,
+      drops: [{ itemId: "titan_heart", chance: 1.0 }, { itemId: "caldera_crystal", chance: 0.8 }, { itemId: "blessed_ore", chance: 0.6 }], behavior: "aggressive"
+    },
+    {
+      id: "ancient_behemoth", element: "nature", name: "Ancient Behemoth", flavor: "A primordial elder beast whose heavy strides shake the roots of the ancient woods.",
+      level: 80, hp: 4800, atk: 210, def: 90, exp: 44000, spriteColor: "#27ae60", sizeTiles: 2, raid: true,
+      drops: [{ itemId: "titan_heart", chance: 1.0 }, { itemId: "silverleaf", chance: 1.0 }, { itemId: "essence_night", chance: 0.5 }], behavior: "aggressive"
+    }
   ],
 
   items: [
@@ -320,7 +330,14 @@ export const CONTENT = {
     { id: "bait_tender_jerky", name: "Tender Jerky", type: "taming_bait", targetPet: "pet_wolf", targetMonster: "wolf", desc: "Savory dried meat seasoned with wild herbs that wolves love.", price: 100, value: 100, rarity: "uncommon" },
     { id: "bait_luminous_nectar", name: "Luminous Nectar", type: "taming_bait", targetPet: "pet_sprite", targetMonster: "blight_sprite", desc: "Shimmering distilled floral nectar irresistible to sprites.", price: 150, value: 150, rarity: "rare" },
     { id: "bait_glacial_salmon", name: "Glacial Salmon Nibble", type: "taming_bait", targetPet: "pet_bear", targetMonster: "tundra_lurker", desc: "Fatty mountain salmon chunks treated with frost lily pollen.", price: 180, value: 180, rarity: "rare" },
-    { id: "bait_magma_fruit", name: "Magma Berry Cluster", type: "taming_bait", targetPet: "pet_dragon", targetMonster: "ember_imp", desc: "Spicy volcanic berries harvested near boiling lava springs.", price: 250, value: 250, rarity: "epic" }
+    { id: "bait_magma_fruit", name: "Magma Berry Cluster", type: "taming_bait", targetPet: "pet_dragon", targetMonster: "ember_imp", desc: "Spicy volcanic berries harvested near boiling lava springs.", price: 250, value: 250, rarity: "epic" },
+
+    // ===== World Boss Raids & Apex Artifacts =====
+    { id: "titan_horn", name: "Titan Horn", type: "consumable", desc: "A celestial shofar horn whose call awakens dormant Apex Titans.", price: 2000, value: 2000, rarity: "rare" },
+    { id: "titan_heart", name: "Heart of the Colossus", type: "material", desc: "A pulsing primordial heart harvested from an Overworld Apex Titan.", price: 3500, value: 3500, rarity: "epic" },
+    { id: "voidmaw_eye", name: "Eye of the Voidmaw", type: "material", desc: "A crystallized cosmic iris radiating with dimensional gravity.", price: 5000, value: 5000, rarity: "legendary" },
+    { id: "titan_pendant", name: "Titanheart Pendant", type: "armor", slot: "accessory", desc: "A colossal talisman granting immense vigor and resilience.", price: 7500, value: 7500, rarity: "epic", def: 15, stats: { maxHp: 250, physDef: 15, magicDef: 15 }, classReq: null, gearLevel: 45 },
+    { id: "voidmaw_edge", name: "Voidmaw Edge", type: "weapon", slot: "weapon", desc: "A reality-cleaving blade pulsating with otherworldly entropy.", price: 12000, value: 12000, rarity: "legendary", atk: 45, stats: { physAtk: 45, critChance: 8, dmg_void: 15 }, classReq: null, gearLevel: 50 }
   ],
 
   npcs: [
@@ -694,6 +711,9 @@ export const CONTENT = {
     { id: "r_bait_luminous_nectar", out: "bait_luminous_nectar", cost: 120, mats: [{ itemId: "moonlight_lotus", qty: 1 }, { itemId: "sunken_kelp", qty: 2 }] },
     { id: "r_bait_glacial_salmon", out: "bait_glacial_salmon", cost: 150, mats: [{ itemId: "glacial_salmon", qty: 1 }, { itemId: "frost_lily", qty: 2 }] },
     { id: "r_bait_magma_fruit", out: "bait_magma_fruit", cost: 200, mats: [{ itemId: "magma_koi", qty: 1 }, { itemId: "ember_blossom", qty: 2 }, { itemId: "caldera_crystal", qty: 1 }] },
+    { id: "r_titan_horn", out: "titan_horn", cost: 500, mats: [{ itemId: "dimensional_shard", qty: 5 }, { itemId: "blessed_ore", qty: 2 }, { itemId: "caldera_crystal", qty: 1 }, { itemId: "star_iron", qty: 4 }] },
+    { id: "r_titan_pendant", out: "titan_pendant", cost: 2500, mats: [{ itemId: "titan_heart", qty: 2 }, { itemId: "star_iron", qty: 8 }, { itemId: "essence_night", qty: 1 }] },
+    { id: "r_voidmaw_edge", out: "voidmaw_edge", cost: 3000, mats: [{ itemId: "voidmaw_eye", qty: 2 }, { itemId: "dimensional_shard", qty: 8 }, { itemId: "blessed_ore", qty: 4 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()

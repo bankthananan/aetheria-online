@@ -1785,6 +1785,8 @@ const monster = {
 // instead of hand-authoring a new 24x24 frame-set; swap in a dedicated matrix if it
 // ever needs a distinct look.
 monster.voidmaw_sovereign = monster.nullking;
+monster.caldera_colossus = monster.flame_dragon;
+monster.ancient_behemoth = monster.elderwood_treant;
 
 // ---- player WALK frames: cloth, weapon and stance all shift with the step ----
 const walkFrame = (base, replacements) => matrix(
@@ -2032,6 +2034,22 @@ const item = {
     '     kkyykk',
     '       kk',
     '', '', '', '', ''),
+
+  heart: matrix(16, 16,
+    '',
+    '   kkk   kkk',
+    '  kRRRk kRRRk',
+    ' kRRrRRkRRrRRk',
+    ' kRrwwRRrwwRRk',
+    ' kRRrrRRRrrRRk',
+    '  kRRRRRRRRRk',
+    '  kRRRRRRRRRk',
+    '   kRRRRRRRk',
+    '    kRRRRRk',
+    '     kRRRk',
+    '      kRk',
+    '       k',
+    '', '', ''),
 
   helm: matrix(16, 16,
     '', '',
@@ -2386,6 +2404,12 @@ export const ITEM_ICON = {
   bait_glacial_salmon: 'bait', bait_magma_fruit: 'bait',
   pet_slime: 'pet_slime', pet_wolf: 'pet_wolf', pet_sprite: 'pet_sprite',
   pet_bear: 'pet_bear', pet_dragon: 'pet_dragon',
+  // World Boss Raids & Apex Artifacts
+  titan_horn: 'scroll',
+  titan_heart: 'heart',
+  voidmaw_eye: 'gem',
+  titan_pendant: 'ring',
+  voidmaw_edge: 'sword',
 };
 
 export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
