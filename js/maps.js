@@ -526,6 +526,32 @@ export const MAPS = {
     ],
     playerStart: { x: 2, y: 2 },
   },
+
+  abyssal_spire: {
+    id: 'abyssal_spire',
+    name: 'Abyssal Spire',
+    ambient: 'An impossibly tall tower piercing dimensional space. Each floor echoes with ascendant trials.',
+    chronicle: {
+      province: 'The Shattered Plane',
+      epithet: 'Tower of 100 Ascendant Trials',
+      landmark: 'The Zenith Elevator',
+      lore: 'Carved from primordial voidstone and starlight, the Abyssal Spire tests the greatest legends of Aetheria across 100 grueling floors.',
+    },
+    width: 24, height: 18,
+    legend: LEGEND,
+    tiles: (() => {
+      const W = 24, H = 18, rows = [];
+      for (let y = 0; y < H; y++) rows.push(y === 0 || y === H - 1 ? 'O'.repeat(W) : 'O' + 'X'.repeat(W - 2) + 'O');
+      rows[15] = rows[15].slice(0, 21) + 'P' + rows[15].slice(22);
+      return rows;
+    })(),
+    spawns: [],
+    npcs: [],
+    portals: [
+      { x: 21, y: 15, toMap: 'town_awakening', toX: 12, toY: 10, label: 'Exit the Spire' },
+    ],
+    playerStart: { x: 2, y: 2 },
+  },
 };
 
 // Keep every established landmark, portal, boss marker, and save coordinate in

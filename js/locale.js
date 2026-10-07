@@ -2415,7 +2415,13 @@ export const L10N = {
       "The Scrap Warrens": "รังเศษเหล็กใต้ดิน",
       "Chieftain’s Hoard": "คลังสมบัติหัวหน้าก็อบลิน",
       "The Blighted Heart": "แกนกลางที่แปดเปื้อน",
-      "The Sorrowful Grove": "พุ่มไม้แห่งความโศกเศร้า"
+      "The Sorrowful Grove": "พุ่มไม้แห่งความโศกเศร้า",
+      "Abyssal Spire": "หอคอยแห่งอบิส",
+      "An impossibly tall tower piercing dimensional space. Each floor echoes with ascendant trials.": "หอคอยสูงเสียดฟ้าที่แทงทะลุมิติ แต่ละชั้นก้องกังวานด้วยบททดสอบแห่งการก้าวข้าม",
+      "Tower of 100 Ascendant Trials": "หอคอยแห่ง 100 บททดสอบสู่ความรุ่งโรจน์",
+      "The Zenith Elevator": "ลิฟต์แห่งจุดสูงสุด",
+      "Carved from primordial voidstone and starlight, the Abyssal Spire tests the greatest legends of Aetheria across 100 grueling floors.": "สลักเสลาขึ้นจากหินแห่งความว่างเปล่าโบราณและแสงดวงดาว หอคอยแห่งอบิสจะทดสอบตำนานที่ยิ่งใหญ่ที่สุดของเอเธเรียตลอด 100 ชั้นอันทรหด",
+      "Exit the Spire": "ออกจากหอคอย"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",

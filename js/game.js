@@ -51,6 +51,8 @@ import { createPetsUIRenderer } from './render/pets-ui.js';
 import { createRaidsSystem, RAID_STATES, CONTRIBUTION_TIERS, WORLD_BOSS_CATALOG } from './systems/raids.js';
 import { createRaidsRenderer } from './render/raids-fx.js';
 import { createRaidsUIRenderer } from './render/raids-ui.js';
+import { createSpireSystem, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS, MILESTONE_BOSS_FLOORS } from './systems/spire.js';
+import { createSpireRenderer } from './render/spire-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -70,6 +72,7 @@ const MAP_MUSIC = {
   sunken_ruins: 'sunken_ruins', frostpeak_tundra: 'frostpeak_tundra',
   dragon_caldera: 'dragon_caldera', astral_rift: 'astral_rift',
   celestial_rift: 'celestial_rift',
+  abyssal_spire: 'abyssal_spire',
   ww_goblin_cave: 'ww_goblin_cave',
   ww_elder_hollow: 'ww_elder_hollow',
 };
@@ -199,6 +202,8 @@ const petsUI = createPetsUIRenderer({ T });
 const raidsSystem = createRaidsSystem({ now, rnd: () => Math.random() });
 const raidsFx = createRaidsRenderer({ T, PX });
 const raidsUI = createRaidsUIRenderer({ T, WORLD_BOSS_CATALOG, CONTRIBUTION_TIERS });
+const spireSystem = createSpireSystem({ now, rnd: () => Math.random() });
+const spireFx = createSpireRenderer({ T, PX });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -456,6 +461,11 @@ const G = {
   raidsUI,
   raidState: null,
   raidBossMob: null,
+  spire: spireSystem.serialize(),
+  spireSystem,
+  spireFx,
+  spireState: null,
+  spireBossMob: null,
   saveStatus: 'saved',
 };
 
@@ -1454,6 +1464,7 @@ function loadMap(mapId, spawnX, spawnY) {
   else if(!dungeonDef && G.dungeonState.currentDungeonId) SubdungeonSystem.exitDungeon(G.dungeonState);
   const map = MAPS[mapId];
   const wasRift = G.mapId === 'celestial_rift' && mapId !== 'celestial_rift';
+  const wasSpire = G.mapId === 'abyssal_spire' && mapId !== 'abyssal_spire';
   G.map = map; G.mapId = mapId; G.tiles = map.tiles; G.legend = map.legend;
   G.weather = weatherSystem.getWeather(mapId);
   recompute(G.player);
@@ -1536,6 +1547,12 @@ function loadMap(mapId, spawnX, spawnY) {
     toast(`✦ Celestial Rift — Floor 1 | Mutator: ${mutName} | Best: ${G.rift.best}`, 'good');
   } else if (wasRift) {
     G.rift.active = false;   // leaving the rift (portal exit or death) ends the run cleanly
+  } else if (wasSpire) {
+    if (G.spireState) {
+      spireSystem.endRun('exit');
+      G.spireState = null;
+      G.spireBossMob = null;
+    }
   }
   if (G.petFollower) {
     G.petFollower.x = G.player.x;
@@ -1606,6 +1623,72 @@ function spawnWorldBossRaid(bossId, { mapId = G.mapId, x = (G.player?.x ?? 0) + 
   AUDIO.playSfx('skill');
   toast(`☠ ${T('WORLD BOSS RAID ENGAGED!', 'ui')} ${T(G.raidState.bossDef.name, 'monsters')}`, 'bad');
   return G.raidState;
+}
+
+function startSpireRun(startingFloor = 1) {
+  G.manualIntent = null;
+  G.path = null;
+  G.target = null;
+  G.targetSource = null;
+  let run = spireSystem.startRun(startingFloor);
+  if (!run) {
+    const cur = spireSystem.serialize();
+    if (!cur.unlockedCheckpoints.includes(startingFloor)) {
+      cur.unlockedCheckpoints.push(startingFloor);
+    }
+    cur.highestFloor = Math.max(cur.highestFloor, startingFloor - 1);
+    spireSystem.deserialize(cur);
+    run = spireSystem.startRun(startingFloor);
+  }
+  G.spireState = spireSystem.getActiveRun();
+  loadMap('abyssal_spire', 2, 2);
+  spawnSpireWave();
+  return G.spireState;
+}
+
+function spawnSpireWave() {
+  if (!G.spireState) return;
+  G.monsters = [];
+  G.spireBossMob = null;
+  G.spireState._nextGravitonAt = now() + 12000;
+  G.spireState._nextMagmaAt = now() + 8000;
+  const curFloor = G.spireState.currentFloor;
+  const isMilestone = spireSystem.isMilestoneFloor(curFloor);
+  if (isMilestone) {
+    const bId = spireSystem.getMilestoneBossId(curFloor);
+    const bDef = monById[bId] || CONTENT.monsters.find(m => m.id === bId) || CONTENT.monsters[0];
+    const scale = spireSystem.getFloorStatScale(curFloor, true);
+    const mob = makeMonster(bDef, 12 * TS, 9 * TS, bDef.level || 50);
+    mob.maxHp = Math.round(mob.maxHp * scale.hpMult);
+    mob.hp = mob.maxHp;
+    mob.atk = Math.round(mob.atk * scale.atkMult);
+    mob.dv = Math.round(mob.dv * scale.defMult);
+    mob._spireBoss = true;
+    mob.deadUntil = Infinity;
+    G.monsters.push(mob);
+    G.spireBossMob = mob;
+    toast(`☠ ${T('Milestone Boss Floor', 'ui')} ${curFloor}: ${T(bDef.name, 'monsters')}!`, 'bad');
+  } else {
+    const biome = spireSystem.getBiomeForFloor(curFloor);
+    const count = 3 + (curFloor % 3);
+    const scale = spireSystem.getFloorStatScale(curFloor, false);
+    for (let i = 0; i < count; i++) {
+      const mid = biome.pool[i % biome.pool.length];
+      const mDef = monById[mid] || CONTENT.monsters[0];
+      const mx = (4 + (i * 5) % 16) * TS;
+      const my = (4 + Math.floor(i / 3) * 4) * TS;
+      const mob = makeMonster(mDef, mx, my, mDef.level || 40);
+      mob.maxHp = Math.round(mob.maxHp * scale.hpMult);
+      mob.hp = mob.maxHp;
+      mob.atk = Math.round(mob.atk * scale.atkMult);
+      mob.dv = Math.round(mob.dv * scale.defMult);
+      mob._spireMob = true;
+      mob.deadUntil = Infinity;
+      G.monsters.push(mob);
+    }
+    const affixesText = G.spireState.activeAffixes.map(a => a.name).join(', ');
+    toast(`✦ ${T('Spire Floor', 'ui')} ${curFloor} [${T(biome.name, 'ui')}] | ${affixesText}`, 'good');
+  }
 }
 
 // A spawned monster rolls its own level around the definition's base (bosses are
@@ -2218,6 +2301,7 @@ function killMonster(m) {
   G.seenMonsters?.add(m.def.id);   // Collection Book discovery
   // rift waves are cleared explicitly (see below), never respawned on the normal timer
   if (G.rift.active && G.mapId === 'celestial_rift') m.deadUntil = Infinity;
+  if (G.mapId === 'abyssal_spire') m.deadUntil = Infinity;
   AUDIO.playSfx('monsterDie');
   if (G.target === m) { G.target = null; G.targetSource = null; G.path = null; }
   if (G.autoFarm) setAutoState('search', T('Finding next encounter', 'ui'), T(m.def.name, 'monsters'));
@@ -2348,6 +2432,25 @@ function killMonster(m) {
     G.rift.best = Math.max(G.rift.best, G.rift.floor);
     spawnRiftWave();
     toast(`✦ Celestial Rift — Floor ${G.rift.floor}! Best: ${G.rift.best}`, 'good');
+  }
+  if (G.mapId === 'abyssal_spire' && G.spireState && (m._spireMob || m._spireBoss)) {
+    const aliveSpire = G.monsters.filter(mo => mo.alive && (mo._spireMob || mo._spireBoss));
+    if (aliveSpire.length === 0 && !G.spireState.cleared) {
+      const clearRes = spireSystem.clearFloor();
+      if (clearRes) {
+        addItem('spire_emblem', clearRes.earnedEmblems);
+        spireFx.triggerClearPortal(12 * TS, 9 * TS);
+        toast(`🎉 ${T('Floor Cleared!', 'ui')} +${clearRes.earnedEmblems} ${T('Spire Emblems', 'ui')}`, 'good');
+        if (clearRes.unlockedCheckpoint) {
+          toast(`🏆 ${T('Checkpoint Unlocked', 'ui')}: ${T('Floor', 'ui')} ${clearRes.unlockedCheckpoint}!`, 'good');
+        }
+        if (clearRes.titleUnlocked) {
+          toast(`🌟 ${T('Title Unlocked', 'ui')}: ${T(clearRes.titleUnlocked, 'items')}!`, 'good');
+        }
+        AUDIO.playSfx('levelup');
+        G.spire = spireSystem.serialize();
+      }
+    }
   }
   if (m._raidAdd) {
     raidsSystem.recordAddKill(m._raidAddIndex);
@@ -3016,6 +3119,11 @@ function playerDeath() {
   })) {
     recompute(p, false);
     return;
+  }
+  if (G.mapId === 'abyssal_spire') {
+    spireSystem.endRun('death');
+    G.spireState = null;
+    G.spireBossMob = null;
   }
   // dying inside the rift returns to its portal source map, not town — same penalty either way
   const inRift = G.rift.active && G.mapId === 'celestial_rift';
@@ -3701,6 +3809,15 @@ function render() {
     }
   }
   raidsFx.drawStaggerBursts(ctx, null, G.cam, now(), CANVAS_W, CANVAS_H);
+  if (G.mapId === 'abyssal_spire') {
+    spireFx.drawSpireAffixFx(ctx, G.spireState?.activeAffixes, G.cam, now(), CANVAS_W, CANVAS_H);
+    if (G.spireState?.cleared) {
+      spireFx.drawAscendancePortal(ctx, { x: 12 * TS, y: 9 * TS }, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+    if (G.spireBossMob && G.spireBossMob.alive) {
+      spireFx.drawMilestoneBossFanfare(ctx, G.spireBossMob, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+  }
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
@@ -4098,6 +4215,49 @@ function step(dt) {
     }
   }
 
+  // Spire subsystem & affix tick
+  if (G.mapId === 'abyssal_spire' && G.spireState) {
+    spireFx.updateFx(dt);
+    const hasGraviton = G.spireState.activeAffixes?.some(a => (a?.id || a) === 'graviton_well');
+    if (hasGraviton) {
+      if (G.spireState._nextGravitonAt == null) G.spireState._nextGravitonAt = now() + 12000;
+      if (now() >= G.spireState._nextGravitonAt) {
+        G.spireState._nextGravitonAt = now() + 12000;
+        const cx = 12 * TS, cy = 9 * TS;
+        const pAngle = Math.atan2(cy - p.y, cx - p.x);
+        const pDist = dist(p.x, p.y, cx, cy);
+        const pPull = Math.min(pDist, TS * 2.5);
+        p.x = clamp(p.x + Math.cos(pAngle) * pPull, TS * 2, (G.map.width - 2) * TS);
+        p.y = clamp(p.y + Math.sin(pAngle) * pPull, TS * 2, (G.map.height - 2) * TS);
+        for (const m of G.monsters) {
+          if (m.alive) {
+            const mAngle = Math.atan2(cy - m.y, cx - m.x);
+            const mDist = dist(m.x, m.y, cx, cy);
+            const mPull = Math.min(mDist, TS * 2.5);
+            m.x = clamp(m.x + Math.cos(mAngle) * mPull, TS * 2, (G.map.width - 2) * TS);
+            m.y = clamp(m.y + Math.sin(mAngle) * mPull, TS * 2, (G.map.height - 2) * TS);
+          }
+        }
+      }
+    }
+    const hasMagma = G.spireState.activeAffixes?.some(a => (a?.id || a) === 'magma_surge');
+    if (hasMagma) {
+      if (G.spireState._nextMagmaAt == null) G.spireState._nextMagmaAt = now() + 8000;
+      if (now() >= G.spireState._nextMagmaAt) {
+        G.spireState._nextMagmaAt = now() + 8000;
+        const isDodging = now() < (p.invulnUntil || 0);
+        if (!isDodging && !p.godMode) {
+          p.hp = Math.max(0, p.hp - 10);
+          floatText(p.x, p.y, 10, 'enemy');
+          if (p.hp <= 0) {
+            playerDeath();
+            return;
+          }
+        }
+      }
+    }
+  }
+
   // Gathering & Fishing subsystem tick
   const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
   gatheringSystem.tick(dt, { activeMapId: G.mapId, dayPhase: curDayPhase, weatherId: G.weather?.id });
@@ -4295,6 +4455,22 @@ function step(dt) {
 function handlePortals() {
   if (now() - G.lastPortalAt < 800) return;
   const p = G.player, col = Math.floor(p.x / TS), row = Math.floor(p.y / TS);
+  if (G.mapId === 'abyssal_spire' && G.spireState?.cleared) {
+    if (dist(p.x, p.y, 12 * TS, 9 * TS) < TS * 1.5) {
+      const adv = spireSystem.advanceFloor();
+      if (adv) {
+        AUDIO.playSfx('stairs');
+        spawnSpireWave();
+      } else {
+        toast(`👑 ${T('The Abyssal Spire has been fully conquered!', 'ui')}`, 'good');
+        spireSystem.endRun('victory');
+        G.spireState = null;
+        G.spireBossMob = null;
+        loadMap('town_awakening');
+      }
+      return;
+    }
+  }
   for (const pt of G.portals) {
     if (pt.x === col && pt.y === row) {
       G.lastPortalAt = now();
@@ -5166,6 +5342,17 @@ function adminAction(a, extra) {
   else if (a === 'resetbestiary') {
     G.bestiary = cardsSystem.deserialize(null);
     toast('Bestiary reset.', 'good');
+  }
+  else if (a === 'spirefloor') {
+    const fl = (typeof extra === 'object' && extra?.floor) || (typeof extra === 'number' ? extra : 1);
+    startSpireRun(fl);
+    toast(`Admin: Started Spire at Floor ${fl}`, 'good');
+  }
+  else if (a === 'spireclear') {
+    if (G.mapId === 'abyssal_spire' && G.spireState) {
+      for (const m of [...G.monsters]) { if (m.alive) killMonster(m); }
+      toast('Admin: Cleared Spire Floor', 'good');
+    }
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -7529,6 +7716,7 @@ function saveGame() {
       bestiary: cardsSystem.serialize(G.bestiary),
       pets: petsSystem.serialize(G.pets),
       raids: raidsSystem.serialize(),
+      spire: spireSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -7665,6 +7853,10 @@ function resumeGame() {
     G.raidState = null;
     G.raidBossMob = null;
   }
+  if (w.spire) spireSystem.deserialize(w.spire);
+  G.spireState = null;
+  G.spireBossMob = null; // Clean session disconnect reset
+  G.spire = spireSystem.serialize();
   G.bestiary = cardsSystem.deserialize(w.bestiary);
   G.pets = petsSystem.deserialize(w.pets);
   syncPetFollower();
@@ -7704,6 +7896,10 @@ function begin(classId, name) {
   raidsSystem.resetToIdle();
   G.raidState = null;
   G.raidBossMob = null;
+  spireSystem.deserialize(null);
+  G.spireState = null;
+  G.spireBossMob = null;
+  G.spire = spireSystem.serialize();
   gatheringSystem.deserialize(null);
   G.bestiary = cardsSystem.deserialize(null);
   G.pets = petsSystem.deserialize(null);
@@ -7739,6 +7935,22 @@ function onCanvasClick(e) {
 function handleClick(wx, wy) {
   syncModalPause();
   if(gameClock.isPaused())return;
+  if (G.mapId === 'abyssal_spire' && G.spireState?.cleared) {
+    if (dist(wx, wy, 12 * TS, 9 * TS) < TS * 2) {
+      const adv = spireSystem.advanceFloor();
+      if (adv) {
+        AUDIO.playSfx('stairs');
+        spawnSpireWave();
+      } else {
+        toast(`👑 ${T('The Abyssal Spire has been fully conquered!', 'ui')}`, 'good');
+        spireSystem.endRun('victory');
+        G.spireState = null;
+        G.spireBossMob = null;
+        loadMap('town_awakening');
+      }
+      return;
+    }
+  }
   // Fishing active: reel in!
   if (gatheringSystem.getActiveFishing()?.active) {
     const res = gatheringSystem.resolveFishingCast();

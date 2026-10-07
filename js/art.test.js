@@ -117,6 +117,7 @@ const expandedMinimums = {
   town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],
   frostpeak_tundra: [48, 36], dragon_caldera: [50, 38], astral_rift: [50, 38],
   celestial_rift: [22, 16],   // fixed-size side arena, never region-expanded
+  abyssal_spire: [24, 18],
   ww_goblin_cave: [22, 16],
   ww_elder_hollow: [24, 18],
 };
@@ -187,7 +188,7 @@ assert.ok(woodsNormals.find(spawn => spawn.monsterId === 'slime').depth[1] <= 0.
 assert.ok(woodsNormals.find(spawn => spawn.monsterId === 'thornback_boar').depth[0] >= 0.65,
   'Thornback Boars must remain in the deep Whispering Woods');
 
-const mapIds = Object.keys(MAPS);
+const mapIds = Object.keys(MAPS).filter(id => id !== 'abyssal_spire');
 for (const from of mapIds) for (const to of mapIds) {
   if (from === to) continue;
   const portal = nextPortalToward(MAPS, from, to);

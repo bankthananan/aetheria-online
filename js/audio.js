@@ -69,6 +69,12 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['E5','A5','B5','C6','B5','A5','G5','R','F5','A5','D6','C6','B5','A5','E5','R'],
     bass: ['A2','A2','F2','F2','D2','D2','E2','E2'], pad: ['A3','C4','D4','E4'],
   },
+  abyssal_spire: { // dark ascendance ascension theme in D minor
+    bpm: 132, leadWave: 'sawtooth', bassWave: 'triangle', padWave: 'sawtooth',
+    leadPeak: 0.15, bassPeak: 0.20, padPeak: 0.05, leadGate: 0.60, padEvery: 4, swing: 0.04,
+    lead: ['D4','F4','A4','D5','C5','A4','F4','R','G4','B4','D5','G5','F5','D5','B4','R'],
+    bass: ['D2','D2','B2','B2','G2','G2','A2','A2'], pad: ['D3','F3','A3','C4'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.
