@@ -1,18 +1,117 @@
-export let currentLang = localStorage.getItem('awo_lang') || 'en';
+export let currentLang = (typeof localStorage !== 'undefined' ? localStorage.getItem('awo_lang') : null) || 'en';
 
 export function setLanguage(lang) {
   currentLang = lang;
-  localStorage.setItem('awo_lang', lang);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('awo_lang', lang);
+  }
 }
 
 export function T(key, category = 'ui') {
-  if (currentLang === 'th' && L10N[currentLang] && L10N[currentLang][category]) {
-    return L10N[currentLang][category][key] || key;
+  if (currentLang === 'th' && L10N.th && L10N.th[category]) {
+    return L10N.th[category][key] || key;
+  }
+  if (currentLang === 'en' && L10N.en && L10N.en[category]) {
+    return L10N.en[category][key] || key;
   }
   return key;
 }
 
 export const L10N = {
+  en: {
+    ui: {
+      "Abyssal Spire": "Abyssal Spire",
+      "Ascendant Elevator": "Ascendant Elevator",
+      "Floor": "Floor",
+      "Ascend": "Ascend",
+      "Checkpoint Unlocked": "Checkpoint Unlocked",
+      "Spire Emblems": "Spire Emblems",
+      "Floors Cleared": "Floors Cleared",
+      "Highest Floor": "Highest Floor",
+      "Spire Archon": "Spire Archon",
+      "Requires Floor {f} Cleared": "Requires Floor {f} Cleared",
+      "Ascendant Might": "Ascendant Might",
+      "Spire Navigation": "Spire Navigation",
+      "Shadow Depths": "Shadow Depths",
+      "Glacial Ascent": "Glacial Ascent",
+      "Magma Foundry": "Magma Foundry",
+      "Storm Spires": "Storm Spires",
+      "Void Zenith": "Void Zenith",
+      "Magma Surge": "Magma Surge",
+      "Glacial Chill": "Glacial Chill",
+      "Mana Drain": "Mana Drain",
+      "Sunder Mist": "Sunder Mist",
+      "Berserk Foes": "Berserk Foes",
+      "Kinetic Reflect": "Kinetic Reflect",
+      "Graviton Well": "Graviton Well",
+      "Chrono Haste": "Chrono Haste"
+    },
+    biomes: {
+      "Shadow Depths": "Shadow Depths",
+      "Glacial Ascent": "Glacial Ascent",
+      "Magma Foundry": "Magma Foundry",
+      "Storm Spires": "Storm Spires",
+      "Void Zenith": "Void Zenith",
+      "depths": "Shadow Depths",
+      "glacial": "Glacial Ascent",
+      "caldera": "Magma Foundry",
+      "storm": "Storm Spires",
+      "void": "Void Zenith"
+    },
+    affixes: {
+      "Magma Surge": "Magma Surge",
+      "Glacial Chill": "Glacial Chill",
+      "Mana Drain": "Mana Drain",
+      "Sunder Mist": "Sunder Mist",
+      "Berserk Foes": "Berserk Foes",
+      "Kinetic Reflect": "Kinetic Reflect",
+      "Graviton Well": "Graviton Well",
+      "Chrono Haste": "Chrono Haste",
+      "magma_surge": "Magma Surge",
+      "glacial_chill": "Glacial Chill",
+      "mana_drain": "Mana Drain",
+      "sunder_mist": "Sunder Mist",
+      "berserk_foes": "Berserk Foes",
+      "kinetic_reflect": "Kinetic Reflect",
+      "graviton_well": "Graviton Well",
+      "chrono_haste": "Chrono Haste"
+    },
+    monsters: {
+      "Corrupted Treant": "Corrupted Treant",
+      "Abyssal Siren & Golem": "Abyssal Siren & Golem",
+      "Abyssal Siren Golem": "Abyssal Siren Golem",
+      "Frost Revenant Alpha": "Frost Revenant Alpha",
+      "Frost Alpha": "Frost Alpha",
+      "Glacial Dragon": "Glacial Dragon",
+      "Glacial Dragon Shade": "Glacial Dragon Shade",
+      "Caldera Avatar": "Caldera Avatar",
+      "Caldera Colossus Avatar": "Caldera Colossus Avatar",
+      "Magma Lord": "Magma Lord",
+      "Magma Lord Ignis": "Magma Lord Ignis",
+      "Tempest Warden": "Tempest Warden",
+      "Zenith Tempest Warden": "Zenith Tempest Warden",
+      "Twin Elementals": "Twin Elementals",
+      "Twin Storm Elementals": "Twin Storm Elementals",
+      "Herald Sovereign": "Herald Sovereign",
+      "Dimensional Herald Sovereign": "Dimensional Herald Sovereign",
+      "Primordial Nullking": "Primordial Nullking",
+      "Nullking Spire Boss": "Nullking Spire Boss"
+    },
+    items: {
+      "Spire Emblem": "Spire Emblem",
+      "Crown of the Ascendant": "Crown of the Ascendant",
+      "Abyssal Compass": "Abyssal Compass",
+      "Ascendant Sigil": "Ascendant Sigil",
+      "Spire Blade": "Spire Blade",
+      "Spire Scythe": "Spire Scythe",
+      "Spire Greatsword": "Spire Greatsword",
+      "Spire Staff": "Spire Staff",
+      "Spire Bow": "Spire Bow",
+      "Spire Knuckles": "Spire Knuckles",
+      "Spire Challenger": "Spire Challenger",
+      "Abyssal Sovereign": "Abyssal Sovereign"
+    }
+  },
   th: {
     ui: {
       "Field guide": "คู่มือผจญภัย",
@@ -838,7 +937,35 @@ export const L10N = {
       "Break Shield": "เกราะสกัด",
       "Break Timer": "เวลาสกัดเกราะ",
       "A World Boss is already active!": "มีบอสโลกกำลังเปิดศึกอยู่แล้ว!",
-      "The Titan Horn only echoes across ancient wild zones!": "เขาสัตว์ไททันจะส่งเสียงก้องกังวานเฉพาะในดินแดนโบราณเท่านั้น!"
+      "The Titan Horn only echoes across ancient wild zones!": "เขาสัตว์ไททันจะส่งเสียงก้องกังวานเฉพาะในดินแดนโบราณเท่านั้น!",
+      // Abyssal Spire UI Strings
+      "Abyssal Spire": "หอคอยแห่งอบิส",
+      "Ascendant Elevator": "ลิฟต์แห่งผู้ก้าวข้าม",
+      "Floor": "ชั้นที่",
+      "Ascend": "ขึ้นสู่หอคอย",
+      "Checkpoint Unlocked": "ปลดล็อกจุดบันทึกชั้นแล้ว",
+      "Spire Emblems": "เหรียญตราหอคอย",
+      "Floors Cleared": "ชั้นที่พิชิตได้",
+      "Highest Floor": "ชั้นสูงสุดที่เคยพิชิต",
+      "Spire Archon": "อาร์คอนแห่งหอคอย",
+      "Requires Floor {f} Cleared": "ต้องพิชิตชั้นที่ {f} ก่อน",
+      "Ascendant Might": "พลังแห่งผู้ก้าวข้าม",
+      "Spire Navigation": "การนำทางในหอคอย",
+      // Biomes
+      "Shadow Depths": "ห้วงลึกแห่งเงามืด",
+      "Glacial Ascent": "เส้นทางน้ำแข็งสูงชัน",
+      "Magma Foundry": "โรงหลอมแมกมา",
+      "Storm Spires": "ยอดหอคอยสายฟ้า",
+      "Void Zenith": "จุดสูงสุดแห่งความว่างเปล่า",
+      // Affixes
+      "Magma Surge": "คลื่นแมกมาพวยพุ่ง",
+      "Glacial Chill": "ความเย็นยะเยือก",
+      "Mana Drain": "สูบกลืนมานา",
+      "Sunder Mist": "หมอกสลายเกราะ",
+      "Berserk Foes": "ศัตรูคลุ้มคลั่ง",
+      "Kinetic Reflect": "สะท้อนแรงปะทะ",
+      "Graviton Well": "หลุมแรงโน้มถ่วง",
+      "Chrono Haste": "ความเร่งกาลเวลา"
     },
     classes: {
       // Classes
@@ -1672,7 +1799,32 @@ export const L10N = {
       "Titanheart Pendant": "จี้หัวใจไททัน",
       "A colossal talisman granting immense vigor and resilience.": "เครื่องรางขนาดยักษ์ที่มอบพลังชีวิตและความทนทานอันมหาศาล",
       "Voidmaw Edge": "ดาบประกายมิติว่างเปล่า",
-      "A reality-cleaving blade pulsating with otherworldly entropy.": "ใบมีดตัดผ่านความจริงที่เต้นเป็นจังหวะด้วยพลังงานเอนโทรปีจากต่างโลก"
+      "A reality-cleaving blade pulsating with otherworldly entropy.": "ใบมีดตัดผ่านความจริงที่เต้นเป็นจังหวะด้วยพลังงานเอนโทรปีจากต่างโลก",
+      // Abyssal Spire Items, Relics, Transmogs & Titles
+      "Spire Emblem": "เหรียญตราหอคอย",
+      "An ancient ascendant sigil earned by conquering floors of the Abyssal Spire.": "เหรียญตราโบราณแห่งผู้ก้าวข้ามที่ได้รับจากการพิชิตชั้นของหอคอยแห่งอบิส",
+      "Crown of the Ascendant": "มงกุฎแห่งผู้ก้าวข้าม",
+      "A celestial coronet forged from raw starlight. Increases damage in Spire & Dungeons by +15% and grants +10% all elemental resistances.": "มงกุฎสรวงสวรรค์ที่หลอมขึ้นจากแสงดาราดั้งเดิม เพิ่มพลังโจมตีในหอคอยและดันเจี้ยน +15% และต้านทานทุกธาตุ +10%",
+      "Abyssal Compass": "เข็มทิศห้วงลึก",
+      "A gyroscopic needle pointing toward the spire zenith. Increases Flee by +15% and Movement Speed by +10%.": "เข็มทิศไจโรสโคปที่ชี้ตรงไปยังจุดสูงสุดของหอคอย เพิ่มการหลบหลีก +15% และความเร็วเคลื่อนที่ +10%",
+      "Ascendant Sigil": "ตราประทับแห่งผู้ก้าวข้าม",
+      "A luminescent seal worn by tower conquerors.": "ตราประทับเรืองแสงที่สวมใส่โดยผู้พิชิตหอคอย",
+      "Spire Blade": "ดาบแห่งหอคอย",
+      "A slender ascendant blade radiating celestial resonance.": "ดาบเรียวยาวแห่งผู้ก้าวข้ามที่แผ่คลื่นสะท้อนแห่งสรวงสวรรค์",
+      "Spire Scythe": "เคียวแห่งหอคอย",
+      "A curved ascendant war-scythe forged from tower alloy.": "เคียวสงครามโค้งแห่งผู้ก้าวข้าม หลอมขึ้นจากโลหะผสมแห่งหอคอย",
+      "Spire Greatsword": "ดาบใหญ่แห่งหอคอย",
+      "A massive ascendant greatsword humming with tower power.": "ดาบใหญ่ทรงพลังแห่งผู้ก้าวข้ามที่สั่นสะเทือนด้วยพลังของหอคอย",
+      "Spire Staff": "คทาแห่งหอคอย",
+      "An ascendant catalyst channeling the spire's magical leylines.": "คทาแห่งผู้ก้าวข้ามที่เชื่อมต่อกับเส้นชีพจรเวทมนตร์ของหอคอย",
+      "Spire Bow": "ธนูแห่งหอคอย",
+      "An ascendant recurve bow tuned to the upper spire winds.": "ธนูโค้งแห่งผู้ก้าวข้ามที่ปรับแต่งให้สอดคล้องกับสายลมบนยอดหอคอย",
+      "Spire Knuckles": "สนับมือแห่งหอคอย",
+      "Ascendant knuckle wraps dense with condensed starlight.": "สนับมือแห่งผู้ก้าวข้ามที่อัดแน่นด้วยแสงดาราควบแน่น",
+      "Spire Challenger": "ผู้ท้าชิงแห่งยอดหอคอย",
+      "A prestigious badge proving mastery over 50 floors of the Abyssal Spire.": "ตราเกียรติยศที่พิสูจน์การพิชิต 50 ชั้นของหอคอยแห่งอบิส",
+      "Abyssal Sovereign": "จอมราชันย์แห่งอบิส",
+      "The supreme mark of conquering all 100 floors of the Abyssal Spire.": "สัญลักษณ์สูงสุดแห่งการพิชิตครบ 100 ชั้นของหอคอยแห่งอบิส"
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -1795,7 +1947,37 @@ export const L10N = {
       "The harbinger of the rift, commanding the dimensional incursion.": "ผู้ส่งสารแห่งรอยแยก ผู้นำการรุกรานข้ามมิติ",
       "Timber Wolf Pup": "ลูกหมาป่าทิมเบอร์",
       "Glacial Bear Cub": "ลูกหมีขั้วโลกน้ำแข็ง",
-      "Magma Hatchling": "ลูกมังกรแมกมา"
+      "Magma Hatchling": "ลูกมังกรแมกมา",
+      // Abyssal Spire Milestone Bosses
+      "Corrupted Treant": "เทรนท์พฤกษาแปดเปื้อน",
+      "A colossal elder treant corrupted by abyssal blight, swinging stone-crushing limbs.": "เทรนท์โบราณขนาดยักษ์ที่ถูกแปดเปื้อนด้วยไอพิษแห่งอบิส แกว่งกิ่งก้านที่บดขยี้หินผา",
+      "Abyssal Siren & Golem": "ไซเรนและโกเลมห้วงลึก",
+      "Abyssal Siren Golem": "ไซเรนและโกเลมห้วงลึก",
+      "A dual union of deepwater siren melody and seismic ancient stone.": "การผสานพลังคู่ระหว่างเสียงเพลงไซเรนใต้ทะเลลึกและศิลาโบราณแห่งแผ่นดินไหว",
+      "Frost Revenant Alpha": "ราชาเยือกแข็งอัลฟา",
+      "Frost Alpha": "ฟรอสต์อัลฟา",
+      "The primordial sovereign of frozen souls, radiating eternal sub-zero cold.": "จอมราชันย์แห่งวิญญาณเยือกแข็ง ปลดปล่อยความหนาวเหน็บจุดเยือกแข็งนิรันดร์",
+      "Glacial Dragon": "มังกรน้ำแข็งกลาเซียล",
+      "Glacial Dragon Shade": "เงากระจกมังกรน้ำแข็ง",
+      "An ancient frost wyrm encrusted in permafrost whose breath freezes the air solid.": "มังกรน้ำแข็งโบราณที่หุ้มด้วยเกล็ดเพอร์มาฟรอสต์ ลมหายใจแช่แข็งอากาศจนแข็งตัว",
+      "Caldera Avatar": "อวตารแห่งแอ่งภูเขาไฟ",
+      "Caldera Colossus Avatar": "อวตารยักษ์ศิลาลาวาแมกมา",
+      "A towering avatar sculpted from living magma and volcanic fury.": "ร่างอวตารสูงตระหง่านที่หล่อหลอมขึ้นจากหินละลายและโทสะภูเขาไฟ",
+      "Magma Lord": "จ้าวแห่งแมกมา",
+      "Magma Lord Ignis": "จ้าวแห่งแมกมา อิกนิส",
+      "The searing master of subterranean fires, commanding rivers of molten rock.": "จ้าวแห่งเปลวเพลิงใต้พิภพ บัญชาการสายธารแห่งหินหลอมละลาย",
+      "Tempest Warden": "ผู้พิทักษ์วาตภัย",
+      "Zenith Tempest Warden": "ผู้พิทักษ์วาตภัยแห่งเซนิท",
+      "A high-altitude sentinel channeling atmospheric electricity and hurricane gales.": "ผู้พิทักษ์เวหาชั้นสูงที่ชี้นำกระแสไฟฟ้าในอากาศและพายุเฮอริเคน",
+      "Twin Elementals": "ภูตธาตุพายุคู่",
+      "Twin Storm Elementals": "ภูตธาตุพายุคู่",
+      "Dual coalesced tempests that strike in devastating ionized harmony.": "พายุแฝดที่รวมตัวกัน โจมตีประสานด้วยประจุไฟฟ้าทำลายล้าง",
+      "Herald Sovereign": "จอมทูตแห่งรอยแยก",
+      "Dimensional Herald Sovereign": "จอมทูตผู้ส่งสารแห่งมิติ",
+      "The supreme cosmic herald commanding void fissures and reality decay.": "ผู้ส่งสารสูงสุดแห่งจักรวาล ผู้บัญชาการรอยแยกมิติและการสลายตัวของความเป็นจริง",
+      "Primordial Nullking": "ราชันความดับสูญดึกดำบรรพ์",
+      "Nullking Spire Boss": "ราชันความดับสูญแห่งหอคอย",
+      "The crowned void singularity waiting at the zenith of the Abyssal Spire.": "ภาวะเอกฐานแห่งความว่างเปล่าผู้สวมมงกุฎที่รออยู่ ณ จุดสูงสุดของหอคอยแห่งอบิส"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
@@ -2304,6 +2486,36 @@ export const L10N = {
       "storm_focus": "วาตภัย",
       "mana_well": "บ่อมานา",
       "tempest_soul": "จิตมรสุม"
+    },
+    biomes: {
+      "Shadow Depths": "ห้วงลึกแห่งเงามืด",
+      "Glacial Ascent": "เส้นทางน้ำแข็งสูงชัน",
+      "Magma Foundry": "โรงหลอมแมกมา",
+      "Storm Spires": "ยอดหอคอยสายฟ้า",
+      "Void Zenith": "จุดสูงสุดแห่งความว่างเปล่า",
+      "depths": "ห้วงลึกแห่งเงามืด",
+      "glacial": "เส้นทางน้ำแข็งสูงชัน",
+      "caldera": "โรงหลอมแมกมา",
+      "storm": "ยอดหอคอยสายฟ้า",
+      "void": "จุดสูงสุดแห่งความว่างเปล่า"
+    },
+    affixes: {
+      "Magma Surge": "คลื่นแมกมาพวยพุ่ง",
+      "Glacial Chill": "ความเย็นยะเยือก",
+      "Mana Drain": "สูบกลืนมานา",
+      "Sunder Mist": "หมอกสลายเกราะ",
+      "Berserk Foes": "ศัตรูคลุ้มคลั่ง",
+      "Kinetic Reflect": "สะท้อนแรงปะทะ",
+      "Graviton Well": "หลุมแรงโน้มถ่วง",
+      "Chrono Haste": "ความเร่งกาลเวลา",
+      "magma_surge": "คลื่นแมกมาพวยพุ่ง",
+      "glacial_chill": "ความเย็นยะเยือก",
+      "mana_drain": "สูบกลืนมานา",
+      "sunder_mist": "หมอกสลายเกราะ",
+      "berserk_foes": "ศัตรูคลุ้มคลั่ง",
+      "kinetic_reflect": "สะท้อนแรงปะทะ",
+      "graviton_well": "หลุมแรงโน้มถ่วง",
+      "chrono_haste": "ความเร่งกาลเวลา"
     }
   }
 };

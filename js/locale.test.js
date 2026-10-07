@@ -310,4 +310,105 @@ assert.equal(T('Break Timer', 'ui'), 'เวลาสกัดเกราะ');
 assert.equal(T('A World Boss is already active!', 'ui'), 'มีบอสโลกกำลังเปิดศึกอยู่แล้ว!');
 assert.equal(T('The Titan Horn only echoes across ancient wild zones!', 'ui'), 'เขาสัตว์ไททันจะส่งเสียงก้องกังวานเฉพาะในดินแดนโบราณเท่านั้น!');
 
+// Test 17: Check Abyssal Spire biomes, affixes, bosses, items, and UI translations in EN and TH
+const spireBiomes = [
+  { en: 'Shadow Depths', th: 'ห้วงลึกแห่งเงามืด' },
+  { en: 'Glacial Ascent', th: 'เส้นทางน้ำแข็งสูงชัน' },
+  { en: 'Magma Foundry', th: 'โรงหลอมแมกมา' },
+  { en: 'Storm Spires', th: 'ยอดหอคอยสายฟ้า' },
+  { en: 'Void Zenith', th: 'จุดสูงสุดแห่งความว่างเปล่า' }
+];
+
+const spireAffixes = [
+  { en: 'Magma Surge', th: 'คลื่นแมกมาพวยพุ่ง' },
+  { en: 'Glacial Chill', th: 'ความเย็นยะเยือก' },
+  { en: 'Mana Drain', th: 'สูบกลืนมานา' },
+  { en: 'Sunder Mist', th: 'หมอกสลายเกราะ' },
+  { en: 'Berserk Foes', th: 'ศัตรูคลุ้มคลั่ง' },
+  { en: 'Kinetic Reflect', th: 'สะท้อนแรงปะทะ' },
+  { en: 'Graviton Well', th: 'หลุมแรงโน้มถ่วง' },
+  { en: 'Chrono Haste', th: 'ความเร่งกาลเวลา' }
+];
+
+const spireBosses = [
+  { en: 'Corrupted Treant', th: 'เทรนท์พฤกษาแปดเปื้อน' },
+  { en: 'Abyssal Siren & Golem', th: 'ไซเรนและโกเลมห้วงลึก' },
+  { en: 'Frost Revenant Alpha', th: 'ราชาเยือกแข็งอัลฟา' },
+  { en: 'Glacial Dragon', th: 'มังกรน้ำแข็งกลาเซียล' },
+  { en: 'Caldera Avatar', th: 'อวตารแห่งแอ่งภูเขาไฟ' },
+  { en: 'Magma Lord', th: 'จ้าวแห่งแมกมา' },
+  { en: 'Tempest Warden', th: 'ผู้พิทักษ์วาตภัย' },
+  { en: 'Twin Elementals', th: 'ภูตธาตุพายุคู่' },
+  { en: 'Herald Sovereign', th: 'จอมทูตแห่งรอยแยก' },
+  { en: 'Primordial Nullking', th: 'ราชันความดับสูญดึกดำบรรพ์' }
+];
+
+const spireItems = [
+  { en: 'Spire Emblem', th: 'เหรียญตราหอคอย' },
+  { en: 'Crown of the Ascendant', th: 'มงกุฎแห่งผู้ก้าวข้าม' },
+  { en: 'Abyssal Compass', th: 'เข็มทิศห้วงลึก' },
+  { en: 'Ascendant Sigil', th: 'ตราประทับแห่งผู้ก้าวข้าม' },
+  { en: 'Spire Blade', th: 'ดาบแห่งหอคอย' },
+  { en: 'Spire Scythe', th: 'เคียวแห่งหอคอย' },
+  { en: 'Spire Greatsword', th: 'ดาบใหญ่แห่งหอคอย' },
+  { en: 'Spire Staff', th: 'คทาแห่งหอคอย' },
+  { en: 'Spire Bow', th: 'ธนูแห่งหอคอย' },
+  { en: 'Spire Knuckles', th: 'สนับมือแห่งหอคอย' },
+  { en: 'Spire Challenger', th: 'ผู้ท้าชิงแห่งยอดหอคอย' },
+  { en: 'Abyssal Sovereign', th: 'จอมราชันย์แห่งอบิส' }
+];
+
+const spireUiStrings = [
+  { en: 'Abyssal Spire', th: 'หอคอยแห่งอบิส' },
+  { en: 'Ascendant Elevator', th: 'ลิฟต์แห่งผู้ก้าวข้าม' },
+  { en: 'Floor', th: 'ชั้นที่' },
+  { en: 'Ascend', th: 'ขึ้นสู่หอคอย' },
+  { en: 'Checkpoint Unlocked', th: 'ปลดล็อกจุดบันทึกชั้นแล้ว' },
+  { en: 'Spire Emblems', th: 'เหรียญตราหอคอย' },
+  { en: 'Floors Cleared', th: 'ชั้นที่พิชิตได้' },
+  { en: 'Highest Floor', th: 'ชั้นสูงสุดที่เคยพิชิต' },
+  { en: 'Spire Archon', th: 'อาร์คอนแห่งหอคอย' },
+  { en: 'Requires Floor {f} Cleared', th: 'ต้องพิชิตชั้นที่ {f} ก่อน' }
+];
+
+// Verify English mode
+setLanguage('en');
+for (const b of spireBiomes) {
+  assert.equal(T(b.en, 'biomes'), b.en, `English biome translation mismatch for: ${b.en}`);
+  assert.equal(T(b.en, 'ui'), b.en, `English biome UI translation mismatch for: ${b.en}`);
+}
+for (const a of spireAffixes) {
+  assert.equal(T(a.en, 'affixes'), a.en, `English affix translation mismatch for: ${a.en}`);
+  assert.equal(T(a.en, 'ui'), a.en, `English affix UI translation mismatch for: ${a.en}`);
+}
+for (const boss of spireBosses) {
+  assert.equal(T(boss.en, 'monsters'), boss.en, `English boss translation mismatch for: ${boss.en}`);
+}
+for (const it of spireItems) {
+  assert.equal(T(it.en, 'items'), it.en, `English item translation mismatch for: ${it.en}`);
+}
+for (const ui of spireUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.en, `English UI translation mismatch for: ${ui.en}`);
+}
+
+// Verify Thai mode
+setLanguage('th');
+for (const b of spireBiomes) {
+  assert.equal(T(b.en, 'biomes'), b.th, `Thai biome translation mismatch for: ${b.en}`);
+  assert.equal(T(b.en, 'ui'), b.th, `Thai biome UI translation mismatch for: ${b.en}`);
+}
+for (const a of spireAffixes) {
+  assert.equal(T(a.en, 'affixes'), a.th, `Thai affix translation mismatch for: ${a.en}`);
+  assert.equal(T(a.en, 'ui'), a.th, `Thai affix UI translation mismatch for: ${a.en}`);
+}
+for (const boss of spireBosses) {
+  assert.equal(T(boss.en, 'monsters'), boss.th, `Thai boss translation mismatch for: ${boss.en}`);
+}
+for (const it of spireItems) {
+  assert.equal(T(it.en, 'items'), it.th, `Thai item translation mismatch for: ${it.en}`);
+}
+for (const ui of spireUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
+}
+
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

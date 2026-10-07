@@ -1788,6 +1788,18 @@ monster.voidmaw_sovereign = monster.nullking;
 monster.caldera_colossus = monster.flame_dragon;
 monster.ancient_behemoth = monster.elderwood_treant;
 
+// Abyssal Spire milestone boss sprite aliases
+monster.corrupted_treant_boss = monster.elderwood_treant;
+monster.abyssal_siren_golem_boss = monster.ruin_golem;
+monster.frost_alpha_boss = monster.frost_revenant;
+monster.glacial_dragon_boss = monster.flame_dragon;
+monster.caldera_avatar_boss = monster.flame_dragon;
+monster.magma_lord_boss = monster.flame_dragon;
+monster.tempest_warden_boss = monster.zenith_warden;
+monster.twin_elementals_boss = monster.storm_elemental;
+monster.herald_sovereign_boss = monster.nullking;
+monster.nullking_spire_boss = monster.nullking;
+
 // ---- player WALK frames: cloth, weapon and stance all shift with the step ----
 const walkFrame = (base, replacements) => matrix(
   base[0].length,
@@ -2324,6 +2336,60 @@ const item = {
     '     krr  rrk   ',
     '      kk  kk    ',
     ''),
+
+  staff: matrix(16, 16,
+    '      kkk       ',
+    '     kccck      ',
+    '     kcxck      ',
+    '     kccck      ',
+    '      kLk       ',
+    '      kNk       ',
+    '      knk       ',
+    '      kNk       ',
+    '      kLk       ',
+    '      kNk       ',
+    '      knk       ',
+    '      kNk       ',
+    '      kLk       ',
+    '      kmk       ',
+    '      kbk       ',
+    '       k        '),
+
+  bow: matrix(16, 16,
+    '        kk      ',
+    '       kyYk     ',
+    '      kywk      ',
+    '     kywk       ',
+    '    kywk        ',
+    '   kywk         ',
+    '  kyLk          ',
+    '  kNk kx        ',
+    '  kyLk          ',
+    '   kywk         ',
+    '    kywk        ',
+    '     kywk       ',
+    '      kywk      ',
+    '       kyYk     ',
+    '        kk      ',
+    '                '),
+
+  iron_fist: matrix(16, 16,
+    '     kkk  kkk   ',
+    '    kwwmk kwwmk ',
+    '    kmBmk kmBmk ',
+    '   kkyykk kkyykk',
+    '  kmwyywmkmwyywm',
+    '  kBwwmmBkBwwmmB',
+    '  kBmmmmBkBmmmmB',
+    '   kBmmBk kBmmBk',
+    '    kNNk   kNNk ',
+    '    kLLk   kLLk ',
+    '    kNNk   kNNk ',
+    '    kLLk   kLLk ',
+    '     kk     kk  ',
+    '                ',
+    '                ',
+    '                '),
 };
 
 // Regional annex species inherit proven six-frame silhouettes, then receive
@@ -2410,6 +2476,19 @@ export const ITEM_ICON = {
   voidmaw_eye: 'gem',
   titan_pendant: 'ring',
   voidmaw_edge: 'sword',
+  // Abyssal Spire Items, Relics, Transmogs & Titles
+  spire_emblem: 'gem',
+  crown_of_the_ascendant: 'helm',
+  abyssal_compass: 'scroll',
+  spire_sigil: 'ring',
+  spire_blade: 'sword',
+  spire_scythe: 'sword',
+  spire_greatsword: 'sword',
+  spire_staff: 'staff',
+  spire_bow: 'bow',
+  spire_knuckles: 'iron_fist',
+  title_spire_challenger: 'scroll',
+  title_abyssal_sovereign: 'scroll',
 };
 
 export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };

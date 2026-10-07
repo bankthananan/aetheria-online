@@ -157,6 +157,78 @@ export const CONTENT = {
       id: "ancient_behemoth", element: "nature", name: "Ancient Behemoth", flavor: "A primordial elder beast whose heavy strides shake the roots of the ancient woods.",
       level: 80, hp: 4800, atk: 210, def: 90, exp: 44000, spriteColor: "#27ae60", sizeTiles: 2, raid: true,
       drops: [{ itemId: "titan_heart", chance: 1.0 }, { itemId: "silverleaf", chance: 1.0 }, { itemId: "essence_night", chance: 0.5 }], behavior: "aggressive"
+    },
+
+    // ===== Abyssal Spire Milestone Bosses (Floors 10–100) =====
+    {
+      id: "corrupted_treant_boss", element: "nature", name: "Corrupted Treant",
+      flavor: "A colossal elder treant corrupted by abyssal blight, swinging stone-crushing limbs.",
+      level: 50, hp: 2200, atk: 135, def: 50, exp: 9500, spriteColor: "#3e6b2f", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.6 }, { itemId: "greater_potion", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "abyssal_siren_golem_boss", element: "ice", name: "Abyssal Siren & Golem",
+      flavor: "A dual union of deepwater siren melody and seismic ancient stone.",
+      level: 55, hp: 2400, atk: 148, def: 52, exp: 12000, spriteColor: "#57c2a8", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "golem_core", chance: 0.6 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "frost_alpha_boss", element: "ice", name: "Frost Revenant Alpha",
+      flavor: "The primordial sovereign of frozen souls, radiating eternal sub-zero cold.",
+      level: 60, hp: 2600, atk: 162, def: 56, exp: 15000, spriteColor: "#bfe6ff", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "ice_core", chance: 0.6 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "glacial_dragon_boss", element: "ice", name: "Glacial Dragon",
+      flavor: "An ancient frost wyrm encrusted in permafrost whose breath freezes the air solid.",
+      level: 65, hp: 2800, atk: 175, def: 60, exp: 18500, spriteColor: "#77b7c9", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "dragon_heart", chance: 0.6 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "caldera_avatar_boss", element: "fire", name: "Caldera Avatar",
+      flavor: "A towering avatar sculpted from living magma and volcanic fury.",
+      level: 70, hp: 3000, atk: 188, def: 66, exp: 22000, spriteColor: "#e2551f", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "titan_heart", chance: 0.5 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "magma_lord_boss", element: "fire", name: "Magma Lord",
+      flavor: "The searing master of subterranean fires, commanding rivers of molten rock.",
+      level: 75, hp: 3200, atk: 200, def: 70, exp: 26000, spriteColor: "#c45d32", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "caldera_crystal", chance: 0.8 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "tempest_warden_boss", element: "lightning", name: "Tempest Warden",
+      flavor: "A high-altitude sentinel channeling atmospheric electricity and hurricane gales.",
+      level: 80, hp: 3400, atk: 212, def: 74, exp: 30000, spriteColor: "#f2e07a", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "zenith_core", chance: 0.6 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "twin_elementals_boss", element: "lightning", name: "Twin Elementals",
+      flavor: "Dual coalesced tempests that strike in devastating ionized harmony.",
+      level: 85, hp: 3600, atk: 225, def: 78, exp: 35000, spriteColor: "#d9c18f", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "storm_core", chance: 0.6 }, { itemId: "elixir", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "herald_sovereign_boss", element: "void", name: "Herald Sovereign",
+      flavor: "The supreme cosmic herald commanding void fissures and reality decay.",
+      level: 90, hp: 3800, atk: 238, def: 82, exp: 40000, spriteColor: "#4a148c", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "dimensional_shard", chance: 0.8 }, { itemId: "elixir", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "nullking_spire_boss", element: "void", name: "Primordial Nullking",
+      flavor: "The crowned void singularity waiting at the zenith of the Abyssal Spire.",
+      level: 99, hp: 4200, atk: 260, def: 86, exp: 50000, spriteColor: "#7a4fd0", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "null_core", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }],
+      behavior: "aggressive"
     }
   ],
 
@@ -337,7 +409,21 @@ export const CONTENT = {
     { id: "titan_heart", name: "Heart of the Colossus", type: "material", desc: "A pulsing primordial heart harvested from an Overworld Apex Titan.", price: 3500, value: 3500, rarity: "epic" },
     { id: "voidmaw_eye", name: "Eye of the Voidmaw", type: "material", desc: "A crystallized cosmic iris radiating with dimensional gravity.", price: 5000, value: 5000, rarity: "legendary" },
     { id: "titan_pendant", name: "Titanheart Pendant", type: "armor", slot: "accessory", desc: "A colossal talisman granting immense vigor and resilience.", price: 7500, value: 7500, rarity: "epic", def: 15, stats: { maxHp: 250, physDef: 15, magicDef: 15 }, classReq: null, gearLevel: 45 },
-    { id: "voidmaw_edge", name: "Voidmaw Edge", type: "weapon", slot: "weapon", desc: "A reality-cleaving blade pulsating with otherworldly entropy.", price: 12000, value: 12000, rarity: "legendary", atk: 45, stats: { physAtk: 45, critChance: 8, dmg_void: 15 }, classReq: null, gearLevel: 50 }
+    { id: "voidmaw_edge", name: "Voidmaw Edge", type: "weapon", slot: "weapon", desc: "A reality-cleaving blade pulsating with otherworldly entropy.", price: 12000, value: 12000, rarity: "legendary", atk: 45, stats: { physAtk: 45, critChance: 8, dmg_void: 15 }, classReq: null, gearLevel: 50 },
+
+    // ===== Abyssal Spire Economy, Relics & Transmogs =====
+    { id: "spire_emblem", name: "Spire Emblem", type: "material", desc: "An ancient ascendant sigil earned by conquering floors of the Abyssal Spire.", price: 100, value: 100, rarity: "rare" },
+    { id: "crown_of_the_ascendant", name: "Crown of the Ascendant", type: "relic", slot: "relic", desc: "A celestial coronet forged from raw starlight. Increases damage in Spire & Dungeons by +15% and grants +10% all elemental resistances.", price: 5000, value: 5000, relicPerk: "ascendant_might", rarity: "legendary", classReq: null },
+    { id: "abyssal_compass", name: "Abyssal Compass", type: "relic", slot: "relic", desc: "A gyroscopic needle pointing toward the spire zenith. Increases Flee by +15% and Movement Speed by +10%.", price: 3500, value: 3500, relicPerk: "spire_navigation", rarity: "epic", classReq: null },
+    { id: "spire_sigil", name: "Ascendant Sigil", type: "accessory", slot: "accessory", desc: "A luminescent seal worn by tower conquerors.", price: 4000, value: 4000, rarity: "epic", atk: 16, def: 14, stats: { maxHp: 220, physAtk: 16, magicAtk: 16, physDef: 14, magicDef: 14 }, classReq: null, gearLevel: 60 },
+    { id: "spire_blade", name: "Spire Blade", type: "weapon", slot: "weapon", desc: "A slender ascendant blade radiating celestial resonance.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["reborn_blade", "lightbringer"], gearLevel: 65 },
+    { id: "spire_scythe", name: "Spire Scythe", type: "weapon", slot: "weapon", desc: "A curved ascendant war-scythe forged from tower alloy.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["drifter"], gearLevel: 65 },
+    { id: "spire_greatsword", name: "Spire Greatsword", type: "weapon", slot: "weapon", desc: "A massive ascendant greatsword humming with tower power.", atk: 52, price: 6000, value: 6000, rarity: "epic", classReq: ["reborn_blade", "lightbringer"], gearLevel: 65 },
+    { id: "spire_staff", name: "Spire Staff", type: "weapon", slot: "weapon", desc: "An ascendant catalyst channeling the spire's magical leylines.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["codeweaver", "stormcaller"], gearLevel: 65 },
+    { id: "spire_bow", name: "Spire Bow", type: "weapon", slot: "weapon", desc: "An ascendant recurve bow tuned to the upper spire winds.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["far_shot"], gearLevel: 65 },
+    { id: "spire_knuckles", name: "Spire Knuckles", type: "weapon", slot: "weapon", desc: "Ascendant knuckle wraps dense with condensed starlight.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["iron_fist"], gearLevel: 65 },
+    { id: "title_spire_challenger", name: "Spire Challenger", type: "material", desc: "A prestigious badge proving mastery over 50 floors of the Abyssal Spire.", price: 1000, value: 1000, rarity: "epic" },
+    { id: "title_abyssal_sovereign", name: "Abyssal Sovereign", type: "material", desc: "The supreme mark of conquering all 100 floors of the Abyssal Spire.", price: 5000, value: 5000, rarity: "legendary" }
   ],
 
   npcs: [
