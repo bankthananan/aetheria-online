@@ -53,6 +53,7 @@ import { createRaidsRenderer } from './render/raids-fx.js';
 import { createRaidsUIRenderer } from './render/raids-ui.js';
 import { createSpireSystem, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS, MILESTONE_BOSS_FLOORS } from './systems/spire.js';
 import { createSpireRenderer } from './render/spire-fx.js';
+import { createSpireUIRenderer } from './render/spire-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -204,6 +205,7 @@ const raidsFx = createRaidsRenderer({ T, PX });
 const raidsUI = createRaidsUIRenderer({ T, WORLD_BOSS_CATALOG, CONTRIBUTION_TIERS });
 const spireSystem = createSpireSystem({ now, rnd: () => Math.random() });
 const spireFx = createSpireRenderer({ T, PX });
+const spireUI = createSpireUIRenderer({ T, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -464,6 +466,7 @@ const G = {
   spire: spireSystem.serialize(),
   spireSystem,
   spireFx,
+  spireUI,
   spireState: null,
   spireBossMob: null,
   saveStatus: 'saved',
@@ -1641,6 +1644,7 @@ function startSpireRun(startingFloor = 1) {
     run = spireSystem.startRun(startingFloor);
   }
   G.spireState = spireSystem.getActiveRun();
+  if (G.spireState) G.spireState.active = true;
   loadMap('abyssal_spire', 2, 2);
   spawnSpireWave();
   return G.spireState;
@@ -4631,6 +4635,7 @@ function buildHud() {
   $('#hud').innerHTML = `
     <div class="hud">
       <div id="raid-hud-slot"></div>
+      <div id="spire-hud-slot"></div>
       <div id="danger-vignette" class="danger-vignette"></div>
       <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
@@ -4995,6 +5000,8 @@ function updateHud() {
   if (rSlot && raidsUI) {
     rSlot.innerHTML = raidsUI.renderRaidHudHtml(G.raidState);
   }
+  const spSlot = $('#spire-hud-slot');
+  if (spSlot && spireUI) spSlot.innerHTML = spireUI.renderSpireHudHtml(G.spireState);
   updateAutomationHud();
 }
 
@@ -5778,6 +5785,9 @@ function worldChronicleHtml() {
       <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'companions' ? 'active' : ''}" data-chronicle-tab="companions" style="font-weight:bold;${currentTab === 'companions' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
         🐾 ${T('Companions & Familiars', 'ui')}
       </button>
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'spire' ? 'active' : ''}" data-chronicle-tab="spire" style="font-weight:bold;${currentTab === 'spire' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        🌀 ${T('Abyssal Spire', 'ui')}
+      </button>
     </div>
   `;
 
@@ -5809,6 +5819,23 @@ function worldChronicleHtml() {
       ${tabNav}
       <div class="companions-body">
         ${petsUI.renderCompanionsTab(G.pets, G.player?.inventory || [])}
+      </div>
+    </section>`;
+  }
+
+  if (currentTab === 'spire') {
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · CHALLENGE GAUNTLET', 'ui')}</small>
+          <h2>${T('Abyssal Spire', 'ui')}</h2>
+          <p>${T('Ascend the 100-floor celestial tower or exchange earned Spire Emblems at the Reliquary.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="spire-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;display:flex;flex-direction:column;gap:16px;">
+        ${spireUI.renderElevatorModalHtml(spireSystem.serialize())}
+        ${spireUI.renderSpireReliquaryTabHtml(spireSystem.serialize(), G.player?.inventory || [])}
       </div>
     </section>`;
   }
@@ -6527,6 +6554,31 @@ function wirePanel(id, el) {
         refreshPanel('world');
       }
     });
+    el.querySelectorAll('[data-spire-ascend]').forEach(b => b.onclick = () => {
+      const targetFloor = parseInt(b.dataset.spireAscend, 10);
+      startSpireRun(targetFloor);
+      togglePanel('world');
+    });
+    el.querySelectorAll('[data-spire-buy]').forEach(b => b.onclick = () => {
+      const itemId = b.dataset.spireBuy;
+      const cost = parseInt(b.dataset.spireCost, 10);
+      if (spireSystem.spendEmblems(cost)) {
+        addItem(itemId, 1);
+        G.spire = spireSystem.serialize();
+        saveGame();
+        refreshPanel('world');
+        toast(T('Item purchased!', 'ui'), 'good');
+      }
+    });
+    el.querySelectorAll('[data-spire-close]').forEach(b => b.onclick = () => {
+      const ov = el.querySelector('.spire-elevator-overlay');
+      if (ov) {
+        ov.style.display = 'none';
+      } else {
+        G._chronicleTab = 'road';
+        refreshPanel('world');
+      }
+    });
   }
   if (id === 'settings') {
     const touchPref=el.querySelector('#touch-preference');
@@ -6828,6 +6880,29 @@ function renderSkillGraphLines(root = document) {
     svg.appendChild(path);
   });
 }
+
+function openSpireElevatorModal() {
+  if (typeof document === 'undefined') return;
+  let modalContainer = document.getElementById('spire-elevator-modal-container');
+  if (!modalContainer) {
+    modalContainer = document.createElement('div');
+    modalContainer.id = 'spire-elevator-modal-container';
+    document.body.appendChild(modalContainer);
+  }
+  modalContainer.innerHTML = spireUI.renderElevatorModalHtml(spireSystem.serialize());
+  modalContainer.querySelectorAll('[data-spire-close]').forEach(b => {
+    b.onclick = () => { modalContainer.innerHTML = ''; };
+  });
+  modalContainer.querySelectorAll('[data-spire-ascend]').forEach(b => {
+    b.onclick = () => {
+      const targetFloor = parseInt(b.dataset.spireAscend, 10);
+      modalContainer.innerHTML = '';
+      startSpireRun(targetFloor);
+    };
+  });
+}
+G.openSpireElevatorModal = openSpireElevatorModal;
+
 function refreshPanel(id) {
   const el = $('#panel');
   if (el && el.dataset.kind === id) {
