@@ -179,7 +179,7 @@ graph TD
   - Admin commands: `givecard:<id>`, `givecardalbum`.
   - Preservation of all 255 keys on `window.__AWO`.
 
-- [ ] **Step 1: Wire `cardsSystem` and `cardsUI` into `js/game.js`**
+- [x] **Step 1: Wire `cardsSystem` and `cardsUI` into `js/game.js`**
   - Initialize `G.bestiary = cardsSystem.deserialize(savedData?.bestiary)`.
   - Wire `recompute(p)` card bonuses and collection milestones.
   - Wire monster kill and loot drop bestiary hooks.
@@ -188,11 +188,11 @@ graph TD
   - Wire Bestiary Tab in World Chronicle modal (`M`).
   - Update `saveGame` and `resumeGame` to persist `G.bestiary`.
   - Expose debug methods on `window.__AWO` if needed while preserving existing 255 keys.
-- [ ] **Step 2: Run engine surface test and update fingerprints if needed**
+- [x] **Step 2: Run engine surface test and update fingerprints if needed**
   - `node js/engine-surface.test.js` (must pass and verify all 255 keys on `window.__AWO`).
-- [ ] **Step 3: Run existing unit tests**
+- [x] **Step 3: Run existing unit tests**
   - `npm test` (verify no regressions).
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   - `git add js/game.js js/engine-surface.test.js && git commit -m "feat(cards): wire monster card drops, codex ui, stat buffs, and combat procs into engine"`
 
 ---
@@ -215,16 +215,16 @@ graph TD
   - Strict ZERO screen shake verification (`G.cam.x` and `G.cam.y` remain steady).
   - Save/Resume persistence: `saveGame` -> `resumeGame` preserves bestiary progress and socketed cards.
 
-- [ ] **Step 1: Implement `js/cards-integration.test.js`**
+- [x] **Step 1: Implement `js/cards-integration.test.js`**
   - Use `installBrowserEnv` fixture.
   - Write comprehensive end-to-end integration assertions.
-- [ ] **Step 2: Run integration test**
+- [x] **Step 2: Run integration test**
   - `node js/cards-integration.test.js` (must pass with exit code 0).
-- [ ] **Step 3: Update `CLAUDE.md`**
+- [x] **Step 3: Update `CLAUDE.md`**
   - Document `js/systems/cards.js` and `js/render/cards-ui.js` in the active game architecture section.
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
   - `npm test` (all suites must pass).
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - `git add js/cards-integration.test.js CLAUDE.md && git commit -m "test(cards): add comprehensive integration test suite and document architecture"`
 
 ---
