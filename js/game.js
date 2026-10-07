@@ -45,6 +45,8 @@ import { createGatheringSystem } from './systems/gathering.js';
 import { createGatheringRenderer } from './render/gathering-fx.js';
 import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './systems/cards.js';
 import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
+import { createPetsSystem } from './systems/pets.js';
+import { createPetsRenderer } from './render/pets-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -184,6 +186,11 @@ const cardsSystem = createCardsSystem({
   rnd: () => Math.random(),
 });
 const cardsUI = createCardsUIRenderer({ T });
+const petsSystem = createPetsSystem({
+  now,
+  rnd: () => Math.random(),
+});
+const petsFx = createPetsRenderer({ T, PX });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -430,8 +437,26 @@ const G = {
   bestiary: cardsSystem.deserialize(null),
   cardsSystem,
   cardsUI,
+  pets: petsSystem.deserialize(null),
+  petsSystem,
+  petsFx,
+  petFollower: null,
   saveStatus: 'saved',
 };
+
+function syncPetFollower() {
+  if (G.pets?.activePetId && G.pets?.owned?.[G.pets.activePetId]) {
+    const activePet = G.pets.owned[G.pets.activePetId];
+    if (!G.petFollower || G.petFollower.id !== activePet.id) {
+      G.petFollower = petsFx.createFollowerEntity(activePet.id, G.player?.x || 0, G.player?.y || 0);
+    }
+    if (G.petFollower) {
+      G.petFollower.devoted = ((activePet.loyalty || 0) >= 80);
+    }
+  } else {
+    G.petFollower = null;
+  }
+}
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
 Object.defineProperty(G, 'activeGuild', {
@@ -1106,6 +1131,27 @@ function recompute(p, fill) {
     p.maxHp = Math.round(p.maxHp * (1 + cardMods.allStatPct));
     p.maxMp = Math.round(p.maxMp * (1 + cardMods.allStatPct));
   }
+  const activePetObj = (G?.pets?.activePetId && G?.pets?.owned?.[G.pets.activePetId])
+    ? G.pets.owned[G.pets.activePetId]
+    : null;
+  const petAura = activePetObj ? petsSystem.computeAuraStats(activePetObj) : {};
+  if (petAura.maxHp) p.maxHp += petAura.maxHp;
+  if (petAura.physAtkPct) {
+    p.physAtk = Math.round(p.physAtk * (1 + petAura.physAtkPct));
+    p.rangedAtk = Math.round(p.rangedAtk * (1 + petAura.physAtkPct));
+  }
+  if (petAura.magicAtkPct) p.magicAtk = Math.round(p.magicAtk * (1 + petAura.magicAtkPct));
+  if (petAura.physDefPct) p.physDef = Math.round(p.physDef * (1 + petAura.physDefPct));
+  if (petAura.critChance) p.critChance = Math.min(100, p.critChance + petAura.critChance);
+  if (petAura.moveMult) p.moveMult *= (1 + petAura.moveMult);
+  p.hpRegen = (p.hpRegen || 0) + (petAura.hpRegen || 0);
+  p.mpRegen = (p.mpRegen || 0) + (petAura.mpRegen || 0);
+  if (petAura.critDmgPct) p.critDmgBonus = (p.critDmgBonus || 0) + petAura.critDmgPct;
+  if (petAura.castSpeedPct) p.castSpeed = (p.castSpeed || 1) * (1 + petAura.castSpeedPct);
+  if (petAura.res_ice) p.res_ice = (p.res_ice || 0) + petAura.res_ice;
+  if (petAura.dmg_fire) p.dmg_fire = (p.dmg_fire || 0) + petAura.dmg_fire;
+  if (petAura.dmg_void) p.dmg_void = (p.dmg_void || 0) + petAura.dmg_void;
+  p.petAura = petAura;
   p.cardMods = cardMods;
   p.runeMods = runeMods;
   p.atkStat = MAGIC.has(p.combatClass) ? p.magicAtk : p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
@@ -1475,6 +1521,10 @@ function loadMap(mapId, spawnX, spawnY) {
     toast(`✦ Celestial Rift — Floor 1 | Mutator: ${mutName} | Best: ${G.rift.best}`, 'good');
   } else if (wasRift) {
     G.rift.active = false;   // leaving the rift (portal exit or death) ends the run cleanly
+  }
+  if (G.petFollower) {
+    G.petFollower.x = G.player.x;
+    G.petFollower.y = G.player.y;
   }
   saveGame();   // persist on every zone change (no-op until the run is live)
 }
@@ -2142,6 +2192,30 @@ function killMonster(m) {
     if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
     else logMsg(`Looted ${it.name}.`, 'good');
     AUDIO.playSfx('pickup');
+  }
+  // Companion Auto-Loot dash & bond perks (strict ZERO camera shake)
+  if (G.pets?.activePetId && G.pets?.owned?.[G.pets.activePetId]) {
+    const activePet = G.pets.owned[G.pets.activePetId];
+    const lootRadius = petsSystem.getAutoLootRadius(activePet) * TS;
+    const distToMon = Math.hypot(m.x - p.x, m.y - p.y);
+    if (distToMon <= lootRadius) {
+      if (G.petFollower) petsFx.triggerAutoLoot(G.petFollower, m);
+      const bondLoot = petsSystem.getBondLootBonus(activePet);
+      if (bondLoot.zenyBonusPct > 0 && zeny > 0) {
+        const bonusZ = Math.round(zeny * bondLoot.zenyBonusPct);
+        p.zeny += bonusZ;
+      }
+      if (bondLoot.dupeMatChance > 0 && chance(bondLoot.dupeMatChance)) {
+        for (const d of m.def.drops) {
+          const it = itemById[d.itemId];
+          if (it && it.type === 'material') {
+            addItem(d.itemId, 1);
+            toast(`🐾 ${T('Companion duplicated', 'ui')} ${T(it.name, 'items')}!`, 'good');
+            break;
+          }
+        }
+      }
+    }
   }
   // Card drop roll (strict ZERO camera shake)
   const rolledCard = cardsSystem.rollCardDrop(m.def, {
@@ -3497,6 +3571,7 @@ function render() {
   const drawables = [];
   for (const n of G.npcs) drawables.push({ y: n.y * TS + TS / 2, draw: () => drawNpc(n, cx, cy) });
   for (const m of G.monsters) if (m.alive) drawables.push({ y: m.y, draw: () => drawMonster(m, cx, cy) });
+  if (G.petFollower) drawables.push({ y: G.petFollower.y, draw: () => petsFx.drawFollower(ctx, G.petFollower, G.cam, now(), CANVAS_W, CANVAS_H) });
   drawables.push({ y: p.y, draw: () => drawPlayer(p, cx, cy) });
   drawables.sort((a, b) => a.y - b.y);
   for (const d2 of drawables) d2.draw();
@@ -3839,6 +3914,9 @@ function step(dt) {
   if (G.jobChoiceOpen) return; // the permanent choice is readable because the world is truly paused
   weatherSystem.update(dt, G?.mapId);
   G.weather = weatherSystem.getWeather(G?.mapId);
+  if (G.petFollower) {
+    petsFx.updateFollower(G.petFollower, p, dt);
+  }
 
   // Incursion subsystem update
   const adventureMaps = ['whispering_woods', 'sunken_ruins', 'frostpeak_tundra', 'dragon_caldera'];
@@ -6368,8 +6446,55 @@ function refreshPanel(id) {
 
 function useItem(itemId) {
   const it = itemById[itemId]; if (!it || itemQty(itemId) <= 0) return false;
-  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album') { logMsg('This item cannot be used directly.', 'sys'); return false; }
+  if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album' && it.type !== 'taming_bait') { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
+  if (it.type === 'taming_bait') {
+    if (!G.target || !G.target.alive) {
+      logMsg(T('Target a wounded creature nearby to tame!', 'ui'), 'sys');
+      return false;
+    }
+    const dist = Math.hypot(G.target.x - p.x, G.target.y - p.y);
+    if (dist > 3.5 * TS) {
+      logMsg(T('Target is too far away to tame!', 'ui'), 'sys');
+      return false;
+    }
+    const res = petsSystem.attemptTame(p, G.target, itemId);
+    if (!res.success) {
+      removeItem(itemId, 1);
+      logMsg(T(res.reason, 'ui'), 'bad');
+      toast(T(res.reason, 'ui'), 'bad');
+      AUDIO.playSfx('miss');
+      saveGame();
+      return false;
+    }
+    removeItem(itemId, 1);
+    const petDef = res.petDef;
+    const petId = res.petId;
+    G.pets.owned[petId] = {
+      id: petId,
+      name: petDef.name,
+      bondLevel: 1,
+      loyalty: 20,
+      exp: 0,
+      unlockedAt: now(),
+    };
+    if (!G.pets.activePetId) {
+      G.pets.activePetId = petId;
+      syncPetFollower();
+      recompute(p);
+    }
+    G.target.alive = false;
+    G.target.deadUntil = now() + R.respawnMs;
+    G.target = null;
+    G.targetSource = null;
+    G.path = null;
+    AUDIO.playSfx('quest');
+    toast(`🐾 ${T('Successfully tamed', 'ui')} [${T(petDef.name, 'items')}]!`, 'good');
+    logMsg(`Successfully tamed ${petDef.name}!`, 'good');
+    if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
+    saveGame();
+    return true;
+  }
   if (itemId === 'old_card_album') {
     removeItem(itemId);
     AUDIO.playSfx('levelup');
@@ -7176,6 +7301,7 @@ function saveGame() {
       incursion: incursionSystem.serialize(),
       gathering: gatheringSystem.serialize(),
       bestiary: cardsSystem.serialize(G.bestiary),
+      pets: petsSystem.serialize(G.pets),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -7304,6 +7430,8 @@ function resumeGame() {
   if (w.incursion) incursionSystem.deserialize(w.incursion);
   if (w.gathering) gatheringSystem.deserialize(w.gathering);
   G.bestiary = cardsSystem.deserialize(w.bestiary);
+  G.pets = petsSystem.deserialize(w.pets);
+  syncPetFollower();
   loadMap(savedDungeon?'whispering_woods':MAPS[w.mapId]?w.mapId:'town_awakening',savedDungeon?entrance?.x:w.col,savedDungeon?entrance?.y:w.row);
   maybeStartPendingQuest();
   updateQuestTracker();
@@ -7339,6 +7467,8 @@ function begin(classId, name) {
   incursionSystem.resetToIdle();
   gatheringSystem.deserialize(null);
   G.bestiary = cardsSystem.deserialize(null);
+  G.pets = petsSystem.deserialize(null);
+  syncPetFollower();
   Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
   G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
