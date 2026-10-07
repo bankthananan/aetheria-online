@@ -47,6 +47,7 @@ import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './system
 import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
 import { createPetsSystem } from './systems/pets.js';
 import { createPetsRenderer } from './render/pets-fx.js';
+import { createPetsUIRenderer } from './render/pets-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -191,6 +192,7 @@ const petsSystem = createPetsSystem({
   rnd: () => Math.random(),
 });
 const petsFx = createPetsRenderer({ T, PX });
+const petsUI = createPetsUIRenderer({ T });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -440,6 +442,7 @@ const G = {
   pets: petsSystem.deserialize(null),
   petsSystem,
   petsFx,
+  petsUI,
   petFollower: null,
   saveStatus: 'saved',
 };
@@ -5430,6 +5433,9 @@ function worldChronicleHtml() {
       <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'bestiary' ? 'active' : ''}" data-chronicle-tab="bestiary" style="font-weight:bold;${currentTab === 'bestiary' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
         📖 ${T('Bestiary Codex', 'ui')}
       </button>
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'companions' ? 'active' : ''}" data-chronicle-tab="companions" style="font-weight:bold;${currentTab === 'companions' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        🐾 ${T('Companions & Familiars', 'ui')}
+      </button>
     </div>
   `;
 
@@ -5445,6 +5451,22 @@ function worldChronicleHtml() {
       ${tabNav}
       <div class="bestiary-body">
         ${cardsUI.renderBestiaryTab(G.bestiary, { selectedZone: G._bestiaryZone || 'woods', selectedMonsterId: G._bestiaryMonsterId || null })}
+      </div>
+    </section>`;
+  }
+
+  if (currentTab === 'companions') {
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · COMPANION SANCTUARY', 'ui')}</small>
+          <h2>${T('Companions & Familiars', 'ui')}</h2>
+          <p>${T('Loyal beasts and bonded familiars granting passive auras and auto-loot perks.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="companions-body">
+        ${petsUI.renderCompanionsTab(G.pets, G.player?.inventory || [])}
       </div>
     </section>`;
   }
@@ -6131,6 +6153,35 @@ function wirePanel(id, el) {
     el.querySelectorAll('[data-monster-id]').forEach(b => b.onclick = () => {
       G._bestiaryMonsterId = b.dataset.monsterId;
       refreshPanel('world');
+    });
+    el.querySelectorAll('[data-summon-pet]').forEach(b => b.onclick = () => {
+      if (!G.pets) G.pets = { activePetId: null, owned: {} };
+      G.pets.activePetId = b.dataset.summonPet;
+      syncPetFollower();
+      recompute(G.player);
+      saveGame();
+      refreshPanel('world');
+    });
+    el.querySelectorAll('[data-dismiss-pet]').forEach(b => b.onclick = () => {
+      if (!G.pets) G.pets = { activePetId: null, owned: {} };
+      G.pets.activePetId = null;
+      syncPetFollower();
+      recompute(G.player);
+      saveGame();
+      refreshPanel('world');
+    });
+    el.querySelectorAll('[data-feed-pet-id]').forEach(b => b.onclick = () => {
+      const petId = b.dataset.feedPetId;
+      const feastId = b.dataset.feastId;
+      if (itemQty(feastId) > 0 && G.pets?.owned?.[petId]) {
+        removeItem(feastId, 1);
+        petsSystem.feedPet(G.pets.owned[petId], feastId);
+        if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
+        AUDIO.playSfx('pickup');
+        recompute(G.player);
+        saveGame();
+        refreshPanel('world');
+      }
     });
   }
   if (id === 'settings') {
