@@ -272,7 +272,8 @@ function socketGem(uid, idx, gemItemId) {
   if (!inst || !Array.isArray(inst.sockets) || idx < 0 || idx >= inst.sockets.length) return false;
   if (inst.sockets[idx]) return false;                    // already filled
   if (itemById[gemItemId]?.type === 'card') {
-    const cardCheck = cardsSystem.canSocketCard(inst, gemItemId, idx);
+    const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
+    const cardCheck = cardsSystem.canSocketCard({ ...inst, slot }, gemItemId, idx);
     if (!cardCheck.canSocket || itemQty(gemItemId) < 1) return false;
     removeItem(gemItemId, 1);
     inst.sockets[idx] = gemItemId;

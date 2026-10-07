@@ -632,7 +632,12 @@ export function createCardsSystem({ now = Date.now, rnd = Math.random } = {}) {
       return { canSocket: false, reason: 'Socket is already occupied' };
     }
 
-    const itemSlot = itemInst.slot || itemInst.type;
+    let itemSlot = itemInst.slot || itemInst.type;
+    if (!itemSlot && itemInst.itemId) {
+      if (itemInst.itemId.includes('blade') || itemInst.itemId.includes('sword') || itemInst.itemId.includes('bow') || itemInst.itemId.includes('staff') || itemInst.itemId.includes('dagger') || itemInst.itemId.includes('wand')) itemSlot = 'weapon';
+      else if (itemInst.itemId.includes('plate') || itemInst.itemId.includes('robe') || itemInst.itemId.includes('armor') || itemInst.itemId.includes('helm') || itemInst.itemId.includes('shield') || itemInst.itemId.includes('boots') || itemInst.itemId.includes('cloak')) itemSlot = 'armor';
+      else if (itemInst.itemId.includes('ring') || itemInst.itemId.includes('amulet') || itemInst.itemId.includes('necklace') || itemInst.itemId.includes('accessory')) itemSlot = 'accessory';
+    }
     const targetSlot = cardDef.targetSlot;
     if (targetSlot === 'any') {
       return { canSocket: true };
