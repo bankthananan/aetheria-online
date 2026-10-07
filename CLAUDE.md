@@ -59,6 +59,8 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/render/pets-ui.js` — World Chronicle 'Companions & Familiars' tab renderer, active companion banner, feast quick-feed tray, and responsive roster grid with boxing containment
   - `js/render/raids-fx.js` — Canvas 2D renderer for elemental ground rune circles, hexagonal Aegis energy dome, break gauge bar, geometric telegraphs (fissure box, breath cone, cataclysm ring), shatter bursts, and strict zero camera shake.
   - `js/render/raids-ui.js` — Top encounter HUD with segmented phase dividers, break shield meter, contribution pill, and victory summary modal with performance breakdown, spoils showcase, and strict boxing containment.
+  - `js/render/spire-fx.js` — Canvas 2D affix shaders, ascendance portal with concentric rings and rising sparkles, milestone boss warning fanfare, and strict zero camera shake.
+  - `js/render/spire-ui.js` — Top encounter HUD with biome and affix badges, 10-floor elevator modal selector, Spire Reliquary exchange catalog, and strict boxing containment (`box-sizing: border-box`, `min-width: 0`, `overflow-x: hidden`).
   - `js/systems/boss-mechanics.js` — Guardian encounter state machine, telegraph patterns, lingering ground hazards, and geometric collision tests (oriented box, cone, circle)
   - `js/systems/elite-monsters.js` — procedural Champion & Elite affixes (Molten, Frost Nova, Vortex, Shielding, Avenger), hazard lifecycle, damage mitigation, and bonus loot/gem multipliers
   - `js/systems/relics.js` — Relic & Legendary Artifact equipment system (8th paper-doll slot, on-hit procs, blood shield absorption, thorns, and Phoenix Feather lethal revive)
@@ -69,8 +71,9 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/systems/cards.js` — Monster Cards & Bestiary Codex subsystem: full 43-card catalog, rarity brackets, target slot affinities, LUK-scaled card drop rolls, Old Card Album roll weights, socketing/unsocketing validation, bestiary kill/drop tracking, and 6 zone album milestones
   - `js/systems/pets.js` — Companion & Pet Familiars Subsystem: 5 archetypes, LUK & HP-scaled wild creature taming, feast bonding, passive auras with Devoted multiplier, auto-loot radius, and persistence
   - `js/systems/raids.js` — Core Raid & World Boss Subsystem: 3 apex titan archetypes (Voidmaw Sovereign, Caldera Colossus, Ancient Behemoth), 7-stage state machine, Aegis break-shield staggering, minion mitigation scaling, apex enrage corona, and tiered contribution grading (Bronze -> Paragon).
+  - `js/systems/spire.js` — Core Abyssal Spire Challenge Tower Subsystem: 100-floor challenge tower partitioned into 5 biome tiers (Shadow Depths, Glacial Ascent, Magma Foundry, Storm Spires, Void Zenith), 8 dynamic environmental affixes, milestone boss scaling every 10 floors up to Floor 100 (Primordial Nullking), permanent elevator checkpoints every 10 floors, Spire Emblem economy, relics (`crown_of_the_ascendant`, `abyssal_compass`, `spire_sigil`), 6 weapon transmogs, and prestige titles.
   - `js/systems/guild.js` — Adventurer's Guild bounties, rank ladder, and turn-ins
-  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, gathering, guidance, incursions, loadouts, loot-preferences, mastery, pets, player-features, raids, rare-spawns, relics, runes, subdungeon, weather)
+  - `js/systems/*.js` (boss-mechanics, dailies, difficulty, elite-monsters, exploration, game-clock, gathering, guidance, incursions, loadouts, loot-preferences, mastery, pets, player-features, raids, rare-spawns, relics, runes, spire, subdungeon, weather)
   - `js/input.js`, `js/viewport.js`, `js/expansion-runtime.js`, `js/guidance-runtime.js`, `js/equipment-features.js`
   - `js/zones/` holds per-zone content packages.
   The remaining `js/` modules are **logic-free data modules**.
