@@ -50,6 +50,7 @@ import { createPetsRenderer } from './render/pets-fx.js';
 import { createPetsUIRenderer } from './render/pets-ui.js';
 import { createRaidsSystem, RAID_STATES, CONTRIBUTION_TIERS, WORLD_BOSS_CATALOG } from './systems/raids.js';
 import { createRaidsRenderer } from './render/raids-fx.js';
+import { createRaidsUIRenderer } from './render/raids-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -197,6 +198,7 @@ const petsFx = createPetsRenderer({ T, PX });
 const petsUI = createPetsUIRenderer({ T });
 const raidsSystem = createRaidsSystem({ now, rnd: () => Math.random() });
 const raidsFx = createRaidsRenderer({ T, PX });
+const raidsUI = createRaidsUIRenderer({ T, WORLD_BOSS_CATALOG, CONTRIBUTION_TIERS });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -451,6 +453,7 @@ const G = {
   raids: raidsSystem.serialize(),
   raidsSystem,
   raidsFx,
+  raidsUI,
   raidState: null,
   raidBossMob: null,
   saveStatus: 'saved',
@@ -2367,6 +2370,21 @@ function killMonster(m) {
       AUDIO.playSfx('levelup');
       toast(`🏆 ${T('Raid Victory!', 'ui')} (${T(vic.tier.toUpperCase() + ' Tier', 'ui')})`, 'good');
       logMsg(`World Boss vanquished! Tier: ${vic.tier}, Score: ${vic.score}`, 'good');
+      const vicModalHtml = raidsUI.renderVictoryModalHtml(vic);
+      if (vicModalHtml && typeof document !== 'undefined') {
+        let modalContainer = document.getElementById('raid-victory-modal-container');
+        if (!modalContainer) {
+          modalContainer = document.createElement('div');
+          modalContainer.id = 'raid-victory-modal-container';
+          document.body.appendChild(modalContainer);
+        }
+        modalContainer.innerHTML = vicModalHtml;
+        modalContainer.querySelectorAll('[data-claim-raid-spoils]').forEach(b => {
+          b.onclick = () => {
+            modalContainer.innerHTML = '';
+          };
+        });
+      }
       // Clean up raid adds
       G.monsters = G.monsters.filter(mo => !mo._raidAdd);
       G.raidState = null;
@@ -4426,6 +4444,7 @@ function buildHud() {
   const p = G.player;
   $('#hud').innerHTML = `
     <div class="hud">
+      <div id="raid-hud-slot"></div>
       <div id="danger-vignette" class="danger-vignette"></div>
       <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
@@ -4785,6 +4804,10 @@ function updateHud() {
       weatherEl.textContent = `${curW.icon} ${T(curW.name, 'ui')}`;
       weatherEl.title = `${T(curW.name, 'ui')}: ${T(curW.desc, 'ui')}`;
     }
+  }
+  const rSlot = $('#raid-hud-slot');
+  if (rSlot && raidsUI) {
+    rSlot.innerHTML = raidsUI.renderRaidHudHtml(G.raidState);
   }
   updateAutomationHud();
 }
