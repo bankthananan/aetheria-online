@@ -79,12 +79,24 @@ console.log('--- b) Titan Horn Overworld Summoning ---');
 A.addItem('titan_horn', 3);
 assert.equal(A.itemQty('titan_horn'), 3, 'Player received 3x titan_horn');
 
+// Verification: Using titan_horn in town_awakening fails and does not consume item
+A.loadMap('town_awakening', 10, 10);
+const usedInTown = A.useItem('titan_horn');
+assert.equal(usedInTown, false, 'Using titan_horn in town_awakening fails');
+assert.equal(A.itemQty('titan_horn'), 3, 'titan_horn not consumed in invalid zone');
+assert.equal(A.G.raidState, null, 'No raid spawned in town_awakening');
+
 // 1. Load map 'dragon_caldera' -> useItem('titan_horn') spawns caldera_colossus
 A.loadMap('dragon_caldera', 10, 10);
 const used1 = A.useItem('titan_horn');
 assert.equal(used1, true, 'titan_horn successfully used in dragon_caldera');
 assert.equal(A.itemQty('titan_horn'), 2, 'titan_horn quantity decreased by 1 (now 2)');
 assert.ok(A.G.raidState?.active, 'Raid is active in dragon_caldera');
+
+// Verification: Using titan_horn while raid active fails with warning and does not consume item
+const usedWhileActive = A.useItem('titan_horn');
+assert.equal(usedWhileActive, false, 'Using titan_horn while raid active fails');
+assert.equal(A.itemQty('titan_horn'), 2, 'titan_horn not consumed while raid is already active');
 assert.equal(A.G.raidState.bossId, 'caldera_colossus', 'caldera_colossus spawned in dragon_caldera');
 assert.equal(A.G.raidBossMob?.def?.id, 'caldera_colossus', 'raidBossMob is caldera_colossus');
 A.adminAction('endraid');
@@ -167,6 +179,15 @@ const boss = A.G.raidBossMob;
 const raid = A.G.raidState;
 assert.equal(raid.phase, 1, 'Phase 1 initialized');
 assert.equal(raid.hp, 28000, 'Boss HP starts at 28,000');
+
+// Verification: Dodging an attack from boss via playerAvoidsHit(bossMob) calls recordHazardDodge() and increments metrics.hazardsDodged and score
+const dodgesBefore = raid.metrics.hazardsDodged;
+const scoreBeforeDodge = raid.score;
+A.G.player.invulnUntil = vnow + 1000;
+const avoided = A.playerAvoidsHit(boss);
+assert.equal(avoided, true, 'playerAvoidsHit returns true when invulnerable');
+assert.equal(raid.metrics.hazardsDodged, dodgesBefore + 1, 'metrics.hazardsDodged incremented by 1');
+assert.equal(raid.score, scoreBeforeDodge + 100, 'Contribution score incremented by 100 on hazard dodge');
 
 // Phase 1: Damage boss until HP reaches 60% (28,000 * 0.60 = 16,800 -> 11,200 damage)
 A.damageMonster(boss, 11200);
@@ -327,20 +348,24 @@ assert.equal(savedData.world.raids.activeRaid?.breakShield, 4000, 'Saved breakSh
 A.G.raidsSystem.resetToIdle();
 assert.equal(A.G.raidsSystem.getActiveRaid(), null, 'In-memory active raid reset to null');
 
-// Resume game from save
+// Resume game from save: Timed MMO raid encounters do not persist across session disconnects
 const resumeOk = A.resumeGame();
 assert.equal(resumeOk, true, 'Game resumed successfully');
 const resumedRaid = A.G.raidsSystem.getActiveRaid();
-assert.ok(resumedRaid, 'Raid state cleanly deserialized by resumeGame');
-assert.equal(resumedRaid.bossId, 'caldera_colossus', 'Deserialized bossId matches');
-assert.equal(resumedRaid.score, 7500, 'Deserialized score matches');
-assert.equal(resumedRaid.phase, 2, 'Deserialized phase matches');
-assert.equal(resumedRaid.breakShield, 4000, 'Deserialized breakShield matches');
-assert.equal(resumedRaid.adds.length, 2, 'Deserialized adds array matches');
+assert.equal(resumedRaid, null, 'Timed active raid cleanly reset to idle on session resume');
+assert.equal(A.G.raidState, null, 'G.raidState is null after session resume');
+assert.equal(A.G.raidBossMob, null, 'G.raidBossMob is null after session resume');
 
-// Clean up raid
-A.adminAction('endraid');
-assert.equal(A.G.raidState, null, 'Raid ended after persistence verification');
+// Direct deserialization verification on raidsSystem:
+A.G.raidsSystem.deserialize(savedData.world.raids);
+const deserializedDirectly = A.G.raidsSystem.getActiveRaid();
+assert.ok(deserializedDirectly, 'Raid state directly deserialized by raidsSystem.deserialize');
+assert.equal(deserializedDirectly.bossId, 'caldera_colossus', 'Deserialized bossId matches');
+assert.equal(deserializedDirectly.score, 7500, 'Deserialized score matches');
+assert.equal(deserializedDirectly.phase, 2, 'Deserialized phase matches');
+assert.equal(deserializedDirectly.breakShield, 4000, 'Deserialized breakShield matches');
+assert.equal(deserializedDirectly.adds.length, 2, 'Deserialized adds array matches');
+A.G.raidsSystem.resetToIdle();
 
 console.log('--- h) UX/UI Boxing Containment ---');
 const testRaidState = {

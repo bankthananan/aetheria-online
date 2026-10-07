@@ -1591,6 +1591,7 @@ function triggerIncursionStart() {
 }
 
 function spawnWorldBossRaid(bossId, { mapId = G.mapId, x = (G.player?.x ?? 0) + 80, y = (G.player?.y ?? 0) } = {}) {
+  G.monsters = G.monsters.filter(mo => !mo._raidBoss && !mo._raidAdd);
   const clampX = G.map ? clamp(x, TS * 2, (G.map.width - 2) * TS) : x;
   const clampY = G.map ? clamp(y, TS * 2, (G.map.height - 2) * TS) : y;
   raidsSystem.startRaid(bossId, { mapId, x: clampX, y: clampY, durationMs: 180000 });
@@ -2484,8 +2485,17 @@ function performParry() {
 // a counter-attack buff.
 function playerAvoidsHit(m) {
   const p = G.player, S = TUNING.stamina;
-  if (now() < p.invulnUntil) { floatText(p.x, p.y, 'dodged!', 'heal'); return true; }
+  if (now() < p.invulnUntil) {
+    if ((m?._raidBoss || m?._raidAdd) && G.raidState?.active) {
+      raidsSystem.recordHazardDodge();
+    }
+    floatText(p.x, p.y, 'dodged!', 'heal');
+    return true;
+  }
   if (now() < p.parryUntil) {
+    if ((m?._raidBoss || m?._raidAdd) && G.raidState?.active) {
+      raidsSystem.recordHazardDodge();
+    }
     p.parryUntil = 0;
     applyStatus(m, 'stun', 1);
     if (m.statuses.stun) m.statuses.stun.until = now() + S.parryStunMs;
@@ -6726,6 +6736,14 @@ function useItem(itemId) {
     return true;
   }
   if (itemId === 'titan_horn') {
+    if (!['whispering_woods', 'dragon_caldera', 'astral_rift'].includes(G.mapId)) {
+      toast(`🎺 ${T('The Titan Horn only echoes across ancient wild zones!', 'ui')}`, 'bad');
+      return false;
+    }
+    if (G.raidState?.active) {
+      toast(`⚠️ ${T('A World Boss is already active!', 'ui')}`, 'bad');
+      return false;
+    }
     removeItem('titan_horn', 1);
     AUDIO.playSfx('levelup');
     let targetTitan = 'caldera_colossus';
@@ -7638,7 +7656,15 @@ function resumeGame() {
   if (w.weather) weatherSystem.setWeatherOverride(w.mapId, w.weather);
   if (w.incursion) incursionSystem.deserialize(w.incursion);
   if (w.gathering) gatheringSystem.deserialize(w.gathering);
-  if (w.raids) raidsSystem.deserialize(w.raids);
+  if (w.raids) {
+    raidsSystem.deserialize(w.raids);
+    // Timed MMO raid encounters do not persist across session disconnects:
+    if (raidsSystem.getActiveRaid()?.active) {
+      raidsSystem.resetToIdle();
+    }
+    G.raidState = null;
+    G.raidBossMob = null;
+  }
   G.bestiary = cardsSystem.deserialize(w.bestiary);
   G.pets = petsSystem.deserialize(w.pets);
   syncPetFollower();

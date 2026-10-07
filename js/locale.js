@@ -836,7 +836,9 @@ export const L10N = {
       "Paragon Tier": "ระดับบรรพชนขั้นสูงสุด",
       "Claim Spoils": "รับของรางวัล",
       "Break Shield": "เกราะสกัด",
-      "Break Timer": "เวลาสกัดเกราะ"
+      "Break Timer": "เวลาสกัดเกราะ",
+      "A World Boss is already active!": "มีบอสโลกกำลังเปิดศึกอยู่แล้ว!",
+      "The Titan Horn only echoes across ancient wild zones!": "เขาสัตว์ไททันจะส่งเสียงก้องกังวานเฉพาะในดินแดนโบราณเท่านั้น!"
     },
     classes: {
       // Classes

@@ -307,5 +307,7 @@ assert.equal(T('Paragon Tier', 'ui'), 'ระดับบรรพชนขั�
 assert.equal(T('Claim Spoils', 'ui'), 'รับของรางวัล');
 assert.equal(T('Break Shield', 'ui'), 'เกราะสกัด');
 assert.equal(T('Break Timer', 'ui'), 'เวลาสกัดเกราะ');
+assert.equal(T('A World Boss is already active!', 'ui'), 'มีบอสโลกกำลังเปิดศึกอยู่แล้ว!');
+assert.equal(T('The Titan Horn only echoes across ancient wild zones!', 'ui'), 'เขาสัตว์ไททันจะส่งเสียงก้องกังวานเฉพาะในดินแดนโบราณเท่านั้น!');
 
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');
