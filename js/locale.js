@@ -211,7 +211,11 @@ export const L10N = {
       "Moonflower Seeds": "Moonflower Seeds",
       "Ember Blossom Seeds": "Ember Blossom Seeds",
       "Golden Grain": "Golden Grain",
-      "Artisan Bread": "Artisan Bread"
+      "Artisan Bread": "Artisan Bread",
+      "Developer Tools": "Developer Tools",
+      "Admin Mode": "Admin Mode",
+      "Dev Tools (Admin Mode) enabled": "Dev Tools (Admin Mode) enabled",
+      "Dev Tools (Admin Mode) disabled": "Dev Tools (Admin Mode) disabled"
     },
     maps: {
       "Guild Stronghold": "Guild Stronghold",
@@ -823,6 +827,10 @@ export const L10N = {
       "God mode:": "โหมดพระเจ้า:",
       "mobs alive": "มอนสเตอร์มีชีวิตอยู่",
       "Admin Tools": "แอดมินทูลส์",
+      "Developer Tools": "เครื่องมือนักพัฒนา",
+      "Admin Mode": "โหมดแอดมิน",
+      "Dev Tools (Admin Mode) enabled": "เปิดใช้งานเครื่องมือแอดมินแล้ว",
+      "Dev Tools (Admin Mode) disabled": "ปิดใช้งานเครื่องมือแอดมินแล้ว",
       "Uncharted": "ยังไม่สำรวจ",
       "Beyond the inked road": "ภายนอกเส้นทางในแผนที่",
       "Walk this land before its name and history can enter your Chronicle.": "ก้าวเท้าลงบนผืนแผ่นดินนี้ก่อนเพื่อจารึกชื่อและประวัติศาสตร์ลงในบันทึกของคุณ",

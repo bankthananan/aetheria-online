@@ -5544,6 +5544,18 @@ function togglePanel(id) {
 }
 function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio', book: 'Collection Book' }[id], 'ui'); }
 
+function shouldEnableAdminByDefault(name = '') {
+  if (name && name.trim().toLowerCase() === 'admin') return true;
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    const search = window.location.search || '';
+    if (host === 'localhost' || host === '127.0.0.1' || search.includes('admin') || search.includes('dev')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const ADMIN_GROUPS = [
   ['🧍 Character', [
     ['lvl5', '+5 Base Levels'], ['job5', '+5 Job Levels'], ['points', '+10 Stat & Skill pts'],
@@ -5573,6 +5585,21 @@ const ADMIN_GROUPS = [
     ['spawnrift', 'Spawn Dimensional Tear'], ['sealrift', 'Seal Active Incursion'],
     ['spawnraid', 'Spawn World Boss Raid'], ['endraid', 'End World Boss Raid'],
     ['resetgather', 'Reset Gather Nodes'], ['catchfish', '+1 of All Fish'],
+  ]],
+  ['🌀 Abyssal Spire', [
+    ['spirefloor:1', 'Floor 1 (Depths)'], ['spirefloor:10', 'Floor 10 Boss'],
+    ['spirefloor:50', 'Floor 50 Boss'], ['spirefloor:100', 'Floor 100 Zenith'],
+    ['spireclear', 'Clear Current Floor'], ['givespireemblems', '+500 Spire Emblems'],
+  ]],
+  ['🏰 Stronghold & Siege', [
+    ['warpstronghold', 'Warp: Stronghold'], ['spawnstrongholdsiege', 'Start Siege Defense'],
+    ['clearstrongholdsiege', 'End Siege Defense'], ['maxfacilities', 'Max Facilities (T3)'],
+    ['alltrophies', 'Socket All Trophies'], ['strongholdmats', '+50 Stronghold Mats'],
+  ]],
+  ['🏡 Homestead & Sanctum', [
+    ['warphomestead', 'Warp: Homestead'], ['homesteadseeds', '+10 All Seeds & Produce'],
+    ['homesteadwater', 'Water All 6 Plots'], ['homesteadmature', 'Mature All Crops'],
+    ['homesteadrest', 'Rest at Hearth (+EXP)'], ['maxpetloyalty', 'Max Pet Loyalty (100)'],
   ]],
   ['🎴 Monster Cards & Bestiary', [
     ['givecardalbum', '+1 Old Card Album'], ['givecard:card_slime', '+1 Slime Card'],
@@ -5753,8 +5780,10 @@ function adminAction(a, extra) {
     G.bestiary = cardsSystem.deserialize(null);
     toast('Bestiary reset.', 'good');
   }
-  else if (a === 'spirefloor') {
-    const fl = (typeof extra === 'object' && extra?.floor) || (typeof extra === 'number' ? extra : 1);
+  else if (a === 'spirefloor' || a?.startsWith?.('spirefloor:')) {
+    const fl = (typeof extra === 'object' && extra?.floor)
+      || (typeof extra === 'number' ? extra : null)
+      || (typeof a === 'string' && a.startsWith('spirefloor:') ? parseInt(a.slice('spirefloor:'.length), 10) : 1);
     startSpireRun(fl);
     toast(`Admin: Started Spire at Floor ${fl}`, 'good');
   }
@@ -5764,13 +5793,61 @@ function adminAction(a, extra) {
       toast('Admin: Cleared Spire Floor', 'good');
     }
   }
+  else if (a === 'givespireemblems') {
+    spireSystem.deserialize({
+      ...spireSystem.serialize(),
+      emblems: (spireSystem.getEmblems() || 0) + 500,
+    });
+    G.spire = spireSystem.serialize();
+    addItem('spire_emblem', 500);
+    toast('Admin: Added +500 Spire Emblems', 'good');
+  }
+  else if (a === 'warpstronghold') {
+    loadMap('guild_stronghold', 16, 22);
+    toast('Admin: Warped to Guild Stronghold', 'good');
+  }
   else if (a === 'spawnstrongholdsiege') {
+    if (G.mapId !== 'guild_stronghold') loadMap('guild_stronghold', 16, 22);
     startStrongholdSiege();
   }
   else if (a === 'clearstrongholdsiege') {
     G.monsters = G.monsters.filter(mo => !mo._siegeMob);
     G.strongholdState = null;
     G.strongholdCrystal.siegeActive = false;
+    toast('Admin: Cleared Stronghold Siege', 'good');
+  }
+  else if (a === 'maxfacilities') {
+    strongholdSystem.deserialize({
+      ...strongholdSystem.serialize(),
+      facilities: { treasury: 3, forge: 3, conservatory: 3, training: 3 },
+    });
+    G.stronghold = strongholdSystem.serialize();
+    recompute(p);
+    toast('Admin: Maxed all Stronghold facilities to Tier 3', 'good');
+  }
+  else if (a === 'alltrophies') {
+    strongholdSystem.deserialize({
+      ...strongholdSystem.serialize(),
+      trophies: {
+        pedestal_colossus: true,
+        pedestal_voidmaw: true,
+        pedestal_zenith: true,
+        pedestal_incursion: true,
+      },
+    });
+    G.stronghold = strongholdSystem.serialize();
+    recompute(p);
+    toast('Admin: Socketed all 4 Trophy Pedestals', 'good');
+  }
+  else if (a === 'strongholdmats') {
+    for (const mid of ['iron_ore', 'star_iron', 'blessed_ore', 'wood', 'hardwood', 'silverleaf', 'essence_nature', 'titan_heart', 'caldera_crystal', 'voidmaw_eye', 'spire_emblem', 'dimensional_shard', 'guild_commendation']) {
+      addStack(mid, 50);
+    }
+    toast('Admin: Granted +50 of all Stronghold materials', 'good');
+  }
+  else if (a === 'warphomestead') {
+    loadMap('player_homestead', 14, 17);
+    toast("Admin: Warped to Adventurer's Homestead", 'good');
   }
   else if (a === 'homesteadwater') {
     const plots = homesteadSystem.getPlots();
@@ -5785,15 +5862,27 @@ function adminAction(a, extra) {
   }
   else if (a === 'homesteadseeds') {
     for (const sid of ['seed_silverleaf', 'seed_golden_wheat', 'seed_moonflower', 'seed_ember_blossom']) {
-      addItem(sid, 5);
+      addStack(sid, 10);
     }
-    toast('Admin: Added 5 of each seed', 'good');
+    for (const pid of ['silverleaf', 'golden_wheat', 'moonflower', 'ember_blossom']) {
+      addStack(pid, 10);
+    }
+    toast('Admin: Added 10 of each seed & produce', 'good');
   }
   else if (a === 'homesteadrest') {
     homesteadSystem.restAtHearth(p);
     recompute(p, true);
     G.homestead = homesteadSystem.serialize();
     toast('Admin: Rested at Hearth with Well Rested buff', 'good');
+  }
+  else if (a === 'maxpetloyalty') {
+    if (G.pets && G.pets.owned) {
+      for (const pid of Object.keys(G.pets.owned)) {
+        G.pets.owned[pid].loyalty = 100;
+      }
+    }
+    recompute(p);
+    toast('Admin: Maxed loyalty (100) for all owned pets', 'good');
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -6562,6 +6651,11 @@ function panelBody(id) {
         <span>High Contrast Mode</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
+      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
+      <div class="setting-row">
+        <span>${T('Admin Mode','ui')}</span>
+        <input type="checkbox" id="admin-toggle" ${G.admin ? 'checked' : ''}>
+      </div>
     </div>`;
   }
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
@@ -7125,6 +7219,14 @@ function wirePanel(id, el) {
         const scVal = el.querySelector('#vol-scale-val');
         if (scVal) scVal.textContent = `${Math.round(G.uiScale * 100)}%`;
         saveGame();
+      };
+    }
+    const adminToggle = el.querySelector('#admin-toggle');
+    if (adminToggle) {
+      adminToggle.onchange = () => {
+        G.admin = adminToggle.checked;
+        buildHud();
+        toast(G.admin ? T('Dev Tools (Admin Mode) enabled', 'ui') : T('Dev Tools (Admin Mode) disabled', 'ui'), 'sys');
       };
     }
   }
@@ -8570,7 +8672,7 @@ function resumeGame() {
   _uid = maxUid;
   G.player = p; recompute(p, false);
   p.hp = clamp(sp.hp ?? p.maxHp, 1, p.maxHp); p.mp = clamp(sp.mp ?? p.maxMp, 0, p.maxMp);
-  G.admin = p.name.trim().toLowerCase() === 'admin';
+  G.admin = shouldEnableAdminByDefault(p.name);
   const w = d.world;
   G.audioVolumes = w.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
   AUDIO.setVolumes(G.audioVolumes);
@@ -8696,7 +8798,7 @@ function begin(classId, name) {
   syncPetFollower();
   Object.assign(G,normalizeExpansion());
   G.player = makePlayer(classId, name);
-  G.admin = G.player.name.trim().toLowerCase() === 'admin';   // name your hero "admin" for dev tools
+  G.admin = shouldEnableAdminByDefault(G.player.name);
   G.won = false; G.autoFarm = false; G.huntTargetId = null; G.taskGuide = null; G.advance = null; G.jobChoiceOpen = false; G.quest = null; G.pendingQuest = null; G.killCounts = {};
   G.autoConfig = normaliseAutoConfig(null);
   G.autoState = { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
@@ -8938,12 +9040,22 @@ window.addEventListener('keydown', e => {
   }
   if (G.running && captureHotkeyBinding(e)) return;
   syncModalPause();
-  if(gameClock.isPaused() && !['escape','c','i','k','m','q','b'].includes(key))return;
+  if(gameClock.isPaused() && !['escape','c','i','k','m','q','b','`','~','f2'].includes(key) && code !== 'Backquote')return;
   G.keys[key] = true;
   if (!G.running) return;
   const slot = !e.ctrlKey && !e.metaKey && !e.altKey ? G.player.hotkeys.indexOf(code) : -1;
   if (slot >= 0) { e.preventDefault(); if (!e.repeat) useHotbarSlot(slot); }
   else if (e.repeat) return;
+  else if (key === '`' || key === '~' || code === 'Backquote' || key === 'f2') {
+    e.preventDefault();
+    if (!G.admin) {
+      G.admin = true;
+      buildHud();
+      togglePanel('admin');
+    } else {
+      togglePanel('admin');
+    }
+  }
   else if (key === 'f') toggleFarm();
   else if (key === 'e') interact();
   else if (key === 'c') togglePanel('char');

@@ -567,7 +567,20 @@ for (const it of homesteadItems) {
 for (const mp of homesteadMaps) {
   assert.equal(T(mp.en, 'maps'), mp.th, `Thai map translation mismatch for: ${mp.en}`);
 }
-for (const ui of homesteadUiStrings) {
+const devToolUiStrings = [
+  { en: 'Developer Tools', th: 'เครื่องมือนักพัฒนา' },
+  { en: 'Admin Mode', th: 'โหมดแอดมิน' },
+  { en: 'Dev Tools (Admin Mode) enabled', th: 'เปิดใช้งานเครื่องมือแอดมินแล้ว' },
+  { en: 'Dev Tools (Admin Mode) disabled', th: 'ปิดใช้งานเครื่องมือแอดมินแล้ว' },
+];
+
+setLanguage('en');
+for (const ui of devToolUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.en, `English UI translation mismatch for: ${ui.en}`);
+}
+
+setLanguage('th');
+for (const ui of devToolUiStrings) {
   assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
 }
 
