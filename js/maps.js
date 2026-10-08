@@ -201,6 +201,7 @@ export const MAPS = {
     ],
     portals: [
       { x: 16, y: 26, toMap: 'whispering_woods', toX: 2, toY: 13, label: 'To Whispering Woods' },
+      { x: 27, y: 21, toMap: 'guild_stronghold', toX: 16, toY: 22, label: 'Enter Guild Stronghold' },
     ],
     playerStart: { x: 17, y: 24 },
   },
@@ -551,6 +552,39 @@ export const MAPS = {
       { x: 21, y: 15, toMap: 'town_awakening', toX: 12, toY: 10, label: 'Exit the Spire' },
     ],
     playerStart: { x: 2, y: 2 },
+  },
+
+  guild_stronghold: {
+    id: 'guild_stronghold',
+    name: 'Guild Stronghold',
+    ambient: 'A resolute bastion carved from living granite, echoing with the triumphs of Aetheria\'s legendary guild.',
+    chronicle: {
+      province: 'The Greenward',
+      epithet: 'Citadel of the Sovereign Vanguard',
+      landmark: 'The Stronghold Crystal',
+      lore: 'Sanctuary of the legendary guild, housing the Hall of Trophies and the ancient crystal core.',
+    },
+    width: 32, height: 24,
+    legend: LEGEND,
+    tiles: (() => {
+      const W = 32, H = 24, rows = [];
+      for (let y = 0; y < H; y++) {
+        if (y === 23) rows.push('O'.repeat(16) + 'P' + 'O'.repeat(15));
+        else if (y === 0 || y === H - 1) rows.push('O'.repeat(W));
+        else rows.push('O' + '.'.repeat(W - 2) + 'O');
+      }
+      return rows;
+    })(),
+    spawns: [],
+    npcs: [
+      { id: 'guild_smith', name: 'Master Smith Borgan', x: 5, y: 10, role: 'craft', title: 'Guild Forge Master', color: '#ff9800' },
+      { id: 'guild_banker', name: 'Treasurer Vane', x: 5, y: 14, role: 'banker', title: 'Guild Treasurer', color: '#ffd700' },
+      { id: 'guild_tactician', name: 'Tactician Cedric', x: 27, y: 14, role: 'tactician', title: 'Master Tactician', color: '#4caf50' },
+    ],
+    portals: [
+      { x: 16, y: 23, toMap: 'town_awakening', toX: 26, toY: 21, label: 'Back to Town' },
+    ],
+    playerStart: { x: 16, y: 22 },
   },
 };
 

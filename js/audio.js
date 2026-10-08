@@ -75,10 +75,16 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['D4','F4','A4','D5','C5','A4','F4','R','G4','B4','D5','G5','F5','D5','B4','R'],
     bass: ['D2','D2','B2','B2','G2','G2','A2','A2'], pad: ['D3','F3','A3','C4'],
   },
+  guild_stronghold: { // sanctuary of the sovereign vanguard: noble crystal resonance
+    bpm: 112, leadWave: 'triangle', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.15, bassPeak: 0.18, padPeak: 0.05, leadGate: 0.76, padEvery: 4, swing: 0.03,
+    lead: ['G4','C5','E5','G5','A5','G5','E5','R','F5','E5','D5','C5','D5','F5','E5','R'],
+    bass: ['C3','G2','A2','E2','F2','C3','F2','G2'], pad: ['C4','G3','A3','F3'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.
-const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battle: 'dragon_caldera', boss: 'dragon_caldera' };
+const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battle: 'dragon_caldera', boss: 'dragon_caldera', sanctuary: 'guild_stronghold', stronghold: 'guild_stronghold' };
 
 const AC = window.AudioContext || window.webkitAudioContext;
 

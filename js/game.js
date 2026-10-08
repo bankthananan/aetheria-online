@@ -54,6 +54,8 @@ import { createRaidsUIRenderer } from './render/raids-ui.js';
 import { createSpireSystem, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS, MILESTONE_BOSS_FLOORS } from './systems/spire.js';
 import { createSpireRenderer } from './render/spire-fx.js';
 import { createSpireUIRenderer } from './render/spire-ui.js';
+import { createStrongholdSystem, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_WAVE_TEMPLATES, SIEGE_REWARDS } from './systems/stronghold.js';
+import { createStrongholdRenderer } from './render/stronghold-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -76,6 +78,7 @@ const MAP_MUSIC = {
   abyssal_spire: 'abyssal_spire',
   ww_goblin_cave: 'ww_goblin_cave',
   ww_elder_hollow: 'ww_elder_hollow',
+  guild_stronghold: 'sanctuary',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.
@@ -206,6 +209,8 @@ const raidsUI = createRaidsUIRenderer({ T, WORLD_BOSS_CATALOG, CONTRIBUTION_TIER
 const spireSystem = createSpireSystem({ now, rnd: () => Math.random() });
 const spireFx = createSpireRenderer({ T, PX });
 const spireUI = createSpireUIRenderer({ T, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS });
+const strongholdSystem = createStrongholdSystem({ now, rnd: () => Math.random() });
+const strongholdFx = createStrongholdRenderer({ T, PX });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -257,7 +262,7 @@ function rollItem(itemId, bias = 0, forceRarity) {
   return { itemId, uid: ++_uid, rarity, affixes, plus: 0, sockets };
 }
 // loot bias grows with the monster's rolled level, the hero's LUK, and guild rank.
-const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15;
+const dropBias = (m, p) => (m.lvl || m.def.level) * TUNING.dropLevelBias + (m.def.sizeTiles >= 2 ? 3 : 0) + (p?.stats?.luk || 0) * TUNING.dropLuckBias + (G.guildRankIdx || 0) * 0.15 + (strongholdSystem.getTrophyAuras()?.lootBias || 0);
 const itemRarity = inst => RARITY[inst?.rarity] || RARITY.common;
 const itemAffixes = inst => Array.isArray(inst?.affixes) ? inst.affixes : [];
 const refineMult = inst => 1 + TUNING.refine.atkPerPlus * (inst.plus || 0);
@@ -469,6 +474,11 @@ const G = {
   spireUI,
   spireState: null,
   spireBossMob: null,
+  stronghold: strongholdSystem.serialize(),
+  strongholdSystem,
+  strongholdFx,
+  strongholdState: null,
+  strongholdCrystal: { x: 16 * TS, y: 12 * TS, hp: 15000, maxHp: 15000, sizeTiles: 2 },
   saveStatus: 'saved',
 };
 
@@ -1201,6 +1211,32 @@ function recompute(p, fill) {
   }
   p.rangeBonus = st.int * TUNING.intRange;                       // extra tiles for ranged/magic
   p.basicRange = MELEE.has(p.combatClass) ? 1.5 : 5 + p.rangeBonus;
+
+  p.expMult = 1;
+  p.skillExpMult = 1;
+  p.dmgMult = 1;
+  p.critDmg = 0;
+  p.magicDef = 0;
+
+  const strongholdMods = strongholdSystem.getPassiveModifiers();
+  const trophyAuras = strongholdSystem.getTrophyAuras();
+  if (strongholdMods.expMult) p.expMult = (p.expMult || 1) * strongholdMods.expMult;
+  if (strongholdMods.skillExpMult) p.skillExpMult = (p.skillExpMult || 1) * strongholdMods.skillExpMult;
+  if (strongholdMods.dmgPct) p.dmgMult = (p.dmgMult || 1) * (1 + strongholdMods.dmgPct / 100);
+  if (trophyAuras.maxHp) p.maxHp += trophyAuras.maxHp;
+  if (trophyAuras.physDef) p.physDef += trophyAuras.physDef;
+  if (trophyAuras.magicDef) p.magicDef += trophyAuras.magicDef;
+  if (trophyAuras.critChance) p.critChance += trophyAuras.critChance;
+  if (trophyAuras.critDmg) p.critDmg += trophyAuras.critDmg;
+  if (trophyAuras.dmgPct) p.dmgMult = (p.dmgMult || 1) * (1 + trophyAuras.dmgPct / 100);
+  if (trophyAuras.moveSpdPct) p.moveMult = (p.moveMult || 1) * (1 + trophyAuras.moveSpdPct / 100);
+  if (trophyAuras.res_fire) p.res_fire = (p.res_fire || 0) + trophyAuras.res_fire;
+  if (trophyAuras.res_nature) p.res_nature = (p.res_nature || 0) + trophyAuras.res_nature;
+  if (trophyAuras.res_void) p.res_void = (p.res_void || 0) + trophyAuras.res_void;
+  if (trophyAuras.res_light) p.res_light = (p.res_light || 0) + trophyAuras.res_light;
+  p.strongholdMods = strongholdMods;
+  p.trophyAuras = trophyAuras;
+
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
   p.hp = clamp(p.hp, 0, p.maxHp);
   p.mp = clamp(p.mp, 0, p.maxMp);
@@ -1725,6 +1761,63 @@ function advanceSpireFloor() {
   }
 }
 
+function startStrongholdSiege() {
+  if (G.mapId !== 'guild_stronghold') return false;
+  const siege = strongholdSystem.startSiege();
+  G.strongholdState = siege;
+  G.strongholdCrystal.hp = siege.crystalHp;
+  G.strongholdCrystal.maxHp = siege.maxCrystalHp;
+  G.strongholdCrystal.siegeActive = true;
+  spawnSiegeWave(1);
+  toast(`⚔ ${T('Crystal Siege Defense', 'ui')} — ${T('WAVE', 'ui')} 1 / 3!`, 'bad');
+  return siege;
+}
+
+function spawnSiegeWave(waveNum) {
+  const tpl = SIEGE_WAVE_TEMPLATES[waveNum - 1];
+  if (!tpl) return;
+  for (let i = 0; i < tpl.foes.length; i++) {
+    const { id, count } = tpl.foes[i];
+    const fDef = monById[id] || CONTENT.monsters[0];
+    for (let j = 0; j < count; j++) {
+      const isWest = (j % 2 === 0);
+      const sx = isWest ? 3 * TS : (15 + (j % 3)) * TS;
+      const sy = isWest ? (11 + (j % 3)) * TS : 21 * TS;
+      const mob = makeMonster(fDef, sx, sy, fDef.level || 60);
+      mob._siegeMob = true;
+      mob._siegeTarget = 'crystal';
+      mob.deadUntil = Infinity;
+      G.monsters.push(mob);
+    }
+  }
+}
+
+function resolveStrongholdSiegeVictory() {
+  const vic = strongholdSystem.resolveSiegeVictory();
+  if (vic?.success) {
+    const p = G.player;
+    G.guildPoints = (G.guildPoints || 0) + vic.guildPoints;
+    p.zeny = (p.zeny || 0) + vic.zeny;
+    addItem('guild_commendation', vic.commendations);
+    if (vic.ore) addItem(vic.ore, vic.oreCount);
+    G.strongholdCrystal.siegeActive = false;
+    G.strongholdState = null;
+    AUDIO.playSfx('levelup');
+    toast(`🏆 ${T('Siege Victory!', 'ui')} (${vic.grade} Tier)`, 'good');
+    logMsg(`Stronghold Crystal defended! Grade: ${vic.grade}, +${vic.guildPoints} GP, +${vic.commendations} Commendations`, 'good');
+    G.monsters = G.monsters.filter(mo => !mo._siegeMob);
+  }
+}
+
+function failStrongholdSiege() {
+  strongholdSystem.failSiege();
+  G.strongholdCrystal.siegeActive = false;
+  G.strongholdState = null;
+  toast(`💀 ${T('Defense Failed!', 'ui')}`, 'bad');
+  logMsg('The Stronghold Crystal has fractured! Defense failed.', 'bad');
+  G.monsters = G.monsters.filter(mo => !mo._siegeMob);
+}
+
 // A spawned monster rolls its own level around the definition's base (bosses are
 // fixed). hp/atk/def/exp scale with the rolled level so a Lv8 wolf really is tougher
 // than a Lv6 one. Instance combat stats live on the monster (m.atk/m.dv/m.exp/m.lvl),
@@ -2232,6 +2325,10 @@ function damageMonster(m, dmg, isCrit, silent) {
     m.hp -= dmg;
   }
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
+  if (m._siegeMob) {
+    m._siegeTarget = 'player';
+    m.provoked = true;
+  }
   if (isCrit) {
     combatFx.addScreenShake(0.25);
     floatText(m.x, m.y, dmg, 'crit', 'CRIT!');
@@ -2563,6 +2660,20 @@ function killMonster(m) {
           toast(`⚡ ${T('Wave {w}/3', 'ui').replace('{w}', nextInc.currentWave)}`, 'bad');
           spawnIncursionWave(nextInc);
         }
+      }
+    }
+  }
+
+  // Stronghold siege mob wave clear check
+  if (m._siegeMob && G.strongholdState?.active) {
+    const aliveSiege = G.monsters.filter(mo => mo.alive && mo._siegeMob && mo !== m);
+    if (aliveSiege.length === 0) {
+      if (G.strongholdState.wave < 3) {
+        strongholdSystem.advanceSiegeWave();
+        spawnSiegeWave(G.strongholdState.wave);
+        toast(`⚔ ${T('WAVE', 'ui')} ${G.strongholdState.wave} / 3!`, 'bad');
+      } else {
+        resolveStrongholdSiegeVictory();
       }
     }
   }
@@ -3858,6 +3969,23 @@ function render() {
       spireFx.drawMilestoneBossFanfare(ctx, G.spireBossMob, G.cam, now(), CANVAS_W, CANVAS_H);
     }
   }
+  if (G.mapId === 'guild_stronghold') {
+    strongholdFx.drawCrystalBeacon(ctx, G.strongholdCrystal, G.cam, now(), CANVAS_W, CANVAS_H);
+    const pedestals = [
+      { id: 'pedestal_colossus', x: 12 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_colossus'), color: '#ff5722' },
+      { id: 'pedestal_voidmaw', x: 14 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_voidmaw'), color: '#9c27b0' },
+      { id: 'pedestal_zenith', x: 18 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_zenith'), color: '#ffd700' },
+      { id: 'pedestal_incursion', x: 20 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_incursion'), color: '#00e5ff' },
+    ];
+    strongholdFx.drawPedestalBeams(ctx, pedestals, G.cam, now(), CANVAS_W, CANVAS_H);
+    if (G.strongholdState?.active) {
+      const lanes = [
+        { x1: 16 * TS, y1: 22 * TS, x2: 16 * TS, y2: 12 * TS },
+        { x1: 2 * TS, y1: 12 * TS, x2: 16 * TS, y2: 12 * TS }
+      ];
+      strongholdFx.drawSiegeLanes(ctx, lanes, G.cam, now(), CANVAS_W, CANVAS_H);
+    }
+  }
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
@@ -4298,6 +4426,37 @@ function step(dt) {
     }
   }
 
+  // Guild Stronghold update
+  if (G.mapId === 'guild_stronghold') {
+    strongholdFx.updateFx(dt);
+    if (G.strongholdState?.active) {
+      for (const mob of G.monsters) {
+        if (mob.alive && mob._siegeMob && mob._siegeTarget === 'crystal') {
+          const cx = 16 * TS, cy = 12 * TS;
+          const d = Math.hypot(cx - mob.x, cy - mob.y);
+          if (d <= 1.5 * TS) {
+            mob._nextCrystalHitAt = mob._nextCrystalHitAt || 0;
+            if (now() >= mob._nextCrystalHitAt) {
+              mob._nextCrystalHitAt = now() + 2000;
+              strongholdSystem.damageCrystal(25);
+              G.strongholdCrystal.hp = strongholdSystem.getSiegeState()?.crystalHp || 0;
+              if (G.strongholdCrystal.hp <= 0) {
+                failStrongholdSiege();
+                break;
+              }
+            }
+          } else {
+            const angle = Math.atan2(cy - mob.y, cx - mob.x);
+            mob.x += Math.cos(angle) * (mob.speed || 60) * (dt / 1000);
+            mob.y += Math.sin(angle) * (mob.speed || 60) * (dt / 1000);
+          }
+        }
+      }
+    } else {
+      G.strongholdCrystal.hp = Math.min(G.strongholdCrystal.maxHp, G.strongholdCrystal.hp + 100 * (dt / 1000));
+    }
+  }
+
   // Gathering & Fishing subsystem tick
   const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
   gatheringSystem.tick(dt, { activeMapId: G.mapId, dayPhase: curDayPhase, weatherId: G.weather?.id });
@@ -4503,6 +4662,12 @@ function handlePortals() {
   }
   for (const pt of G.portals) {
     if (pt.x === col && pt.y === row) {
+      if (pt.toMap === 'guild_stronghold') {
+        if ((G.guildRankIdx || 0) < GUILD_RANKS.indexOf('D')) {
+          toast(`⛔ ${T('The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.', 'ui')}`, 'bad');
+          return; // Block entry!
+        }
+      }
       G.lastPortalAt = now();
       AUDIO.playSfx('menu');
       loadMap(pt.toMap, pt.toX, pt.toY);
@@ -5386,6 +5551,14 @@ function adminAction(a, extra) {
       for (const m of [...G.monsters]) { if (m.alive) killMonster(m); }
       toast('Admin: Cleared Spire Floor', 'good');
     }
+  }
+  else if (a === 'spawnstrongholdsiege') {
+    startStrongholdSiege();
+  }
+  else if (a === 'clearstrongholdsiege') {
+    G.monsters = G.monsters.filter(mo => !mo._siegeMob);
+    G.strongholdState = null;
+    G.strongholdCrystal.siegeActive = false;
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -7818,6 +7991,7 @@ function saveGame() {
       pets: petsSystem.serialize(G.pets),
       raids: raidsSystem.serialize(),
       spire: spireSystem.serialize(),
+      stronghold: strongholdSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -7958,6 +8132,10 @@ function resumeGame() {
   G.spireState = null;
   G.spireBossMob = null; // Clean session disconnect reset
   G.spire = spireSystem.serialize();
+  if (w.stronghold) strongholdSystem.deserialize(w.stronghold);
+  G.strongholdState = null;
+  G.strongholdCrystal.siegeActive = false;
+  G.monsters = G.monsters.filter(mo => !mo._siegeMob);
   G.bestiary = cardsSystem.deserialize(w.bestiary);
   G.pets = petsSystem.deserialize(w.pets);
   syncPetFollower();
@@ -8001,6 +8179,9 @@ function begin(classId, name) {
   G.spireState = null;
   G.spireBossMob = null;
   G.spire = spireSystem.serialize();
+  strongholdSystem.deserialize(null);
+  G.strongholdState = null;
+  G.strongholdCrystal.siegeActive = false;
   gatheringSystem.deserialize(null);
   G.bestiary = cardsSystem.deserialize(null);
   G.pets = petsSystem.deserialize(null);

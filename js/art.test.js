@@ -120,6 +120,7 @@ const expandedMinimums = {
   abyssal_spire: [24, 18],
   ww_goblin_cave: [22, 16],
   ww_elder_hollow: [24, 18],
+  guild_stronghold: [32, 24],
 };
 const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
 

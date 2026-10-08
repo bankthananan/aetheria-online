@@ -2108,7 +2108,13 @@ export const L10N = {
       "Ruins Archivist": "ผู้จารึกโบราณสถาน",
       "Exiled Watchman": "ทหารยามผู้ถูกเนรเทศ",
       "Last Forgekeeper": "ผู้ดูแลเตาหลอมคนสุดท้าย",
-      "Rift Cartographer": "นักทำแผนที่รอยแยก"
+      "Rift Cartographer": "นักทำแผนที่รอยแยก",
+      "Master Smith Borgan": "หัวหน้าช่างตีเหล็กบอร์แกน",
+      "Guild Forge Master": "ปรมาจารย์เตาหลอมกิลด์",
+      "Treasurer Vane": "เหรัญญิกเวย์น",
+      "Guild Treasurer": "เหรัญญิกกิลด์",
+      "Tactician Cedric": "นักยุทธศาสตร์เซดริก",
+      "Master Tactician": "ปรมาจารย์นักยุทธศาสตร์"
     },
     dialogues: {
       "Fresh gear for a fresh face? You've got the look of someone not from around here.": "อุปกรณ์ใหม่สำหรับนักผจญภัยหน้าใหม่หรือเปล่า? เจ้าดูเหมือนคนที่มาจากต่างถิ่นเลยนะ",
@@ -2531,7 +2537,12 @@ export const L10N = {
       "Tower of 100 Ascendant Trials": "หอคอยแห่ง 100 บททดสอบสู่ความรุ่งโรจน์",
       "The Zenith Elevator": "ลิฟต์แห่งจุดสูงสุด",
       "Carved from primordial voidstone and starlight, the Abyssal Spire tests the greatest legends of Aetheria across 100 grueling floors.": "สลักเสลาขึ้นจากหินแห่งความว่างเปล่าโบราณและแสงดวงดาว หอคอยแห่งอบิสจะทดสอบตำนานที่ยิ่งใหญ่ที่สุดของเอเธเรียตลอด 100 ชั้นอันทรหด",
-      "Exit the Spire": "ออกจากหอคอย"
+      "Exit the Spire": "ออกจากหอคอย",
+      "Enter Guild Stronghold": "เข้าสู่ป้อมปราการกิลด์",
+      "A resolute bastion carved from living granite, echoing with the triumphs of Aetheria's legendary guild.": "ป้อมปราการอันมั่นคงที่สลักขึ้นจากหินแกรนิตมีชีวิต ก้องกังวานไปด้วยชัยชนะของกิลด์ในตำนานแห่งเอเธเรีย",
+      "Citadel of the Sovereign Vanguard": "ป้อมปราการแห่งกองหน้าผู้ครองอำนาจ",
+      "The Stronghold Crystal": "คริสตัลป้อมปราการ",
+      "Sanctuary of the legendary guild, housing the Hall of Trophies and the ancient crystal core.": "วิหารแห่งกิลด์ในตำนาน ที่ตั้งของหอเกียรติยศถ้วยรางวัลและแกนกลางคริสตัลโบราณ"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",
