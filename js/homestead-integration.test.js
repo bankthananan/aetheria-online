@@ -205,6 +205,15 @@ A.craftItem('r_seed_silverleaf');
 const seedsAfterCraft = A.G.player.inventory.find(i => i.itemId === 'seed_silverleaf')?.qty || 0;
 assert.equal(seedsAfterCraft, seedsBeforeCraft + 1, 'Crafted 1 seed_silverleaf from produce');
 
+// Test background crop growth outside homestead
+A.G.homesteadSystem.plantSeed(1, 'seed_golden_wheat', A.G.player);
+A.loadMap('town_awakening', 10, 10);
+assert.equal(A.G.mapId, 'town_awakening');
+const p1Before = A.G.homesteadSystem.getPlot(1).progressMs;
+A.step(1.0); // 1 second dt in town
+assert.ok(A.G.homesteadSystem.getPlot(1).progressMs > p1Before, 'Crops grow continuously worldwide while adventuring');
+A.loadMap('player_homestead', 14, 17);
+
 console.log('--- d) Companion Pasture & Daily Petting / Forage Gifts ---');
 // Setup owned pet
 A.G.pets = {
@@ -260,6 +269,9 @@ A.G.player.equip = {
 const storeRes = A.G.homesteadSystem.storeLoadout('mannequin_a', A.G.player);
 assert.equal(storeRes.success, true, 'Stored loadout on Mannequin A');
 assert.equal(A.G.homesteadSystem.getMannequin('mannequin_a').loadout.weapon.itemId, 'spire_blade');
+assert.equal(A.G.player.equip.weapon, null, 'Gear unequipped from player to prevent duplication exploit');
+assert.equal(A.G.player.equip.body, null, 'Gear unequipped from player to prevent duplication exploit');
+assert.equal(A.G.player.equip.head, null, 'Gear unequipped from player to prevent duplication exploit');
 
 // Change player equipment to alternative gear
 const scythe = A.rollItem('spire_scythe', 0, 'epic');

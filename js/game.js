@@ -4540,9 +4540,9 @@ function step(dt) {
     }
   }
 
-  // Adventurer's Homestead update
+  // Adventurer's Homestead update (crops grow continuously worldwide)
+  homesteadSystem.tickCrops(dt);
   if (G.mapId === 'player_homestead') {
-    homesteadSystem.tickCrops(dt);
     homesteadFx.updateFx(dt);
     if (G.homesteadPets && Array.isArray(G.homesteadPets)) {
       for (const pet of G.homesteadPets) {
@@ -4823,13 +4823,17 @@ function handleHomesteadPlotInteraction(plotIdx) {
   const plot = homesteadSystem.getPlot(plotIdx);
   if (!plot) return;
   if (plot.stage === 3) {
+    const cropId = plot.cropId;
     const hRes = homesteadSystem.harvestCrop(plotIdx, G.player);
-    if (hRes.success) {
+    if (hRes && hRes.success) {
       AUDIO.playSfx('pickup');
-      const prodDef = itemById[hRes.harvest.produceId];
-      toast(`🌾 ${T('Harvested', 'ui')} ${hRes.harvest.produceYield}x ${prodDef ? T(prodDef.name, 'items') : hRes.harvest.produceId}!`, 'good');
-      if (hRes.harvest.seedReturned) {
-        toast(`🌱 +1 ${T(CROP_DEFINITIONS[plot.cropId]?.name || 'Seed', 'items')}`, 'good');
+      const produceId = hRes.yieldItem || hRes.harvest?.produceId;
+      const produceYield = hRes.yieldQty || hRes.harvest?.produceYield || 1;
+      const seedReturned = hRes.returnedSeed || hRes.harvest?.seedReturned;
+      const prodDef = itemById[produceId];
+      toast(`🌾 ${T('Harvested', 'ui')} ${produceYield}x ${prodDef ? T(prodDef.name, 'items') : produceId}!`, 'good');
+      if (seedReturned) {
+        toast(`🌱 +1 ${T(CROP_DEFINITIONS[cropId]?.name || 'Seed', 'items')}`, 'good');
       }
       G.homestead = homesteadSystem.serialize();
       saveGame();
@@ -4842,21 +4846,9 @@ function handleHomesteadPlotInteraction(plotIdx) {
       G.homestead = homesteadSystem.serialize();
       saveGame();
     }
-  } else if (plot.stage === 0) {
-    const seedIds = ['seed_silverleaf', 'seed_golden_wheat', 'seed_moonflower', 'seed_ember_blossom'];
-    const availableSeed = seedIds.find(sid => (itemQty(G.player, sid) || 0) > 0);
-    if (availableSeed) {
-      const pRes = homesteadSystem.plantSeed(plotIdx, availableSeed, G.player);
-      if (pRes.success) {
-        AUDIO.playSfx('pickup');
-        const sDef = itemById[availableSeed];
-        toast(`🌱 ${T('Planted', 'ui')} ${sDef ? T(sDef.name, 'items') : availableSeed}!`, 'good');
-        G.homestead = homesteadSystem.serialize();
-        saveGame();
-      }
-    } else {
-      toast(`🌱 ${T('No seeds available to plant. Gather or craft seeds first!', 'ui')}`, 'bad');
-    }
+  } else {
+    // Empty plot or watered growing plot: open modal for seed selection tray or growth progress
+    openHomesteadPlotModal(plotIdx);
   }
 }
 
@@ -7464,13 +7456,17 @@ function openHomesteadPlotModal(plotIdx) {
   });
   mc.querySelectorAll('[data-homestead-harvest]').forEach(b => {
     b.onclick = () => {
+      const cropId = plot?.cropId;
       const res = homesteadSystem.harvestCrop(plotIdx, G.player);
-      if (res.success) {
+      if (res && res.success) {
         AUDIO.playSfx('pickup');
-        const prodDef = itemById[res.harvest.produceId];
-        toast(`🌾 ${T('Harvested', 'ui')} ${res.harvest.produceYield}x ${prodDef ? T(prodDef.name, 'items') : res.harvest.produceId}!`, 'good');
-        if (res.harvest.seedReturned) {
-          toast(`🌱 +1 ${T(CROP_DEFINITIONS[plot.cropId]?.name || 'Seed', 'items')}`, 'good');
+        const produceId = res.yieldItem || res.harvest?.produceId;
+        const produceYield = res.yieldQty || res.harvest?.produceYield || 1;
+        const seedReturned = res.returnedSeed || res.harvest?.seedReturned;
+        const prodDef = itemById[produceId];
+        toast(`🌾 ${T('Harvested', 'ui')} ${produceYield}x ${prodDef ? T(prodDef.name, 'items') : produceId}!`, 'good');
+        if (seedReturned) {
+          toast(`🌱 +1 ${T(CROP_DEFINITIONS[cropId]?.name || 'Seed', 'items')}`, 'good');
         }
         G.homestead = homesteadSystem.serialize();
         saveGame();
@@ -8641,7 +8637,7 @@ function resumeGame() {
   G.spireBossMob = null; // Clean session disconnect reset
   G.spire = spireSystem.serialize();
   if (w.stronghold) strongholdSystem.deserialize(w.stronghold);
-  if (w.homestead) homesteadSystem.deserialize(w.homestead);
+  homesteadSystem.deserialize(w.homestead || null);
   G.homestead = homesteadSystem.serialize();
   G.strongholdState = null;
   G.strongholdCrystal.siegeActive = false;

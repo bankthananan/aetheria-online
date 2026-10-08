@@ -259,6 +259,13 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
       yieldQty,
       returnedSeed,
       seedQty,
+      harvest: {
+        produceId: cropDef.produceId,
+        produceYield: yieldQty,
+        seedReturned: returnedSeed,
+        seedId: cropDef.id,
+        seedQty,
+      },
       plot: { ...plot },
     };
   }
@@ -342,6 +349,9 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     if (!man || !player) return { success: false, reason: 'invalid_target' };
     for (const slot of MANNEQUIN_SLOTS) {
       man.loadout[slot] = player.equip?.[slot] ? JSON.parse(JSON.stringify(player.equip[slot])) : null;
+      if (player.equip) {
+        player.equip[slot] = null;
+      }
     }
     return { success: true, loadout: { ...man.loadout } };
   }
@@ -482,6 +492,7 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     waterPlot,
     tickCrops,
     harvestPlot,
+    harvestCrop: harvestPlot,
     petCompanion,
     feedCompanion,
     generatePastureGifts,

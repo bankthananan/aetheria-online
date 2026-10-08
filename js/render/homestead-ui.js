@@ -97,7 +97,7 @@ export function createHomesteadUIRenderer({
           <div style="box-sizing: border-box; min-width: 0; display: flex; justify-content: center; gap: 8px;">
             ${plot.watered ? `
               <span class="badge" style="box-sizing: border-box; min-width: 0; background: rgba(3, 169, 244, 0.2); color: #81d4fa; border: 1px solid #03a9f4; padding: 4px 10px; border-radius: 4px; font-size: 11px;">
-                💧 Watered (2× Growth Speed)
+                💧 ${T('Watered (2× Growth Speed)', 'ui')}
               </span>
             ` : `
               <button class="btn btn--secondary" data-homestead-water="${plotId}" style="box-sizing: border-box; min-width: 0; padding: 6px 14px;">
@@ -150,7 +150,7 @@ export function createHomesteadUIRenderer({
     } else {
       petsCards = petsList.map(pet => {
         const loyalty = pet.loyalty || 0;
-        const statusBadge = loyalty >= 80 ? 'Devoted ♥' : loyalty >= 40 ? 'Loyal' : 'Bonding';
+        const statusBadge = loyalty >= 80 ? T('Devoted ♥', 'ui') : loyalty >= 40 ? T('Loyal', 'ui') : T('Bonding', 'ui');
         return `
           <div class="homestead-pet-card" style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px;">
             <div style="box-sizing: border-box; min-width: 0; flex: 1; padding-right: 8px;">
@@ -239,9 +239,9 @@ export function createHomesteadUIRenderer({
           <table style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; border-collapse: collapse; font-size: 12px; margin-bottom: 14px;">
             <thead>
               <tr style="box-sizing: border-box; min-width: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: #c9d1d9;">
-                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">Slot</th>
-                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">Currently Worn</th>
-                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">Mannequin Gear</th>
+                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">${T('Slot', 'ui')}</th>
+                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">${T('Currently Worn', 'ui')}</th>
+                <th style="box-sizing: border-box; min-width: 0; text-align: left; padding: 6px 8px;">${T('Mannequin Gear', 'ui')}</th>
               </tr>
             </thead>
             <tbody>
@@ -310,7 +310,7 @@ export function createHomesteadUIRenderer({
           <div style="font-weight: bold; color: #e6edf3;">Plot ${p.id + 1}</div>
           <div style="color: #8b949e;">${stageName}</div>
           <div style="color: #a5d6a7;">${cName}</div>
-          ${p.watered ? '<div style="color: #81d4fa;">💧 Watered</div>' : ''}
+          ${p.watered ? `<div style="color: #81d4fa;">💧 ${T('Watered', 'ui')}</div>` : ''}
         </div>
       `;
     }).join('');
