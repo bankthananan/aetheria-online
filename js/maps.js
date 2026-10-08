@@ -202,6 +202,7 @@ export const MAPS = {
     portals: [
       { x: 16, y: 26, toMap: 'whispering_woods', toX: 2, toY: 13, label: 'To Whispering Woods' },
       { x: 27, y: 21, toMap: 'guild_stronghold', toX: 16, toY: 22, label: 'Enter Guild Stronghold' },
+      { x: 14, y: 8, toMap: 'player_homestead', toX: 14, toY: 17, label: 'Enter Homestead' },
     ],
     playerStart: { x: 17, y: 24 },
   },
@@ -585,6 +586,35 @@ export const MAPS = {
       { x: 16, y: 23, toMap: 'town_awakening', toX: 26, toY: 21, label: 'Back to Town' },
     ],
     playerStart: { x: 16, y: 22 },
+  },
+
+  player_homestead: {
+    id: 'player_homestead',
+    name: "Adventurer's Homestead",
+    ambient: 'A tranquil personal haven with fragrant soil, crackling hearthfire, and roaming familiars.',
+    chronicle: {
+      province: 'Crownlands of Aster',
+      epithet: 'The Sovereign Sanctuary',
+      landmark: 'The Botanical Sanctum',
+      lore: 'A secluded personal estate granted to seasoned adventurers, featuring rich fertile plots, a pasture paddock, and a warm hearth.',
+    },
+    width: 28, height: 20,
+    legend: LEGEND,
+    tiles: (() => {
+      const W = 28, H = 20, rows = [];
+      for (let y = 0; y < H; y++) {
+        if (y === 0 || y === H - 1) rows.push('#'.repeat(W));
+        else if (y === 18) rows.push('#' + '.'.repeat(13) + 'P' + '.'.repeat(12) + '#');
+        else rows.push('#' + '.'.repeat(W - 2) + '#');
+      }
+      return rows;
+    })(),
+    spawns: [],
+    npcs: [],
+    portals: [
+      { x: 14, y: 18, toMap: 'town_awakening', toX: 14, toY: 8, label: 'Exit to Town' },
+    ],
+    playerStart: { x: 14, y: 17 },
   },
 };
 

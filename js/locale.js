@@ -194,7 +194,11 @@ export const L10N = {
     },
     maps: {
       "Guild Stronghold": "Guild Stronghold",
-      "Adventurer's Homestead": "Adventurer's Homestead"
+      "Adventurer's Homestead": "Adventurer's Homestead",
+      "The Sovereign Sanctuary": "The Sovereign Sanctuary",
+      "The Botanical Sanctum": "The Botanical Sanctum",
+      "Enter Homestead": "Enter Homestead",
+      "Exit to Town": "Exit to Town"
     }
   },
   th: {
@@ -2627,7 +2631,13 @@ export const L10N = {
       "A resolute bastion carved from living granite, echoing with the triumphs of Aetheria's legendary guild.": "ป้อมปราการอันมั่นคงที่สลักขึ้นจากหินแกรนิตมีชีวิต ก้องกังวานไปด้วยชัยชนะของกิลด์ในตำนานแห่งเอเธเรีย",
       "Citadel of the Sovereign Vanguard": "ป้อมปราการแห่งกองหน้าผู้ครองอำนาจ",
       "The Stronghold Crystal": "คริสตัลป้อมปราการ",
-      "Sanctuary of the legendary guild, housing the Hall of Trophies and the ancient crystal core.": "วิหารแห่งกิลด์ในตำนาน ที่ตั้งของหอเกียรติยศถ้วยรางวัลและแกนกลางคริสตัลโบราณ"
+      "Sanctuary of the legendary guild, housing the Hall of Trophies and the ancient crystal core.": "วิหารแห่งกิลด์ในตำนาน ที่ตั้งของหอเกียรติยศถ้วยรางวัลและแกนกลางคริสตัลโบราณ",
+      "The Sovereign Sanctuary": "แดนศักดิ์สิทธิ์แห่งเอกราช",
+      "The Botanical Sanctum": "สวนพฤกษศาสตร์ศักดิ์สิทธิ์",
+      "A secluded personal estate granted to seasoned adventurers, featuring rich fertile plots, a pasture paddock, and a warm hearth.": "คฤหาสน์ส่วนตัวอันเงียบสงบที่มอบให้แก่นักผจญภัยผู้ช่ำชอง โดดเด่นด้วยแปลงดินอันอุดมสมบูรณ์ ทุ่งเลี้ยงสัตว์ และเตาผิงอันอบอุ่น",
+      "A tranquil personal haven with fragrant soil, crackling hearthfire, and roaming familiars.": "สวรรค์ส่วนตัวอันเงียบสงบพร้อมดินหอมกรุ่น ไฟเตาผิงที่ปะทุ และเหล่าสัตว์เลี้ยงที่เดินเตร็ดเตร่",
+      "Enter Homestead": "เข้าสู่บ้านพักนักผจญภัย",
+      "Exit to Town": "กลับสู่เมือง"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",

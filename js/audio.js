@@ -81,10 +81,16 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['G4','C5','E5','G5','A5','G5','E5','R','F5','E5','D5','C5','D5','F5','E5','R'],
     bass: ['C3','G2','A2','E2','F2','C3','F2','G2'], pad: ['C4','G3','A3','F3'],
   },
+  player_homestead: { // cozy pastoral warmth by the garden hearth
+    bpm: 108, leadWave: 'triangle', bassWave: 'sine', padWave: 'sine',
+    leadPeak: 0.14, bassPeak: 0.18, padPeak: 0.05, leadGate: 0.72, padEvery: 4, swing: 0.04,
+    lead: ['G4','B4','D5','G5','E5','D5','B4','R','C5','E5','G5','E5','D5','C5','A4','R'],
+    bass: ['G2','G2','E2','E2','C2','C2','D2','D2'], pad: ['G3','B3','C4','D4'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.
-const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battle: 'dragon_caldera', boss: 'dragon_caldera', sanctuary: 'guild_stronghold', stronghold: 'guild_stronghold' };
+const THEME_ALIASES = { town: 'town_awakening', field: 'whispering_woods', battle: 'dragon_caldera', boss: 'dragon_caldera', sanctuary: 'guild_stronghold', stronghold: 'guild_stronghold', homestead: 'player_homestead' };
 
 const AC = window.AudioContext || window.webkitAudioContext;
 

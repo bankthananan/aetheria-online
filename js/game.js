@@ -57,6 +57,8 @@ import { createSpireUIRenderer } from './render/spire-ui.js';
 import { createStrongholdSystem, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_WAVE_TEMPLATES, SIEGE_REWARDS } from './systems/stronghold.js';
 import { createStrongholdRenderer } from './render/stronghold-fx.js';
 import { createStrongholdUIRenderer } from './render/stronghold-ui.js';
+import { createHomesteadSystem, CROP_DEFINITIONS, MANNEQUIN_SLOTS, PASTURE_FORAGE_TABLE, HEARTH_BUFF_DURATION_MS } from './systems/homestead.js';
+import { createHomesteadRenderer } from './render/homestead-fx.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -80,6 +82,7 @@ const MAP_MUSIC = {
   ww_goblin_cave: 'ww_goblin_cave',
   ww_elder_hollow: 'ww_elder_hollow',
   guild_stronghold: 'sanctuary',
+  player_homestead: 'player_homestead',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.
@@ -213,6 +216,8 @@ const spireUI = createSpireUIRenderer({ T, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOI
 const strongholdSystem = createStrongholdSystem({ now, rnd: () => Math.random() });
 const strongholdFx = createStrongholdRenderer({ T, PX });
 const strongholdUI = createStrongholdUIRenderer({ T, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_REWARDS });
+const homesteadSystem = createHomesteadSystem({ now, rnd: () => Math.random() });
+const homesteadFx = createHomesteadRenderer({ T, PX });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -482,9 +487,28 @@ const G = {
   strongholdUI,
   strongholdState: null,
   strongholdCrystal: { x: 16 * TS, y: 12 * TS, hp: 15000, maxHp: 15000, sizeTiles: 2 },
+  homestead: homesteadSystem.serialize(),
+  homesteadSystem,
+  homesteadFx,
+  homesteadPets: [],
   saveStatus: 'saved',
 };
 G.strongholdUI = strongholdUI;
+
+function syncHomesteadPets() {
+  if (G.mapId !== 'player_homestead') return;
+  const owned = G.pets?.owned ? Object.values(G.pets.owned) : [];
+  G.homesteadPets = owned.map((p, idx) => ({
+    id: p.id,
+    name: p.name || p.id,
+    loyalty: p.loyalty || 0,
+    x: (18 + (idx % 4) * 1.8) * TS,
+    y: (6 + Math.floor(idx / 4) * 2) * TS,
+    _nextMoveAt: now() + 1000 + idx * 500,
+    _targetX: null,
+    _targetY: null,
+  }));
+}
 
 function syncPetFollower() {
   if (G.pets?.activePetId && G.pets?.owned?.[G.pets.activePetId]) {
@@ -1240,6 +1264,9 @@ function recompute(p, fill) {
   if (trophyAuras.res_holy) p.res_holy = (p.res_holy || 0) + trophyAuras.res_holy;
   p.strongholdMods = strongholdMods;
   p.trophyAuras = trophyAuras;
+  if (homesteadSystem && homesteadSystem.isHearthBuffActive()) {
+    p.expMult = (p.expMult || 1) * 1.10;
+  }
 
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
   p.hp = clamp(p.hp, 0, p.maxHp);
@@ -1606,6 +1633,9 @@ function loadMap(mapId, spawnX, spawnY) {
       G.spireState = null;
       G.spireBossMob = null;
     }
+  }
+  if (mapId === 'player_homestead') {
+    syncHomesteadPets();
   }
   if (G.petFollower) {
     G.petFollower.x = G.player.x;
@@ -4005,6 +4035,36 @@ function render() {
       strongholdFx.drawSiegeLanes(ctx, lanes, G.cam, now(), CANVAS_W, CANVAS_H);
     }
   }
+  if (G.mapId === 'player_homestead') {
+    const plots = homesteadSystem.getPlots();
+    const plotCoords = [
+      { x: 5 * TS, y: 13 * TS },
+      { x: 7 * TS, y: 13 * TS },
+      { x: 9 * TS, y: 13 * TS },
+      { x: 5 * TS, y: 15 * TS },
+      { x: 7 * TS, y: 15 * TS },
+      { x: 9 * TS, y: 15 * TS },
+    ];
+    const plotsToDraw = plots.map((p, idx) => ({
+      ...p,
+      x: plotCoords[idx]?.x || (5 + (idx % 3) * 2) * TS,
+      y: plotCoords[idx]?.y || (13 + Math.floor(idx / 3) * 2) * TS,
+    }));
+    homesteadFx.drawCropPlots(ctx, plotsToDraw, G.cam, now(), CANVAS_W, CANVAS_H);
+
+    if (!G.homesteadPets || !G.homesteadPets.length) {
+      syncHomesteadPets();
+    }
+    homesteadFx.drawPasturePets(ctx, G.homesteadPets || [], G.cam, now(), CANVAS_W, CANVAS_H);
+
+    homesteadFx.drawHearthFire(ctx, { x: 6 * TS, y: 4 * TS }, G.cam, now(), CANVAS_W, CANVAS_H);
+
+    const mannequinsToDraw = [
+      { id: 'mannequin_a', x: 8 * TS, y: 4 * TS, loadout: homesteadSystem.getMannequin('mannequin_a')?.loadout || {} },
+      { id: 'mannequin_b', x: 10 * TS, y: 4 * TS, loadout: homesteadSystem.getMannequin('mannequin_b')?.loadout || {} },
+    ];
+    homesteadFx.drawMannequins(ctx, mannequinsToDraw, G.cam, now(), CANVAS_W, CANVAS_H);
+  }
   drawAtmosphere();
   drawDayNight();
   drawFloaties();  // damage numbers on top of everything
@@ -4476,6 +4536,31 @@ function step(dt) {
     }
   }
 
+  // Adventurer's Homestead update
+  if (G.mapId === 'player_homestead') {
+    homesteadSystem.tickCrops(dt);
+    homesteadFx.updateFx(dt);
+    if (G.homesteadPets && Array.isArray(G.homesteadPets)) {
+      for (const pet of G.homesteadPets) {
+        if (!pet._nextMoveAt || now() >= pet._nextMoveAt) {
+          pet._nextMoveAt = now() + 2000 + Math.random() * 3000;
+          pet._targetX = (17 + Math.random() * 7) * TS;
+          pet._targetY = (5 + Math.random() * 10) * TS;
+        }
+        if (pet._targetX != null && pet._targetY != null) {
+          const dx = pet._targetX - pet.x;
+          const dy = pet._targetY - pet.y;
+          const d = Math.hypot(dx, dy);
+          if (d > 2) {
+            const spd = 30;
+            pet.x += (dx / d) * spd * (dt / 1000);
+            pet.y += (dy / d) * spd * (dt / 1000);
+          }
+        }
+      }
+    }
+  }
+
   // Gathering & Fishing subsystem tick
   const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
   gatheringSystem.tick(dt, { activeMapId: G.mapId, dayPhase: curDayPhase, weatherId: G.weather?.id });
@@ -4652,6 +4737,66 @@ function step(dt) {
     } else if (!G.path) {
       G.manualIntent = null;
     }
+  } else if (G.manualIntent?.type === 'homestead_hearth') {
+    const intent = G.manualIntent;
+    if (dist(p.x, p.y, intent.x, intent.y) <= TS * 2.5) {
+      G.manualIntent = null;
+      const res = homesteadSystem.restAtHearth(G.player);
+      if (res.success) {
+        recompute(G.player, true);
+        AUDIO.playSfx('heal');
+        toast(`🔥 ${T('Rest by the Hearth', 'ui')} — ${T('Well Rested', 'ui')} (+10% EXP for 30m)!`, 'good');
+        saveGame();
+      }
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
+  } else if (G.manualIntent?.type === 'homestead_mannequin') {
+    const intent = G.manualIntent;
+    if (dist(p.x, p.y, intent.x, intent.y) <= TS * 2.5) {
+      G.manualIntent = null;
+      const swapRes = homesteadSystem.swapLoadout(intent.mannequinId, G.player);
+      if (swapRes.success) {
+        recompute(G.player);
+        AUDIO.playSfx('equip');
+        const label = intent.mannequinId === 'mannequin_b' ? 'Mannequin B' : 'Mannequin A';
+        toast(`👗 ${T('Swapped Equipment', 'ui')} (${label})!`, 'good');
+        saveGame();
+      }
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
+  } else if (G.manualIntent?.type === 'homestead_plot') {
+    const intent = G.manualIntent;
+    if (dist(p.x, p.y, intent.x + TS / 2, intent.y + TS / 2) <= TS * 2.5) {
+      G.manualIntent = null;
+      handleHomesteadPlotInteraction(intent.plotIdx);
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
+  } else if (G.manualIntent?.type === 'homestead_pet') {
+    const intent = G.manualIntent;
+    const pet = G.homesteadPets?.find(pe => pe.id === intent.petId);
+    if (pet && dist(p.x, p.y, pet.x + 16, pet.y + 16) <= TS * 2.5) {
+      G.manualIntent = null;
+      const pRes = homesteadSystem.petCompanion(pet.id, G.pets?.owned);
+      if (pRes.success) {
+        homesteadFx.triggerPetHearts(pet.x + 16, pet.y + 16);
+        AUDIO.playSfx('pickup');
+        toast(`💖 ${T('Petted', 'ui')} ${pet.name || pet.id}! (+5 ${T('Loyalty', 'ui')})`, 'good');
+      }
+      const gRes = homesteadSystem.generatePastureGifts(G.pets?.owned);
+      if (gRes?.length) {
+        const cRes = homesteadSystem.collectPastureGifts(G.player);
+        if (cRes.success && cRes.collected?.length) {
+          const names = cRes.collected.map(g => `${g.qty}x ${itemById[g.itemId]?.name || g.itemId}`).join(', ');
+          toast(`🎁 ${T('Forage Gifts Collected', 'ui')}: ${names}!`, 'good');
+        }
+      }
+      saveGame();
+    } else if (!G.path) {
+      G.manualIntent = null;
+    }
   }
 
   if (G.taskGuide?.mode === 'npc' && G.taskGuide.mapId === G.mapId) {
@@ -4670,6 +4815,47 @@ function step(dt) {
   if (now() - (G._lastSave || 0) > 5000) { G._lastSave = now(); saveGame(); }   // autosave every 5s
 }
 
+function handleHomesteadPlotInteraction(plotIdx) {
+  const plot = homesteadSystem.getPlot(plotIdx);
+  if (!plot) return;
+  if (plot.stage === 3) {
+    const hRes = homesteadSystem.harvestCrop(plotIdx, G.player);
+    if (hRes.success) {
+      AUDIO.playSfx('pickup');
+      const prodDef = itemById[hRes.harvest.produceId];
+      toast(`🌾 ${T('Harvested', 'ui')} ${hRes.harvest.produceYield}x ${prodDef ? T(prodDef.name, 'items') : hRes.harvest.produceId}!`, 'good');
+      if (hRes.harvest.seedReturned) {
+        toast(`🌱 +1 ${T(CROP_DEFINITIONS[plot.cropId]?.name || 'Seed', 'items')}`, 'good');
+      }
+      G.homestead = homesteadSystem.serialize();
+      saveGame();
+    }
+  } else if (plot.stage > 0 && !plot.watered) {
+    const wRes = homesteadSystem.waterPlot(plotIdx);
+    if (wRes.success) {
+      AUDIO.playSfx('pickup');
+      toast(`💧 ${T('Watered Crop Plot', 'ui')} (2x growth speed)!`, 'good');
+      G.homestead = homesteadSystem.serialize();
+      saveGame();
+    }
+  } else if (plot.stage === 0) {
+    const seedIds = ['seed_silverleaf', 'seed_golden_wheat', 'seed_moonflower', 'seed_ember_blossom'];
+    const availableSeed = seedIds.find(sid => (itemQty(G.player, sid) || 0) > 0);
+    if (availableSeed) {
+      const pRes = homesteadSystem.plantSeed(plotIdx, availableSeed, G.player);
+      if (pRes.success) {
+        AUDIO.playSfx('pickup');
+        const sDef = itemById[availableSeed];
+        toast(`🌱 ${T('Planted', 'ui')} ${sDef ? T(sDef.name, 'items') : availableSeed}!`, 'good');
+        G.homestead = homesteadSystem.serialize();
+        saveGame();
+      }
+    } else {
+      toast(`🌱 ${T('No seeds available to plant. Gather or craft seeds first!', 'ui')}`, 'bad');
+    }
+  }
+}
+
 function handlePortals() {
   if (now() - G.lastPortalAt < 800) return;
   const p = G.player, col = Math.floor(p.x / TS), row = Math.floor(p.y / TS);
@@ -4684,6 +4870,12 @@ function handlePortals() {
       if (pt.toMap === 'guild_stronghold') {
         if ((G.guildRankIdx || 0) < GUILD_RANKS.indexOf('D')) {
           toast(`⛔ ${T('The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.', 'ui')}`, 'bad');
+          return; // Block entry!
+        }
+      }
+      if (pt.toMap === 'player_homestead') {
+        if ((G.player?.level || 1) < 15) {
+          toast(`🌱 ${T('The Hearth Portal is dormant. Reach Level 15 and speak with the Oracle to claim your homestead.', 'ui')}`, 'bad');
           return; // Block entry!
         }
       }
@@ -5583,6 +5775,29 @@ function adminAction(a, extra) {
     G.monsters = G.monsters.filter(mo => !mo._siegeMob);
     G.strongholdState = null;
     G.strongholdCrystal.siegeActive = false;
+  }
+  else if (a === 'homesteadwater') {
+    const plots = homesteadSystem.getPlots();
+    plots.forEach((_, idx) => homesteadSystem.waterPlot(idx));
+    G.homestead = homesteadSystem.serialize();
+    toast('Admin: Watered all homestead plots', 'good');
+  }
+  else if (a === 'homesteadmature') {
+    homesteadSystem.tickCrops(100000000);
+    G.homestead = homesteadSystem.serialize();
+    toast('Admin: Matured all homestead plots', 'good');
+  }
+  else if (a === 'homesteadseeds') {
+    for (const sid of ['seed_silverleaf', 'seed_golden_wheat', 'seed_moonflower', 'seed_ember_blossom']) {
+      addItem(sid, 5);
+    }
+    toast('Admin: Added 5 of each seed', 'good');
+  }
+  else if (a === 'homesteadrest') {
+    homesteadSystem.restAtHearth(p);
+    recompute(p, true);
+    G.homestead = homesteadSystem.serialize();
+    toast('Admin: Rested at Hearth with Well Rested buff', 'good');
   }
   recompute(p); renderHotbar(); updateHud();
 }
@@ -8073,6 +8288,7 @@ function saveGame() {
       raids: raidsSystem.serialize(),
       spire: spireSystem.serialize(),
       stronghold: strongholdSystem.serialize(),
+      homestead: homesteadSystem.serialize(),
       expansion: normalizeExpansion(G) } };
   try { ls.setItem(saveKey(), JSON.stringify(data)); G.saveStatus='saved'; showSaveStatus(); return true; }
   catch { G.saveStatus='failed'; showSaveStatus(); return false; }
@@ -8214,6 +8430,8 @@ function resumeGame() {
   G.spireBossMob = null; // Clean session disconnect reset
   G.spire = spireSystem.serialize();
   if (w.stronghold) strongholdSystem.deserialize(w.stronghold);
+  if (w.homestead) homesteadSystem.deserialize(w.homestead);
+  G.homestead = homesteadSystem.serialize();
   G.strongholdState = null;
   G.strongholdCrystal.siegeActive = false;
   G.monsters = G.monsters.filter(mo => !mo._siegeMob);
@@ -8261,6 +8479,8 @@ function begin(classId, name) {
   G.spireBossMob = null;
   G.spire = spireSystem.serialize();
   strongholdSystem.deserialize(null);
+  homesteadSystem.deserialize(null);
+  G.homestead = homesteadSystem.serialize();
   G.strongholdState = null;
   G.strongholdCrystal.siegeActive = false;
   gatheringSystem.deserialize(null);
@@ -8302,6 +8522,94 @@ function handleClick(wx, wy) {
     if (dist(wx, wy, 12 * TS, 9 * TS) < TS * 2) {
       advanceSpireFloor();
       return;
+    }
+  }
+  if (G.mapId === 'player_homestead') {
+    // 1. Cozy Hearth at (6, 4)
+    if (dist(wx, wy, 6 * TS + TS / 2, 4 * TS + TS / 2) < TS * 1.5) {
+      if (dist(G.player.x, G.player.y, 6 * TS + TS / 2, 4 * TS + TS / 2) <= TS * 2.5) {
+        G.manualIntent = null;
+        const res = homesteadSystem.restAtHearth(G.player);
+        if (res.success) {
+          recompute(G.player, true);
+          AUDIO.playSfx('heal');
+          toast(`🔥 ${T('Rest by the Hearth', 'ui')} — ${T('Well Rested', 'ui')} (+10% EXP for 30m)!`, 'good');
+          saveGame();
+        }
+      } else if (pathTo(6 * TS, 4 * TS)) {
+        G.manualIntent = { type: 'homestead_hearth', x: 6 * TS, y: 4 * TS };
+      }
+      return;
+    }
+    // 2. Mannequins: A at (8, 4), B at (10, 4)
+    for (const mId of ['mannequin_a', 'mannequin_b']) {
+      const mx = (mId === 'mannequin_a' ? 8 : 10) * TS + TS / 2;
+      const my = 4 * TS + TS / 2;
+      if (dist(wx, wy, mx, my) < TS * 1.2) {
+        if (dist(G.player.x, G.player.y, mx, my) <= TS * 2.5) {
+          G.manualIntent = null;
+          const swapRes = homesteadSystem.swapLoadout(mId, G.player);
+          if (swapRes.success) {
+            recompute(G.player);
+            AUDIO.playSfx('equip');
+            const label = mId === 'mannequin_b' ? 'Mannequin B' : 'Mannequin A';
+            toast(`👗 ${T('Swapped Equipment', 'ui')} (${label})!`, 'good');
+            saveGame();
+          }
+        } else if (pathTo(mx - TS / 2, my - TS / 2)) {
+          G.manualIntent = { type: 'homestead_mannequin', mannequinId: mId, x: mx, y: my };
+        }
+        return;
+      }
+    }
+    // 3. Botanical garden crop plots (plots 0..5)
+    const plotCoords = [
+      { x: 5 * TS, y: 13 * TS },
+      { x: 7 * TS, y: 13 * TS },
+      { x: 9 * TS, y: 13 * TS },
+      { x: 5 * TS, y: 15 * TS },
+      { x: 7 * TS, y: 15 * TS },
+      { x: 9 * TS, y: 15 * TS },
+    ];
+    for (let i = 0; i < plotCoords.length; i++) {
+      const pt = plotCoords[i];
+      if (dist(wx, wy, pt.x + TS / 2, pt.y + TS / 2) < TS * 1.2) {
+        if (dist(G.player.x, G.player.y, pt.x + TS / 2, pt.y + TS / 2) <= TS * 2.5) {
+          G.manualIntent = null;
+          handleHomesteadPlotInteraction(i);
+        } else if (pathTo(pt.x, pt.y)) {
+          G.manualIntent = { type: 'homestead_plot', plotIdx: i, x: pt.x, y: pt.y };
+        }
+        return;
+      }
+    }
+    // 4. Pasture pets
+    if (G.homesteadPets && Array.isArray(G.homesteadPets)) {
+      for (const pet of G.homesteadPets) {
+        if (dist(wx, wy, pet.x + 16, pet.y + 16) < TS * 1.5) {
+          if (dist(G.player.x, G.player.y, pet.x + 16, pet.y + 16) <= TS * 2.5) {
+            G.manualIntent = null;
+            const pRes = homesteadSystem.petCompanion(pet.id, G.pets?.owned);
+            if (pRes.success) {
+              homesteadFx.triggerPetHearts(pet.x + 16, pet.y + 16);
+              AUDIO.playSfx('pickup');
+              toast(`💖 ${T('Petted', 'ui')} ${pet.name || pet.id}! (+5 ${T('Loyalty', 'ui')})`, 'good');
+            }
+            const gRes = homesteadSystem.generatePastureGifts(G.pets?.owned);
+            if (gRes?.length) {
+              const cRes = homesteadSystem.collectPastureGifts(G.player);
+              if (cRes.success && cRes.collected?.length) {
+                const names = cRes.collected.map(g => `${g.qty}x ${itemById[g.itemId]?.name || g.itemId}`).join(', ');
+                toast(`🎁 ${T('Forage Gifts Collected', 'ui')}: ${names}!`, 'good');
+              }
+            }
+            saveGame();
+          } else if (pathTo(pet.x, pet.y)) {
+            G.manualIntent = { type: 'homestead_pet', petId: pet.id, x: pet.x, y: pet.y };
+          }
+          return;
+        }
+      }
     }
   }
   // Fishing active: reel in!
