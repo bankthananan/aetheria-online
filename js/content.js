@@ -229,6 +229,43 @@ export const CONTENT = {
       level: 99, hp: 4200, atk: 260, def: 86, exp: 50000, spriteColor: "#7a4fd0", sizeTiles: 2, boss: true,
       drops: [{ itemId: "spire_emblem", chance: 1.0 }, { itemId: "null_core", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }],
       behavior: "aggressive"
+    },
+
+    // ===== Guild Stronghold Siege Monsters =====
+    {
+      id: "siege_grunt", element: "physical", name: "Siege Grunt",
+      flavor: "A brutish frontline shocktrooper trained to breach fortification walls.",
+      level: 60, hp: 1800, atk: 120, def: 55, exp: 6500, spriteColor: "#795548", sizeTiles: 1,
+      drops: [{ itemId: "iron_ore", chance: 0.5 }, { itemId: "minor_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "siege_hound", element: "physical", name: "Siege Hound",
+      flavor: "A war beast trained to track and isolate defenders in breached keeps.",
+      level: 60, hp: 1400, atk: 135, def: 40, exp: 6200, spriteColor: "#5d4037", sizeTiles: 1,
+      drops: [{ itemId: "beast_fang", chance: 0.6 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "siege_sapper", element: "fire", name: "Siege Sapper",
+      flavor: "Demolition specialist armed with volatile alchemical blasting charges.",
+      level: 65, hp: 2000, atk: 140, def: 50, exp: 7800, spriteColor: "#e64a19", sizeTiles: 1,
+      drops: [{ itemId: "essence_fire", chance: 0.4 }, { itemId: "blessed_ore", chance: 0.1 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "siege_archer", element: "physical", name: "Siege Archer",
+      flavor: "Sharpshooter unleashing arcing volleys past citadel parapets.",
+      level: 65, hp: 1600, atk: 150, def: 45, exp: 7500, spriteColor: "#388e3c", sizeTiles: 1,
+      drops: [{ itemId: "hardwood", chance: 0.5 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "siege_warlord_boss", element: "earth", name: "Siege Warlord",
+      flavor: "A colossal warlord clad in siege plate, brandishing an iron battering ram.",
+      level: 75, hp: 8500, atk: 195, def: 75, exp: 22000, spriteColor: "#4e342e", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "guild_commendation", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.8 }, { itemId: "star_iron", chance: 1.0 }],
+      behavior: "aggressive"
     }
   ],
 
@@ -423,7 +460,11 @@ export const CONTENT = {
     { id: "spire_bow", name: "Spire Bow", type: "weapon", slot: "weapon", desc: "An ascendant recurve bow tuned to the upper spire winds.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["far_shot"], gearLevel: 65 },
     { id: "spire_knuckles", name: "Spire Knuckles", type: "weapon", slot: "weapon", desc: "Ascendant knuckle wraps dense with condensed starlight.", atk: 50, price: 6000, value: 6000, rarity: "epic", classReq: ["iron_fist"], gearLevel: 65 },
     { id: "title_spire_challenger", name: "Spire Challenger", type: "material", desc: "A prestigious badge proving mastery over 50 floors of the Abyssal Spire.", price: 1000, value: 1000, rarity: "epic" },
-    { id: "title_abyssal_sovereign", name: "Abyssal Sovereign", type: "material", desc: "The supreme mark of conquering all 100 floors of the Abyssal Spire.", price: 5000, value: 5000, rarity: "legendary" }
+    { id: "title_abyssal_sovereign", name: "Abyssal Sovereign", type: "material", desc: "The supreme mark of conquering all 100 floors of the Abyssal Spire.", price: 5000, value: 5000, rarity: "legendary" },
+
+    // ===== Guild Stronghold Items =====
+    { id: "guild_commendation", name: "Guild Commendation", type: "material", desc: "A prestigious seal of valor awarded for defending the Stronghold Crystal during siege incursions.", price: 500, value: 500, rarity: "epic" },
+    { id: "stronghold_banner", name: "Stronghold Vanguard Banner", type: "armor", slot: "accessory", desc: "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.", price: 5000, value: 5000, rarity: "epic", stats: { maxHp: 150, physDef: 12 }, classReq: null, gearLevel: 55 }
   ],
 
   npcs: [

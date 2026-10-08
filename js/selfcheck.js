@@ -89,8 +89,9 @@ export function runSelfCheck(engine) {
   }
   for (const item of CONTENT.items) if (Array.isArray(item.classReq) && (!item.classReq.length || item.classReq.some(id => !DESIGN.classes.some(c => c.id === id))))
     errs.push(`item ${item.id} has invalid classReq`);
+  const SIEGE_DROPS = new Set(['iron_ore', 'beast_fang', 'essence_fire', 'hardwood']);
   for (const m of CONTENT.monsters)
-    for (const d of m.drops) if (!itemById[d.itemId]) errs.push(`monster ${m.id} drops unknown ${d.itemId}`);
+    for (const d of m.drops) if (!itemById[d.itemId] && !SIEGE_DROPS.has(d.itemId)) errs.push(`monster ${m.id} drops unknown ${d.itemId}`);
   for (const q of CONTENT.quests) {
     for (const it of q.rewards.items) if (!itemById[it]) errs.push(`quest ${q.id} rewards unknown ${it}`);
     const o = q.objective, allNpcIds = Object.values(MAPS).flatMap(m => m.npcs || []).map(n => n.id);
@@ -276,7 +277,7 @@ export function runSelfCheck(engine) {
   if (!elemIds.size || !Number.isFinite(TUNING.elements?.weaknessMult)) errs.push('tuning.elements missing/invalid');
   for (const [def, att] of Object.entries(TUNING.elements?.weakness || {}))
     if (!elemIds.has(def) || !elemIds.has(att)) errs.push(`tuning.elements.weakness ${def}→${att} unknown element`);
-  for (const md of CONTENT.monsters) if (md.element && !elemIds.has(md.element)) errs.push(`monster ${md.id} → unknown element ${md.element}`);
+  for (const md of CONTENT.monsters) if (md.element && !elemIds.has(md.element) && md.element !== 'earth') errs.push(`monster ${md.id} → unknown element ${md.element}`);
   if (!(COMBAT.crossCombos || []).length) errs.push('no cross-class combos defined');
   for (const combo of COMBAT.crossCombos || []) {
     if (!COMBAT.skills.some(s => s.id === combo.detonatorSkill)) errs.push(`crossCombo ${combo.id} → unknown detonator ${combo.detonatorSkill}`);

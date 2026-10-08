@@ -2390,6 +2390,22 @@ const item = {
     '                ',
     '                ',
     '                '),
+
+  coin: matrix(16, 16,
+    '', '',
+    '      kkkk      ',
+    '    kkyyyykk    ',
+    '   kyxyyyyyYk   ',
+    '  kyxxyyyyyyYk  ',
+    '  kyxyykkkkyYk  ',
+    '  kyyyyykkkyYk  ',
+    '  kyyyyykkkyYk  ',
+    '  kyxyykkkkyYk  ',
+    '  kyyyyyyyyYYk  ',
+    '   kyyyyyyYYk   ',
+    '    kkYYYYkk    ',
+    '      kkkk      ',
+    '', ''),
 };
 
 // Regional annex species inherit proven six-frame silhouettes, then receive
@@ -2411,6 +2427,14 @@ for (const [id, base, remap] of [
   ['void_stalker', 'star_reaver', { p: 'u', q: 'U', c: 'x' }],
   ['void_herald', 'void_construct', { p: 'u', q: 'U', c: 'x' }],
 ]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
+
+// Guild Stronghold Siege Monsters
+monster.siege_grunt = monster.orc_warrior || monster.goblin;
+monster.siege_hound = monster.wolf;
+monster.siege_sapper = monster.goblin;
+monster.siege_archer = monster.bandit_archer || monster.goblin;
+monster.siege_warlord_boss = monster.orc_warlord || monster.ruin_golem;
+
 
 // item id -> pixel icon key (see PX.item)
 export const ITEM_ICON = {
@@ -2489,6 +2513,9 @@ export const ITEM_ICON = {
   spire_knuckles: 'iron_fist',
   title_spire_challenger: 'scroll',
   title_abyssal_sovereign: 'scroll',
+  // Guild Stronghold Items
+  guild_commendation: 'coin',
+  stronghold_banner: 'scroll',
 };
 
 export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };

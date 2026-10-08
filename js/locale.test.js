@@ -429,4 +429,76 @@ for (const ui of spireUiStrings) {
   assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
 }
 
+// Verify Stronghold & Siege Content Dual Localization
+const strongholdMonsters = [
+  { id: 'siege_grunt', en: 'Siege Grunt', th: 'ทหารราบปิดล้อม' },
+  { id: 'siege_hound', en: 'Siege Hound', th: 'สุนัขสงครามปิดล้อม' },
+  { id: 'siege_sapper', en: 'Siege Sapper', th: 'หน่วยระเบิดทำลายปิดล้อม' },
+  { id: 'siege_archer', en: 'Siege Archer', th: 'พลธนูยิงถล่มปิดล้อม' },
+  { id: 'siege_warlord_boss', en: 'Siege Warlord', th: 'แม่ทัพอสูรศึกปิดล้อม' },
+];
+
+const strongholdItems = [
+  { id: 'guild_commendation', en: 'Guild Commendation', th: 'เหรียญเกียรติยศกิลด์' },
+  { id: 'stronghold_banner', en: 'Stronghold Vanguard Banner', th: 'ธงชัยกองหน้าป้อมปราการ' },
+];
+
+const strongholdMaps = [
+  { en: 'Guild Stronghold', th: 'ป้อมปราการกิลด์' },
+];
+
+const strongholdUiStrings = [
+  { en: 'Treasury Vault', th: 'ห้องคลังสมบัติกิลด์' },
+  { en: 'Guild Forge', th: 'โรงตีเหล็กกิลด์' },
+  { en: 'Botanical Conservatory', th: 'เรือนกระจกพฤกษศาสตร์' },
+  { en: 'Tactical Training Grounds', th: 'ลานฝึกยุทธวิธี' },
+  { en: 'Colossal Fortitude', th: 'ความทรหดยักษ์ศิลา' },
+  { en: 'Singularity Edge', th: 'คมดาบซิงกูลาริตี' },
+  { en: 'Zenith Ascendance', th: 'การก้าวข้ามสู่จุดสูงสุด' },
+  { en: 'Aetheric Resonance', th: 'คลื่นสะท้อนเอเธอริก' },
+  { en: 'Crystal Siege Defense', th: 'การป้องกันคริสตัลกิลด์' },
+  { en: 'Commence Siege Defense', th: 'เริ่มการป้องกันการปิดล้อม' },
+  { en: 'Crystal Health', th: 'พลังชีวิตของคริสตัล' },
+  { en: 'Siege Victory!', th: 'ชัยชนะการป้องกันป้อมปราการ!' },
+  { en: 'Defense Failed!', th: 'การป้องกันล้มเหลว!' },
+  { en: 'Mount Trophy', th: 'ติดตั้งถ้วยรางวัล' },
+  { en: 'Retrieve Trophy', th: 'ปลดถ้วยรางวัลออก' },
+  { en: 'Claim Stipend', th: 'รับเบี้ยเลี้ยงประจำวัน' },
+  { en: 'Upgrade Facility', th: 'อัปเกรดสิ่งปลูกสร้าง' },
+  { en: 'Stronghold Gate Barred', th: 'ประตูป้อมปราการถูกปิดล็อก' },
+  { en: 'The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.', th: 'ประตูป้อมปราการกิลด์ถูกปิดล็อก จงพิสูจน์ความกล้าหาญโดยการเลื่อนระดับเป็นกิลด์แรงก์ D กับผู้อาวุโสมาโรก่อน' },
+  { en: 'Foes Remaining', th: 'ศัตรูที่เหลืออยู่' },
+  { en: 'WAVE', th: 'เวฟที่' },
+];
+
+// Verify English mode
+setLanguage('en');
+for (const m of strongholdMonsters) {
+  assert.equal(T(m.en, 'monsters'), m.en, `English monster translation mismatch for: ${m.en}`);
+}
+for (const it of strongholdItems) {
+  assert.equal(T(it.en, 'items'), it.en, `English item translation mismatch for: ${it.en}`);
+}
+for (const mp of strongholdMaps) {
+  assert.equal(T(mp.en, 'maps'), mp.en, `English map translation mismatch for: ${mp.en}`);
+}
+for (const ui of strongholdUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.en, `English UI translation mismatch for: ${ui.en}`);
+}
+
+// Verify Thai mode
+setLanguage('th');
+for (const m of strongholdMonsters) {
+  assert.equal(T(m.en, 'monsters'), m.th, `Thai monster translation mismatch for: ${m.en}`);
+}
+for (const it of strongholdItems) {
+  assert.equal(T(it.en, 'items'), it.th, `Thai item translation mismatch for: ${it.en}`);
+}
+for (const mp of strongholdMaps) {
+  assert.equal(T(mp.en, 'maps'), mp.th, `Thai map translation mismatch for: ${mp.en}`);
+}
+for (const ui of strongholdUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
+}
+
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

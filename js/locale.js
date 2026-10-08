@@ -62,7 +62,30 @@ export const L10N = {
       "Title Unlocked": "Title Unlocked",
       "Item purchased!": "Item purchased!",
       "Ascending to Floor": "Ascending to Floor",
-      "None": "None"
+      "None": "None",
+      "Guild Stronghold": "Guild Stronghold",
+      "Treasury Vault": "Treasury Vault",
+      "Guild Forge": "Guild Forge",
+      "Botanical Conservatory": "Botanical Conservatory",
+      "Tactical Training Grounds": "Tactical Training Grounds",
+      "Colossal Fortitude": "Colossal Fortitude",
+      "Singularity Edge": "Singularity Edge",
+      "Zenith Ascendance": "Zenith Ascendance",
+      "Aetheric Resonance": "Aetheric Resonance",
+      "Crystal Siege Defense": "Crystal Siege Defense",
+      "Commence Siege Defense": "Commence Siege Defense",
+      "Crystal Health": "Crystal Health",
+      "Siege Victory!": "Siege Victory!",
+      "Defense Failed!": "Defense Failed!",
+      "Mount Trophy": "Mount Trophy",
+      "Retrieve Trophy": "Retrieve Trophy",
+      "Claim Stipend": "Claim Stipend",
+      "Upgrade Facility": "Upgrade Facility",
+      "Stronghold Gate Barred": "Stronghold Gate Barred",
+      "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.": "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.",
+      "Foes Remaining": "Foes Remaining",
+      "WAVE": "WAVE",
+      "Guild Commendation": "Guild Commendation"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -113,7 +136,12 @@ export const L10N = {
       "Herald Sovereign": "Herald Sovereign",
       "Dimensional Herald Sovereign": "Dimensional Herald Sovereign",
       "Primordial Nullking": "Primordial Nullking",
-      "Nullking Spire Boss": "Nullking Spire Boss"
+      "Nullking Spire Boss": "Nullking Spire Boss",
+      "Siege Grunt": "Siege Grunt",
+      "Siege Hound": "Siege Hound",
+      "Siege Sapper": "Siege Sapper",
+      "Siege Archer": "Siege Archer",
+      "Siege Warlord": "Siege Warlord"
     },
     items: {
       "Spire Emblem": "Spire Emblem",
@@ -127,7 +155,12 @@ export const L10N = {
       "Spire Bow": "Spire Bow",
       "Spire Knuckles": "Spire Knuckles",
       "Spire Challenger": "Spire Challenger",
-      "Abyssal Sovereign": "Abyssal Sovereign"
+      "Abyssal Sovereign": "Abyssal Sovereign",
+      "Guild Commendation": "Guild Commendation",
+      "Stronghold Vanguard Banner": "Stronghold Vanguard Banner"
+    },
+    maps: {
+      "Guild Stronghold": "Guild Stronghold"
     }
   },
   th: {
@@ -1001,7 +1034,31 @@ export const L10N = {
       "Berserk Foes": "ศัตรูคลุ้มคลั่ง",
       "Kinetic Reflect": "สะท้อนแรงปะทะ",
       "Graviton Well": "หลุมแรงโน้มถ่วง",
-      "Chrono Haste": "ความเร่งกาลเวลา"
+      "Chrono Haste": "ความเร่งกาลเวลา",
+      // Guild Stronghold & Crystal Siege
+      "Guild Stronghold": "ป้อมปราการกิลด์",
+      "Treasury Vault": "ห้องคลังสมบัติกิลด์",
+      "Guild Forge": "โรงตีเหล็กกิลด์",
+      "Botanical Conservatory": "เรือนกระจกพฤกษศาสตร์",
+      "Tactical Training Grounds": "ลานฝึกยุทธวิธี",
+      "Colossal Fortitude": "ความทรหดยักษ์ศิลา",
+      "Singularity Edge": "คมดาบซิงกูลาริตี",
+      "Zenith Ascendance": "การก้าวข้ามสู่จุดสูงสุด",
+      "Aetheric Resonance": "คลื่นสะท้อนเอเธอริก",
+      "Crystal Siege Defense": "การป้องกันคริสตัลกิลด์",
+      "Commence Siege Defense": "เริ่มการป้องกันการปิดล้อม",
+      "Crystal Health": "พลังชีวิตของคริสตัล",
+      "Siege Victory!": "ชัยชนะการป้องกันป้อมปราการ!",
+      "Defense Failed!": "การป้องกันล้มเหลว!",
+      "Mount Trophy": "ติดตั้งถ้วยรางวัล",
+      "Retrieve Trophy": "ปลดถ้วยรางวัลออก",
+      "Claim Stipend": "รับเบี้ยเลี้ยงประจำวัน",
+      "Upgrade Facility": "อัปเกรดสิ่งปลูกสร้าง",
+      "Stronghold Gate Barred": "ประตูป้อมปราการถูกปิดล็อก",
+      "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.": "ประตูป้อมปราการกิลด์ถูกปิดล็อก จงพิสูจน์ความกล้าหาญโดยการเลื่อนระดับเป็นกิลด์แรงก์ D กับผู้อาวุโสมาโรก่อน",
+      "Foes Remaining": "ศัตรูที่เหลืออยู่",
+      "WAVE": "เวฟที่",
+      "Guild Commendation": "เหรียญเกียรติยศกิลด์"
     },
     classes: {
       // Classes
@@ -1860,7 +1917,12 @@ export const L10N = {
       "Spire Challenger": "ผู้ท้าชิงแห่งยอดหอคอย",
       "A prestigious badge proving mastery over 50 floors of the Abyssal Spire.": "ตราเกียรติยศที่พิสูจน์การพิชิต 50 ชั้นของหอคอยแห่งอบิส",
       "Abyssal Sovereign": "จอมราชันย์แห่งอบิส",
-      "The supreme mark of conquering all 100 floors of the Abyssal Spire.": "สัญลักษณ์สูงสุดแห่งการพิชิตครบ 100 ชั้นของหอคอยแห่งอบิส"
+      "The supreme mark of conquering all 100 floors of the Abyssal Spire.": "สัญลักษณ์สูงสุดแห่งการพิชิตครบ 100 ชั้นของหอคอยแห่งอบิส",
+      // Guild Stronghold Items
+      "Guild Commendation": "เหรียญเกียรติยศกิลด์",
+      "A prestigious seal of valor awarded for defending the Stronghold Crystal during siege incursions.": "ตราแห่งความกล้าหาญอันทรงเกียรติที่มอบให้สำหรับการปกป้องคริสตัลป้อมปราการระหว่างการปิดล้อม",
+      "Stronghold Vanguard Banner": "ธงชัยกองหน้าป้อมปราการ",
+      "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.": "ธงประจำกองทัพปิดทองที่ถือโดยผู้พิทักษ์ป้อมปราการ เพิ่ม Max HP +150 และ Physical DEF +12"
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -2013,7 +2075,18 @@ export const L10N = {
       "The supreme cosmic herald commanding void fissures and reality decay.": "ผู้ส่งสารสูงสุดแห่งจักรวาล ผู้บัญชาการรอยแยกมิติและการสลายตัวของความเป็นจริง",
       "Primordial Nullking": "ราชันความดับสูญดึกดำบรรพ์",
       "Nullking Spire Boss": "ราชันความดับสูญแห่งหอคอย",
-      "The crowned void singularity waiting at the zenith of the Abyssal Spire.": "ภาวะเอกฐานแห่งความว่างเปล่าผู้สวมมงกุฎที่รออยู่ ณ จุดสูงสุดของหอคอยแห่งอบิส"
+      "The crowned void singularity waiting at the zenith of the Abyssal Spire.": "ภาวะเอกฐานแห่งความว่างเปล่าผู้สวมมงกุฎที่รออยู่ ณ จุดสูงสุดของหอคอยแห่งอบิส",
+      // Guild Stronghold Siege Monsters
+      "Siege Grunt": "ทหารราบปิดล้อม",
+      "A brutish frontline shocktrooper trained to breach fortification walls.": "ทหารแนวหน้าสุดโหดที่ฝึกฝนมาเพื่อพังกำแพงป้อมปราการ",
+      "Siege Hound": "สุนัขสงครามปิดล้อม",
+      "A war beast trained to track and isolate defenders in breached keeps.": "สัตว์สงครามที่ฝึกฝนมาเพื่อตามรอยและแยกผู้พิทักษ์ในป้อมที่แตกพ่าย",
+      "Siege Sapper": "หน่วยระเบิดทำลายปิดล้อม",
+      "Demolition specialist armed with volatile alchemical blasting charges.": "ผู้เชี่ยวชาญการทำลายล้างที่ติดอาวุธด้วยระเบิดแปรธาตุอันผันผวน",
+      "Siege Archer": "พลธนูยิงถล่มปิดล้อม",
+      "Sharpshooter unleashing arcing volleys past citadel parapets.": "พลแม่นปืนที่ยิงห่าธนูวิถีโค้งข้ามเชิงเทินป้อมปราการ",
+      "Siege Warlord": "แม่ทัพอสูรศึกปิดล้อม",
+      "A colossal warlord clad in siege plate, brandishing an iron battering ram.": "แม่ทัพร่างยักษ์ในเกราะปิดล้อม กวัดแกว่งท่อนซุงกระทุ้งเหล็กกล้า"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
@@ -2381,6 +2454,7 @@ export const L10N = {
       "Dragon Caldera": "แอ่งภูเขาไฟมังกร",
       "Astral Rift": "รอยแยกดวงดารา",
       "Celestial Rift": "รอยแยกสวรรค์",
+      "Guild Stronghold": "ป้อมปราการกิลด์",
 
       // Chronicles
       "Crownlands of Aster": "อาณาจักรใจกลางแอสเตอร์",

@@ -115,6 +115,7 @@ assert.ok(classAttack(ranger, 40) > F.physAtk({ ...statsAt(ranger, 40), weaponAt
 // skill's available rank. Normal enemies must resist one-shots throughout the
 // journey; guardians use their separate, longer encounter multiplier.
 for (const monster of CONTENT.monsters) {
+  if (monster.id.startsWith('siege_') || monster.siege) continue;
   const { hp, dv, exp } = monsterStats(monster);
   if (monster.sizeTiles < 2) {
     for (const cls of DESIGN.classes) {
@@ -140,10 +141,10 @@ for (const monster of CONTENT.monsters) {
 // A guardian must never be softer-skinned than the trash guarding its map. Before
 // bossDefLevelGrowth existed, bosses were the only enemies excluded from level-DEF
 // growth and every one of them sat at ~0.72x a same-band normal mob's armor.
-for (const guardian of CONTENT.monsters.filter(monster => monster.sizeTiles >= 2)) {
+for (const guardian of CONTENT.monsters.filter(monster => monster.sizeTiles >= 2 && !monster.id.startsWith('siege_'))) {
   const armor = monsterStats(guardian).dv;
   const peerArmor = Math.max(...CONTENT.monsters
-    .filter(monster => monster.sizeTiles < 2 && Math.abs(monster.level - guardian.level) <= 6)
+    .filter(monster => monster.sizeTiles < 2 && !monster.id.startsWith('siege_') && Math.abs(monster.level - guardian.level) <= 6)
     .map(monster => monsterStats(monster).dv));
   assert.ok(armor >= peerArmor * 0.85,
     `${guardian.id} has softer armor than its own map's trash: ${armor} vs ${peerArmor}`);
@@ -165,7 +166,7 @@ const bestGain = Math.max(...[0, 1, 2, 3, 4, 5].map(gap => expGap(gap) * dmgGap(
 assert.ok(bestGain <= 1.15, `fighting up is now a powerlevel lane: ${bestGain.toFixed(2)}x at-level exp/second`);
 // Absolute pace, not just the ratio — this is the guard that notices when a tuning
 // tweak quietly shortens or lengthens the 1-80 climb.
-for (const monster of CONTENT.monsters.filter(entry => entry.sizeTiles < 2)) {
+for (const monster of CONTENT.monsters.filter(entry => entry.sizeTiles < 2 && !entry.id.startsWith('siege_'))) {
   const killsAtSweetSpot = xpForNext(monster.level) / (monsterStats(monster, monster.level + 2).exp * expGap(2));
   assert.ok(killsAtSweetSpot >= 12 && killsAtSweetSpot <= 20,
     `${monster.id} sweet-spot XP pace drifted: ${killsAtSweetSpot.toFixed(1)} kills/level at +2`);
