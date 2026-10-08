@@ -514,4 +514,61 @@ for (const ui of strongholdUiStrings) {
   assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
 }
 
+// Homestead items, maps, and UI strings
+const homesteadItems = [
+  { id: 'seed_silverleaf', en: 'Silverleaf Seeds', th: 'เมล็ดซิลเวอร์ลีฟ' },
+  { id: 'seed_golden_wheat', en: 'Golden Wheat Seeds', th: 'เมล็ดข้าวสาลีทองคำ' },
+  { id: 'seed_moonflower', en: 'Moonflower Seeds', th: 'เมล็ดมูนฟลาวเวอร์' },
+  { id: 'seed_ember_blossom', en: 'Ember Blossom Seeds', th: 'เมล็ดเอมเบอร์บลอสซัม' },
+  { id: 'golden_grain', en: 'Golden Grain', th: 'รวงข้าวสาลีทองคำ' },
+  { id: 'artisan_bread', en: 'Artisan Bread', th: 'ขนมปังฝีมือช่าง' },
+];
+
+const homesteadMaps = [
+  { en: "Adventurer's Homestead", th: 'บ้านพักนักผจญภัย' },
+];
+
+const homesteadUiStrings = [
+  { en: 'Botanical Sanctum', th: 'สวนพฤกษศาสตร์ศักดิ์สิทธิ์' },
+  { en: 'Companion Pasture', th: 'ทุ่งหญ้าสัตว์เลี้ยง' },
+  { en: 'Armory Mannequin', th: 'หุ่นลองชุดเกราะ' },
+  { en: 'Cozy Hearth', th: 'เตาผิงอันอบอุ่น' },
+  { en: 'Well Rested', th: 'พักผ่อนเต็มอิ่ม' },
+  { en: 'Plant Seed', th: 'หว่านเมล็ดพืช' },
+  { en: 'Water Plot', th: 'รดน้ำแปลงเพาะปลูก' },
+  { en: 'Harvest Crop', th: 'เก็บเกี่ยวผลผลิต' },
+  { en: 'Pet Companion', th: 'ลูบหัวสัตว์เลี้ยง' },
+  { en: 'Collect Pasture Gifts', th: 'เก็บของขวัญสัตว์เลี้ยงทั้งหมด' },
+  { en: 'Equip This Loadout', th: 'สวมใส่ชุดอุปกรณ์นี้' },
+  { en: 'Save Current Loadout', th: 'บันทึกชุดอุปกรณ์ปัจจุบัน' },
+  { en: 'Retrieve Equipment', th: 'ปลดชุดอุปกรณ์ออก' },
+  { en: 'Rest by the Hearth', th: 'พักผ่อนริมเตาผิง' },
+  { en: 'The Hearth Portal is dormant. Reach Level 15 and speak with the Oracle to claim your homestead.', th: 'พอร์ทัลบ้านพักยังไม่ทำงาน จงบรรลุเลเวล 15 และคุยกับผู้หยั่งรู้เพื่อรับสิทธิ์เข้าสู่บ้านพักของคุณ' },
+];
+
+// Verify English mode
+setLanguage('en');
+for (const it of homesteadItems) {
+  assert.ok(CONTENT.items.some(i => i.id === it.id), `Homestead item exists in CONTENT.items: ${it.id}`);
+  assert.equal(T(it.en, 'items'), it.en, `English item translation mismatch for: ${it.en}`);
+}
+for (const mp of homesteadMaps) {
+  assert.equal(T(mp.en, 'maps'), mp.en, `English map translation mismatch for: ${mp.en}`);
+}
+for (const ui of homesteadUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.en, `English UI translation mismatch for: ${ui.en}`);
+}
+
+// Verify Thai mode
+setLanguage('th');
+for (const it of homesteadItems) {
+  assert.equal(T(it.en, 'items'), it.th, `Thai item translation mismatch for: ${it.en}`);
+}
+for (const mp of homesteadMaps) {
+  assert.equal(T(mp.en, 'maps'), mp.th, `Thai map translation mismatch for: ${mp.en}`);
+}
+for (const ui of homesteadUiStrings) {
+  assert.equal(T(ui.en, 'ui'), ui.th, `Thai UI translation mismatch for: ${ui.en}`);
+}
+
 console.log('✔ [PASSED] Localization test: All game data elements are successfully translated in Thai');

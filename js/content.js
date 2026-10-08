@@ -468,7 +468,15 @@ export const CONTENT = {
     { id: "essence_fire", name: "Fire Essence", type: "material", desc: "A warm, crackling elemental core refined from pyrotechnic explosives.", price: 60, value: 60, rarity: "uncommon" },
     { id: "hardwood", name: "Hardwood", type: "material", desc: "Sturdy, dense timber ideal for bracing fortifications and training equipment.", price: 35, value: 35, rarity: "common" },
     { id: "guild_commendation", name: "Guild Commendation", type: "material", desc: "A prestigious seal of valor awarded for defending the Stronghold Crystal during siege incursions.", price: 500, value: 500, rarity: "epic" },
-    { id: "stronghold_banner", name: "Stronghold Vanguard Banner", type: "armor", slot: "accessory", desc: "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.", price: 5000, value: 5000, rarity: "epic", stats: { maxHp: 150, physDef: 12 }, classReq: null, gearLevel: 55 }
+    { id: "stronghold_banner", name: "Stronghold Vanguard Banner", type: "armor", slot: "accessory", desc: "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.", price: 5000, value: 5000, rarity: "epic", stats: { maxHp: 150, physDef: 12 }, classReq: null, gearLevel: 55 },
+
+    // ===== Adventurer's Homestead Botanical Sanctum & Feast Items =====
+    { id: "seed_silverleaf", name: "Silverleaf Seeds", type: "material", desc: "Viable herbal seeds suited for fertile garden soil. Yields fresh silverleaf.", price: 50, value: 50, rarity: "common" },
+    { id: "seed_golden_wheat", name: "Golden Wheat Seeds", type: "material", desc: "Hardy grain seeds yielding golden wheat bundles for artisan baking.", price: 60, value: 60, rarity: "common" },
+    { id: "seed_moonflower", name: "Moonflower Seeds", type: "material", desc: "Luminescent mystical seeds blossoming into moonlight lotus flowers.", price: 100, value: 100, rarity: "uncommon" },
+    { id: "seed_ember_blossom", name: "Ember Blossom Seeds", type: "material", desc: "Warm volcanic seeds that sprout into radiant ember blossoms.", price: 120, value: 120, rarity: "uncommon" },
+    { id: "golden_grain", name: "Golden Grain", type: "material", desc: "Sun-ripened cereal grain harvested from the homestead botanical sanctum.", price: 40, value: 40, rarity: "common" },
+    { id: "artisan_bread", name: "Artisan Bread", type: "consumable", desc: "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).", hpRestore: 500, buff: { stat: "hp", flat: 150, durationMs: 900000 }, price: 250, value: 250, rarity: "uncommon" }
   ],
 
   npcs: [
@@ -845,6 +853,11 @@ export const CONTENT = {
     { id: "r_titan_horn", out: "titan_horn", cost: 500, mats: [{ itemId: "dimensional_shard", qty: 5 }, { itemId: "blessed_ore", qty: 2 }, { itemId: "caldera_crystal", qty: 1 }, { itemId: "star_iron", qty: 4 }] },
     { id: "r_titan_pendant", out: "titan_pendant", cost: 2500, mats: [{ itemId: "titan_heart", qty: 2 }, { itemId: "star_iron", qty: 8 }, { itemId: "essence_night", qty: 1 }] },
     { id: "r_voidmaw_edge", out: "voidmaw_edge", cost: 3000, mats: [{ itemId: "voidmaw_eye", qty: 2 }, { itemId: "dimensional_shard", qty: 8 }, { itemId: "blessed_ore", qty: 4 }] },
+    // Botanical Sanctum Seed Extraction & Feast Recipes
+    { id: "r_seed_silverleaf", out: "seed_silverleaf", cost: 50, mats: [{ itemId: "silverleaf", qty: 2 }] },
+    { id: "r_seed_moonflower", out: "seed_moonflower", cost: 100, mats: [{ itemId: "moonlight_lotus", qty: 2 }] },
+    { id: "r_seed_ember_blossom", out: "seed_ember_blossom", cost: 120, mats: [{ itemId: "ember_blossom", qty: 2 }] },
+    { id: "r_artisan_bread", out: "artisan_bread", cost: 150, mats: [{ itemId: "golden_grain", qty: 3 }, { itemId: "iron_ore", qty: 1 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()

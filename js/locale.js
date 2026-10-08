@@ -93,7 +93,22 @@ export const L10N = {
       "Trophy retrieved!": "Trophy retrieved!",
       "Claim Commendations": "Claim Commendations",
       "Guild Points": "Guild Points",
-      "Stronghold Crystal": "Stronghold Crystal"
+      "Stronghold Crystal": "Stronghold Crystal",
+      "Botanical Sanctum": "Botanical Sanctum",
+      "Companion Pasture": "Companion Pasture",
+      "Armory Mannequin": "Armory Mannequin",
+      "Cozy Hearth": "Cozy Hearth",
+      "Well Rested": "Well Rested",
+      "Plant Seed": "Plant Seed",
+      "Water Plot": "Water Plot",
+      "Harvest Crop": "Harvest Crop",
+      "Pet Companion": "Pet Companion",
+      "Collect Pasture Gifts": "Collect Pasture Gifts",
+      "Equip This Loadout": "Equip This Loadout",
+      "Save Current Loadout": "Save Current Loadout",
+      "Retrieve Equipment": "Retrieve Equipment",
+      "Rest by the Hearth": "Rest by the Hearth",
+      "The Hearth Portal is dormant. Reach Level 15 and speak with the Oracle to claim your homestead.": "The Hearth Portal is dormant. Reach Level 15 and speak with the Oracle to claim your homestead."
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -169,10 +184,17 @@ export const L10N = {
       "Fire Essence": "Fire Essence",
       "Hardwood": "Hardwood",
       "Guild Commendation": "Guild Commendation",
-      "Stronghold Vanguard Banner": "Stronghold Vanguard Banner"
+      "Stronghold Vanguard Banner": "Stronghold Vanguard Banner",
+      "Silverleaf Seeds": "Silverleaf Seeds",
+      "Golden Wheat Seeds": "Golden Wheat Seeds",
+      "Moonflower Seeds": "Moonflower Seeds",
+      "Ember Blossom Seeds": "Ember Blossom Seeds",
+      "Golden Grain": "Golden Grain",
+      "Artisan Bread": "Artisan Bread"
     },
     maps: {
-      "Guild Stronghold": "Guild Stronghold"
+      "Guild Stronghold": "Guild Stronghold",
+      "Adventurer's Homestead": "Adventurer's Homestead"
     }
   },
   th: {
@@ -1078,7 +1100,22 @@ export const L10N = {
       "Trophy retrieved!": "ปลดถ้วยรางวัลสำเร็จ!",
       "Claim Commendations": "รับเหรียญเกียรติยศ",
       "Guild Points": "คะแนนกิลด์",
-      "Stronghold Crystal": "คริสตัลป้อมปราการ"
+      "Stronghold Crystal": "คริสตัลป้อมปราการ",
+      "Botanical Sanctum": "สวนพฤกษศาสตร์ศักดิ์สิทธิ์",
+      "Companion Pasture": "ทุ่งหญ้าสัตว์เลี้ยง",
+      "Armory Mannequin": "หุ่นลองชุดเกราะ",
+      "Cozy Hearth": "เตาผิงอันอบอุ่น",
+      "Well Rested": "พักผ่อนเต็มอิ่ม",
+      "Plant Seed": "หว่านเมล็ดพืช",
+      "Water Plot": "รดน้ำแปลงเพาะปลูก",
+      "Harvest Crop": "เก็บเกี่ยวผลผลิต",
+      "Pet Companion": "ลูบหัวสัตว์เลี้ยง",
+      "Collect Pasture Gifts": "เก็บของขวัญสัตว์เลี้ยงทั้งหมด",
+      "Equip This Loadout": "สวมใส่ชุดอุปกรณ์นี้",
+      "Save Current Loadout": "บันทึกชุดอุปกรณ์ปัจจุบัน",
+      "Retrieve Equipment": "ปลดชุดอุปกรณ์ออก",
+      "Rest by the Hearth": "พักผ่อนริมเตาผิง",
+      "The Hearth Portal is dormant. Reach Level 15 and speak with the Oracle to claim your homestead.": "พอร์ทัลบ้านพักยังไม่ทำงาน จงบรรลุเลเวล 15 และคุยกับผู้หยั่งรู้เพื่อรับสิทธิ์เข้าสู่บ้านพักของคุณ"
     },
     classes: {
       // Classes
@@ -1950,7 +1987,20 @@ export const L10N = {
       "Guild Commendation": "เหรียญเกียรติยศกิลด์",
       "A prestigious seal of valor awarded for defending the Stronghold Crystal during siege incursions.": "ตราแห่งความกล้าหาญอันทรงเกียรติที่มอบให้สำหรับการปกป้องคริสตัลป้อมปราการระหว่างการปิดล้อม",
       "Stronghold Vanguard Banner": "ธงชัยกองหน้าป้อมปราการ",
-      "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.": "ธงประจำกองทัพปิดทองที่ถือโดยผู้พิทักษ์ป้อมปราการ เพิ่ม Max HP +150 และ Physical DEF +12"
+      "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.": "ธงประจำกองทัพปิดทองที่ถือโดยผู้พิทักษ์ป้อมปราการ เพิ่ม Max HP +150 และ Physical DEF +12",
+      // Homestead Botanical Sanctum Items
+      "Silverleaf Seeds": "เมล็ดซิลเวอร์ลีฟ",
+      "Viable herbal seeds suited for fertile garden soil. Yields fresh silverleaf.": "เมล็ดสมุนไพรที่เหมาะสำหรับดินสวนอันอุดมสมบูรณ์ ให้ผลผลิตเป็นซิลเวอร์ลีฟสด",
+      "Golden Wheat Seeds": "เมล็ดข้าวสาลีทองคำ",
+      "Hardy grain seeds yielding golden wheat bundles for artisan baking.": "เมล็ดธัญพืชทนทานที่ให้ผลผลิตรวงข้าวสาลีสีทองสำหรับการทำขนมปังฝีมือช่าง",
+      "Moonflower Seeds": "เมล็ดมูนฟลาวเวอร์",
+      "Luminescent mystical seeds blossoming into moonlight lotus flowers.": "เมล็ดพันธุ์ลึกลับเรืองแสงที่ผลิบานเป็นดอกบัวแสงจันทร์",
+      "Ember Blossom Seeds": "เมล็ดเอมเบอร์บลอสซัม",
+      "Warm volcanic seeds that sprout into radiant ember blossoms.": "เมล็ดพันธุ์ภูเขาไฟอันอบอุ่นที่งอกเป็นดอกไม้เปลวเพลิงอันเจิดจ้า",
+      "Golden Grain": "รวงข้าวสาลีทองคำ",
+      "Sun-ripened cereal grain harvested from the homestead botanical sanctum.": "ธัญพืชสุกปลั่งใต้แสงตะวันที่เก็บเกี่ยวจากสวนพฤกษศาสตร์ในบ้านพัก",
+      "Artisan Bread": "ขนมปังฝีมือช่าง",
+      "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).": "ขนมปังอบสดใหม่จากเตาผิง ฟื้นฟู 500 HP และมอบบัฟอิ่มหนำ (+150 Max HP และฟื้นฟู 10 HP ทุก 5 วินาที เป็นเวลา 15 นาที)"
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -2418,6 +2468,12 @@ export const L10N = {
       "Bring down five. When the feathers stop falling, the pass will belong to the living again.": "โค่นพวกมันห้าตัว เมื่อขนนกหยุดร่วง ช่องเขาจะกลับเป็นของผู้มีชีวิต",
       "The gale still cuts, but nothing screams inside it now. Revenant Pass is open.": "ลมยังคงคมกริบ แต่ไม่มีเสียงกรีดร้องอยู่ในนั้นแล้ว ช่องเขาผีดิบเปิดแล้ว",
 
+      "A Place to Call Home": "สถานที่ที่เรียกว่าบ้าน",
+      "Reach Level 15 and speak with Elowen to claim your personal sanctuary — the Adventurer's Homestead.": "ไปถึงเลเวล 15 และคุยกับอีโลเวนเพื่อรับสิทธิ์ครอบครองสถานที่พักผ่อนส่วนตัวของคุณ — บ้านพักนักผจญภัย",
+      "You have walked far and fought hard, hero. Every wanderer needs a hearth to return to.": "เจ้าเดินทางมาไกลและต่อสู้อย่างหนักแล้ว ผู้กล้าเอ๋ย ผู้พเนจรทุกคนย่อมต้องการเตาผิงให้อบอุ่นใจเมื่อหวนคืน",
+      "The old town portal at the north-west plaza now connects to your very own sanctuary. Take this key and make it your home.": "พอร์ทัลเก่าของเมืองที่จัตุรัสทิศตะวันตกเฉียงเหนือบัดนี้เชื่อมต่อไปยังแดนศักดิ์สิทธิ์ส่วนตัวของเจ้าแล้ว จงรับกุญแจนี้ไปและทำให้มันเป็นบ้านของเจ้า",
+      "The hearth is lit, the soil is tilled, and your companions await. Welcome home.": "เตาผิงจุดสว่าง ดินได้รับการพรวน และเหล่าสัตว์เลี้ยงของเจ้ากำลังรออยู่ ยินดีต้อนรับกลับบ้าน",
+
       "The Forge That Stayed Lit": "เตาหลอมที่ไม่เคยดับ",
       "Smoke rises from an impossible forge on the eastern rim. Find Veya the Ashsmith and ask how to cross the old furnace road.": "ควันลอยจากเตาหลอมที่ไม่น่าเป็นไปได้บนขอบตะวันออก จงหาเวยา ช่างตีเหล็กเถ้าถ่าน และถามทางข้ามถนนเตาหลอมเก่า",
       "Someone is hammering steel on the eastern rim. Either we found a survivor or the fire learned a trade.": "มีใครกำลังตีเหล็กบนขอบตะวันออก เราอาจพบผู้รอดชีวิต หรือไม่ก็เปลวไฟเรียนรู้อาชีพช่างแล้ว",
@@ -2489,6 +2545,7 @@ export const L10N = {
       "Astral Rift": "รอยแยกดวงดารา",
       "Celestial Rift": "รอยแยกสวรรค์",
       "Guild Stronghold": "ป้อมปราการกิลด์",
+      "Adventurer's Homestead": "บ้านพักนักผจญภัย",
 
       // Chronicles
       "Crownlands of Aster": "อาณาจักรใจกลางแอสเตอร์",

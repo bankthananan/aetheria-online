@@ -2558,6 +2558,13 @@ export const ITEM_ICON = {
   hardwood: 'wood',
   guild_commendation: 'coin',
   stronghold_banner: 'scroll',
+  // Homestead Botanical Sanctum & Feast Items
+  seed_silverleaf: 'scroll',
+  seed_golden_wheat: 'scroll',
+  seed_moonflower: 'scroll',
+  seed_ember_blossom: 'scroll',
+  golden_grain: 'ore',
+  artisan_bread: 'potred',
 };
 
 export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
