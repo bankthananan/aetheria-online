@@ -59,6 +59,7 @@ import { createStrongholdRenderer } from './render/stronghold-fx.js';
 import { createStrongholdUIRenderer } from './render/stronghold-ui.js';
 import { createHomesteadSystem, CROP_DEFINITIONS, MANNEQUIN_SLOTS, PASTURE_FORAGE_TABLE, HEARTH_BUFF_DURATION_MS } from './systems/homestead.js';
 import { createHomesteadRenderer } from './render/homestead-fx.js';
+import { createHomesteadUIRenderer } from './render/homestead-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -218,6 +219,7 @@ const strongholdFx = createStrongholdRenderer({ T, PX });
 const strongholdUI = createStrongholdUIRenderer({ T, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_REWARDS });
 const homesteadSystem = createHomesteadSystem({ now, rnd: () => Math.random() });
 const homesteadFx = createHomesteadRenderer({ T, PX });
+const homesteadUI = createHomesteadUIRenderer({ T, CROP_DEFINITIONS, MANNEQUIN_SLOTS });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -490,10 +492,12 @@ const G = {
   homestead: homesteadSystem.serialize(),
   homesteadSystem,
   homesteadFx,
+  homesteadUI,
   homesteadPets: [],
   saveStatus: 'saved',
 };
 G.strongholdUI = strongholdUI;
+G.homesteadUI = homesteadUI;
 
 function syncHomesteadPets() {
   if (G.mapId !== 'player_homestead') return;
@@ -6229,8 +6233,27 @@ function worldChronicleHtml() {
       <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'stronghold' ? 'active' : ''}" data-chronicle-tab="stronghold" style="font-weight:bold;${currentTab === 'stronghold' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
         🏰 ${T('Guild Stronghold', 'ui')}
       </button>
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'homestead' ? 'active' : ''}" data-chronicle-tab="homestead" style="font-weight:bold;${currentTab === 'homestead' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        🏡 ${T("Adventurer's Homestead", 'ui')}
+      </button>
     </div>
   `;
+
+  if (currentTab === 'homestead') {
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · SOVEREIGN SANCTUARY', 'ui')}</small>
+          <h2>${T("Adventurer's Homestead", 'ui')}</h2>
+          <p>${T('Botanical sanctum plots, companion pasture, armory mannequins, and cozy hearth.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="homestead-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;">
+        ${homesteadUI.renderHomesteadOverviewHtml(homesteadSystem.serialize(), G.player, G.pets?.owned || {})}
+      </div>
+    </section>`;
+  }
 
   if (currentTab === 'stronghold') {
     return `<section class="world-chronicle" style="max-width:860px">
@@ -7397,6 +7420,194 @@ function openSpireElevatorModal() {
   });
 }
 G.openSpireElevatorModal = openSpireElevatorModal;
+
+function openHomesteadPlotModal(plotIdx) {
+  if (typeof document === 'undefined') return;
+  let mc = document.getElementById('homestead-modal-container');
+  if (!mc) {
+    mc = document.createElement('div');
+    mc.id = 'homestead-modal-container';
+    mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
+    document.body.appendChild(mc);
+  }
+  const plot = homesteadSystem.getPlot(plotIdx);
+  if (!plot) return;
+  mc.style.display = 'flex';
+  mc.innerHTML = homesteadUI.renderPlotModalHtml(plot, G.player?.inventory || []);
+  mc.querySelectorAll('[data-homestead-close]').forEach(b => {
+    b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
+  });
+  mc.querySelectorAll('[data-homestead-plant]').forEach(b => {
+    b.onclick = () => {
+      const sId = b.dataset.homesteadPlant;
+      const res = homesteadSystem.plantSeed(plotIdx, sId, G.player);
+      if (res.success) {
+        AUDIO.playSfx('pickup');
+        toast(`🌱 ${T('Planted', 'ui')} ${T(CROP_DEFINITIONS[sId]?.name || sId, 'items')}!`, 'good');
+        G.homestead = homesteadSystem.serialize();
+        saveGame();
+        openHomesteadPlotModal(plotIdx);
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-water]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.waterPlot(plotIdx);
+      if (res.success) {
+        AUDIO.playSfx('pickup');
+        toast(`💧 ${T('Watered Crop Plot', 'ui')} (2x growth speed)!`, 'good');
+        G.homestead = homesteadSystem.serialize();
+        saveGame();
+        openHomesteadPlotModal(plotIdx);
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-harvest]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.harvestCrop(plotIdx, G.player);
+      if (res.success) {
+        AUDIO.playSfx('pickup');
+        const prodDef = itemById[res.harvest.produceId];
+        toast(`🌾 ${T('Harvested', 'ui')} ${res.harvest.produceYield}x ${prodDef ? T(prodDef.name, 'items') : res.harvest.produceId}!`, 'good');
+        if (res.harvest.seedReturned) {
+          toast(`🌱 +1 ${T(CROP_DEFINITIONS[plot.cropId]?.name || 'Seed', 'items')}`, 'good');
+        }
+        G.homestead = homesteadSystem.serialize();
+        saveGame();
+        mc.style.display = 'none';
+        mc.innerHTML = '';
+      }
+    };
+  });
+}
+G.openHomesteadPlotModal = openHomesteadPlotModal;
+
+function openHomesteadPastureModal() {
+  if (typeof document === 'undefined') return;
+  let mc = document.getElementById('homestead-modal-container');
+  if (!mc) {
+    mc = document.createElement('div');
+    mc.id = 'homestead-modal-container';
+    mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
+    document.body.appendChild(mc);
+  }
+  mc.style.display = 'flex';
+  mc.innerHTML = homesteadUI.renderPastureDialogHtml(G.pets?.owned || {}, homesteadSystem.getPendingPastureGifts());
+  mc.querySelectorAll('[data-homestead-close]').forEach(b => {
+    b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
+  });
+  mc.querySelectorAll('[data-homestead-pet]').forEach(b => {
+    b.onclick = () => {
+      const petId = b.dataset.homesteadPet;
+      const res = homesteadSystem.petCompanion(petId, G.pets?.owned);
+      if (res.success) {
+        AUDIO.playSfx('pickup');
+        toast(`💖 ${T('Petted', 'ui')} ${petId}! (+5 ${T('Loyalty', 'ui')})`, 'good');
+        saveGame();
+        openHomesteadPastureModal();
+      } else if (res.reason === 'cooldown') {
+        toast(`💖 ${petId} ${T('is already happy today!', 'ui')}`, 'sys');
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-collect-gifts]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.collectPastureGifts(G.player);
+      if (res.success && res.collected?.length) {
+        AUDIO.playSfx('pickup');
+        const names = res.collected.map(g => `${g.qty}x ${itemById[g.itemId]?.name || g.itemId}`).join(', ');
+        toast(`🎁 ${T('Forage Gifts Collected', 'ui')}: ${names}!`, 'good');
+        saveGame();
+        openHomesteadPastureModal();
+      }
+    };
+  });
+}
+G.openHomesteadPastureModal = openHomesteadPastureModal;
+
+function openHomesteadMannequinModal(mannequinId) {
+  if (typeof document === 'undefined') return;
+  let mc = document.getElementById('homestead-modal-container');
+  if (!mc) {
+    mc = document.createElement('div');
+    mc.id = 'homestead-modal-container';
+    mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
+    document.body.appendChild(mc);
+  }
+  const man = homesteadSystem.getMannequin(mannequinId);
+  if (!man) return;
+  mc.style.display = 'flex';
+  mc.innerHTML = homesteadUI.renderMannequinModalHtml(mannequinId, man.loadout || {}, G.player?.equip || {});
+  mc.querySelectorAll('[data-homestead-close]').forEach(b => {
+    b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
+  });
+  mc.querySelectorAll('[data-homestead-swap-mannequin]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.swapLoadout(mannequinId, G.player);
+      if (res.success) {
+        recompute(G.player);
+        AUDIO.playSfx('equip');
+        toast(`👗 ${T('Swapped Equipment', 'ui')}!`, 'good');
+        saveGame();
+        openHomesteadMannequinModal(mannequinId);
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-store-mannequin]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.storeLoadout(mannequinId, G.player);
+      if (res.success) {
+        AUDIO.playSfx('equip');
+        toast(`📥 ${T('Stored Current Equipment', 'ui')}!`, 'good');
+        saveGame();
+        openHomesteadMannequinModal(mannequinId);
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-retrieve-mannequin]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.retrieveLoadout(mannequinId, G.player);
+      if (res.success) {
+        AUDIO.playSfx('equip');
+        toast(`📤 ${T('Retrieved Equipment', 'ui')}!`, 'good');
+        saveGame();
+        openHomesteadMannequinModal(mannequinId);
+      }
+    };
+  });
+}
+G.openHomesteadMannequinModal = openHomesteadMannequinModal;
+
+function openHomesteadHearthModal() {
+  if (typeof document === 'undefined') return;
+  let mc = document.getElementById('homestead-modal-container');
+  if (!mc) {
+    mc = document.createElement('div');
+    mc.id = 'homestead-modal-container';
+    mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
+    document.body.appendChild(mc);
+  }
+  const buffActive = homesteadSystem.isHearthBuffActive();
+  const rem = homesteadSystem.getHearthBuffTimeRemaining();
+  mc.style.display = 'flex';
+  mc.innerHTML = homesteadUI.renderHearthModalHtml(buffActive, rem);
+  mc.querySelectorAll('[data-homestead-close]').forEach(b => {
+    b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
+  });
+  mc.querySelectorAll('[data-homestead-rest-hearth]').forEach(b => {
+    b.onclick = () => {
+      const res = homesteadSystem.restAtHearth(G.player);
+      if (res.success) {
+        recompute(G.player, true);
+        AUDIO.playSfx('heal');
+        toast(`🔥 ${T('Rest by the Hearth', 'ui')} — ${T('Well Rested', 'ui')} (+10% EXP for 30m)!`, 'good');
+        saveGame();
+        openHomesteadHearthModal();
+      }
+    };
+  });
+}
+G.openHomesteadHearthModal = openHomesteadHearthModal;
 
 function refreshPanel(id) {
   const el = $('#panel');
