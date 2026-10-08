@@ -57,7 +57,8 @@ function formatPerk(key, val) {
     case 'res_fire': return `+${val}% Fire RES`;
     case 'res_nature': return `+${val}% Nature RES`;
     case 'res_void': return `+${val}% Void RES`;
-    case 'res_light': return `+${val}% Light RES`;
+    case 'res_holy': return `+${val}% Holy RES`;
+    case 'res_light': return `+${val}% Holy RES`;
     default: return `+${val} ${key}`;
   }
 }
