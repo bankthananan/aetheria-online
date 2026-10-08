@@ -85,7 +85,15 @@ export const L10N = {
       "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.": "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.",
       "Foes Remaining": "Foes Remaining",
       "WAVE": "WAVE",
-      "Guild Commendation": "Guild Commendation"
+      "Guild Commendation": "Guild Commendation",
+      "Max Tier": "Max Tier",
+      "Facility upgraded!": "Facility upgraded!",
+      "Claimed daily stipend!": "Claimed daily stipend!",
+      "Trophy mounted!": "Trophy mounted!",
+      "Trophy retrieved!": "Trophy retrieved!",
+      "Claim Commendations": "Claim Commendations",
+      "Guild Points": "Guild Points",
+      "Stronghold Crystal": "Stronghold Crystal"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -1058,7 +1066,15 @@ export const L10N = {
       "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.": "ประตูป้อมปราการกิลด์ถูกปิดล็อก จงพิสูจน์ความกล้าหาญโดยการเลื่อนระดับเป็นกิลด์แรงก์ D กับผู้อาวุโสมาโรก่อน",
       "Foes Remaining": "ศัตรูที่เหลืออยู่",
       "WAVE": "เวฟที่",
-      "Guild Commendation": "เหรียญเกียรติยศกิลด์"
+      "Guild Commendation": "เหรียญเกียรติยศกิลด์",
+      "Max Tier": "ระดับสูงสุด",
+      "Facility upgraded!": "อัปเกรดสิ่งปลูกสร้างสำเร็จ!",
+      "Claimed daily stipend!": "รับเบี้ยเลี้ยงประจำวันแล้ว!",
+      "Trophy mounted!": "ติดตั้งถ้วยรางวัลสำเร็จ!",
+      "Trophy retrieved!": "ปลดถ้วยรางวัลสำเร็จ!",
+      "Claim Commendations": "รับเหรียญเกียรติยศ",
+      "Guild Points": "คะแนนกิลด์",
+      "Stronghold Crystal": "คริสตัลป้อมปราการ"
     },
     classes: {
       // Classes

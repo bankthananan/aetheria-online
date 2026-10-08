@@ -56,6 +56,7 @@ import { createSpireRenderer } from './render/spire-fx.js';
 import { createSpireUIRenderer } from './render/spire-ui.js';
 import { createStrongholdSystem, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_WAVE_TEMPLATES, SIEGE_REWARDS } from './systems/stronghold.js';
 import { createStrongholdRenderer } from './render/stronghold-fx.js';
+import { createStrongholdUIRenderer } from './render/stronghold-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -211,6 +212,7 @@ const spireFx = createSpireRenderer({ T, PX });
 const spireUI = createSpireUIRenderer({ T, SPIRE_BIOMES, SPIRE_AFFIXES, CHECKPOINT_FLOORS });
 const strongholdSystem = createStrongholdSystem({ now, rnd: () => Math.random() });
 const strongholdFx = createStrongholdRenderer({ T, PX });
+const strongholdUI = createStrongholdUIRenderer({ T, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_REWARDS });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -477,10 +479,12 @@ const G = {
   stronghold: strongholdSystem.serialize(),
   strongholdSystem,
   strongholdFx,
+  strongholdUI,
   strongholdState: null,
   strongholdCrystal: { x: 16 * TS, y: 12 * TS, hp: 15000, maxHp: 15000, sizeTiles: 2 },
   saveStatus: 'saved',
 };
+G.strongholdUI = strongholdUI;
 
 function syncPetFollower() {
   if (G.pets?.activePetId && G.pets?.owned?.[G.pets.activePetId]) {
@@ -1806,6 +1810,20 @@ function resolveStrongholdSiegeVictory() {
     toast(`🏆 ${T('Siege Victory!', 'ui')} (${vic.grade} Tier)`, 'good');
     logMsg(`Stronghold Crystal defended! Grade: ${vic.grade}, +${vic.guildPoints} GP, +${vic.commendations} Commendations`, 'good');
     G.monsters = G.monsters.filter(mo => !mo._siegeMob);
+
+    const modalHtml = strongholdUI.renderSiegeVictoryModalHtml(vic);
+    if (modalHtml && typeof document !== 'undefined') {
+      let mContainer = document.getElementById('siege-victory-modal-container');
+      if (!mContainer) {
+        mContainer = document.createElement('div');
+        mContainer.id = 'siege-victory-modal-container';
+        document.body.appendChild(mContainer);
+      }
+      mContainer.innerHTML = modalHtml;
+      mContainer.querySelectorAll('[data-claim-siege-spoils]').forEach(btn => {
+        btn.onclick = () => { mContainer.innerHTML = ''; };
+      });
+    }
   }
 }
 
@@ -4827,6 +4845,7 @@ function buildHud() {
     <div class="hud">
       <div id="raid-hud-slot"></div>
       <div id="spire-hud-slot"></div>
+      <div id="stronghold-hud-slot"></div>
       <div id="danger-vignette" class="danger-vignette"></div>
       <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
@@ -5193,6 +5212,10 @@ function updateHud() {
   }
   const spSlot = $('#spire-hud-slot');
   if (spSlot && spireUI) spSlot.innerHTML = spireUI.renderSpireHudHtml(G.spireState);
+  const shSlot = $('#stronghold-hud-slot');
+  if (shSlot && strongholdUI) {
+    shSlot.innerHTML = strongholdUI.renderSiegeHudHtml(G.strongholdState, G.strongholdCrystal);
+  }
   updateAutomationHud();
 }
 
@@ -5987,8 +6010,27 @@ function worldChronicleHtml() {
       <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'spire' ? 'active' : ''}" data-chronicle-tab="spire" style="font-weight:bold;${currentTab === 'spire' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
         🌀 ${T('Abyssal Spire', 'ui')}
       </button>
+      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'stronghold' ? 'active' : ''}" data-chronicle-tab="stronghold" style="font-weight:bold;${currentTab === 'stronghold' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
+        🏰 ${T('Guild Stronghold', 'ui')}
+      </button>
     </div>
   `;
+
+  if (currentTab === 'stronghold') {
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · GUILD STRONGHOLD', 'ui')}</small>
+          <h2>${T('Guild Stronghold', 'ui')}</h2>
+          <p>${T('Facility upgrades, trophy pedestals, and stronghold defenses.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="stronghold-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;">
+        ${strongholdUI.renderStrongholdConsoleHtml(strongholdSystem.serialize(), G.player, G.guildPoints)}
+      </div>
+    </section>`;
+  }
 
   if (currentTab === 'bestiary') {
     return `<section class="world-chronicle" style="max-width:860px">
@@ -6776,6 +6818,44 @@ function wirePanel(id, el) {
       } else {
         G._chronicleTab = 'road';
         refreshPanel('world');
+      }
+    });
+    el.querySelectorAll('[data-upgrade-facility]').forEach(b => b.onclick = () => {
+      const fId = b.dataset.upgradeFacility;
+      const res = strongholdSystem.upgradeFacility(fId, G.player, G.guildPoints, (pts) => { G.guildPoints -= pts; });
+      if (res.success) {
+        recompute(G.player);
+        saveGame();
+        refreshPanel('world');
+        toast(T('Facility upgraded!', 'ui'), 'good');
+      }
+    });
+    el.querySelectorAll('[data-claim-stipend]').forEach(b => b.onclick = () => {
+      const res = strongholdSystem.claimDailyStipend(G.player);
+      if (res.success) {
+        saveGame();
+        refreshPanel('world');
+        toast(T('Claimed daily stipend!', 'ui'), 'good');
+      }
+    });
+    el.querySelectorAll('[data-mount-pedestal]').forEach(b => b.onclick = () => {
+      const pId = b.dataset.mountPedestal;
+      const res = strongholdSystem.mountTrophy(pId, G.player);
+      if (res.success) {
+        recompute(G.player);
+        saveGame();
+        refreshPanel('world');
+        toast(T('Trophy mounted!', 'ui'), 'good');
+      }
+    });
+    el.querySelectorAll('[data-unmount-pedestal]').forEach(b => b.onclick = () => {
+      const pId = b.dataset.unmountPedestal;
+      const res = strongholdSystem.unmountTrophy(pId, G.player);
+      if (res.success) {
+        recompute(G.player);
+        saveGame();
+        refreshPanel('world');
+        toast(T('Trophy retrieved!', 'ui'), 'good');
       }
     });
   }

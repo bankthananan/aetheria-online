@@ -469,6 +469,14 @@ const strongholdUiStrings = [
   { en: 'The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.', th: 'ประตูป้อมปราการกิลด์ถูกปิดล็อก จงพิสูจน์ความกล้าหาญโดยการเลื่อนระดับเป็นกิลด์แรงก์ D กับผู้อาวุโสมาโรก่อน' },
   { en: 'Foes Remaining', th: 'ศัตรูที่เหลืออยู่' },
   { en: 'WAVE', th: 'เวฟที่' },
+  { en: 'Max Tier', th: 'ระดับสูงสุด' },
+  { en: 'Facility upgraded!', th: 'อัปเกรดสิ่งปลูกสร้างสำเร็จ!' },
+  { en: 'Claimed daily stipend!', th: 'รับเบี้ยเลี้ยงประจำวันแล้ว!' },
+  { en: 'Trophy mounted!', th: 'ติดตั้งถ้วยรางวัลสำเร็จ!' },
+  { en: 'Trophy retrieved!', th: 'ปลดถ้วยรางวัลสำเร็จ!' },
+  { en: 'Claim Commendations', th: 'รับเหรียญเกียรติยศ' },
+  { en: 'Guild Points', th: 'คะแนนกิลด์' },
+  { en: 'Stronghold Crystal', th: 'คริสตัลป้อมปราการ' },
 ];
 
 // Verify English mode
