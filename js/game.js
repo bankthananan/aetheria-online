@@ -1237,7 +1237,7 @@ function recompute(p, fill) {
   if (trophyAuras.res_fire) p.res_fire = (p.res_fire || 0) + trophyAuras.res_fire;
   if (trophyAuras.res_nature) p.res_nature = (p.res_nature || 0) + trophyAuras.res_nature;
   if (trophyAuras.res_void) p.res_void = (p.res_void || 0) + trophyAuras.res_void;
-  if (trophyAuras.res_light) p.res_light = (p.res_light || 0) + trophyAuras.res_light;
+  if (trophyAuras.res_holy) p.res_holy = (p.res_holy || 0) + trophyAuras.res_holy;
   p.strongholdMods = strongholdMods;
   p.trophyAuras = trophyAuras;
 
@@ -1776,6 +1776,7 @@ function startStrongholdSiege() {
   toast(`⚔ ${T('Crystal Siege Defense', 'ui')} — ${T('WAVE', 'ui')} 1 / 3!`, 'bad');
   return siege;
 }
+G.startStrongholdSiege = startStrongholdSiege;
 
 function spawnSiegeWave(waveNum) {
   const tpl = SIEGE_WAVE_TEMPLATES[waveNum - 1];
@@ -3025,7 +3026,7 @@ function updateMonsters(dt) {
       if (p.hp <= 0) return;
     }
 
-    const aggro = m.def.behavior === 'aggressive' || m.provoked;
+    const aggro = m._siegeMob ? (m._siegeTarget === 'player' || m.provoked) : (m.def.behavior === 'aggressive' || m.provoked);
     const aggroTiles = Math.max(R.aggroRangeTiles * weatherSystem.getAggroRangeMult(G?.mapId), (m.def.attackRange || 0) + 1);
     if (aggro && d < aggroTiles * TS * (m.def.id === 'ruin_golem' ? 4 : 1)) {
       const range = (m.size / 2) + TS * (m.def.attackRange || 0.6);

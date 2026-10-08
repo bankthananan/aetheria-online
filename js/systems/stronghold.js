@@ -86,7 +86,7 @@ export const TROPHY_PEDESTAL_DEFINITIONS = {
     targetTrophy: 'dimensional_shard',
     trophyQty: 10,
     auraName: 'Aetheric Resonance',
-    perks: { magicDef: 15, lootBias: 0.20, res_light: 10 },
+    perks: { magicDef: 15, lootBias: 0.20, res_holy: 10 },
     color: '#00e5ff'
   }
 };
@@ -305,7 +305,7 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
       res_fire: 0,
       res_nature: 0,
       res_void: 0,
-      res_light: 0,
+      res_holy: 0,
     };
 
     for (const [id, def] of Object.entries(TROPHY_PEDESTAL_DEFINITIONS)) {

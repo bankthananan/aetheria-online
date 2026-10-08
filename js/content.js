@@ -261,7 +261,7 @@ export const CONTENT = {
       behavior: "aggressive"
     },
     {
-      id: "siege_warlord_boss", element: "earth", name: "Siege Warlord",
+      id: "siege_warlord_boss", element: "physical", name: "Siege Warlord",
       flavor: "A colossal warlord clad in siege plate, brandishing an iron battering ram.",
       level: 75, hp: 8500, atk: 195, def: 75, exp: 22000, spriteColor: "#4e342e", sizeTiles: 2, boss: true,
       drops: [{ itemId: "guild_commendation", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.8 }, { itemId: "star_iron", chance: 1.0 }],
@@ -463,6 +463,10 @@ export const CONTENT = {
     { id: "title_abyssal_sovereign", name: "Abyssal Sovereign", type: "material", desc: "The supreme mark of conquering all 100 floors of the Abyssal Spire.", price: 5000, value: 5000, rarity: "legendary" },
 
     // ===== Guild Stronghold Items =====
+    { id: "iron_ore", name: "Iron Ore", type: "material", desc: "Raw iron ore extracted from quarry veins or reclaimed from siege armaments.", price: 25, value: 25, rarity: "common" },
+    { id: "beast_fang", name: "Beast Fang", type: "material", desc: "A serrated predator fang harvested from trained war beasts.", price: 30, value: 30, rarity: "common" },
+    { id: "essence_fire", name: "Fire Essence", type: "material", desc: "A warm, crackling elemental core refined from pyrotechnic explosives.", price: 60, value: 60, rarity: "uncommon" },
+    { id: "hardwood", name: "Hardwood", type: "material", desc: "Sturdy, dense timber ideal for bracing fortifications and training equipment.", price: 35, value: 35, rarity: "common" },
     { id: "guild_commendation", name: "Guild Commendation", type: "material", desc: "A prestigious seal of valor awarded for defending the Stronghold Crystal during siege incursions.", price: 500, value: 500, rarity: "epic" },
     { id: "stronghold_banner", name: "Stronghold Vanguard Banner", type: "armor", slot: "accessory", desc: "A gilded standard carried by citadel defenders. Increases Max HP by +150 and Physical DEF by +12.", price: 5000, value: 5000, rarity: "epic", stats: { maxHp: 150, physDef: 12 }, classReq: null, gearLevel: 55 }
   ],

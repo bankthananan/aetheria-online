@@ -24,16 +24,6 @@ installBrowserEnv({
 });
 
 const { CONTENT } = await import('./content.js');
-const validItemIds = new Set(CONTENT.items.map(i => i.id));
-for (const m of CONTENT.monsters) {
-  if (m.id.startsWith('siege_') && m.drops) {
-    m.drops = m.drops.map(d => {
-      if (d.itemId === 'beast_fang') return { ...d, itemId: 'wolf_fang' };
-      if (d.itemId === 'essence_fire') return { ...d, itemId: 'ember_ash' };
-      return d;
-    }).filter(d => validItemIds.has(d.itemId));
-  }
-}
 await import('./game.js');
 const {
   FACILITY_DEFINITIONS,
@@ -50,10 +40,7 @@ const A = globalThis.__AWO;
 assert.ok(A, 'game debug API loaded');
 
 if (!A.startStrongholdSiege) {
-  A.startStrongholdSiege = () => {
-    A.adminAction('spawnstrongholdsiege');
-    return A.G.strongholdState;
-  };
+  A.startStrongholdSiege = () => A.G.startStrongholdSiege();
 }
 
 // Set up test player
@@ -83,8 +70,15 @@ for (const mobId of expectedSiegeMonsters) {
   assert.ok(mobDef.level >= 60, `Monster '${mobId}' level is >= 60 (endgame level: ${mobDef.level})`);
 }
 
-// 2. 2 items exist in CONTENT.items
-const expectedItems = ['guild_commendation', 'stronghold_banner'];
+// 2. Stronghold materials and gear exist in CONTENT.items
+const expectedItems = [
+  'guild_commendation',
+  'stronghold_banner',
+  'iron_ore',
+  'beast_fang',
+  'essence_fire',
+  'hardwood',
+];
 for (const itemId of expectedItems) {
   const itemDef = CONTENT.items.find(i => i.id === itemId);
   assert.ok(itemDef, `Item '${itemId}' exists in CONTENT.items`);
@@ -212,7 +206,7 @@ const baselineResVoid = A.G.player.res_void || 0;
 const baselineDmgMult = A.G.player.dmgMult || 1.0;
 const baselineMoveMult = A.G.player.moveMult || 1.0;
 const baselineMagicDef = A.G.player.magicDef || 0;
-const baselineResLight = A.G.player.res_light || 0;
+const baselineResHoly = A.G.player.res_holy || 0;
 
 // Stock player inventory with trophy items
 A.G.player.inventory.push(
@@ -251,7 +245,7 @@ const mIncursion = A.G.strongholdSystem.mountTrophy('pedestal_incursion', A.G.pl
 assert.equal(mIncursion.success, true, 'Mounted dimensional_shard into pedestal_incursion');
 A.recompute(A.G.player);
 assert.equal(A.G.player.magicDef, baselineMagicDef + 15, '+15 Magic DEF from Incursion pedestal');
-assert.equal(A.G.player.res_light, baselineResLight + 10, '+10 Light RES from Incursion pedestal');
+assert.equal(A.G.player.res_holy, baselineResHoly + 10, '+10 Holy RES from Incursion pedestal');
 assert.equal(A.G.strongholdSystem.getTrophyAuras().lootBias, 0.20, '+0.20 lootBias from Incursion pedestal');
 
 // 5. Unmount pedestal_colossus -> verify Max HP returns to baseline and titan_heart returns to inventory
@@ -284,6 +278,12 @@ assert.ok(initialMob, 'Siege mob present in Wave 1');
 assert.equal(initialMob._siegeTarget, 'crystal', 'Initial siege mob target is crystal');
 A.damageMonster(initialMob, 50);
 assert.equal(initialMob._siegeTarget, 'player', 'Damage switches target to player');
+
+// Verify killing a siege mob drops registered items without throwing TypeError
+const dropTestMob = A.makeMonster(CONTENT.monsters.find(m => m.id === 'siege_sapper'), 16 * 32, 12 * 32, 65);
+assert.doesNotThrow(() => {
+  A.killMonster(dropTestMob);
+}, 'Killing a siege mob with registered drops should not throw TypeError');
 
 // Track spoils before victory
 const preGP = A.G.guildPoints || 0;

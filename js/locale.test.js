@@ -439,6 +439,10 @@ const strongholdMonsters = [
 ];
 
 const strongholdItems = [
+  { id: 'iron_ore', en: 'Iron Ore', th: 'แร่เหล็ก' },
+  { id: 'beast_fang', en: 'Beast Fang', th: 'เขี้ยวสัตว์อสูร' },
+  { id: 'essence_fire', en: 'Fire Essence', th: 'แก่นแท้แห่งไฟ' },
+  { id: 'hardwood', en: 'Hardwood', th: 'ไม้เนื้อแข็ง' },
   { id: 'guild_commendation', en: 'Guild Commendation', th: 'เหรียญเกียรติยศกิลด์' },
   { id: 'stronghold_banner', en: 'Stronghold Vanguard Banner', th: 'ธงชัยกองหน้าป้อมปราการ' },
 ];
@@ -485,6 +489,7 @@ for (const m of strongholdMonsters) {
   assert.equal(T(m.en, 'monsters'), m.en, `English monster translation mismatch for: ${m.en}`);
 }
 for (const it of strongholdItems) {
+  assert.ok(CONTENT.items.some(i => i.id === it.id), `Stronghold item exists in CONTENT.items: ${it.id}`);
   assert.equal(T(it.en, 'items'), it.en, `English item translation mismatch for: ${it.en}`);
 }
 for (const mp of strongholdMaps) {
