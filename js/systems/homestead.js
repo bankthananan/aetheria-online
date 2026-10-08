@@ -328,7 +328,7 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     }
     const collected = [...pendingPastureGifts];
     pendingPastureGifts = [];
-    return { success: true, gifts: collected };
+    return { success: true, gifts: collected, collected };
   }
 
   // --- Armory Mannequins ---
@@ -489,6 +489,7 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     collectPastureGifts,
     getMannequin,
     saveLoadout,
+    storeLoadout: saveLoadout,
     swapLoadout,
     retrieveLoadout,
     restAtHearth,

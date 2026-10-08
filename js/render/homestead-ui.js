@@ -356,8 +356,10 @@ export function createHomesteadUIRenderer({
   return {
     renderPlotModalHtml,
     renderPastureDialogHtml,
+    renderPastureModalHtml: renderPastureDialogHtml,
     renderMannequinModalHtml,
     renderHearthModalHtml,
     renderHomesteadOverviewHtml,
+    renderHomesteadChronicleTabHtml: renderHomesteadOverviewHtml,
   };
 }
