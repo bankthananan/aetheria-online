@@ -1,0 +1,89 @@
+# UI/UX Audit & Design Spec — Aetheria Online (Oct 2026)
+
+Scope: `index.html`, `js/theme.js`, HUD/panels in `js/game.js`, and the six subsystem UIs
+`js/render/{cards,pets,spire,stronghold,homestead,raids}-ui.js`.
+Evidence: headless Brave screenshots at 1280×800 and 390×844 (`autotest.html?panel=world&chrontab=<tab>`).
+
+## Core finding
+
+`theme.js` defines a coherent 16-bit "walnut + brass + parchment" token system (`--gold`, `--wood-*`,
+`--parchment-*`, `--text`, `--text-muted`, `--success`, `--danger`) and a ready-made tab/grid/card kit
+(`.book-tabs`, `.book-tab`, `.book-grid`, `.book-card`). **The six `*-ui.js` modules use none of it** —
+0 `var(--…)` references across ~440 inline `style=` attributes — each ships its own palette
+(GitHub-dark `#30363d`/`#e6edf3`, Material `#4caf50`/`#ffd54f`, neon `#7c4dff`/`#00e5ff`) and its own
+font sizes (10–24px). Result: World Chronicle tabs look like six different apps inside one brass frame.
+
+Design rule going forward: **subsystem UIs compose existing classes + tokens; no new hex literals.**
+No new component layer is needed — this is mostly deleting inline styles.
+
+## P0 — visible breakage (shipped)
+
+| # | Issue | Root cause → fix |
+|---|---|---|
+| 1 | Stronghold badge rendered `Tier …` | Title wrapper had `width:100%`, squeezing the badge (which had `min-width:0` + ellipsis) to nothing. Wrapper → `flex:1`, badge → `flex-shrink:0`, ellipsis dropped. Rule: containment goes on containers, never on badges/labels. |
+| 2 | Chronicle tab strip clipped the 6th tab; indigo active state off-theme | Inline flex row without wrap + per-button inline styles. Now `.book-tabs.chronicle-tabs` / `.book-tab.active` (wraps, gold active), `white-space:nowrap`, light inactive text for the navy chronicle body, `role="tab"`/`aria-selected`. |
+| 3 | Content clipped on the right at 1280px (companion roster, stronghold grid) | `.world-chronicle` was a fixed `min(760px,84vw)` inside a 760px panel with 15px padding → always ~30px too wide. Now `width:100%`. |
+| 3b | Bestiary detail columns overflow at 390px | Fixed `min-width:220px` + `flex:0 0 240px` → `min(220px,100%)` / `flex:0 1 240px; max-width:100%`. |
+| 4 | Spire elevator nested as a modal inside the Chronicle (double ×, inner scroll) | `inline` mode now omits the close button and the `max-height:90vh` inner scroller. Standalone modal unchanged. |
+| 5 | Boss frame overlapped the top menu (desktop) / stat stack (phone) | Desktop `top:80px` (below the two menu rows); ≤680px anchored `bottom:104px`, above momentum + hotbar. |
+| 6 | Phone minimap cropped, weather label wrapping out of the frame | Mobile minimap is 96px but the 136px canvas wasn't scaled → `canvas{width:100%;height:100%}`; weather label `nowrap` + ellipsis. |
+
+Retracted from the first draft: "homestead grid clipped at 390px" and "hotbar slot 9 clipped" were
+screenshot artifacts — **headless Brave clamps `--window-size` to a 500px minimum width**, so a "390px"
+screenshot is a 500px layout cropped. True phone widths need an iframe wrapper (see Verification). The
+mobile hotbar is an intentional scroll-snap row.
+
+## P1 — consistency (mechanical token mapping)
+
+Apply across all six `*-ui.js` files:
+
+| Hard-coded | Token |
+|---|---|
+| `#ffd54f` `#ffd700` `#f0d47d` | `var(--gold-bright)` / `var(--accent-alt)` |
+| `#aaa` `#888` `#8b949e` `#9e9e9e` `#a0a0a0` | `var(--text-muted)` |
+| `#fff` `#ffffff` `#e6edf3` | `var(--text)` |
+| `#4caf50` `#81c784` | `var(--success)` |
+| `#e57373` | `var(--danger)` |
+| `#30363d`, `rgba(255,255,255,.05–.1)` surfaces/borders | `.book-card` (bg `rgba(0,0,0,.28)`, border `rgba(120,90,50,.4)`) |
+| `font-family` system sans (pets) | inherit `--font-ui`; headings `--font-head` |
+| font-size zoo 10/11/12/13/14/15/16/18/20/24 | 10 (meta) · 11 (body) · 12 (card title) · 17 (section head, `--font-head`) |
+
+Allowed exceptions: one **biome accent** per subsystem (Spire violet, Raids ember) for a single border/title
+color — surfaces stay on-theme. Rarity colors stay as defined in `loot.js`.
+
+Card anatomy (all subsystems): `.book-card` → `.book-card-head` (icon + `<b>` title + right-aligned status
+badge) → `<small>` description → requirement rows → full-width action button. Locked/unbuilt =
+`.book-card.locked`, not a red-text list.
+
+Unverified: whether high-contrast mode (`hc`) re-colors these tabs. If HC works by overriding tokens,
+every hard-coded hex above currently ignores it — P1 fixes that for free. Check with a settings→HC toggle
+then reopening the Chronicle.
+
+## P2 — polish
+
+- Homestead empty plots show "None" in success-green + a crate emoji → muted empty state: "Empty — tap to plant".
+- Stronghold requirement rows are all red at 0 progress → show `have / need` muted, turn green per row when met; red only on the button's disabled tooltip.
+- Disabled "Upgrade Facility" button is near-invisible → standard `.btn[disabled]` (opacity .55, `cursor:not-allowed`) + reason text.
+- Stronghold/Homestead/Spire tabs nest a second dark navy hero banner inside the parchment panel body; keep one header (the Chronicle hero), drop the per-tab duplicate title (e.g. "Adventurer's Homestead" appears twice).
+- Top menu wraps to two rows at 1280px with 15 buttons; group rarely-used ones (Field guide, Loadouts, Audio, Lang, Admin) under the existing `≡ Menu` button. The "≡ Menu" button is also half-hidden behind the level badge at top-left.
+
+Out of scope: overlapping canvas nameplates over monster clusters (canvas render, not DOM UI).
+
+## Tooling change made during audit
+
+`autotest.html` gained `chrontab=<road|bestiary|companions|spire|stronghold|homestead>` (sets
+`G._chronicleTab`, mirrors `booktab`).
+
+## Verification contract for implementation
+
+Per CLAUDE.md: Node harness (assert tab render + no throw for all six tabs) **and** Brave screenshots at
+1280×800 and a true 390px (iframe `<iframe style="width:390px;height:844px">` around `autotest.html`,
+window ≥500px) for every Chronicle tab, with `tilephase`/`anim` frozen. Acceptance: no horizontal
+clipping at either width, `grep -c '#[0-9a-fA-F]\{3,6\}' js/render/*-ui.js` trends to ~0 (biome accent
+excepted), `Tier 0/3` fully visible.
+
+## Suggested phasing
+
+1. **P0** (one commit per row; rows 1–3 are mostly deletions).
+2. **P1** token sweep, one `*-ui.js` per commit.
+3. **P2** as appetite allows.

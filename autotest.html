@@ -195,6 +195,7 @@
               if (params.get('shoptab') === 'enhance') A.addItem('blessed_ore', 5);
             }
             if (params.get('booktab')) A.G._bookTab = params.get('booktab');   // e.g. panel=book&booktab=elements
+            if (params.get('chrontab')) A.G._chronicleTab = params.get('chrontab'); // e.g. panel=world&chrontab=homestead
             if (params.get('deliver') && !A.G.activeGuilds.length) {  // force a delivery bounty, fully stocked
               let q; do { q = A.genGuildQuest(); } while (q.kind !== 'deliver');
               A.G.activeGuilds.push(q); A.addItem(q.target, q.count);
