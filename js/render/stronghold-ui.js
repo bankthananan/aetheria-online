@@ -112,7 +112,7 @@ export function createStrongholdUIRenderer({
           if (!matHave) allMatsHave = false;
           const matBaseName = ITEM_NAMES[mat.itemId] || mat.itemId;
           const matName = esc(T(matBaseName, 'items'));
-          return `<div class="cost-item cost-item--mat" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${matHave ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">${currentCount} / ${mat.qty} ${matName}</div>`;
+          return `<div class="cost-item cost-item--mat" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${matHave ? 'var(--success-text)' : 'var(--text-muted)'}; word-break: break-word;">${matHave ? '✓ ' : ''}${currentCount} / ${mat.qty} ${matName}</div>`;
         }).join('');
 
         const canUpgrade = hasGP && hasZeny && allMatsHave;
@@ -120,11 +120,11 @@ export function createStrongholdUIRenderer({
         costsAndUpgradeHtml = `
           <div class="facility-costs" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
             <small style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word;">${T('Upgrade Requirements', 'ui')}:</small>
-            <div class="cost-item cost-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasGP ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">GP: ${guildPoints ?? 0} / ${nextTierData.costGP}</div>
-            <div class="cost-item cost-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasZeny ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">Zeny: ${playerZeny} / ${nextTierData.costZeny}</div>
+            <div class="cost-item cost-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasGP ? 'var(--success-text)' : 'var(--text-muted)'}; word-break: break-word;">${hasGP ? '✓ ' : ''}GP: ${guildPoints ?? 0} / ${nextTierData.costGP}</div>
+            <div class="cost-item cost-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasZeny ? 'var(--success-text)' : 'var(--text-muted)'}; word-break: break-word;">${hasZeny ? '✓ ' : ''}Zeny: ${playerZeny} / ${nextTierData.costZeny}</div>
             ${matsHtml}
           </div>
-          <button class="btn btn--primary" data-upgrade-facility="${fId}" ${canUpgrade ? '' : 'disabled'} style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 8px 12px; font-weight: bold;">${T('Upgrade Facility', 'ui')}</button>
+          <button class="btn btn--primary" data-upgrade-facility="${fId}" ${canUpgrade ? '' : 'disabled'} style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 8px 12px; font-weight: bold;">${canUpgrade ? T('Upgrade Facility', 'ui') : T('Requirements not met', 'ui')}</button>
         `;
       } else {
         costsAndUpgradeHtml = `

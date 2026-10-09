@@ -217,7 +217,7 @@ export function createSpireUIRenderer({
               <span style="font-weight: 700; font-size: 14px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">🔒 Floor ${floor}</span>
               <span class="spire-biome-pill" style="flex-shrink: 0; box-sizing: border-box; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: var(--text-muted);">${esc(T(biome.name, 'maps'))}</span>
             </div>
-            <span style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--danger-text); font-weight: 600;">${esc(reqText)}</span>
+            <span style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--text-muted); font-weight: 600;">${esc(reqText)}</span>
           </div>
         `.trim();
       }
@@ -233,7 +233,7 @@ export function createSpireUIRenderer({
           <!-- Header with Title and Close Button -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(124, 77, 255, 0.3); padding-bottom: 10px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #b388ff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); box-sizing: border-box; min-width: 0; word-break: break-word;">
-              🌀 ${T('Ascendant Elevator', 'ui')} — ${T('Abyssal Spire', 'ui')}
+              🌀 ${T('Ascendant Elevator', 'ui')}${inline ? '' : ` — ${T('Abyssal Spire', 'ui')}`}
             </h2>
             ${inline ? '' : `<button class="btn btn--ghost spire-modal-close" data-spire-close="1" style="box-sizing: border-box; min-width: 0; font-size: 17px; line-height: 1; padding: 4px 8px; cursor: pointer; color: #b388ff; background: transparent; border: 1px solid transparent; border-radius: 4px;">✕</button>`}
           </div>

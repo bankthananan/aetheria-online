@@ -308,12 +308,12 @@ export function createHomesteadUIRenderer({
 
     const plotsSummary = plots.map(p => {
       const stageName = p.stage === 3 ? 'Mature 🌸' : p.stage === 2 ? 'Vegetative 🌿' : p.stage === 1 ? 'Seedling 🌱' : 'Empty 🟫';
-      const cName = p.cropId ? (cropDefs[p.cropId]?.name || p.cropId) : 'None';
+      const cName = p.cropId ? (cropDefs[p.cropId]?.name || p.cropId) : '';
       return `
         <div style="box-sizing: border-box; min-width: 0; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; padding: 6px 8px; font-size: 11px;">
           <div style="font-weight: bold; color: var(--text);">Plot ${p.id + 1}</div>
           <div style="color: var(--text-muted);">${stageName}</div>
-          <div style="color: var(--success-text);">${cName}</div>
+          ${cName ? `<div style="color: var(--success-text);">${esc(T(cName, 'items'))}</div>` : ''}
           ${p.watered ? `<div style="color: var(--info);">💧 ${T('Watered', 'ui')}</div>` : ''}
         </div>
       `;
@@ -322,7 +322,6 @@ export function createHomesteadUIRenderer({
     return `
       <div class="homestead-overview-dashboard" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
         <div style="box-sizing: border-box; width: 100%; max-width: 600px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 16px;">
-          <h3 style="margin: 0 0 12px 0; color: var(--gold-bright); font-size: 14px;">🏡 Adventurer's Homestead & Botanical Sanctum</h3>
           
           <!-- Botanical Sanctum -->
           <div style="box-sizing: border-box; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; margin-bottom: 16px;">
@@ -336,7 +335,7 @@ export function createHomesteadUIRenderer({
           <div style="box-sizing: border-box; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; margin-bottom: 16px;">
             <div style="font-weight: bold; color: var(--gold-bright); font-size: 12px; margin-bottom: 6px;">Companion Pasture</div>
             <div style="font-size: 12px; color: var(--text);">Companions Grazing: ${Object.keys(ownedPets || {}).length}</div>
-            <div style="font-size: 12px; color: var(--success-text);">Pending Forage Gifts: ${pendingGifts.length} items</div>
+            <div style="font-size: 12px; color: ${pendingGifts.length ? 'var(--success-text)' : 'var(--text-muted)'};">Pending Forage Gifts: ${pendingGifts.length} items</div>
           </div>
 
           <!-- Armory Mannequins & Hearth -->
