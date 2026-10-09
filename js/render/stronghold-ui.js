@@ -112,16 +112,16 @@ export function createStrongholdUIRenderer({
           if (!matHave) allMatsHave = false;
           const matBaseName = ITEM_NAMES[mat.itemId] || mat.itemId;
           const matName = esc(T(matBaseName, 'items'));
-          return `<div class="cost-item cost-item--mat" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${matHave ? '#81c784' : '#e57373'}; word-break: break-word;">${currentCount} / ${mat.qty} ${matName}</div>`;
+          return `<div class="cost-item cost-item--mat" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${matHave ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">${currentCount} / ${mat.qty} ${matName}</div>`;
         }).join('');
 
         const canUpgrade = hasGP && hasZeny && allMatsHave;
 
         costsAndUpgradeHtml = `
           <div class="facility-costs" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
-            <small style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; color: #90a4ae; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word;">${T('Upgrade Requirements', 'ui')}:</small>
-            <div class="cost-item cost-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasGP ? '#81c784' : '#e57373'}; word-break: break-word;">GP: ${guildPoints ?? 0} / ${nextTierData.costGP}</div>
-            <div class="cost-item cost-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasZeny ? '#81c784' : '#e57373'}; word-break: break-word;">Zeny: ${playerZeny} / ${nextTierData.costZeny}</div>
+            <small style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word;">${T('Upgrade Requirements', 'ui')}:</small>
+            <div class="cost-item cost-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasGP ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">GP: ${guildPoints ?? 0} / ${nextTierData.costGP}</div>
+            <div class="cost-item cost-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasZeny ? 'var(--success-text)' : 'var(--danger-text)'}; word-break: break-word;">Zeny: ${playerZeny} / ${nextTierData.costZeny}</div>
             ${matsHtml}
           </div>
           <button class="btn btn--primary" data-upgrade-facility="${fId}" ${canUpgrade ? '' : 'disabled'} style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 8px 12px; font-weight: bold;">${T('Upgrade Facility', 'ui')}</button>
@@ -129,7 +129,7 @@ export function createStrongholdUIRenderer({
       } else {
         costsAndUpgradeHtml = `
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; text-align: center; padding: 6px 0;">
-            <span class="badge badge--gold" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: inline-block; padding: 4px 12px; border-radius: 4px; background: rgba(255, 215, 0, 0.2); border: 1px solid #ffd700; color: #ffd700; font-weight: bold; font-size: 12px; white-space: nowrap; text-overflow: ellipsis;">${T('Max Tier', 'ui')}</span>
+            <span class="badge badge--gold" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 100%; display: inline-block; padding: 4px 12px; border-radius: 4px; background: color-mix(in srgb, var(--gold) 20%, transparent); border: 1px solid var(--gold-bright); color: var(--gold-bright); font-weight: bold; font-size: 12px; white-space: nowrap; ">${T('Max Tier', 'ui')}</span>
           </div>
         `;
       }
@@ -146,15 +146,15 @@ export function createStrongholdUIRenderer({
       }
 
       return `
-        <div class="facility-card facility-card--${fId}" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(22, 26, 35, 0.95); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="facility-card facility-card--${fId}" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 20px;">${fDef.icon}</span>
-              <b style="font-size: 14px; color: #fff; word-break: break-word; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${esc(T(fDef.name, 'ui'))}</b>
+              <b style="font-size: 14px; color: var(--text); word-break: break-word; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${esc(T(fDef.name, 'ui'))}</b>
             </div>
-            <span class="badge badge--tier" style="flex-shrink: 0; padding: 2px 8px; border-radius: 4px; background: rgba(240, 212, 125, 0.15); border: 1px solid #f0d47d; color: #f0d47d; font-size: 11px; font-weight: bold; white-space: nowrap;">Tier ${currentTier}/3</span>
+            <span class="badge badge--tier" style="flex-shrink: 0; padding: 2px 8px; border-radius: 4px; background: color-mix(in srgb, var(--gold) 15%, transparent); border: 1px solid var(--gold-bright); color: var(--gold-bright); font-size: 11px; font-weight: bold; white-space: nowrap;">Tier ${currentTier}/3</span>
           </div>
-          <div class="facility-perk" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: #cfd8dc; word-break: break-word;">
+          <div class="facility-perk" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: var(--text-muted); word-break: break-word;">
             ${esc(T(currentTierData.perkDesc || '', 'ui'))}
           </div>
           ${costsAndUpgradeHtml}
@@ -179,20 +179,20 @@ export function createStrongholdUIRenderer({
         : `<button class="btn btn--primary" data-mount-pedestal="${pId}" ${hasItem ? '' : 'disabled'} style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 8px 12px; font-weight: bold;">${T('Mount Trophy', 'ui')}</button>`;
 
       return `
-        <div class="pedestal-card pedestal-card--${pId}" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(22, 26, 35, 0.95); border: 1px solid ${isSocketed ? pDef.color : 'rgba(255, 255, 255, 0.12)'}; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: ${isSocketed ? `0 0 12px ${pDef.color}33` : 'none'};">
+        <div class="pedestal-card pedestal-card--${pId}" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: var(--card-bg); border: 1px solid ${isSocketed ? pDef.color : 'rgba(255, 255, 255, 0.12)'}; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: ${isSocketed ? `0 0 12px ${pDef.color}33` : 'none'};">
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; gap: 6px;">
-              <span class="badge badge--element" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; padding: 2px 6px; border-radius: 4px; background: ${pDef.color}22; border: 1px solid ${pDef.color}; color: ${pDef.color}; font-size: 10px; font-weight: bold; white-space: nowrap; text-overflow: ellipsis;">${pDef.element.toUpperCase()}</span>
-              <b style="font-size: 13px; color: #fff; word-break: break-word; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${esc(T(pDef.name, 'ui'))}</b>
+              <span class="badge badge--element" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 6px; border-radius: 4px; background: ${pDef.color}22; border: 1px solid ${pDef.color}; color: ${pDef.color}; font-size: 10px; font-weight: bold; white-space: nowrap; ">${pDef.element.toUpperCase()}</span>
+              <b style="font-size: 12px; color: var(--text); word-break: break-word; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${esc(T(pDef.name, 'ui'))}</b>
             </div>
-            <span class="pedestal-status-badge" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; font-size: 11px; font-weight: 800; color: ${isSocketed ? '#69f0ae' : '#757575'}; white-space: nowrap; text-overflow: ellipsis;">${isSocketed ? '[SOCKETED]' : '[EMPTY]'}</span>
+            <span class="pedestal-status-badge" style="flex-shrink: 0; box-sizing: border-box; font-size: 11px; font-weight: 800; color: ${isSocketed ? 'var(--success-text)' : 'var(--text-muted)'}; white-space: nowrap; ">${isSocketed ? '[SOCKETED]' : '[EMPTY]'}</span>
           </div>
-          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: #b0bec5; word-break: break-word;">
-            <span style="color: #90a4ae;">${T('Trophy', 'ui')}:</span> <b>${pDef.trophyQty}× ${targetTrophyName}</b>
+          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: var(--text-muted); word-break: break-word;">
+            <span style="color: var(--text-muted);">${T('Trophy', 'ui')}:</span> <b>${pDef.trophyQty}× ${targetTrophyName}</b>
           </div>
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
             <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; font-weight: bold; color: ${pDef.color}; word-break: break-word;">✦ ${auraName}</div>
-            <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: #cfd8dc; word-break: break-word;">${perksDesc}</div>
+            <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: var(--text-muted); word-break: break-word;">${perksDesc}</div>
           </div>
           ${actionBtnHtml}
         </div>
@@ -203,8 +203,8 @@ export function createStrongholdUIRenderer({
       <div class="stronghold-console-shell" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; flex-direction: column; gap: 20px;">
         <!-- Facilities Section -->
         <div class="stronghold-section-head" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
-          <h3 style="margin: 0 0 4px 0; font-size: 16px; color: #f0d47d; word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏛️ ${T('Stronghold Facilities', 'ui')}</h3>
-          <p style="margin: 0; font-size: 12px; color: var(--text-muted, #9e9e9e); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">${T('Upgrade guild facilities to unlock passive empire perks, crafting bonuses, and daily resources.', 'ui')}</p>
+          <h3 style="margin: 0 0 4px 0; font-size: 14px; color: var(--gold-bright); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏛️ ${T('Stronghold Facilities', 'ui')}</h3>
+          <p style="margin: 0; font-size: 12px; color: var(--text-muted, var(--text-muted)); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">${T('Upgrade guild facilities to unlock passive empire perks, crafting bonuses, and daily resources.', 'ui')}</p>
         </div>
         <div class="facilities-grid" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
           ${facilityCardsHtml}
@@ -212,8 +212,8 @@ export function createStrongholdUIRenderer({
 
         <!-- Hall of Trophies Section -->
         <div class="stronghold-section-head" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; margin-top: 8px;">
-          <h3 style="margin: 0 0 4px 0; font-size: 16px; color: #80d8ff; word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Hall of Trophies', 'ui')}</h3>
-          <p style="margin: 0; font-size: 12px; color: var(--text-muted, #9e9e9e); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">${T('Mount mighty boss remnants onto consecrated pedestals to channel permanent account-wide auras.', 'ui')}</p>
+          <h3 style="margin: 0 0 4px 0; font-size: 14px; color: var(--info); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Hall of Trophies', 'ui')}</h3>
+          <p style="margin: 0; font-size: 12px; color: var(--text-muted, var(--text-muted)); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">${T('Mount mighty boss remnants onto consecrated pedestals to channel permanent account-wide auras.', 'ui')}</p>
         </div>
         <div class="pedestals-grid" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
           ${pedestalCardsHtml}
@@ -237,20 +237,20 @@ export function createStrongholdUIRenderer({
     const hp = Math.max(0, crystalEntity.hp || 0);
     const maxHp = Math.max(1, crystalEntity.maxHp || 15000);
     const percentage = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
-    const barColor = percentage >= 50 ? '#4caf50' : (percentage >= 25 ? '#ff9800' : '#f44336');
+    const barColor = percentage >= 50 ? 'var(--success)' : (percentage >= 25 ? 'var(--warn)' : 'var(--danger)');
     const foesRemaining = siegeState.foesRemaining !== undefined
       ? siegeState.foesRemaining
       : Math.max(0, (siegeState.totalWaveFoes ?? 0) - (siegeState.defeatedFoes ?? 0));
 
     return `
-      <div class="stronghold-siege-hud" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px 12px; background: rgba(18, 14, 26, 0.94); border: 1px solid #00e5ff; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7); margin-bottom: 6px;">
+      <div class="stronghold-siege-hud" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px 12px; background: var(--wood-deep); border: 2px solid var(--gold); border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7); margin-bottom: 6px;">
         <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
           <!-- Wave Pill -->
-          <span class="siege-wave-pill" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; padding: 2px 8px; border-radius: 12px; background: rgba(255, 87, 34, 0.25); border: 1px solid #ff5722; color: #ff8a65; font-weight: 800; font-size: 11px; white-space: nowrap; text-overflow: ellipsis;">⚔ ${T('WAVE', 'ui')} ${wave} / 3</span>
+          <span class="siege-wave-pill" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 12px; background: color-mix(in srgb, var(--danger) 25%, transparent); border: 1px solid var(--danger); color: var(--danger-text); font-weight: 800; font-size: 11px; white-space: nowrap; ">⚔ ${T('WAVE', 'ui')} ${wave} / 3</span>
 
           <!-- Crystal HP Bar -->
           <div class="siege-crystal-meter" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; flex: 1 1 160px; max-width: 280px; display: flex; flex-direction: column; gap: 2px;">
-            <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #e0e0e0; white-space: nowrap; text-overflow: ellipsis;">
+            <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: var(--text); white-space: nowrap; text-overflow: ellipsis;">
               <span>💎 ${hp} / ${maxHp} HP (${percentage}%)</span>
             </div>
             <div style="box-sizing: border-box; width: 100%; max-width: 100%; height: 8px; background: rgba(255, 255, 255, 0.15); border-radius: 4px; overflow: hidden; min-width: 0;">
@@ -259,7 +259,7 @@ export function createStrongholdUIRenderer({
           </div>
 
           <!-- Foes Remaining Pill -->
-          <span class="siege-foes-pill" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; padding: 2px 8px; border-radius: 12px; background: rgba(156, 39, 176, 0.25); border: 1px solid #ab47bc; color: #e1bee7; font-weight: 700; font-size: 11px; white-space: nowrap; text-overflow: ellipsis;">👾 ${foesRemaining} ${T('Foes Remaining', 'ui')}</span>
+          <span class="siege-foes-pill" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text); font-weight: 700; font-size: 11px; white-space: nowrap; ">👾 ${foesRemaining} ${T('Foes Remaining', 'ui')}</span>
         </div>
       </div>
     `.trim();
@@ -285,37 +285,37 @@ export function createStrongholdUIRenderer({
 
     const oreBaseName = ore ? (ITEM_NAMES[ore] || ore) : '';
     const oreHtml = ore ? `
-      <div class="spoil-item spoil-item--ore" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 13px; font-weight: bold; color: #80cbc4; word-break: break-word;">
+      <div class="spoil-item spoil-item--ore" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--success-text); word-break: break-word;">
         +${oreCount}× ${esc(T(oreBaseName, 'items'))}
       </div>
     ` : '';
 
     return `
       <div class="siege-victory-overlay" style="position: fixed; inset: 0; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;">
-        <div class="siege-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: #161a23; border: 2px solid #ffd700; border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
+        <div class="siege-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: var(--card-bg); border: 2px solid var(--gold-bright); border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
           <header style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
-            <h2 style="margin: 0; font-size: 24px; color: #ffd700; word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Siege Victory!', 'ui')}</h2>
+            <h2 style="margin: 0; font-size: 24px; color: var(--gold-bright); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Siege Victory!', 'ui')}</h2>
           </header>
 
           <!-- Rank Crest Badge -->
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: center;">
-            <span class="badge badge--rank" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; padding: 6px 20px; border-radius: 20px; background: rgba(255, 215, 0, 0.2); border: 2px solid #ffd700; color: #ffd700; font-weight: 900; font-size: 18px; letter-spacing: 1px; white-space: nowrap; text-overflow: ellipsis;">RANK ${grade}</span>
+            <span class="badge badge--rank" style="flex-shrink: 0; box-sizing: border-box; padding: 6px 20px; border-radius: 20px; background: color-mix(in srgb, var(--gold) 20%, transparent); border: 2px solid var(--gold-bright); color: var(--gold-bright); font-weight: 900; font-size: 17px; letter-spacing: 1px; white-space: nowrap; ">RANK ${grade}</span>
           </div>
 
           <!-- Preserved Crystal HP -->
-          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 14px; color: #80d8ff; font-weight: bold; word-break: break-word;">
+          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 14px; color: var(--info); font-weight: bold; word-break: break-word;">
             💎 ${crystalHp} HP Preserved
           </div>
 
           <!-- Spoils Breakdown Grid -->
           <div class="siege-spoils-grid" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
-            <div class="spoil-item spoil-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 13px; font-weight: bold; color: #f0d47d; word-break: break-word;">
+            <div class="spoil-item spoil-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--gold-bright); word-break: break-word;">
               +${guildPoints} ${T('Guild Points', 'ui')}
             </div>
-            <div class="spoil-item spoil-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 13px; font-weight: bold; color: #ffca28; word-break: break-word;">
+            <div class="spoil-item spoil-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--gold-bright); word-break: break-word;">
               +${zeny} Zeny
             </div>
-            <div class="spoil-item spoil-item--commendations" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 13px; font-weight: bold; color: #64b5f6; word-break: break-word;">
+            <div class="spoil-item spoil-item--commendations" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; font-size: 12px; font-weight: bold; color: var(--info); word-break: break-word;">
               +${commendations}× ${T('Guild Commendation', 'ui')}
             </div>
             ${oreHtml}

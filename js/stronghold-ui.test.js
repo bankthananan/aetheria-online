@@ -134,16 +134,16 @@ assert.ok(hudHtml.includes('stronghold-siege-hud'), 'Renders .stronghold-siege-h
 assert.ok(hudHtml.includes('WAVE 2 / 3'), 'Displays WAVE 2 / 3 badge');
 assert.ok(hudHtml.includes('12000 / 15000 HP (80%)'), 'Displays crystal HP label and percentage');
 assert.ok(hudHtml.includes('5 Foes Remaining'), 'Displays 5 Foes Remaining (8 total - 3 defeated)');
-assert.ok(hudHtml.includes('#4caf50'), 'Uses green bar for >= 50% crystal HP');
+assert.ok(hudHtml.includes('var(--success)'), 'Uses green bar for >= 50% crystal HP');
 
 // Damaged crystal colors
 const lowCrystal = { hp: 3000, maxHp: 15000 }; // 20%
 const lowHudHtml = ui.renderSiegeHudHtml(activeSiege, lowCrystal);
-assert.ok(lowHudHtml.includes('#f44336'), 'Uses red bar for < 25% crystal HP');
+assert.ok(lowHudHtml.includes('var(--danger)'), 'Uses red bar for < 25% crystal HP');
 
 const midCrystal = { hp: 6000, maxHp: 15000 }; // 40%
 const midHudHtml = ui.renderSiegeHudHtml(activeSiege, midCrystal);
-assert.ok(midHudHtml.includes('#ff9800'), 'Uses orange bar for 25-49% crystal HP');
+assert.ok(midHudHtml.includes('var(--warn)'), 'Uses orange bar for 25-49% crystal HP');
 
 // 6. renderSiegeVictoryModalHtml results
 assert.equal(ui.renderSiegeVictoryModalHtml(null), '', 'Returns empty string for null victoryResult');
