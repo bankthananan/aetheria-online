@@ -33,7 +33,24 @@ screenshot artifacts — **headless Brave clamps `--window-size` to a 500px mini
 screenshot is a 500px layout cropped. True phone widths need an iframe wrapper (see Verification). The
 mobile hotbar is an intentional scroll-snap row.
 
-## P1 — consistency (mechanical token mapping)
+## P1 — consistency (shipped)
+
+Result: `var(--…)` uses in the six `*-ui.js` files went 0 → ~340; hard-coded hex 200+ → 27, all
+intentional (rarity/grade/pet-archetype data maps, Spire violet accent, heart-pink loyalty bar, canvas
+fanfare). Deviations from the plan below:
+
+- New tokens: `--success-text`/`--danger-text` (text-safe ≥6.5:1 on dark cards — `--danger` alone is
+  4.3:1), `--info`, `--warn`, `--card-bg`, `--card-border`. Tints use `color-mix(in srgb, var(--x) N%, transparent)`.
+- `.panel__body` swaps `--text`/`--text-muted`/`--accent-alt`/`--success` to parchment ink; `.world-chronicle`
+  restores the dark values so tokens are readable on its navy body.
+- Card `RARITY_COLORS` now derive from `loot.js` `RARITY` (cards and gear previously disagreed, e.g.
+  legendary yellow vs orange).
+- Inline `box-sizing`/`min-width:0`/`overflow-x:hidden` "boxing containment" is kept — it is a documented
+  convention asserted by the UI tests — but stripped from badges/pills (`flex-shrink:0` instead), the
+  pattern behind `Tier …`.
+- Font sizes: 13→12, 15/16→14, 18→17; a 14px card-title step stayed.
+
+Original mapping plan:
 
 Apply across all six `*-ui.js` files:
 
@@ -67,6 +84,8 @@ then reopening the Chronicle.
 - Stronghold/Homestead/Spire tabs nest a second dark navy hero banner inside the parchment panel body; keep one header (the Chronicle hero), drop the per-tab duplicate title (e.g. "Adventurer's Homestead" appears twice).
 - Top menu wraps to two rows at 1280px with 15 buttons; group rarely-used ones (Field guide, Loadouts, Audio, Lang, Admin) under the existing `≡ Menu` button. The "≡ Menu" button is also half-hidden behind the level badge at top-left.
 
+- Raid victory "Spoils Showcase" prints raw item ids (`titan_heart`, `rune_ember`, `smoked_salmon`) instead of item names.
+
 Out of scope: overlapping canvas nameplates over monster clusters (canvas render, not DOM UI).
 
 ## Tooling change made during audit
@@ -84,6 +103,6 @@ excepted), `Tier 0/3` fully visible.
 
 ## Suggested phasing
 
-1. **P0** (one commit per row; rows 1–3 are mostly deletions).
-2. **P1** token sweep, one `*-ui.js` per commit.
+1. ~~P0~~ shipped (`0437bde`…`2db2054`).
+2. ~~P1~~ shipped (`b996cf5`…, one `*-ui.js` per commit).
 3. **P2** as appetite allows.
