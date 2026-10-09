@@ -5082,21 +5082,24 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="guide">${T('Field guide', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="loadouts">${T('Loadouts', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
-        ${G.admin ? `<button class="btn btn--ghost" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
-        <button class="btn btn--ghost" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
-        <button class="btn btn--ghost" id="mute-btn">🔊</button>
+        <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')}</button>
+        <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')}</button>
+        <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
+        ${G.admin ? `<button class="btn btn--ghost hud-more" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
+        <button class="btn btn--ghost hud-more" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
+        <button class="btn btn--ghost hud-more" id="mute-btn">🔊</button>
+        <button class="btn btn--ghost hud-more-toggle" id="hud-more-btn" type="button" aria-expanded="false" aria-label="${T('More', 'ui')}" title="${T('More', 'ui')}">⋯</button>
       </div>
     </div>`;
   renderHotbar();
   initTouchControls();
   $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => {
     togglePanel(b.dataset.panel);
-    $('#hud .hud-menu')?.classList.remove('open');
+    $('#hud .hud-menu')?.classList.remove('open', 'more-open');
     $('#mobile-menu-btn')?.classList.remove('active');
   });
+  const moreBtn = $('#hud-more-btn');
+  if (moreBtn) moreBtn.onclick = () => moreBtn.setAttribute('aria-expanded', $('#hud .hud-menu').classList.toggle('more-open'));
   const mBtn = $('#mobile-menu-btn');
   const hMenu = $('#hud .hud-menu');
   if (mBtn && hMenu) {

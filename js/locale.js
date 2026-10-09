@@ -1122,6 +1122,7 @@ export const L10N = {
       "Claim Stipend": "รับเบี้ยเลี้ยงประจำวัน",
       "Upgrade Facility": "อัปเกรดสิ่งปลูกสร้าง",
       "Requirements not met": "ยังไม่ครบเงื่อนไข",
+      "More": "เพิ่มเติม",
       "Stronghold Gate Barred": "ประตูป้อมปราการถูกปิดล็อก",
       "The Stronghold gate is barred. Prove your valor by reaching Guild Rank D with Elder Maro.": "ประตูป้อมปราการกิลด์ถูกปิดล็อก จงพิสูจน์ความกล้าหาญโดยการเลื่อนระดับเป็นกิลด์แรงก์ D กับผู้อาวุโสมาโรก่อน",
       "Foes Remaining": "ศัตรูที่เหลืออยู่",

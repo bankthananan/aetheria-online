@@ -109,7 +109,11 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #hud .quest-tracker:focus-visible{outline:2px solid var(--accent-alt);outline-offset:2px}
 
 /* Command menu */
-.mobile-menu-btn{display:none}
+#hud .mobile-menu-btn{display:none}
+/* desktop: rarely-used menu buttons fold behind ⋯ (the phone menu lists everything) */
+@media (min-width:681px){body:not([data-viewport="portrait"]):not([data-viewport="landscape"]) #hud .hud-menu:not(.more-open) .hud-more{display:none}}
+@media (max-width:680px){#hud .hud-more-toggle{display:none}}
+body[data-viewport="portrait"] #hud .hud-more-toggle,body[data-viewport="landscape"] #hud .hud-more-toggle{display:none}
 .hud-badge-dot{position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#e0795f;border:1px solid #fff;box-shadow:0 0 4px #e0795f}
 .danger-vignette{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;transition:opacity .3s ease;box-shadow:inset 0 0 60px 20px rgba(180,30,40,.6)}
 .danger-vignette.danger-active{opacity:1;animation:dangerPulse 1.2s steps(4,end) infinite alternate}
