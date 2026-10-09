@@ -163,7 +163,7 @@ export function createCardsUIRenderer({
 
       detailsPaneHtml = `
         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 220px;">
+          <div style="flex: 1; min-width: min(220px, 100%);">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <h3 style="margin: 0; color: ${activeMonster.spriteColor || '#fff'}; font-size: 16px;">${T(activeMonster.name, 'monsters')}</h3>
               <span style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px; font-size: 10px;">Lv.${activeMonster.level || 1}</span>
@@ -189,7 +189,7 @@ export function createCardsUIRenderer({
               </div>
             </div>
           </div>
-          <div style="flex: 0 0 240px;">
+          <div style="flex: 0 1 240px; max-width: 100%;">
             ${cardFrameHtml}
           </div>
         </div>
