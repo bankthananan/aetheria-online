@@ -6297,28 +6297,10 @@ const WORLD_SIGIL = {
 };
 function worldChronicleHtml() {
   const currentTab = G._chronicleTab || 'road';
-  const tabNav = `
-    <div class="chronicle-tabs" style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:8px">
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'road' ? 'active' : ''}" data-chronicle-tab="road" style="font-weight:bold;${currentTab === 'road' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        🗺 ${T('Roads of the Outworlder', 'ui')}
-      </button>
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'bestiary' ? 'active' : ''}" data-chronicle-tab="bestiary" style="font-weight:bold;${currentTab === 'bestiary' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        📖 ${T('Bestiary Codex', 'ui')}
-      </button>
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'companions' ? 'active' : ''}" data-chronicle-tab="companions" style="font-weight:bold;${currentTab === 'companions' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        🐾 ${T('Companions & Familiars', 'ui')}
-      </button>
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'spire' ? 'active' : ''}" data-chronicle-tab="spire" style="font-weight:bold;${currentTab === 'spire' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        🌀 ${T('Abyssal Spire', 'ui')}
-      </button>
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'stronghold' ? 'active' : ''}" data-chronicle-tab="stronghold" style="font-weight:bold;${currentTab === 'stronghold' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        🏰 ${T('Guild Stronghold', 'ui')}
-      </button>
-      <button class="btn btn--ghost chronicle-tab-btn ${currentTab === 'homestead' ? 'active' : ''}" data-chronicle-tab="homestead" style="font-weight:bold;${currentTab === 'homestead' ? 'background:rgba(92,107,192,0.4);border-color:#7986cb;' : ''}">
-        🏡 ${T("Adventurer's Homestead", 'ui')}
-      </button>
-    </div>
-  `;
+  const tabs = [['road', '🗺', 'Roads of the Outworlder'], ['bestiary', '📖', 'Bestiary Codex'], ['companions', '🐾', 'Companions & Familiars'],
+    ['spire', '🌀', 'Abyssal Spire'], ['stronghold', '🏰', 'Guild Stronghold'], ['homestead', '🏡', "Adventurer's Homestead"]];
+  const tabNav = `<div class="book-tabs chronicle-tabs" role="tablist">${tabs.map(([id, icon, label]) =>
+    `<button class="book-tab ${currentTab === id ? 'active' : ''}" data-chronicle-tab="${id}" role="tab" aria-selected="${currentTab === id}">${icon} ${T(label, 'ui')}</button>`).join('')}</div>`;
 
   if (currentTab === 'homestead') {
     return `<section class="world-chronicle" style="max-width:860px">
@@ -8366,7 +8348,7 @@ const extraCss = `
 .quest-wait{padding-left:7px;border-left:3px solid #718198}
 /* World Chronicle: a readable linear pilgrimage road, revealed by exploration. */
 .panel[data-kind="world"] .panel__body{padding:9px;background:#0f1c30}
-.world-chronicle{width:min(760px,84vw);color:#e8edf3}
+.world-chronicle{width:100%;color:#e8edf3}
 .world-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;background:#101d32;border:1px solid #7f8da0;border-left:4px solid #d5b85d;box-shadow:inset 0 0 0 1px #314b73}
 .world-head>div:first-child{min-width:0}.world-head small{color:#91a2b8;font-size:8px;font-weight:800;letter-spacing:1.3px}
 .world-head h2{margin:1px 0 2px;color:#f0d47d;font:700 20px var(--font-head)}
@@ -8538,7 +8520,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
   #hud .hotbar-shell{width:96vw}.hotbar-shell .hotbar{max-width:calc(96vw - 38px);overflow-x:auto!important}.hotbar-shell .momentum-state{display:none}
   .skill-flow{width:82vw}.flow-grid{display:flex;flex-direction:column;gap:4px}.flow-arrow{height:12px;transform:rotate(90deg)}.flow-copy{min-height:0}.flow-legend span:last-child{margin-left:0}
   .hotkey-grid{grid-template-columns:1fr;min-width:78vw}
-  .world-chronicle{width:86vw}.world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
+  .world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
   .gear-row{flex-direction:column}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
   .automation-console{width:84vw}.auto-toggle-grid,.auto-profile-grid,.auto-target-grid,.auto-slot-grid{grid-template-columns:1fr}.automation-objective{grid-template-columns:1fr}
 }

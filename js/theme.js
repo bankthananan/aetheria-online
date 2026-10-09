@@ -486,7 +486,10 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
 .elem-chip{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:3px;font-size:9px;font-weight:800;line-height:15px;vertical-align:middle;white-space:nowrap}
 .collection-book{display:flex;flex-direction:column;gap:10px}
 .book-tabs{display:flex;gap:4px;flex-wrap:wrap}
-.book-tab{padding:5px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(120,90,50,.5);color:var(--text,#e8dcc0);font-size:11px;font-weight:700;cursor:pointer;border-radius:3px}
+.chronicle-tabs{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(214,182,108,.3)}
+.chronicle-tabs .book-tab:not(.active){color:#d2c29b;background:rgba(0,0,0,.35);border-color:rgba(214,182,108,.35)}
+.chronicle-tabs .book-tab:not(.active):hover{color:var(--gold-bright);border-color:var(--gold)}
+.book-tab{white-space:nowrap;padding:5px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(120,90,50,.5);color:var(--text,#e8dcc0);font-size:11px;font-weight:700;cursor:pointer;border-radius:3px}
 .book-tab.active{background:var(--gold-deep,#74501d);color:var(--gold-bright,#f2d88a);border-color:var(--gold,#d6b45a)}
 .book-pane{min-height:160px}
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
