@@ -292,7 +292,7 @@ export function createStrongholdUIRenderer({
 
     return `
       <div class="siege-victory-overlay" style="position: fixed; inset: 0; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;">
-        <div class="siege-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: var(--card-bg); border: 2px solid var(--gold-bright); border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
+        <div class="siege-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: var(--wood-deep); border: 2px solid var(--gold-bright); border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
           <header style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <h2 style="margin: 0; font-size: 24px; color: var(--gold-bright); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Siege Victory!', 'ui')}</h2>
           </header>

@@ -241,7 +241,7 @@ export function createCardsUIRenderer({
           <span style="font-size: 12px; color: ${cardDef ? RARITY_COLORS[cardDef.rarity] : 'var(--text-muted)'};">
             ${idx + 1}. ${cardDef ? T(cardDef.name, 'items') : `[${T('Empty Socket', 'ui')}]`}
           </span>
-          ${cardDef ? `<button class="unsocket-btn" data-slot-index="${idx}" style="font-size: 10px; background: var(--danger); color: var(--text); border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer;">${T('Unsocket', 'ui')}</button>` : ''}
+          ${cardDef ? `<button class="unsocket-btn" data-slot-index="${idx}" style="font-size: 10px; background: var(--oxblood); color: var(--text); border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer;">${T('Unsocket', 'ui')}</button>` : ''}
         </div>
       `;
     }).join('');
@@ -254,7 +254,7 @@ export function createCardsUIRenderer({
             <span style="font-size: 12px; font-weight: bold; color: ${RARITY_COLORS[cardDef.rarity]};">${T(cardDef.name, 'items')}</span>
             <div style="font-size: 10px; color: var(--text-muted);">${cardDef.collectionBonus || ''}</div>
           </div>
-          <button class="socket-card-btn" data-card-id="${cardDef.id}" style="font-size: 11px; background: var(--success); color: var(--text); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+          <button class="socket-card-btn" data-card-id="${cardDef.id}" style="font-size: 11px; background: var(--forest); color: var(--text); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
             ${T('Socket', 'ui')}
           </button>
         </div>

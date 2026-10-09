@@ -145,7 +145,7 @@ export function createSpireUIRenderer({
 
     // Milestone Boss Badge
     const milestoneBadge = isMilestone
-      ? `<span class="spire-milestone-badge" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 4px; background: var(--danger); color: var(--text); font-weight: 800; font-size: 11px; white-space: nowrap; border: 1px solid var(--danger); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">☠ ${T('MILESTONE BOSS', 'ui')}</span>`
+      ? `<span class="spire-milestone-badge" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 4px; background: var(--oxblood); color: var(--text); font-weight: 800; font-size: 11px; white-space: nowrap; border: 1px solid var(--danger); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">☠ ${T('MILESTONE BOSS', 'ui')}</span>`
       : '';
 
     // Active Affixes Badges

@@ -84,7 +84,9 @@ then reopening the Chronicle.
 - Stronghold/Homestead/Spire tabs nest a second dark navy hero banner inside the parchment panel body; keep one header (the Chronicle hero), drop the per-tab duplicate title (e.g. "Adventurer's Homestead" appears twice).
 - Top menu wraps to two rows at 1280px with 15 buttons; group rarely-used ones (Field guide, Loadouts, Audio, Lang, Admin) under the existing `≡ Menu` button. The "≡ Menu" button is also half-hidden behind the level badge at top-left.
 
-- Raid victory "Spoils Showcase" prints raw item ids (`titan_heart`, `rune_ember`, `smoked_salmon`) instead of item names.
+- Raw item ids shown instead of names: raid victory "Spoils Showcase" and the homestead mannequin modal (`iron_sword`, `titan_heart`, …). Same root cause — `T(itemId)` on an id rather than the item name.
+- `openHomesteadMannequinModal(badId)` creates the blocking backdrop before its `if (!man) return` guard → empty overlay with no close button. Only reachable with an invalid id.
+- (old) Raid victory "Spoils Showcase" prints raw item ids (`titan_heart`, `rune_ember`, `smoked_salmon`) instead of item names.
 
 Out of scope: overlapping canvas nameplates over monster clusters (canvas render, not DOM UI).
 

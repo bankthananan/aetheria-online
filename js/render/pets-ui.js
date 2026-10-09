@@ -220,7 +220,7 @@ export function createPetsUIRenderer({
                   <div style="font-size: 10px; color: var(--success-text);">+${f.values.loyalty} Loyalty, +${f.values.exp} EXP</div>
                 </div>
               </div>
-              <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${activePet.id}" data-feast-id="${f.id}" style="font-size: 11px; padding: 4px 10px; background: var(--success); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
+              <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${activePet.id}" data-feast-id="${f.id}" style="font-size: 11px; padding: 4px 10px; background: var(--forest); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
                 ${T('Feed', 'ui')}
               </button>
             </div>
@@ -416,7 +416,7 @@ export function createPetsUIRenderer({
                 <div style="font-size: 11px; color: var(--success-text);">+${f.values.loyalty} Loyalty · +${f.values.exp} EXP</div>
               </div>
             </div>
-            <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${petState.id}" data-feast-id="${f.id}" style="font-size: 12px; padding: 6px 12px; background: var(--success); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
+            <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${petState.id}" data-feast-id="${f.id}" style="font-size: 12px; padding: 6px 12px; background: var(--forest); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
               ${T('Feed', 'ui')}
             </button>
           </div>
