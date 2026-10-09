@@ -6,6 +6,10 @@ import {
   CROP_DEFINITIONS,
   MANNEQUIN_SLOTS,
 } from '../systems/homestead.js';
+import { CONTENT } from '../content.js';
+
+const ITEM_NAME = Object.fromEntries(CONTENT.items.map(i => [i.id, i.name]));
+const itemName = id => ITEM_NAME[id] || id;
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => ({
@@ -58,7 +62,7 @@ export function createHomesteadUIRenderer({
           <div class="homestead-seed-card" style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;">
             <div style="box-sizing: border-box; min-width: 0; flex: 1; padding-right: 8px;">
               <div style="font-weight: bold; color: var(--success-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T(def.name, 'items'))}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">Yields: ${esc(T(def.produceId, 'items'))} · Time: ${formatDuration(def.baseDurationMs)}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Yields: ${esc(T(itemName(def.produceId), 'items'))} · Time: ${formatDuration(def.baseDurationMs)}</div>
               <div style="font-size: 11px; color: ${canPlant ? 'var(--success-text)' : 'var(--danger-text)'};">Owned: ${qty}</div>
             </div>
             <button class="btn ${canPlant ? 'btn--primary' : 'btn--disabled'}" data-homestead-plant="${esc(sid)}" data-homestead-plot="${plotId}" ${canPlant ? '' : 'disabled'} style="box-sizing: border-box; min-width: 0; padding: 4px 10px; font-size: 11px;">
@@ -170,7 +174,7 @@ export function createHomesteadUIRenderer({
 
     let giftBoxHtml = '';
     if (Array.isArray(pendingGifts) && pendingGifts.length > 0) {
-      const itemsList = pendingGifts.map(g => `${g.qty}x ${esc(T(g.itemId, 'items'))}`).join(', ');
+      const itemsList = pendingGifts.map(g => `${g.qty}x ${esc(T(itemName(g.itemId), 'items'))}`).join(', ');
       giftBoxHtml = `
         <div style="box-sizing: border-box; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; background: color-mix(in srgb, var(--success) 15%, transparent); border: 1px solid var(--success); border-radius: 6px; padding: 10px; margin-top: 12px; display: flex; align-items: center; justify-content: space-between;">
           <div style="box-sizing: border-box; min-width: 0; flex: 1; padding-right: 8px;">
@@ -216,8 +220,8 @@ export function createHomesteadUIRenderer({
       const storedItem = mannequinLoadout[slot] || null;
       const wornItem = playerEquip[slot] || null;
 
-      const storedText = storedItem ? `${esc(T(storedItem.itemId, 'items'))}${storedItem.plus ? ` +${storedItem.plus}` : ''}` : `<span style="color: var(--text-muted);">[Empty]</span>`;
-      const wornText = wornItem ? `${esc(T(wornItem.itemId, 'items'))}${wornItem.plus ? ` +${wornItem.plus}` : ''}` : `<span style="color: var(--text-muted);">[Empty]</span>`;
+      const storedText = storedItem ? `${esc(T(itemName(storedItem.itemId), 'items'))}${storedItem.plus ? ` +${storedItem.plus}` : ''}` : `<span style="color: var(--text-muted);">[Empty]</span>`;
+      const wornText = wornItem ? `${esc(T(itemName(wornItem.itemId), 'items'))}${wornItem.plus ? ` +${wornItem.plus}` : ''}` : `<span style="color: var(--text-muted);">[Empty]</span>`;
 
       return `
         <tr style="box-sizing: border-box; min-width: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">

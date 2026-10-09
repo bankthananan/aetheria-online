@@ -194,9 +194,9 @@ test('6. renderVictoryModalHtml generates modal shell, tier crest, performance b
   // Spoils Showcase Grid
   assert.ok(html.includes('12000 Zeny') || html.includes('12,000 Zeny'), 'shows Zeny spoils');
   assert.ok(html.includes('8× Shards'), 'shows Dimensional Shards spoils');
-  assert.ok(html.includes('titan_heart'), 'shows apex trophies spoils');
-  assert.ok(html.includes('rune_ember, rune_glacial'), 'shows primal runes spoils');
-  assert.ok(html.includes('smoked_salmon'), 'shows feast spoils');
+  assert.ok(html.includes('Heart of the Colossus') && !html.includes('titan_heart'), 'shows apex trophies spoils');
+  assert.ok(html.includes('Ember Rune, Glacial Rune'), 'shows primal runes spoils');
+  assert.ok(html.includes('Smoked Salmon'), 'shows feast spoils');
   assert.ok(html.includes('2× Blessed Ore'), 'shows gems spoils');
 
   // Action and Close buttons with data-claim-raid-spoils

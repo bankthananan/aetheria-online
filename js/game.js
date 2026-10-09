@@ -7499,6 +7499,8 @@ G.openSpireElevatorModal = openSpireElevatorModal;
 
 function openHomesteadPlotModal(plotIdx) {
   if (typeof document === 'undefined') return;
+  const plot = homesteadSystem.getPlot(plotIdx);
+  if (!plot) return;   // before creating the blocking backdrop (see openHomesteadMannequinModal)
   let mc = document.getElementById('homestead-modal-container');
   if (!mc) {
     mc = document.createElement('div');
@@ -7506,8 +7508,6 @@ function openHomesteadPlotModal(plotIdx) {
     mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
     document.body.appendChild(mc);
   }
-  const plot = homesteadSystem.getPlot(plotIdx);
-  if (!plot) return;
   mc.style.display = 'flex';
   mc.innerHTML = homesteadUI.renderPlotModalHtml(plot, G.player?.inventory || []);
   mc.querySelectorAll('[data-homestead-close]').forEach(b => {
@@ -7607,6 +7607,8 @@ G.openHomesteadPastureModal = openHomesteadPastureModal;
 
 function openHomesteadMannequinModal(mannequinId) {
   if (typeof document === 'undefined') return;
+  const man = homesteadSystem.getMannequin(mannequinId);
+  if (!man) return;   // before creating the blocking backdrop, or a bad id strands an empty overlay
   let mc = document.getElementById('homestead-modal-container');
   if (!mc) {
     mc = document.createElement('div');
@@ -7614,8 +7616,6 @@ function openHomesteadMannequinModal(mannequinId) {
     mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
     document.body.appendChild(mc);
   }
-  const man = homesteadSystem.getMannequin(mannequinId);
-  if (!man) return;
   mc.style.display = 'flex';
   mc.innerHTML = homesteadUI.renderMannequinModalHtml(mannequinId, man.loadout || {}, G.player?.equip || {});
   mc.querySelectorAll('[data-homestead-close]').forEach(b => {

@@ -4,6 +4,10 @@
 // and victory spoils modal (tier crest, performance breakdown, spoils showcase).
 
 import { WORLD_BOSS_CATALOG, CONTRIBUTION_TIERS, RAID_STATES } from '../systems/raids.js';
+import { CONTENT } from '../content.js';
+
+const ITEM_NAME = Object.fromEntries(CONTENT.items.map(i => [i.id, i.name]));
+const itemName = id => ITEM_NAME[id] || id;
 
 export const TIER_COLORS = {
   bronze: '#cd7f32',
@@ -191,12 +195,12 @@ export function createRaidsUIRenderer({
     const cache = victoryResult.cache || {};
 
     const trophiesText = (cache.trophies && cache.trophies.length > 0)
-      ? cache.trophies.join(', ')
+      ? cache.trophies.map(id => T(itemName(id), 'items')).join(', ')
       : 'None';
     const runesText = (cache.runes && cache.runes.length > 0)
-      ? cache.runes.join(', ')
+      ? cache.runes.map(id => T(itemName(id), 'items')).join(', ')
       : 'None';
-    const feastText = cache.feast || 'None';
+    const feastText = cache.feast ? T(itemName(cache.feast), 'items') : 'None';
     const gemsText = `${cache.gems || 0}× Blessed Ore`;
 
     return `
