@@ -232,7 +232,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 #hud .job-bar .fill{background:linear-gradient(90deg,#3a6da0,#638cc1,#8ec1f8)}
 
 /* Dynamic Boss & Focus Target Frame */
-.boss-frame{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 20px));background:rgba(20,13,8,.95);border:2px solid var(--gold);border-radius:3px;box-shadow:0 6px 20px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.1);padding:6px 10px;display:flex;align-items:center;gap:8px;z-index:18;pointer-events:none}
+.boss-frame{position:fixed;top:80px;left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 20px));background:rgba(20,13,8,.95);border:2px solid var(--gold);border-radius:3px;box-shadow:0 6px 20px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.1);padding:6px 10px;display:flex;align-items:center;gap:8px;z-index:18;pointer-events:none}
 .boss-frame > *{pointer-events:auto}
 .boss-portrait{width:36px;height:36px;border-radius:2px;background:#351e12;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gold-bright);flex-shrink:0}
 .boss-details{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
@@ -245,7 +245,7 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .boss-stagger-bar .fill{background:linear-gradient(90deg,#8c6b23,#e0b343)!important}
 .boss-stagger-bar .label{display:none}
 @media (max-width:680px){
-  .boss-frame{top:48px;width:min(340px,calc(100vw - 16px));padding:4px 6px}
+  .boss-frame{top:auto;bottom:104px;width:min(340px,calc(100vw - 16px));padding:4px 6px}
   .boss-portrait{width:28px;height:28px;font-size:16px}
 }
 
