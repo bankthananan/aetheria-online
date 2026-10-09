@@ -428,6 +428,7 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
   #hud .stat-stack{left:58px;width:min(176px,calc(100vw - 170px));padding:5px 6px;gap:4px}
   #hud .level-badge{left:8px;width:44px;height:44px}
   #hud .minimap{top:8px;right:8px;width:96px;height:96px}
+  #hud .minimap canvas{width:100%;height:100%}
   #hud .quest-tracker{top:74px;right:8px;width:min(180px,46vw);max-height:135px;padding:6px 8px;font-size:9px;transition:max-height .2s ease;z-index:12}
   #hud .quest-tracker .tracker-header{display:flex}
   #hud .quest-tracker.collapsed{max-height:26px;overflow:hidden;padding:4px 8px}

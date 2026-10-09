@@ -5054,7 +5054,7 @@ function buildHud() {
           <div class="bar boss-stagger-bar"><div class="fill" id="boss-stagger-fill"></div></div>
         </div>
       </div>
-      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div><div id="minimap-weather" style="position:absolute;top:2px;right:6px;font-size:10px;font-weight:600;pointer-events:auto;cursor:help"></div></div>
+      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div><div id="minimap-weather" style="position:absolute;top:2px;right:6px;max-width:calc(100% - 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600;pointer-events:auto;cursor:help"></div></div>
       <button id="mobile-menu-btn" class="mobile-menu-btn btn btn--ghost" type="button" aria-label="${T('Menu', 'ui')}">
         <span class="m-icon">☰</span> <span class="m-label">${T('Menu', 'ui')}</span><span id="mobile-menu-badge" class="hud-badge-dot" style="display:none"></span>
       </button>
