@@ -148,11 +148,11 @@ export function createStrongholdUIRenderer({
       return `
         <div class="facility-card facility-card--${fId}" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(22, 26, 35, 0.95); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 20px; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${fDef.icon}</span>
+            <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">${fDef.icon}</span>
               <b style="font-size: 14px; color: #fff; word-break: break-word; box-sizing: border-box; min-width: 0; overflow-x: hidden;">${esc(T(fDef.name, 'ui'))}</b>
             </div>
-            <span class="badge badge--tier" style="box-sizing: border-box; min-width: 0; overflow-x: hidden; padding: 2px 8px; border-radius: 4px; background: rgba(240, 212, 125, 0.15); border: 1px solid #f0d47d; color: #f0d47d; font-size: 11px; font-weight: bold; white-space: nowrap; text-overflow: ellipsis;">Tier ${currentTier}/3</span>
+            <span class="badge badge--tier" style="flex-shrink: 0; padding: 2px 8px; border-radius: 4px; background: rgba(240, 212, 125, 0.15); border: 1px solid #f0d47d; color: #f0d47d; font-size: 11px; font-weight: bold; white-space: nowrap;">Tier ${currentTier}/3</span>
           </div>
           <div class="facility-perk" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: #cfd8dc; word-break: break-word;">
             ${esc(T(currentTierData.perkDesc || '', 'ui'))}
