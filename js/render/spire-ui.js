@@ -145,7 +145,7 @@ export function createSpireUIRenderer({
 
     // Milestone Boss Badge
     const milestoneBadge = isMilestone
-      ? `<span class="spire-milestone-badge" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; border-radius: 4px; background: #d32f2f; color: #ffffff; font-weight: 800; font-size: 11px; white-space: nowrap; border: 1px solid #ff5252; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">☠ ${T('MILESTONE BOSS', 'ui')}</span>`
+      ? `<span class="spire-milestone-badge" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 4px; background: var(--danger); color: var(--text); font-weight: 800; font-size: 11px; white-space: nowrap; border: 1px solid var(--danger); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">☠ ${T('MILESTONE BOSS', 'ui')}</span>`
       : '';
 
     // Active Affixes Badges
@@ -153,23 +153,23 @@ export function createSpireUIRenderer({
       const name = esc(T(affix.name || affix.id, 'ui'));
       const desc = esc(T(affix.desc || '', 'ui'));
       const icon = affix.icon || '🌀';
-      return `<span class="spire-affix-badge" title="${desc}" style="box-sizing: border-box; min-width: 0; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); font-size: 11px; color: #e0e0e0; white-space: nowrap;">${icon} ${name}</span>`;
+      return `<span class="spire-affix-badge" title="${desc}" style="flex-shrink: 0; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); font-size: 11px; color: var(--text); white-space: nowrap;">${icon} ${name}</span>`;
     }).join('');
 
     return `
-      <div class="spire-encounter-hud" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px 12px; background: rgba(18, 14, 26, 0.94); border: 1px solid #7c4dff; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7); margin-bottom: 6px;">
+      <div class="spire-encounter-hud" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 8px 12px; background: var(--wood-deep); border: 1px solid #7c4dff; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7); margin-bottom: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
           <!-- Floor Pill & Biome Badge -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; box-sizing: border-box; min-width: 0; overflow-x: hidden;">
-            <span class="spire-floor-pill" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; border-radius: 12px; background: rgba(124, 77, 255, 0.25); border: 1px solid #7c4dff; color: #b388ff; font-weight: 800; font-size: 11px; white-space: nowrap;">✦ ${T('Floor', 'ui')} ${currentFloor} / 100</span>
-            <span class="spire-biome-badge" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; border-radius: 12px; background: ${biome.color}; color: #ffffff; font-weight: 700; font-size: 11px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);">${esc(T(biome.name, 'maps'))}</span>
+            <span class="spire-floor-pill" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 12px; background: rgba(124, 77, 255, 0.25); border: 1px solid #7c4dff; color: #b388ff; font-weight: 800; font-size: 11px; white-space: nowrap;">✦ ${T('Floor', 'ui')} ${currentFloor} / 100</span>
+            <span class="spire-biome-badge" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 12px; background: ${biome.color}; color: var(--text); font-weight: 700; font-size: 11px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);">${esc(T(biome.name, 'maps'))}</span>
             ${milestoneBadge}
           </div>
 
           <!-- Affixes and Emblems -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; box-sizing: border-box; min-width: 0; overflow-x: hidden;">
             ${affixBadges}
-            <span class="spire-emblems-pill" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; border-radius: 12px; background: rgba(0, 229, 255, 0.15); border: 1px solid #00e5ff; color: #18ffff; font-weight: 700; font-size: 11px; white-space: nowrap;">💎 ${emblemsEarned} ${T('Emblems', 'ui')}</span>
+            <span class="spire-emblems-pill" style="flex-shrink: 0; box-sizing: border-box; padding: 2px 8px; border-radius: 12px; background: color-mix(in srgb, var(--info) 15%, transparent); border: 1px solid var(--info); color: var(--info); font-weight: 700; font-size: 11px; white-space: nowrap;">💎 ${emblemsEarned} ${T('Emblems', 'ui')}</span>
           </div>
         </div>
       </div>
@@ -202,8 +202,8 @@ export function createSpireUIRenderer({
         return `
           <div class="spire-checkpoint-card spire-checkpoint-unlocked" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(124, 77, 255, 0.4); border-radius: 6px; margin-bottom: 8px;">
             <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; gap: 8px;">
-              <span style="font-weight: 800; font-size: 14px; color: #ffffff; box-sizing: border-box; min-width: 0;">Floor ${floor}</span>
-              <span class="spire-biome-pill" style="box-sizing: border-box; min-width: 0; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: ${biome.color}; color: #ffffff; border: 1px solid rgba(255,255,255,0.2);">${esc(T(biome.name, 'maps'))}</span>
+              <span style="font-weight: 800; font-size: 14px; color: var(--text); box-sizing: border-box; min-width: 0;">Floor ${floor}</span>
+              <span class="spire-biome-pill" style="flex-shrink: 0; box-sizing: border-box; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: ${biome.color}; color: var(--text); border: 1px solid rgba(255,255,255,0.2);">${esc(T(biome.name, 'maps'))}</span>
             </div>
             <button class="btn btn--primary spire-ascend-btn" data-spire-ascend="${floor}" style="box-sizing: border-box; min-width: 0; padding: 6px 14px; cursor: pointer; font-weight: 700;">${T('Ascend', 'ui')}</button>
           </div>
@@ -214,43 +214,43 @@ export function createSpireUIRenderer({
         return `
           <div class="spire-checkpoint-card spire-checkpoint-locked" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; margin-bottom: 8px; opacity: 0.65;">
             <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; gap: 8px;">
-              <span style="font-weight: 700; font-size: 14px; color: #888888; box-sizing: border-box; min-width: 0;">🔒 Floor ${floor}</span>
-              <span class="spire-biome-pill" style="box-sizing: border-box; min-width: 0; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: #888888;">${esc(T(biome.name, 'maps'))}</span>
+              <span style="font-weight: 700; font-size: 14px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">🔒 Floor ${floor}</span>
+              <span class="spire-biome-pill" style="flex-shrink: 0; box-sizing: border-box; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: var(--text-muted);">${esc(T(biome.name, 'maps'))}</span>
             </div>
-            <span style="box-sizing: border-box; min-width: 0; font-size: 11px; color: #ff8a80; font-weight: 600;">${esc(reqText)}</span>
+            <span style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--danger-text); font-weight: 600;">${esc(reqText)}</span>
           </div>
         `.trim();
       }
     }).join('\n');
 
     const overlayStyle = inline
-      ? `position: relative; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; justify-content: center; background: rgba(10, 8, 16, 0.85); border-radius: 8px;`
-      : `position: fixed; inset: 0; box-sizing: border-box; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(10, 8, 16, 0.85); backdrop-filter: blur(4px); width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;`;
+      ? `position: relative; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; align-items: center; justify-content: center;`
+      : `position: fixed; inset: 0; box-sizing: border-box; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(9, 5, 2, 0.8); backdrop-filter: blur(4px); width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;`;
 
     return `
       <div class="spire-elevator-overlay" style="${overlayStyle}">
-        <div class="spire-elevator-shell" style="box-sizing: border-box; width: 100%; max-width: ${inline ? '100%' : '560px'}; min-width: 0; ${inline ? '' : 'max-height: 90vh; overflow-y: auto;'} overflow-x: hidden; border-radius: 8px; background: linear-gradient(180deg, #1d1629 0%, #0f0b17 100%); border: 2px solid #7c4dff; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: #fff8dc;">
+        <div class="spire-elevator-shell" style="box-sizing: border-box; width: 100%; max-width: ${inline ? '100%' : '560px'}; min-width: 0; ${inline ? '' : 'max-height: 90vh; overflow-y: auto;'} overflow-x: hidden; border-radius: 8px; background: ${inline ? 'var(--card-bg)' : 'var(--wood-deep)'}; border: 2px solid #7c4dff; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: var(--text);">
           <!-- Header with Title and Close Button -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(124, 77, 255, 0.3); padding-bottom: 10px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
-            <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: #b388ff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); box-sizing: border-box; min-width: 0; word-break: break-word;">
+            <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #b388ff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); box-sizing: border-box; min-width: 0; word-break: break-word;">
               🌀 ${T('Ascendant Elevator', 'ui')} — ${T('Abyssal Spire', 'ui')}
             </h2>
-            ${inline ? '' : `<button class="btn btn--ghost spire-modal-close" data-spire-close="1" style="box-sizing: border-box; min-width: 0; font-size: 18px; line-height: 1; padding: 4px 8px; cursor: pointer; color: #b388ff; background: transparent; border: 1px solid transparent; border-radius: 4px;">✕</button>`}
+            ${inline ? '' : `<button class="btn btn--ghost spire-modal-close" data-spire-close="1" style="box-sizing: border-box; min-width: 0; font-size: 17px; line-height: 1; padding: 4px 8px; cursor: pointer; color: #b388ff; background: transparent; border: 1px solid transparent; border-radius: 4px;">✕</button>`}
           </div>
 
           <!-- Stats Banner -->
           <div class="spire-stats-banner" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(124, 77, 255, 0.3); border-radius: 6px; margin-bottom: 14px;">
             <div style="box-sizing: border-box; min-width: 0;">
-              <small style="color: #9e9e9e; font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Highest Floor Cleared', 'ui')}</small>
-              <b style="color: #ffd700; font-size: 14px; box-sizing: border-box; min-width: 0;">${highestFloor} / 100</b>
+              <small style="color: var(--text-muted); font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Highest Floor Cleared', 'ui')}</small>
+              <b style="color: var(--gold-bright); font-size: 14px; box-sizing: border-box; min-width: 0;">${highestFloor} / 100</b>
             </div>
             <div style="box-sizing: border-box; min-width: 0;">
-              <small style="color: #9e9e9e; font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Total Emblems', 'ui')}</small>
-              <b style="color: #00e5ff; font-size: 14px; box-sizing: border-box; min-width: 0;">💎 ${totalEmblems}</b>
+              <small style="color: var(--text-muted); font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Total Emblems', 'ui')}</small>
+              <b style="color: var(--info); font-size: 14px; box-sizing: border-box; min-width: 0;">💎 ${totalEmblems}</b>
             </div>
             <div style="box-sizing: border-box; min-width: 0;">
-              <small style="color: #9e9e9e; font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Prestige Titles', 'ui')}</small>
-              <b style="color: #e040fb; font-size: 14px; box-sizing: border-box; min-width: 0;">${unlockedTitles}</b>
+              <small style="color: var(--text-muted); font-size: 11px; display: block; box-sizing: border-box; min-width: 0;">${T('Prestige Titles', 'ui')}</small>
+              <b style="color: #b388ff; font-size: 14px; box-sizing: border-box; min-width: 0;">${unlockedTitles}</b>
             </div>
           </div>
 
@@ -282,10 +282,10 @@ export function createSpireUIRenderer({
         <div class="spire-reliquary-item-card" style="box-sizing: border-box; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(124, 77, 255, 0.3); border-radius: 6px;">
           <div style="box-sizing: border-box; min-width: 0; margin-bottom: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; box-sizing: border-box; min-width: 0; margin-bottom: 4px;">
-              <span style="font-weight: 800; font-size: 13px; color: #ffffff; box-sizing: border-box; min-width: 0; word-break: break-word;">${item.icon} ${esc(T(item.name, 'items'))}</span>
-              <span style="box-sizing: border-box; min-width: 0; color: #00e5ff; font-weight: 700; font-size: 12px; white-space: nowrap;">💎 ${item.cost.toLocaleString()} ${T('Emblems', 'ui')}</span>
+              <span style="font-weight: 800; font-size: 12px; color: var(--text); box-sizing: border-box; min-width: 0; word-break: break-word;">${item.icon} ${esc(T(item.name, 'items'))}</span>
+              <span style="box-sizing: border-box; min-width: 0; color: var(--info); font-weight: 700; font-size: 12px; white-space: nowrap;">💎 ${item.cost.toLocaleString()} ${T('Emblems', 'ui')}</span>
             </div>
-            <p style="box-sizing: border-box; min-width: 0; font-size: 11px; color: #b0bec5; margin: 4px 0 0 0; line-height: 1.4; word-break: break-word;">${esc(T(item.desc, 'items'))}</p>
+            <p style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--text-muted); margin: 4px 0 0 0; line-height: 1.4; word-break: break-word;">${esc(T(item.desc, 'items'))}</p>
           </div>
           <div style="box-sizing: border-box; min-width: 0; margin-top: 8px;">
             ${buttonHtml}
@@ -295,18 +295,18 @@ export function createSpireUIRenderer({
     }).join('\n');
 
     return `
-      <div class="spire-reliquary-catalog" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 14px; background: rgba(18, 14, 26, 0.94); border: 1px solid #7c4dff; border-radius: 6px;">
+      <div class="spire-reliquary-catalog" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 14px; background: var(--wood-deep); border: 1px solid #7c4dff; border-radius: 6px;">
         <!-- Header row with Reliquary Title and Emblems Balance -->
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; border-bottom: 1px solid rgba(124, 77, 255, 0.3); padding-bottom: 8px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
           <div>
-            <h3 style="margin: 0; font-size: 15px; font-weight: 800; color: #b388ff; box-sizing: border-box; min-width: 0;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #b388ff; box-sizing: border-box; min-width: 0;">
               ✨ ${T('Spire Reliquary', 'ui')}
             </h3>
-            <small style="color: #9e9e9e; font-size: 11px; box-sizing: border-box; min-width: 0;">
+            <small style="color: var(--text-muted); font-size: 11px; box-sizing: border-box; min-width: 0;">
               ${T('Exchange earned Spire Emblems for ascendant relics and transmogs.', 'ui')}
             </small>
           </div>
-          <span class="spire-emblem-balance" style="box-sizing: border-box; min-width: 0; padding: 4px 10px; border-radius: 12px; background: rgba(0, 229, 255, 0.2); border: 1px solid #00e5ff; color: #18ffff; font-weight: 800; font-size: 12px; white-space: nowrap;">
+          <span class="spire-emblem-balance" style="box-sizing: border-box; min-width: 0; padding: 4px 10px; border-radius: 12px; background: color-mix(in srgb, var(--info) 20%, transparent); border: 1px solid var(--info); color: var(--info); font-weight: 800; font-size: 12px; white-space: nowrap;">
             💎 ${emblems} ${T('Spire Emblems', 'ui')}
           </span>
         </div>
