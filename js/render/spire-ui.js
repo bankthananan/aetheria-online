@@ -229,13 +229,13 @@ export function createSpireUIRenderer({
 
     return `
       <div class="spire-elevator-overlay" style="${overlayStyle}">
-        <div class="spire-elevator-shell" style="box-sizing: border-box; width: 100%; max-width: 560px; min-width: 0; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 8px; background: linear-gradient(180deg, #1d1629 0%, #0f0b17 100%); border: 2px solid #7c4dff; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: #fff8dc;">
+        <div class="spire-elevator-shell" style="box-sizing: border-box; width: 100%; max-width: ${inline ? '100%' : '560px'}; min-width: 0; ${inline ? '' : 'max-height: 90vh; overflow-y: auto;'} overflow-x: hidden; border-radius: 8px; background: linear-gradient(180deg, #1d1629 0%, #0f0b17 100%); border: 2px solid #7c4dff; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: #fff8dc;">
           <!-- Header with Title and Close Button -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(124, 77, 255, 0.3); padding-bottom: 10px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: #b388ff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); box-sizing: border-box; min-width: 0; word-break: break-word;">
               🌀 ${T('Ascendant Elevator', 'ui')} — ${T('Abyssal Spire', 'ui')}
             </h2>
-            <button class="btn btn--ghost spire-modal-close" data-spire-close="1" style="box-sizing: border-box; min-width: 0; font-size: 18px; line-height: 1; padding: 4px 8px; cursor: pointer; color: #b388ff; background: transparent; border: 1px solid transparent; border-radius: 4px;">✕</button>
+            ${inline ? '' : `<button class="btn btn--ghost spire-modal-close" data-spire-close="1" style="box-sizing: border-box; min-width: 0; font-size: 18px; line-height: 1; padding: 4px 8px; cursor: pointer; color: #b388ff; background: transparent; border: 1px solid transparent; border-radius: 4px;">✕</button>`}
           </div>
 
           <!-- Stats Banner -->
