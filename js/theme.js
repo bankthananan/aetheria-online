@@ -180,7 +180,7 @@ body[data-viewport="portrait"] #hud .hud-more-toggle,body[data-viewport="landsca
 .msg-log .line--sys{color:var(--text-muted)}
 .msg-log .line--good,.toast.line--good{color:#b8d6ad}
 .msg-log .line--bad,.toast.line--bad{color:#ef9b9e}
-.toast{--toast-index:0;position:fixed;top:calc(72px + var(--toast-index,0) * 42px);transition:top .15s steps(3,end);left:50%;transform:translateX(-50%);width:max-content;max-width:min(560px,90vw);
+.toast{--toast-index:0;position:fixed;top:calc(72px + var(--toast-index,0) * 42px);transition:top .15s steps(3,end);left:0;right:0;margin-inline:auto;width:max-content;max-width:min(560px,90vw);
   padding:7px 12px;background:#172a47;border:2px solid #d0d8e0;border-radius:2px;box-shadow:inset 0 0 0 1px #3b5680,3px 3px 0 rgba(0,0,0,.62);
   color:var(--text);font-size:11px;line-height:1.35;text-align:center;overflow-wrap:anywhere;z-index:30;animation:fadeIn .16s steps(3,end)}
 .dmg-float{position:absolute;font-family:var(--font-ui);font-weight:800;font-size:17px;pointer-events:none;
