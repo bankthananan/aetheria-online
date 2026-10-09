@@ -97,6 +97,21 @@ then reopening the Chronicle.
 
 Out of scope: overlapping canvas nameplates over monster clusters (canvas render, not DOM UI).
 
+## Menus pass (Oct 2026)
+
+All 14 HUD panels screenshotted at 1280px and true 390px; no panel overflows horizontally at 390px.
+Shipped (`6397cad`…`8630fa1`):
+
+- Abilities: connector-line SVG had no overlay CSS → a 300×150 empty band above the lanes; rows now
+  left-aligned with the state badge in its own column (6px → 9px).
+- Parchment legibility: light-gold headings (Settings, Keybindings, Admin status) → panel ink tokens;
+  rarity-colored item names get a 1px pixel outline (`.rar`).
+- Toasts centered with margins — `fadeIn`'s `transform:none` was cancelling `translateX(-50%)`.
+- Field guide: labeled pickers, responsive grid, empty-state hint.
+
+Not changed: Automation Console / Abilities keep their dark "manual" cards inside parchment (deliberate
+style); `autotest.html` hovers a skill on purpose, so a tooltip appears in Abilities screenshots.
+
 ## Tooling change made during audit
 
 `autotest.html` gained `chrontab=<road|bestiary|companions|spire|stronghold|homestead>` (sets
