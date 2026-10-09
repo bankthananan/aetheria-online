@@ -76,17 +76,24 @@ Unverified: whether high-contrast mode (`hc`) re-colors these tabs. If HC works 
 every hard-coded hex above currently ignores it — P1 fixes that for free. Check with a settings→HC toggle
 then reopening the Chronicle.
 
-## P2 — polish
+## P2 — polish (shipped)
 
-- Homestead empty plots show "None" in success-green + a crate emoji → muted empty state: "Empty — tap to plant".
-- Stronghold requirement rows are all red at 0 progress → show `have / need` muted, turn green per row when met; red only on the button's disabled tooltip.
-- Disabled "Upgrade Facility" button is near-invisible → standard `.btn[disabled]` (opacity .55, `cursor:not-allowed`) + reason text.
-- Stronghold/Homestead/Spire tabs nest a second dark navy hero banner inside the parchment panel body; keep one header (the Chronicle hero), drop the per-tab duplicate title (e.g. "Adventurer's Homestead" appears twice).
-- Top menu wraps to two rows at 1280px with 15 buttons; group rarely-used ones (Field guide, Loadouts, Audio, Lang, Admin) under the existing `≡ Menu` button. The "≡ Menu" button is also half-hidden behind the level badge at top-left.
+- Raw item ids → names from `CONTENT.items` (raid spoils, homestead mannequin/plot/pasture). `46640ec`
+- Homestead plot/mannequin openers guard the id before appending the blocking backdrop; regression test
+  `js/homestead-modal-guard.test.js`. `46640ec`
+- Neutral states read neutral: unmet Stronghold requirements muted (✓ when met, not color-only), disabled
+  button says "Requirements not met"; empty plots drop green "None"; zero forage gifts and locked Spire floors
+  muted. Duplicate per-tab titles removed. `7f82f5d`
+- Desktop menu fits one row at 1280px: Field guide/Loadouts/Audio/Admin/lang/mute fold behind `⋯`; touch
+  popover still lists all. The phone "Menu" button was leaking onto desktop behind the level badge
+  (specificity) — fixed. `cc17c47`
 
-- Raw item ids shown instead of names: raid victory "Spoils Showcase" and the homestead mannequin modal (`iron_sword`, `titan_heart`, …). Same root cause — `T(itemId)` on an id rather than the item name.
-- `openHomesteadMannequinModal(badId)` creates the blocking backdrop before its `if (!man) return` guard → empty overlay with no close button. Only reachable with an invalid id.
-- (old) Raid victory "Spoils Showcase" prints raw item ids (`titan_heart`, `rune_ember`, `smoked_salmon`) instead of item names.
+### Found, not fixed (content, not UI)
+
+- Stronghold costs reference item ids missing from `CONTENT.items`: `wood` (Botanical Conservatory tier 1)
+  and `essence_nature`. That upgrade can never be afforded; `selfCheck()` doesn't validate
+  `systems/stronghold.js` costs. Needs a content decision (add the items + a source, or change the cost).
+- Mannequin modal lists 7 slots; gauntlets/cloak/boots/ring slots worn by the player aren't shown.
 
 Out of scope: overlapping canvas nameplates over monster clusters (canvas render, not DOM UI).
 
@@ -107,4 +114,4 @@ excepted), `Tier 0/3` fully visible.
 
 1. ~~P0~~ shipped (`0437bde`…`2db2054`).
 2. ~~P1~~ shipped (`b996cf5`…, one `*-ui.js` per commit).
-3. **P2** as appetite allows.
+3. ~~P2~~ shipped (`46640ec`…`cc17c47`).
