@@ -26,8 +26,8 @@ export function createGuidance({G,CONTENT,COMBAT,PROGRESSION,MAPS,esc,saveGame,u
     return `<button class="task-link" data-guide-kind="${goal.kind}" data-guide-id="${esc(goal.id)}">${T('Pinned goal','ui')} · ${esc(itemName(m.output))}<br>${m.missing.map(r=>`${esc(itemName(r.itemId))}: ${r.owned}/${r.required}`).join(' · ')}</button>`;
   };
   const guidePanelHtml=()=>{
-    const controls=`<button class="btn" data-guide-back>${T('Back','ui')}</button><label>${T('Find item','ui')} <select data-guide-picker><option value="">—</option>${CONTENT.items.map(i=>`<option value="item:${i.id}">${esc(T(i.name,'items'))}</option>`).join('')}${CONTENT.recipes.map(r=>`<option value="recipe:${r.id}">${T('Recipe','ui')} · ${esc(itemName(r.out))}</option>`).join('')}</select></label><label>${T('Abilities','ui')} <select data-guide-skill><option value="">—</option>${skillsFor(G.player.combatClass).map(s=>`<option value="${s.id}">${esc(T(s.name,'skills'))}</option>`).join('')}</select></label>`;
-    const selected=selection||G.player.features.goal;if(!selected)return controls;
+    const controls=`<div class="guide-controls"><button class="btn" data-guide-back>${T('Back','ui')}</button><label>${T('Find item','ui')} <select data-guide-picker><option value="">—</option>${CONTENT.items.map(i=>`<option value="item:${i.id}">${esc(T(i.name,'items'))}</option>`).join('')}${CONTENT.recipes.map(r=>`<option value="recipe:${r.id}">${T('Recipe','ui')} · ${esc(itemName(r.out))}</option>`).join('')}</select></label><label>${T('Abilities','ui')} <select data-guide-skill><option value="">—</option>${skillsFor(G.player.combatClass).map(s=>`<option value="${s.id}">${esc(T(s.name,'skills'))}</option>`).join('')}</select></label></div>`;
+    const selected=selection||G.player.features.goal;if(!selected)return controls+`<p class="guide-empty">${T('Pick an item, recipe or ability to see where it drops, what it needs, and how to reach it.','ui')}</p>`;
     if(selected.kind==='skill'){
       const m=skillGuide(selected.id,{combat:COMBAT,progression:PROGRESSION,player:G.player});
       const s=COMBAT.skills.find(s=>s.id===selected.id);if(!m)return controls;

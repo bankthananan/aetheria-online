@@ -316,6 +316,13 @@ body .panel .panel__body{padding:13px 15px;color:var(--parchment-ink);background
 body .panel .panel__close{flex:0 0 27px;width:27px;height:25px;border:2px solid var(--gold);background:linear-gradient(#694625,#351e0f);
   color:#fff1bf;box-shadow:inset 0 0 0 1px #8b6030;line-height:19px}
 body .panel .panel__close:hover{background:#782c35;border-color:#f0c988;color:#fff}
+/* rarity colors are tuned for dark UI; a 1px pixel outline keeps them legible on parchment */
+body .panel .panel__body .rar{text-shadow:-1px 0 #2b1c0c,1px 0 #2b1c0c,0 -1px #2b1c0c,0 1px #2b1c0c}
+.guide-controls{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end;margin-bottom:10px}
+.guide-controls label{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:11px;font-weight:700;color:var(--text-muted)}
+.guide-controls select{width:100%;min-width:0}
+.guide-empty{margin:4px 0 0;color:var(--text-muted);font-size:12px}
+@media (max-width:680px){.guide-controls{grid-template-columns:1fr}.guide-controls [data-guide-back]{justify-self:start}}
 body .panel .stat-row{padding:6px 4px;border-bottom:1px solid rgba(78,52,24,.25)}
 body .panel .doll-slot{border:2px solid #92733c;background:rgba(255,247,218,.42);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 body .panel .doll-slot[data-unequip]:hover{background:#e2c7a0;border-color:#963741}

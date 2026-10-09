@@ -233,6 +233,7 @@ export const L10N = {
       "Pin goal": "ปักหมุดเป้าหมาย",
       "Clear goal": "ล้างเป้าหมาย",
       "Find item": "ค้นหาไอเทม",
+      "Pick an item, recipe or ability to see where it drops, what it needs, and how to reach it.": "เลือกไอเทม สูตร หรือสกิล เพื่อดูว่าดรอปจากที่ไหน ต้องใช้อะไร และไปถึงได้อย่างไร",
       "Source": "แหล่งที่มา",
       "Recipe": "สูตรสร้าง",
       "Source unknown": "ยังไม่ทราบแหล่งที่มา",
