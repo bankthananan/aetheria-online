@@ -49,6 +49,8 @@ export const THEME = {
   --accent:#507344;--accent-alt:#e0bd61;
   --hp:#963741;--mp:#416eaa;--xp:#c49c43;
   --danger:#c65356;--success:#6f9669;
+  --success-text:#8fbf7f;--danger-text:#e07b70;--info:#8fb4dc;--warn:#e5a35a;
+  --card-bg:rgba(0,0,0,.28);--card-border:rgba(214,182,108,.28);
   --iron:#1b2027;--iron-deep:#0d1219;--royal:#152743;--royal-light:#213b63;
   --oxblood:#782c35;--forest:#3f6048;--brass:#a98742;
   --wood-deep:#180d07;--wood:#342313;--wood-mid:#51351d;--wood-light:#74502d;

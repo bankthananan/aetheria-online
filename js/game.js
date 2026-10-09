@@ -8348,7 +8348,8 @@ const extraCss = `
 .quest-wait{padding-left:7px;border-left:3px solid #718198}
 /* World Chronicle: a readable linear pilgrimage road, revealed by exploration. */
 .panel[data-kind="world"] .panel__body{padding:9px;background:#0f1c30}
-.world-chronicle{width:100%;color:#e8edf3}
+.world-chronicle{width:100%;color:#e8edf3;
+  --text:#f7edce;--text-muted:#d2c29b;--accent-alt:#e0bd61;--success:#6f9669;--panel-border:#d6b66c}
 .world-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;background:#101d32;border:1px solid #7f8da0;border-left:4px solid #d5b85d;box-shadow:inset 0 0 0 1px #314b73}
 .world-head>div:first-child{min-width:0}.world-head small{color:#91a2b8;font-size:8px;font-weight:800;letter-spacing:1.3px}
 .world-head h2{margin:1px 0 2px;color:#f0d47d;font:700 20px var(--font-head)}
