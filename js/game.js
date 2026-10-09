@@ -5912,7 +5912,7 @@ function paperDoll(p) {
     return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="${T('Unequip', 'ui')} ${esc(instName(inst))}"` : ''}>
       ${icon}<div style="font-size:10px;line-height:1.25;overflow:hidden">
         <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
-        ${inst ? `<b style="color:${rc.color}">${esc(instName(inst))}</b> <small style="color:${rc.color}">◆${rc.name}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
+        ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
       </div></div>`;
   }).join('') + `</div>`;
 }
@@ -6614,7 +6614,7 @@ function panelBody(id) {
     return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
       <label>${T('Touch controls','ui')} <select id="touch-preference">${['auto','on','off'].map(value=>`<option value="${value}" ${G.player.features.touch===value?'selected':''}>${T({auto:'Automatic',on:'On',off:'Off'}[value],'ui')}</option>`).join('')}</select></label>
       <div>${T('Assign actions','ui')} ${Array.from({length:9},(_,i)=>`<button class="btn" data-edit-slot="${i}">${i+1}</button>`).join(' ')}</div>
-      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d)">🔊 Volume Controls</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head)">🔊 Volume Controls</div>
       <div class="setting-row">
         <span>Master Volume (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
         <input type="range" id="vol-master" min="0" max="1" step="0.05" value="${v.master}" style="width:140px">
@@ -6627,7 +6627,7 @@ function panelBody(id) {
         <span>SFX Volume (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
         <input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${v.sfx}" style="width:140px">
       </div>
-      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">♿ Accessibility & Scaling</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">♿ Accessibility & Scaling</div>
       <div class="setting-row">
         <span>UI Scaling (<b id="vol-scale-val">${Math.round((G.uiScale || 1.0) * 100)}%</b>)</span>
         <input type="range" id="vol-scale" min="0.8" max="1.3" step="0.05" value="${G.uiScale || 1.0}" style="width:140px">
@@ -6636,7 +6636,7 @@ function panelBody(id) {
         <span>High Contrast Mode</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
-      <div style="font-weight:bold;font-size:14px;color:var(--gold-bright,#f0d47d);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
       <div class="setting-row">
         <span>${T('Admin Mode','ui')}</span>
         <input type="checkbox" id="admin-toggle" ${G.admin ? 'checked' : ''}>
@@ -6751,7 +6751,7 @@ function panelBody(id) {
         const usable = canUseItem(p, it);
         const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         return `<div class="gear-row">
-          <div class="gear-row__copy">${itemIconImg(dispItemId(e))} <b style="color:${rc.color}">${esc(instName(e))}</b> <small style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${socketDotsHtml(e)} — ${itemMainStatsHtml(e)}
+          <div class="gear-row__copy">${itemIconImg(dispItemId(e))} <b class="rar" style="color:${rc.color}">${esc(instName(e))}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${socketDotsHtml(e)} — ${itemMainStatsHtml(e)}
             ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}<button class="btn" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button></div>
           <button class="btn" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected?'Unprotect':'Protect','ui')}</button><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
       }
@@ -6934,7 +6934,7 @@ function panelBody(id) {
         if (!inst) return `<div class="gear-row ${locked ? 'locked' : ''}"><span class="gear-row__copy">${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${price}z${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${btn}</div>`;
         const rc = itemRarity(inst), slot = itemSlot(it);
         return `<div class="gear-row ${locked ? 'locked' : ''}">
-          <div class="gear-row__copy">${itemIconImg(it.id)} <b style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
+          <div class="gear-row__copy">${itemIconImg(it.id)} <b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
             <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${requirement}
             <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
       };
@@ -6957,7 +6957,7 @@ function panelBody(id) {
       const it = itemById[e.itemId], price = sellPrice(e);
       const rc = e.uid ? itemRarity(e) : null;
       const label = e.uid
-        ? `<b style="color:${rc.color}">${instName(e)}</b> <small style="color:${rc.color}">◆${rc.name}</small>`
+        ? `<b class="rar" style="color:${rc.color}">${instName(e)}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small>`
         : `<b>${T(it.name, 'items')}</b> ×${e.qty}`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
         <span>${itemIconImg(e.itemId)} ${label}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
@@ -6994,7 +6994,7 @@ function panelBody(id) {
         expBtn = `<button class="btn btn--ghost" data-expand-socket="${ref}" ${expCheck?.canExpand ? '' : 'disabled'} title="${expTitle}" style="font-size:11px;padding:3px 8px">${expLabel}</button>`;
       }
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(inst.itemId)} ${badge}<b style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')} ${socketDotsHtml(inst)}<br>
+        <span>${itemIconImg(inst.itemId)} ${badge}<b class="rar" style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')} ${socketDotsHtml(inst)}<br>
           <small style="color:var(--text-muted)">${fuelTxt}</small></span>
         <div style="display:flex;gap:6px;align-items:center">
           ${expBtn}
@@ -7016,7 +7016,7 @@ function panelBody(id) {
     return head + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">${refineFuelText}</div>` + enhBody;
   }
   if (id === 'admin') {
-    const status = `<div style="color:#ffd24d;margin-bottom:8px;font-size:12px;line-height:1.6">
+    const status = `<div style="color:var(--text);margin-bottom:8px;font-size:12px;line-height:1.6">
       God mode: <b>${p.godMode ? 'ON 🛡' : 'off'}</b> · Lv <b>${p.level}</b>/${DESIGN.levelCap} · Job <b>${p.jobLevel}</b>/${activeJobLevelCap(p)} · ${p.className}<br>
       💰${p.zeny} · 🏅 Rank ${GUILD_RANKS[G.guildRankIdx || 0]} (${G.guildPoints || 0} pts) · 🗺 ${G.map.name} · ${G.monsters.filter(m => m.alive).length} mobs alive</div>`;
     return status + ADMIN_GROUPS.map(([title, btns]) =>
@@ -8489,7 +8489,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:#e8edf3;border-color:
 .tip-bar{margin-top:4px;color:#aeb9c8}.tip-bar kbd,.slot-picker kbd{color:#f0d47d}
 
 /* Keybinding panel */
-.hotkey-intro{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;color:#aeb9c8;font-size:10px}.hotkey-intro b{color:#f0d47d;font:700 15px var(--font-head)}
+.hotkey-intro{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;color:var(--text-muted);font-size:11px}.hotkey-intro b{color:var(--accent-alt);font:700 15px var(--font-head)}
 .hotkey-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:min(560px,78vw)}
 .hotkey-row{display:grid;grid-template-columns:22px 26px minmax(0,1fr) 58px;align-items:center;gap:5px;min-height:43px;padding:4px 6px;background:#101d32;border:1px solid #586a82}
 .hotkey-slot-no{color:#718197;font-size:9px}.hotkey-row-glyph{color:#efd16f;font-size:18px;text-align:center}.hotkey-action{display:flex;flex-direction:column;min-width:0}.hotkey-action b{overflow:hidden;color:#e8edf3;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.hotkey-action small{overflow:hidden;color:#8796a9;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
