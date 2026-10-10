@@ -3788,6 +3788,20 @@ function pxDataURL(group, name) {
   try { const c = matrixCanvas(group + ':' + name, PX[group]?.[name]); return c && c.toDataURL ? c.toDataURL() : ''; } catch { return ''; }
 }
 const itemIconImg = (id, sz = 24) => `<img src="${pxDataURL('item', ITEM_ICON[id] || 'gem')}" width="${sz}" height="${sz}" style="image-rendering:pixelated;vertical-align:middle;flex:0 0 ${sz}px" alt="">`;
+// Shared RO item box + fixed slot grid (Satchel, Trader Sell, Storage).
+// cells: [{ e, key, attrs? } | { label }]; empty boxes pad the grid to `minSlots` so it reads as a container.
+const BAG_MIN_SLOTS = 40;
+function itemSlotHtml(e, { key, sel = false, attrs = '' } = {}) {
+  const it = itemById[e.itemId], rc = e.uid ? itemRarity(e) : null, locked = !!e.uid && !canUseItem(G.player, it);
+  return `<button type="button" class="bag-slot${sel ? ' is-sel' : ''}${locked ? ' is-locked' : ''}" data-slot-key="${key}" ${attrs}
+    style="${rc ? `--slot-rar:${rc.color}` : ''}" title="${esc(e.uid ? instName(e) : T(it.name, 'items'))}${locked ? ' · ' + T('Class locked', 'ui') : ''}">
+    ${itemIconImg(e.uid ? dispItemId(e) : e.itemId, 28)}${e.plus ? `<i class="bag-slot__plus">+${e.plus}</i>` : ''}${!e.uid && e.qty > 1 ? `<i class="bag-slot__qty">${e.qty}</i>` : ''}${e.protected ? '<i class="bag-slot__lock">🔒</i>' : ''}${locked ? '<i class="bag-slot__ban">⛔</i>' : ''}</button>`;
+}
+function slotGridHtml(cells, { selKey = null, minSlots = BAG_MIN_SLOTS } = {}) {
+  let n = 0;
+  const html = cells.map(c => c.label != null ? `<div class="bag-grid__label">${c.label}</div>` : (n++, itemSlotHtml(c.e, { key: c.key, sel: c.key === selKey, attrs: c.attrs || '' }))).join('');
+  return `<div class="bag-grid">${html}${'<span class="bag-slot is-empty" aria-hidden="true"></span>'.repeat(Math.max(0, minSlots - n))}</div>`;
+}
 // draw a pixel sprite centered at (cx,cy), nearest-neighbor upscaled to `size`; flip = mirror horizontally
 function drawPx(group, name, cx, cy, size, flip, state = 'idle', frame = 0) {
   let rows = PX[group]?.[name]; if (!rows) return false;
@@ -6760,12 +6774,6 @@ function panelBody(id) {
     const keyOf = e => e.uid ? 'u' + e.uid : 'i' + e.itemId;
     const visible = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).flatMap(c => groups[c]);
     const sel = visible.find(e => keyOf(e) === G._bagSel) || visible[0];
-    const tileHtml = e => {
-      const it = itemById[e.itemId], rc = e.uid ? itemRarity(e) : null, locked = e.uid && !canUseItem(p, it);
-      return `<button type="button" class="bag-slot${sel === e ? ' is-sel' : ''}${locked ? ' is-locked' : ''}" data-bag-sel="${keyOf(e)}"
-        style="${rc ? `--slot-rar:${rc.color}` : ''}" title="${esc(e.uid ? instName(e) : T(it.name, 'items'))}">
-        ${itemIconImg(e.uid ? dispItemId(e) : e.itemId, 28)}${e.plus ? `<i class="bag-slot__plus">+${e.plus}</i>` : ''}${!e.uid && e.qty > 1 ? `<i class="bag-slot__qty">${e.qty}</i>` : ''}${e.protected ? '<i class="bag-slot__lock">🔒</i>' : ''}</button>`;
-    };
     const detailHtml = e => {
       const it = itemById[e.itemId];
       const source = `<button class="btn btn--ghost" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button>`;
@@ -6798,9 +6806,10 @@ function panelBody(id) {
       <label><input type="checkbox" data-loot-quiet ${p.features.loot.quiet?'checked':''}> ${T('Quiet irrelevant drops','ui')}</label>
       ${hiddenN ? `<button class="btn" data-loot-all>${T('Show all','ui')}</button>` : ''}
       ${p.features.loot.mode==='affixes'?`<div>${[...new Set(AFFIXES.map(a=>a.stat))].map(stat=>`<label><input type="checkbox" data-loot-affix="${esc(stat)}" ${p.features.loot.affixes.includes(stat)?'checked':''}>${esc(stat)}</label>`).join(' ')}</div>`:''}</div></details>`;
-    const tabsHtml = `<div class="book-tabs bag-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${tab === k}" class="book-tab${tab === k ? ' active' : ''}" data-bagtab="${k}">${l} <small>${tabCount(k)}</small></button>`).join('')}</div>`;
-    const grid = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${T(c, 'ui')} <small>${groups[c].length}</small></div><div class="bag-grid">${groups[c].map(tileHtml).join('')}</div>`).join('');
-    return `${toolbarHtml}${tabsHtml}<div class="bag-layout"><div class="bag-slots">${grid || `<p class="ro-muted">${q ? T('No items match your search.', 'ui') : T('Nothing in this tab.', 'ui')}</p>`}</div>
+    const tabsHtml = `<nav class="bag-tabs" role="tablist" aria-label="${T('Bag tabs', 'ui')}">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${tab === k}" class="bag-vtab${tab === k ? ' active' : ''}" data-bagtab="${k}">${l}<small>${tabCount(k)}</small></button>`).join('')}</nav>`;
+    const cells = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).flatMap(c => [{ label: `${T(c, 'ui')} <small>${groups[c].length}</small>` }, ...groups[c].map(e => ({ e, key: keyOf(e), attrs: `data-bag-sel="${keyOf(e)}"` }))]);
+    const grid = visible.length ? slotGridHtml(cells, { selKey: sel && keyOf(sel) }) : `<p class="ro-muted">${q ? T('No items match your search.', 'ui') : T('Nothing in this tab.', 'ui')}</p>${slotGridHtml([])}`;
+    return `${toolbarHtml}<div class="bag-layout">${tabsHtml}<div class="bag-slots">${grid}</div>
       <aside class="ro-box bag-detail">${sel ? detailHtml(sel) : `<p class="ro-muted">${T('Select an item to see its details.', 'ui')}</p>`}</aside></div>`;
   }
   if (id === 'skills') return skillsPanelHtml(p);
@@ -6929,22 +6938,18 @@ function panelBody(id) {
     }
 
     if (tab === 'storage') {
-      const line = (e, action, idx) => {
-        const it = itemById[e.itemId];
-        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-          <span>${itemIconImg(e.itemId)} ${e.uid ? instName(e) : `<b>${T(it.name, 'items')}</b>`}${!e.uid && e.qty > 1 ? ` ×${e.qty}` : ''}</span>
-          <button class="btn" data-${action}="${idx}">${T(action === 'deposit' ? 'Deposit' : 'Withdraw', 'ui')}</button></div>`;
-      };
-      const stored = G.storage.map((e, i) => line(e, 'withdraw', i)).join('')
-        || `<div style="color:var(--text-muted);padding:4px 0">${T('The chest is empty.', 'ui')}</div>`;
-      const bag = p.inventory
-        .map((e, i) => ({ e, i }))
-        .filter(({ e }) => itemById[e.itemId].type !== 'quest')
-        .map(({ e, i }) => line(e, 'deposit', i)).join('')
-        || `<div style="color:var(--text-muted);padding:4px 0">${T('Your backpack is empty.', 'ui')}</div>`;
-      return head + `<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${T('Goods left here are kept safe between adventures.', 'ui')}</div>
-        <div class="bag-cat">📦 ${T('Storage', 'ui')} (${G.storage.length})</div>${stored}
-        <div class="bag-cat">🎒 ${T('Backpack', 'ui')}</div>${bag}`;
+      // two RO-style chests side by side; click selects, double-click (or the button) moves one
+      const all = [...G.storage.map((e, i) => ({ e, key: 's' + i, from: 'withdraw', i })), ...p.inventory.map((e, i) => ({ e, key: 'b' + i, from: 'deposit', i })).filter(x => itemById[x.e.itemId].type !== 'quest')];
+      const sel = all.find(x => x.key === G._stashSel);
+      const cells = list => list.map(x => ({ e: x.e, key: x.key, attrs: `data-stash-sel="${x.key}" data-stash-move="${x.from}:${x.i}"` }));
+      const side = (title, list, empty) => `<section><div class="bag-cat">${title} <small>${list.length}</small></div>${list.length ? '' : `<p class="ro-muted">${empty}</p>`}${slotGridHtml(cells(list), { selKey: sel?.key, minSlots: 24 })}</section>`;
+      const it = sel && itemById[sel.e.itemId];
+      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.e.uid ? dispItemId(sel.e) : sel.e.itemId, 40)}<div><b ${sel.e.uid ? `class="rar" style="color:${itemRarity(sel.e).color}"` : ''}>${esc(sel.e.uid ? instName(sel.e) : T(it.name, 'items'))}</b><small class="ro-muted">${sel.e.uid ? itemRarity(sel.e).name : '×' + sel.e.qty}</small></div></div>
+          <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p><div class="bag-detail__actions"><button class="btn" data-${sel.from}="${sel.i}">${T(sel.from === 'deposit' ? 'Deposit' : 'Withdraw', 'ui')}${!sel.e.uid && sel.e.qty > 1 ? ' 1' : ''}</button></div>`
+        : `<p class="ro-muted">${T('Select an item, or double-click to move it between chest and backpack.', 'ui')}</p>`;
+      return head + `<p class="ro-muted">${T('Goods left here are kept safe between adventures.', 'ui')}</p>
+        <div class="stash-layout">${side('📦 ' + T('Storage', 'ui'), all.filter(x => x.from === 'withdraw'), T('The chest is empty.', 'ui'))}${side('🎒 ' + T('Backpack', 'ui'), all.filter(x => x.from === 'deposit'), T('Your backpack is empty.', 'ui'))}
+        <aside class="ro-box bag-detail">${detail}</aside></div>`;
     }
       
     if (tab === 'buy') {
@@ -6983,24 +6988,21 @@ function panelBody(id) {
     }
     
     // sell tab — everything except quest items, at half value (rarity-scaled for gear), grouped by category
-    const sellRow = e => {
-      const it = itemById[e.itemId], price = sellPrice(e);
-      const rc = e.uid ? itemRarity(e) : null;
-      const label = e.uid
-        ? `<b class="rar" style="color:${rc.color}">${instName(e)}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small>`
-        : `<b>${T(it.name, 'items')}</b> ×${e.qty}`;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(e.itemId)} ${label}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>
-        <button class="btn" data-sell="${e.uid || e.itemId}">${T('Sell', 'ui')} ${price}z</button></div>`;
-    };
     const sellables = p.inventory.filter(e => itemById[e.itemId].type !== 'quest');
-    const sellGroups = {};
-    for (const e of sellables) { const c = ITEM_CAT(itemById[e.itemId]); (sellGroups[c] = sellGroups[c] || []).push(e); }
-    const rows = sellables.length
-      ? Object.keys(sellGroups).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
-          .map(c => `<div class="bag-cat">${T(c, 'ui')} (${sellGroups[c].length})</div>${sellGroups[c].map(sellRow).join('')}`).join('')
-      : `<i>${T('Nothing to sell.', 'ui')}</i>`;
-    if (tab === 'sell') return head + rows;
+    const sellKey = e => e.uid ? 'u' + e.uid : 'i' + e.itemId;
+    if (tab === 'sell') {
+      const sellGroups = {};
+      for (const e of sellables) { const c = ITEM_CAT(itemById[e.itemId]); (sellGroups[c] = sellGroups[c] || []).push(e); }
+      const sel = sellables.find(e => sellKey(e) === G._sellSel);
+      const cells = Object.keys(sellGroups).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
+        .flatMap(c => [{ label: `${T(c, 'ui')} <small>${sellGroups[c].length}</small>` }, ...sellGroups[c].map(e => ({ e, key: sellKey(e), attrs: `data-sell-sel="${sellKey(e)}"` }))]);
+      const it = sel && itemById[sel.itemId];
+      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.uid ? dispItemId(sel) : sel.itemId, 40)}<div><b ${sel.uid ? `class="rar" style="color:${itemRarity(sel).color}"` : ''}>${esc(sel.uid ? instName(sel) : T(it.name, 'items'))}</b><small class="ro-muted">${sel.uid ? itemRarity(sel).name : '×' + sel.qty}</small></div></div>
+          <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p>${sel.protected ? `<p class="ro-muted">🔒 ${T('Protected', 'ui')}</p>` : ''}
+          <div class="bag-detail__actions"><button class="btn" data-sell="${sel.uid || sel.itemId}">${T('Sell', 'ui')} ${sellPrice(sel)}z${!sel.uid && sel.qty > 1 ? ' ×1' : ''}</button></div>`
+        : `<p class="ro-muted">${T('Select an item to see its sell price.', 'ui')}</p>`;
+      return head + (sellables.length ? `<div class="sell-layout"><div>${slotGridHtml(cells, { selKey: G._sellSel })}</div><aside class="ro-box bag-detail">${detail}</aside></div>` : `<p class="ro-muted">${T('Nothing to sell.', 'ui')}</p>`);
+    }
     
     // enhance tab — equipped gear (with slot badges) first, then bag gear, each in its own section
     const enhRow = (inst, ref, slot) => {
@@ -7325,6 +7327,11 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => { equip(b.dataset.equip); refreshPanel(id); });
   el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { buy(b.dataset.buy); refreshPanel('shop'); });
   el.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { sellItem(b.dataset.sell); refreshPanel('shop'); });
+  el.querySelectorAll('[data-sell-sel]').forEach(b => b.onclick = () => { G._sellSel = b.dataset.sellSel; refreshPanel('shop'); });
+  el.querySelectorAll('[data-stash-sel]').forEach(b => {
+    b.onclick = () => { G._stashSel = b.dataset.stashSel; refreshPanel('shop'); };
+    b.ondblclick = () => { const [act, i] = b.dataset.stashMove.split(':'); G._stashSel = null; (act === 'deposit' ? depositItem : withdrawItem)(+i); };
+  });
   el.querySelectorAll('[data-refine]').forEach(b => b.onclick = () => { refineItem(b.dataset.refine); refreshPanel('shop'); });
   el.querySelectorAll('[data-expand-socket]').forEach(b => b.onclick = () => { expandSockets(b.dataset.expandSocket); refreshPanel('shop'); });
   el.querySelectorAll('[data-deposit]').forEach(b => b.onclick = () => depositItem(+b.dataset.deposit));
