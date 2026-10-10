@@ -3834,8 +3834,10 @@ const itemIconImg = (id, sz = 24) => `<img src="${pxDataURL('item', ITEM_ICON[id
 // Shared RO item box + fixed slot grid (Satchel, Trader Sell, Storage).
 // cells: [{ e, key, attrs? } | { label }]; empty boxes pad the grid to `minSlots` so it reads as a container.
 const BAG_MIN_SLOTS = 40;
+// rarity for any bag entry: rolled gear carries its own; stack items (cards, materials, food, bait) use the item's static rarity
+const slotRarity = e => e.uid ? itemRarity(e) : (RARITY[itemById[e.itemId]?.rarity] || null);
 function itemSlotHtml(e, { key, sel = false, attrs = '' } = {}) {
-  const it = itemById[e.itemId], rc = e.uid ? itemRarity(e) : null, locked = !!e.uid && !canUseItem(G.player, it);
+  const it = itemById[e.itemId], rc = slotRarity(e), locked = !!e.uid && !canUseItem(G.player, it);
   return `<button type="button" class="bag-slot${sel ? ' is-sel' : ''}${locked ? ' is-locked' : ''}" data-slot-key="${key}" ${attrs}
     style="${rc ? `--slot-rar:${rc.color}` : ''}" title="${esc(e.uid ? instName(e) : T(it.name, 'items'))}${locked ? ' · ' + T('Class locked', 'ui') : ''}">
     ${itemIconImg(e.uid ? dispItemId(e) : e.itemId, 28)}${e.plus ? `<i class="bag-slot__plus">+${e.plus}</i>` : ''}${!e.uid && e.qty > 1 ? `<i class="bag-slot__qty">${e.qty}</i>` : ''}${e.protected ? '<i class="bag-slot__lock">🔒</i>' : ''}${locked ? '<i class="bag-slot__ban">⛔</i>' : ''}</button>`;
@@ -6844,7 +6846,8 @@ function panelBody(id) {
         : it.type === 'card' ? T('Fits {slot} gear. Click Socket…, then click an empty ○ socket on that gear (in this bag or on Status → Equipment). No empty socket? The Trader → Enhance tab can add sockets.', 'ui').replace('{slot}', T(it.targetSlot || 'any', 'ui'))
         : it.gem ? T('Click Socket…, then click an empty ○ socket on a piece of gear.', 'ui') : '';
       const pickHint = G._socketPick === it.id ? `<p class="ro-muted">👉 ${T('Now click an empty ○ socket on your gear.', 'ui')}</p>` : '';
-      return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b>${T(it.name, 'items')}</b><small class="ro-muted">×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
+      const sr = slotRarity(e);
+      return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b ${sr ? `class="rar" style="color:${sr.color}"` : ''}>${T(it.name, 'items')}</b><small class="ro-muted">${sr ? `<span class="rar" style="color:${sr.color}">◆${sr.name}</span> · ` : ''}×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
         <p class="bag-detail__desc">${T(it.desc, 'items')}</p>${howTo ? `<p class="bag-howto">${howTo}</p>` : ''}${pickHint}<div class="bag-detail__actions">${act}${source}</div>`;
     };
     const hiddenN = p.inventory.filter(e => !matchesLoot(e, itemById[e.itemId], p.features.loot, p.classId)).length;
@@ -6998,7 +7001,7 @@ function panelBody(id) {
       const cells = list => list.map(x => ({ e: x.e, key: x.key, attrs: `data-stash-sel="${x.key}" data-stash-move="${x.from}:${x.i}"` }));
       const side = (title, list, empty) => `<section><div class="bag-cat">${title} <small>${list.length}</small></div>${list.length ? '' : `<p class="ro-muted">${empty}</p>`}${slotGridHtml(cells(list), { selKey: sel?.key, minSlots: 24 })}</section>`;
       const it = sel && itemById[sel.e.itemId];
-      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.e.uid ? dispItemId(sel.e) : sel.e.itemId, 40)}<div><b ${sel.e.uid ? `class="rar" style="color:${itemRarity(sel.e).color}"` : ''}>${esc(sel.e.uid ? instName(sel.e) : T(it.name, 'items'))}</b><small class="ro-muted">${sel.e.uid ? itemRarity(sel.e).name : '×' + sel.e.qty}</small></div></div>
+      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.e.uid ? dispItemId(sel.e) : sel.e.itemId, 40)}<div><b ${slotRarity(sel.e) ? `class="rar" style="color:${slotRarity(sel.e).color}"` : ''}>${esc(sel.e.uid ? instName(sel.e) : T(it.name, 'items'))}</b><small class="ro-muted">${[slotRarity(sel.e)?.name, sel.e.uid ? '' : '×' + sel.e.qty].filter(Boolean).join(' · ')}</small></div></div>
           <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p><div class="bag-detail__actions"><button class="btn" data-${sel.from}="${sel.i}">${T(sel.from === 'deposit' ? 'Deposit' : 'Withdraw', 'ui')}${!sel.e.uid && sel.e.qty > 1 ? ' 1' : ''}</button></div>`
         : `<p class="ro-muted">${T('Select an item, or double-click to move it between chest and backpack.', 'ui')}</p>`;
       return head + `<p class="ro-muted">${T('Goods left here are kept safe between adventures.', 'ui')}</p>
@@ -7051,7 +7054,7 @@ function panelBody(id) {
       const cells = Object.keys(sellGroups).sort((a, b) => ITEM_CAT_ORDER[a] - ITEM_CAT_ORDER[b])
         .flatMap(c => [{ label: `${T(c, 'ui')} <small>${sellGroups[c].length}</small>` }, ...sellGroups[c].map(e => ({ e, key: sellKey(e), attrs: `data-sell-sel="${sellKey(e)}"` }))]);
       const it = sel && itemById[sel.itemId];
-      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.uid ? dispItemId(sel) : sel.itemId, 40)}<div><b ${sel.uid ? `class="rar" style="color:${itemRarity(sel).color}"` : ''}>${esc(sel.uid ? instName(sel) : T(it.name, 'items'))}</b><small class="ro-muted">${sel.uid ? itemRarity(sel).name : '×' + sel.qty}</small></div></div>
+      const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.uid ? dispItemId(sel) : sel.itemId, 40)}<div><b ${slotRarity(sel) ? `class="rar" style="color:${slotRarity(sel).color}"` : ''}>${esc(sel.uid ? instName(sel) : T(it.name, 'items'))}</b><small class="ro-muted">${[slotRarity(sel)?.name, sel.uid ? '' : '×' + sel.qty].filter(Boolean).join(' · ')}</small></div></div>
           <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p>${sel.protected ? `<p class="ro-muted">🔒 ${T('Protected', 'ui')}</p>` : ''}
           <div class="bag-detail__actions"><button class="btn" data-sell="${sel.uid || sel.itemId}">${T('Sell', 'ui')} ${sellPrice(sel)}z${!sel.uid && sel.qty > 1 ? ' ×1' : ''}</button></div>`
         : `<p class="ro-muted">${T('Select an item to see its sell price.', 'ui')}</p>`;
