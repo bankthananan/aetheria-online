@@ -123,6 +123,26 @@ body .panel .panel__body h3:not([class]):after,.ro-parchment h3:not([class]):aft
 .guild-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .guild-rank{flex-shrink:0;padding:4px 10px;background:#74501d;color:#f2d88a;border:1px solid #d6b45a;font:700 14px var(--font-head)}
 .guild-head__prog{flex:1;min-width:0;display:grid;gap:3px;font-size:12px}
+/* Satchel (RO inventory): slot grid + detail pane */
+.bag-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.bag-zeny{margin-right:auto;color:var(--accent-alt);font-size:13px}
+.bag-bar .inv-search-input{flex:1 1 180px;min-width:0}
+.bag-filter{margin-bottom:6px;font-size:12px}.bag-filter summary{cursor:pointer;color:var(--text-muted)}
+.bag-filter .inv-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0}
+.bag-tabs{margin-bottom:8px}.bag-tabs small{opacity:.7;font-weight:400}
+.bag-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:10px;align-items:start}
+.bag-cat{margin:4px 0 4px;color:var(--accent-alt);font:700 12px var(--font-head)}.bag-cat small{color:var(--text-muted);font:400 11px var(--font-ui)}
+.bag-grid{display:grid;grid-template-columns:repeat(auto-fill,44px);gap:4px;margin-bottom:6px}
+.bag-slot{position:relative;width:44px;height:44px;display:grid;place-items:center;padding:0;cursor:pointer;
+  background:var(--card-bg);border:2px solid color-mix(in srgb,var(--slot-rar,var(--card-border)) 80%,#2b1c0c);border-radius:2px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.bag-slot:hover{border-color:var(--gold)}.bag-slot.is-sel{outline:2px solid #74501d;outline-offset:1px;background:color-mix(in srgb,var(--gold) 25%,var(--card-bg))}
+.bag-slot.is-locked img{filter:grayscale(.8);opacity:.55}
+.bag-slot i{position:absolute;font:700 9px/1 var(--font-ui);font-style:normal;color:#fff;text-shadow:-1px 0 #000,1px 0 #000,0 -1px #000,0 1px #000}
+.bag-slot__qty{right:2px;bottom:2px}.bag-slot__plus{left:2px;top:2px;color:#f2d88a!important}.bag-slot__lock{right:1px;top:1px;font-size:8px!important}
+.bag-detail{position:sticky;top:0;display:grid;gap:6px;font-size:12px;min-width:0}
+.bag-detail__head{display:flex;gap:8px;align-items:center}.bag-detail__head>div{display:grid;gap:2px;min-width:0}.bag-detail__head b{font-size:14px}
+.bag-detail__desc{margin:0}.bag-detail__actions{display:flex;flex-wrap:wrap;gap:5px}
+@media (max-width:680px){.bag-layout{grid-template-columns:1fr}.bag-detail{position:static}}
 /* Loadouts */
 .loadout-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px;margin-top:6px}
 .loadout-row__state{grid-column:1/-1}

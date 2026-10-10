@@ -107,6 +107,7 @@ A.G._shopItems = A.CONTENT.npcs.find(npc => npc.id === 'merchant' || npc.id === 
 p.zeny = 999999;
 const shopHtml = A.panelBody('shop');
 assert.ok(shopHtml.includes('Soul Ledger') && shopHtml.includes('Memory Prism'), 'Marla sells both reset items');
+A.G._bagSel = 'imemory_prism';   // the satchel shows actions for the selected slot
 const inventoryHtml = A.panelBody('inv');
 assert.ok(inventoryHtml.includes('data-use="memory_prism"'), 'reset item appears in inventory Use actions');
 assert.ok(!inventoryHtml.includes('data-assign-item="memory_prism"'), 'reset item cannot be assigned to combat hotbar');

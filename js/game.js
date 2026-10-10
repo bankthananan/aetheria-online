@@ -6732,11 +6732,12 @@ function panelBody(id) {
     </div>`;
   }
   if (id === 'inv') {
-    if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div><i>${T('Bag is empty.', 'ui')}</i>`;
+    if (!p.inventory.length) return `<div class="bag-bar"><span class="bag-zeny">💰 <b>${p.zeny.toLocaleString()}</b> ${T('zeny', 'ui')}</span></div><p class="ro-muted">${T('Bag is empty.', 'ui')} ${T('Loot from monsters and quest rewards land here.', 'ui')}</p>`;
     const tab = G._bagTab || 'all';
     const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
     const q = (G._invSearch || '').trim().toLowerCase();
-    const inTab = it => tab === 'all' || (tab === 'gear' && ['weapon', 'armor', 'accessory', 'relic'].includes(it.type)) || (tab === 'use' && ['potion', 'reset'].includes(it.type)) || (tab === 'etc' && it.type === 'material') || (tab === 'quest' && it.type === 'quest');
+    const inTabK = (it, k) => k === 'all' || (k === 'gear' && ['weapon', 'armor', 'accessory', 'relic'].includes(it.type)) || (k === 'use' && ['potion', 'reset'].includes(it.type)) || (k === 'etc' && it.type === 'material') || (k === 'quest' && it.type === 'quest');
+    const inTab = it => inTabK(it, tab);
     const matchesSearch = (e, it) => {
       if (!q) return true;
       if (it && it.name && it.name.toLowerCase().includes(q)) return true;
@@ -6755,36 +6756,52 @@ function panelBody(id) {
     const slotRank = e => e.uid ? EQUIP_SLOTS.indexOf(itemSlot(itemById[e.itemId])) : 99;
     for (const c in groups) groups[c].sort((a, b) => (slotRank(a) - slotRank(b)) || (rarRank(b) - rarRank(a)) || ((b.plus || 0) - (a.plus || 0)) || itemById[a.itemId].name.localeCompare(itemById[b.itemId].name));
 
-    const rowHtml = e => {
+    // RO-style satchel: a slot grid on the left, the selected item's details on the right.
+    const keyOf = e => e.uid ? 'u' + e.uid : 'i' + e.itemId;
+    const visible = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).flatMap(c => groups[c]);
+    const sel = visible.find(e => keyOf(e) === G._bagSel) || visible[0];
+    const tileHtml = e => {
+      const it = itemById[e.itemId], rc = e.uid ? itemRarity(e) : null, locked = e.uid && !canUseItem(p, it);
+      return `<button type="button" class="bag-slot${sel === e ? ' is-sel' : ''}${locked ? ' is-locked' : ''}" data-bag-sel="${keyOf(e)}"
+        style="${rc ? `--slot-rar:${rc.color}` : ''}" title="${esc(e.uid ? instName(e) : T(it.name, 'items'))}">
+        ${itemIconImg(e.uid ? dispItemId(e) : e.itemId, 28)}${e.plus ? `<i class="bag-slot__plus">+${e.plus}</i>` : ''}${!e.uid && e.qty > 1 ? `<i class="bag-slot__qty">${e.qty}</i>` : ''}${e.protected ? '<i class="bag-slot__lock">🔒</i>' : ''}</button>`;
+    };
+    const detailHtml = e => {
       const it = itemById[e.itemId];
-      if (e.uid) {   // rarity-rolled equipment instance — compare vs the item's slot
-        const rc = itemRarity(e), slot = itemSlot(it);
-        const usable = canUseItem(p, it);
+      const source = `<button class="btn btn--ghost" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button>`;
+      if (e.uid) {
+        const rc = itemRarity(e), slot = itemSlot(it), usable = canUseItem(p, it);
         const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
-        return `<div class="gear-row">
-          <div class="gear-row__copy">${itemIconImg(dispItemId(e))} <b class="rar" style="color:${rc.color}">${esc(instName(e))}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${socketDotsHtml(e)} — ${itemMainStatsHtml(e)}
-            ${requirement}<span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}<button class="btn" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button></div>
-          <button class="btn" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected?'Unprotect':'Protect','ui')}</button><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button></div>`;
+        return `<div class="bag-detail__head">${itemIconImg(dispItemId(e), 40)}<div><b class="rar" style="color:${rc.color}">${esc(instName(e))}</b>
+            <small class="ro-muted"><span class="rar" style="color:${rc.color}">◆${rc.name}</span> · ${T(SLOT_LABEL[slot], 'ui')}${socketDotsHtml(e)}</small></div></div>
+          <div class="bag-detail__stats">${itemMainStatsHtml(e)}</div>${requirement}
+          <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}
+          <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
+            <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}</div>`;
       }
       const act = it.type === 'potion'
-        ? `<span style="display:flex;gap:6px"><button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button></span>`
+        ? `<button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button>`
         : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>`
         : it.gem ? `<button class="btn ${G._socketPick === it.id ? 'btn--ghost' : ''}" data-pick-gem="${it.id}">${G._socketPick === it.id ? T('Cancel', 'ui') : T('Socket…', 'ui')}</button>` : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.12)">
-        <span>${itemIconImg(e.itemId)} <b>${T(it.name, 'items')}</b> ×${e.qty}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small><button class="btn" data-guide-kind="item" data-guide-id="${e.itemId}">${T('Source','ui')}</button></span>${act}</div>`;
+      return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b>${T(it.name, 'items')}</b><small class="ro-muted">×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
+        <p class="bag-detail__desc">${T(it.desc, 'items')}</p><div class="bag-detail__actions">${act}${source}</div>`;
     };
-    const toolbarHtml = `<div class="inv-toolbar">
-      <label>${T('Loot relevance','ui')} <select data-loot-mode>${['all','usable','affixes'].map(mode=>`<option value="${mode}" ${p.features.loot.mode===mode?'selected':''}>${T({all:'All',usable:'Usable',affixes:'Selected affixes'}[mode],'ui')}</option>`).join('')}</select></label>
-      <label><input type="checkbox" data-loot-quiet ${p.features.loot.quiet?'checked':''}>${T('Quiet irrelevant drops','ui')}</label>
-      <span>${p.inventory.filter(e=>!matchesLoot(e,itemById[e.itemId],p.features.loot,p.classId)).length} ${T('hidden','ui')} <button class="btn" data-loot-all>${T('Show all','ui')}</button></span>
-      ${p.features.loot.mode==='affixes'?`<details><summary>${T('Select affixes; none shows all','ui')}</summary>${[...new Set(AFFIXES.map(a=>a.stat))].map(stat=>`<label><input type="checkbox" data-loot-affix="${esc(stat)}" ${p.features.loot.affixes.includes(stat)?'checked':''}>${esc(stat)}</label>`).join(' ')}</details>`:''}
+    const hiddenN = p.inventory.filter(e => !matchesLoot(e, itemById[e.itemId], p.features.loot, p.classId)).length;
+    const tabCount = k => p.inventory.filter(e => inTabK(itemById[e.itemId], k)).length;
+    const toolbarHtml = `<div class="bag-bar">
+      <span class="bag-zeny">💰 <b>${p.zeny.toLocaleString()}</b> ${T('zeny', 'ui')}</span>
       <input type="search" id="inv-search" class="inv-search-input" placeholder="${T('Search items / affixes...', 'ui')}" value="${esc(G._invSearch || '')}">
       <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button>
-      <button class="btn btn--ghost" id="inv-deposit-mats" title="${T('Deposit Materials to Storage', 'ui')}">📥 ${T('Deposit Mats', 'ui')}</button>
-    </div>`;
-    const tabsHtml = `<div class="bag-tabs">${tabs.map(([k, l]) => `<span class="bag-tab ${tab === k ? 'on' : ''}" data-bagtab="${k}">${l}</span>`).join('')}</div>`;
-    const body = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${T(c, 'ui')} (${groups[c].length})</div>${groups[c].map(rowHtml).join('')}`).join('');
-    return `<div style="color:var(--accent-alt);margin-bottom:6px">💰 ${p.zeny} ${T('zeny', 'ui')}</div>${toolbarHtml}${tabsHtml}${body || `<i>${T('Nothing in this tab.', 'ui')}</i>`}`;
+      <button class="btn btn--ghost" id="inv-deposit-mats" title="${T('Deposit Materials to Storage', 'ui')}">📥 ${T('Deposit Mats', 'ui')}</button></div>
+      <details class="bag-filter"${p.features.loot.mode !== 'all' || p.features.loot.quiet ? ' open' : ''}><summary>${T('Loot filter', 'ui')}${hiddenN ? ` · ${hiddenN} ${T('hidden','ui')}` : ''}</summary>
+      <div class="inv-toolbar"><label>${T('Loot relevance','ui')} <select data-loot-mode>${['all','usable','affixes'].map(mode=>`<option value="${mode}" ${p.features.loot.mode===mode?'selected':''}>${T({all:'All',usable:'Usable',affixes:'Selected affixes'}[mode],'ui')}</option>`).join('')}</select></label>
+      <label><input type="checkbox" data-loot-quiet ${p.features.loot.quiet?'checked':''}> ${T('Quiet irrelevant drops','ui')}</label>
+      ${hiddenN ? `<button class="btn" data-loot-all>${T('Show all','ui')}</button>` : ''}
+      ${p.features.loot.mode==='affixes'?`<div>${[...new Set(AFFIXES.map(a=>a.stat))].map(stat=>`<label><input type="checkbox" data-loot-affix="${esc(stat)}" ${p.features.loot.affixes.includes(stat)?'checked':''}>${esc(stat)}</label>`).join(' ')}</div>`:''}</div></details>`;
+    const tabsHtml = `<div class="book-tabs bag-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${tab === k}" class="book-tab${tab === k ? ' active' : ''}" data-bagtab="${k}">${l} <small>${tabCount(k)}</small></button>`).join('')}</div>`;
+    const grid = Object.keys(groups).sort((a, b) => ORDER[a] - ORDER[b]).map(c => `<div class="bag-cat">${T(c, 'ui')} <small>${groups[c].length}</small></div><div class="bag-grid">${groups[c].map(tileHtml).join('')}</div>`).join('');
+    return `${toolbarHtml}${tabsHtml}<div class="bag-layout"><div class="bag-slots">${grid || `<p class="ro-muted">${q ? T('No items match your search.', 'ui') : T('Nothing in this tab.', 'ui')}</p>`}</div>
+      <aside class="ro-box bag-detail">${sel ? detailHtml(sel) : `<p class="ro-muted">${T('Select an item to see its details.', 'ui')}</p>`}</aside></div>`;
   }
   if (id === 'skills') return skillsPanelHtml(p);
   if (id === 'quest') {
@@ -7336,9 +7353,24 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
+  el.querySelectorAll('[data-bag-sel]').forEach(b => {
+    b.onclick = () => {
+      G._bagSel = b.dataset.bagSel; refreshPanel('inv');
+      if (innerWidth <= 680) requestAnimationFrame(() => $('#panel .bag-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));   // stacked layout: details sit below the grid; after refreshPanel's scroll restore
+    };
+    b.ondblclick = () => {   // RO habit: double-click uses a consumable or equips gear
+      const k = b.dataset.bagSel, e = G.player.inventory.find(x => (x.uid ? 'u' + x.uid : 'i' + x.itemId) === k); if (!e) return;
+      if (e.uid) { if (canUseItem(G.player, itemById[e.itemId])) equip(e.uid); }
+      else if (['potion', 'reset'].includes(itemById[e.itemId].type)) useItem(e.itemId);
+      refreshPanel('inv');
+    };
+  });
   const invSearch = el.querySelector('#inv-search');
   if (invSearch) {
-    invSearch.oninput = e => { G._invSearch = e.target.value; refreshPanel('inv'); };
+    invSearch.oninput = e => {
+      const caret = e.target.selectionStart; G._invSearch = e.target.value; refreshPanel('inv');
+      const fresh = $('#panel #inv-search'); if (fresh) { fresh.focus(); fresh.setSelectionRange(caret, caret); }   // re-render replaced the input
+    };
   }
   const invSort = el.querySelector('#inv-sort-rarity');
   if (invSort) {
@@ -7352,24 +7384,16 @@ function wirePanel(id, el) {
   const invDep = el.querySelector('#inv-deposit-mats');
   if (invDep) {
     invDep.onclick = () => {
-      if (!G.world.storage) G.world.storage = [];
       let count = 0;
-      const remaining = [];
-      for (const item of G.player.inventory) {
-        const it = itemById[item.itemId];
-        if (it && it.type === 'material') {
-          const existing = G.world.storage.find(s => s.itemId === item.itemId && !s.uid);
-          if (existing) existing.qty += item.qty;
-          else G.world.storage.push({ itemId: item.itemId, qty: item.qty });
-          count += item.qty;
-        } else {
-          remaining.push(item);
-        }
+      for (let k = G.player.inventory.length - 1; k >= 0; k--) {
+        const item = G.player.inventory[k];
+        if (itemById[item.itemId]?.type !== 'material') continue;
+        const existing = G.storage.find(x => !x.uid && x.itemId === item.itemId);   // G.storage is the persisted storage (was G.world.storage → crash)
+        if (existing) existing.qty += item.qty; else G.storage.push({ itemId: item.itemId, qty: item.qty });
+        count += item.qty; G.player.inventory.splice(k, 1);
       }
-      G.player.inventory = remaining;
-      saveGame();
-      refreshPanel('inv');
-      toast(T(`Deposited {n} materials into storage.`, 'ui').replace('{n}', count), 'info');
+      saveGame(); refreshPanel('inv');
+      toast(count ? T('Deposited {n} materials into storage.', 'ui').replace('{n}', count) : T('No materials to deposit.', 'ui'), 'info');
     };
   }
   // rune sockets: click a gem to arm it, then click an empty socket dot to insert it.
@@ -8331,7 +8355,7 @@ const extraCss = `
 .doll-slot[data-unequip]:hover{background:rgba(224,90,74,.18);border-color:var(--danger)}
 .gear-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid rgba(92,63,27,.2)}
 .gear-row.locked{opacity:.62}.gear-row>.btn{flex:0 0 auto}.gear-row__copy{display:block;min-width:0;flex:1;line-height:1.45}
-.gear-requirement{display:block;margin-top:3px;color:#9dc19f}.gear-requirement.locked{color:#e49a8b;font-weight:800}
+.gear-requirement{display:block;margin-top:3px;color:var(--success-text)}.gear-requirement.locked{color:var(--danger-text);font-weight:800}
 .rarity-badge{display:inline-block;padding:1px 5px;border:1px solid var(--rarity);color:var(--rarity);font-weight:800}
 .gear-bonuses{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.gear-bonuses--slot{gap:2px;margin-top:3px}
 .gear-bonus{display:inline-block;padding:1px 5px;border:1px solid #71809a;background:rgba(34,54,81,.1);color:#34465f;font-size:9px;line-height:1.35}

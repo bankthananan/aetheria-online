@@ -67,6 +67,7 @@ assert.equal(A.canUseItem(p, 'training_greatsword'), false, 'Far Shot cannot use
 A.equip(lockedSword.uid);
 assert.equal(p.equip.weapon, weaponBeforeLockedEquip, 'incompatible equip does not mutate the equipped slot');
 assert.ok(p.inventory.some(item => item.uid === lockedSword.uid), 'incompatible gear remains in inventory');
+A.G._bagSel = 'u' + lockedSword.uid;   // details pane shows the selected slot
 assert.ok(A.panelBody('inv').includes('Reborn Blade, Lightbringer'), 'locked inventory gear shows required base classes');
 const bow = A.rollItem('hunter_bow', 0, 'common');
 p.inventory.push(bow);
