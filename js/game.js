@@ -9216,7 +9216,7 @@ function handleClick(wx, wy) {
 
 // input
 window.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' && e.target?.closest?.('input,textarea,select,[contenteditable]')) return;   // typing in a field never fires game keys
+  if (e.key !== 'Escape' && e.target?.closest?.('input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]),textarea,select,[contenteditable]')) return;   // typing in a field never fires game keys; sliders/checkboxes don't count
   const key = e.key.toLowerCase();
   const code = eventHotkeyCode(e);
   if (G.running && dlg && (key === ' ' || code === 'Space')) {

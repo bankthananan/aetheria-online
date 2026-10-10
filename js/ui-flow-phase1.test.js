@@ -26,6 +26,10 @@ dispatch(window, 'keydown', { key: 'i', code: 'KeyI', target: input, preventDefa
 assert.equal(!!A.G.keys.i, false, 'typing "i" in a field is ignored');
 dispatch(window, 'keydown', { key: 'i', code: 'KeyI', target: makeEl('div'), preventDefault() {}, repeat: false });
 assert.equal(A.G.keys.i, true, 'the same key outside a field still registers');
+const box = makeEl('input'); box.type = 'checkbox'; box.closest = () => null;   // CSS :not([type=checkbox]) → no text-field match
+A.G.keys.k = false;
+dispatch(window, 'keydown', { key: 'k', code: 'KeyK', target: box, preventDefault() {}, repeat: false });
+assert.equal(A.G.keys.k, true, 'a focused checkbox/slider does not swallow game keys');
 
 // Reserved keys — B (Book) and V (parry) can't be bound, and fallbacks never hand them out
 assert.equal(A.setHotkeyBinding(0, 'KeyR'), true, 'a free letter binds');

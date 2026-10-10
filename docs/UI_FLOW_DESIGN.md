@@ -144,8 +144,10 @@ const WINDOW_KEYS = [
 | Loot rules | Automation | Satchel loot filter stays (it's visual filtering); add a link to the Automation loot rules |
 | Names | | "⚙ Audio" → "⚙ Settings"; "⚙ Auto" → "🤖 Auto"; "Field guide" stays and gets key G; "Handbook" stays inside Journal |
 
-**M4**: `pauseForInterruption` stops clearing `taskGuide` and `huntTargetId`. Freezing the clock
-is enough.
+**M4** *(shipped partly)*: `pauseForInterruption` no longer clears `huntTargetId` (the Automation
+pin). It still clears `taskGuide`, and tab-hide still stops Hunt, both deliberately (asserted by
+`lifecycle-improvements.test.js`): resuming a stale route after a long absence would surprise
+the player.
 
 **Return to title**: add a "Save & return to title" button in Settings (`saveGame(); showTitle()`).
 
