@@ -6317,14 +6317,14 @@ function skillsPanelHtml(p) {
 }
 // sticky strip under the tree: what the selected node does now / next, plus Learn and → Bar
 function skillDetailHtml(p) {
-  const id = G._skillSel;
-  if (!id || p !== G.player) return `<aside class="ro-skill-detail is-empty"><small class="ro-muted">${T('Select a skill to see what it does. Double-click to learn.', 'ui')}</small></aside>`;
+  const id = G._skillSel, tip = id && p === G.player ? skillNodeTip(id, !!PROGRESSION.passives[id]) : '';
+  if (!tip) return `<aside class="ro-skill-detail is-empty"><small class="ro-muted">${T('Select a skill to see what it does. Double-click to learn.', 'ui')}</small></aside>`;
   const isPassive = !!PROGRESSION.passives[id];
   const lv = skillLevel(p, id), max = isPassive ? PROGRESSION.passives[id].maxLevel : (PROGRESSION.skillTree[id]?.maxLevel || 1);
   const can = (isPassive ? canLearnPassive(p, id) : canLearn(p, id)) && lv < max;
   const learn = can ? `<button class="btn btn--primary" ${isPassive ? `data-passive="${id}"` : `data-learn="${id}"`}>${T('Learn', 'ui')} +1 <small>(${p.skillPoints})</small></button>` : '';
   const bar = !isPassive && lv > 0 ? `<button class="btn" data-assign-skill="${id}">→ ${T('Bar', 'ui')}${hotkeyForSkill(p, id) ? ` <kbd>${hotkeyForSkill(p, id)}</kbd>` : ''}</button>` : '';
-  return `<aside class="ro-skill-detail"><div class="ro-skill-detail__body">${skillNodeTip(id, isPassive)}</div><div class="ro-skill-detail__actions">${learn}${bar}</div></aside>`;
+  return `<aside class="ro-skill-detail"><div class="ro-skill-detail__body">${tip}</div><div class="ro-skill-detail__actions">${learn}${bar}</div></aside>`;
 }
 
 // plain-language "what does it do" line for a skill at level L
@@ -8552,7 +8552,8 @@ const extraCss = `
 .ro-skill-detail__body{flex:1 1 320px;min-width:0;font-size:13px;line-height:1.5}.ro-skill-detail__actions{display:flex;gap:6px;flex-wrap:wrap}
 .ro-job-lane>header>span{white-space:nowrap}
 .ro-branch-label{margin:6px 5px 2px;font:700 14px var(--font-head);color:var(--book-accent,var(--accent-alt))}
-@media (max-width:680px){.ro-skill-tree{grid-template-columns:repeat(var(--tree-cols),minmax(160px,72vw))}}
+@media (max-width:680px){.ro-skill-tree{grid-template-columns:repeat(var(--tree-cols),minmax(210px,78vw))}
+  .ro-tree-cell .ro-skill{grid-template-columns:36px minmax(0,1fr)}.ro-tree-cell .ro-skill-state{grid-column:1/-1;justify-self:start}}
 .jr-tabs{margin-bottom:8px}.jr-wrap{display:grid;grid-template-columns:minmax(190px,36%) minmax(0,1fr);gap:10px;align-items:start}
 .jr-list{display:flex;flex-direction:column;gap:2px;padding:6px;max-height:min(52vh,460px);overflow-y:auto;min-width:0}
 .jr-cat{margin:6px 2px 2px;font:700 12px var(--font-head);color:var(--book-accent,var(--accent-alt))}.jr-cat small{color:var(--text-muted);font-weight:400}
