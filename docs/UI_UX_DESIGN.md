@@ -4,6 +4,42 @@ Scope: `index.html`, `js/theme.js`, HUD/panels in `js/game.js`, and the six subs
 `js/render/{cards,pets,spire,stronghold,homestead,raids}-ui.js`.
 Evidence: headless Brave screenshots at 1280×800 and 390×844 (`autotest.html?panel=world&chrontab=<tab>`).
 
+## Template
+
+**Aetheria × RO**: Ragnarok Online's window structure, in the game's own walnut/brass/parchment colours.
+Defined at the top of `js/theme.js`. Every menu is one of two surfaces:
+
+| Surface | Where | Look |
+|---|---|---|
+| **Parchment window** | `.panel__body`, `#hud .quest-tracker`, any element with `.ro-parchment` (modal shells) | wood title bar, gold rule, parchment body, ink text |
+| **Dark** | HUD strips, title/sign-in, class & job choice, auto-status, tooltips, slot picker, encounter HUDs | wood-deep fill, brass/gold borders, parchment-light text |
+
+Both surfaces use the **same token names**. `:root` holds the dark values. The parchment scope flips them to ink,
+so a component written against tokens renders correctly on either surface with no extra CSS.
+
+| Token | Dark | Parchment | Use |
+|---|---|---|---|
+| `--text` / `--text-muted` | `#f7edce` / `#d2c29b` | `#302619` / `#5c4e36` | body / secondary text |
+| `--accent-alt`, `--gold-bright` | light gold | `#6b4a10` | headings, highlighted values |
+| `--success-text` `--danger-text` `--info` `--warn` `--violet` | light variants | dark ink variants | state text (≥4.9:1 on parchment) |
+| `--success` `--danger` `--gold` | fills/borders | — | bars, borders, tints via `color-mix(in srgb, var(--x) N%, transparent)` |
+| `--card-bg` / `--card-border` | `rgba(0,0,0,.28)` / brass | light inset / umber line | inset boxes |
+| `--on-fill` | `#f7edce` | (never flips) | labels on solid `--forest` / `--oxblood` / `#74501d` fills |
+| `--window-bg` | parchment gradient | — | background of standalone modal shells |
+
+Components: `.ro-box` (inset info box), `.ro-sec` (section header with rule), `.book-tabs`/`.book-tab`
+(tabs; active = fixed gold on `#74501d`), `.btn` (wood button), `.rar`/`.ro-id` (1px dark outline for identity
+colours such as rarity, element, pet or grade on parchment).
+
+Rules for new UI:
+1. No hex values in component markup or CSS. Use tokens; identity data maps (rarity, element, grade) are the only exception.
+2. A modal shell gets `class="… ro-parchment"` and `background: var(--window-bg)`.
+3. A solid dark fill with a label uses `--on-fill`, never `--text`.
+4. Inline-only "containment" (`min-width:0`, `overflow-x:hidden`, ellipsis) belongs on containers, never on badges or labels.
+
+Not carried over from RO (deliberately): vertical inventory tabs (the Satchel's horizontal filters cover the same
+need and fit phone width) and window minimize `[_]` (panels are modal one-at-a-time; nothing to minimize to).
+
 ## Core finding
 
 `theme.js` defines a coherent 16-bit "walnut + brass + parchment" token system (`--gold`, `--wood-*`,

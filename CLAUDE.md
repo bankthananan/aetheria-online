@@ -89,7 +89,7 @@ If a harness needs an internal that isn't exported, add it to the `__AWO` export
   - `js/content.js` — monsters, items, NPCs, quests
   - `js/maps.js` — biomes, tile legends, spawns, portals; includes `guild_stronghold` map with Guild Rank D town entry gate and `player_homestead` sanctuary map with Level 15 town entry gate.
   - `js/loot.js` — rarity tiers + affix pool
-  - `js/pixelart.js` — pixel-matrix sprites + `ITEM_ICON` map; `js/sprites.js` — title-screen portraits; `js/theme.js` — CSS design system; `js/audio.js` — Web Audio chiptune/SFX
+  - `js/pixelart.js` — pixel-matrix sprites + `ITEM_ICON` map; `js/sprites.js` — title-screen portraits; `js/theme.js` — CSS design system (the **Aetheria × RO window template**: one token vocabulary that flips between dark and parchment surfaces — read `docs/UI_UX_DESIGN.md#template` before writing UI); `js/audio.js` — Web Audio chiptune/SFX
 - `selfCheck()` in `js/selfcheck.js` (called from `js/game.js`) runs at load and **fails loudly** on any mis-wiring: spawn/drop/reward pointing at an unknown id, skill without a tree node, monster without a sprite, missing item icon, bad quest difficulty, non-finite formula. When adding content, reload and let it tell you what's missing.
 - Step-by-step recipes for adding monsters/items/skills/quests/maps are in the "Extending the game" section of `docs/ISEKAI_README.md` — each is one data-module edit plus whatever `selfCheck()` demands.
 
