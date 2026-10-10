@@ -8659,6 +8659,13 @@ function resumeGame() {
     buffs: (sp.buffs || []).filter(b => b.until > now()) });
   normalisePlayerProgression(p); // migrate old uncapped-job saves without deleting learned ranks
   while (p.hotbar.length < 9) p.hotbar.push(null);
+  // drop bag/storage/worn entries whose item no longer exists — one stale id used to crash the Satchel
+  const knownItem = e => !!(e && itemById[e.itemId]);
+  const stale = [...(p.inventory || []), ...(d.world?.storage || []), ...Object.values(p.equip || {})].filter(e => e && !knownItem(e)).map(e => e.itemId);
+  p.inventory = (p.inventory || []).filter(knownItem);
+  if (d.world?.storage) d.world.storage = d.world.storage.filter(knownItem);
+  for (const slot in p.equip) if (p.equip[slot] && !knownItem(p.equip[slot])) p.equip[slot] = null;
+  if (stale.length) console.warn('[save] dropped unknown items:', stale.join(', '));
   // restore the uid counter past every saved instance so fresh drops don't collide
   let maxUid = 0; const scan = e => { if (e && e.uid > maxUid) maxUid = e.uid; };
   Object.values(sp.equip || {}).forEach(scan); (sp.inventory || []).forEach(scan);
