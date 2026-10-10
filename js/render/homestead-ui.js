@@ -93,7 +93,7 @@ export function createHomesteadUIRenderer({
           <div style="font-size: 14px; font-weight: bold; color: var(--success-text); margin-bottom: 4px;">${esc(T(cropDef?.name || 'Crop', 'items'))}</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Stage: <span style="color: var(--gold-bright);">${stageName}</span></div>
           
-          <div style="box-sizing: border-box; min-width: 0; width: 100%; height: 16px; background: rgba(0, 0, 0, 0.4); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 8px;">
+          <div style="box-sizing: border-box; min-width: 0; width: 100%; height: 16px; background: var(--card-bg); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 8px;">
             <div style="box-sizing: border-box; min-width: 0; height: 100%; width: ${pct}%; background: linear-gradient(90deg, var(--success), var(--success)); border-radius: 8px; transition: width 0.3s ease;"></div>
           </div>
           <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">${pct}% · ${formatDuration(remainingMs)} remaining</div>
@@ -127,7 +127,7 @@ export function createHomesteadUIRenderer({
 
     return `
       <div class="homestead-modal-overlay" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
-        <div class="homestead-modal-shell" style="box-sizing: border-box; width: 100%; max-width: 440px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--wood-deep); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">
+        <div class="homestead-modal-shell ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 440px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">
           <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin-bottom: 12px;">
             <div style="font-weight: bold; font-size: 14px; color: var(--text);">🌱 ${T('Plot', 'ui')} ${plotId + 1}</div>
             <button class="btn btn--ghost" data-homestead-close="1" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; font-size: 12px;">✕</button>
@@ -160,7 +160,7 @@ export function createHomesteadUIRenderer({
             <div style="box-sizing: border-box; min-width: 0; flex: 1; padding-right: 8px;">
               <div style="font-weight: bold; color: var(--info); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(pet.name || pet.id)}</div>
               <div style="font-size: 11px; color: var(--text-muted);">Loyalty: ${loyalty}/100 · <span style="color: var(--danger-text);">${statusBadge}</span></div>
-              <div style="box-sizing: border-box; min-width: 0; width: 100%; height: 6px; background: rgba(0, 0, 0, 0.4); border-radius: 3px; overflow: hidden; margin-top: 4px;">
+              <div style="box-sizing: border-box; min-width: 0; width: 100%; height: 6px; background: var(--card-bg); border-radius: 3px; overflow: hidden; margin-top: 4px;">
                 <div style="box-sizing: border-box; min-width: 0; height: 100%; width: ${loyalty}%; background: #ff4081; border-radius: 3px;"></div>
               </div>
             </div>
@@ -196,7 +196,7 @@ export function createHomesteadUIRenderer({
 
     return `
       <div class="homestead-pasture-dialog" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
-        <div style="box-sizing: border-box; width: 100%; max-width: 480px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--wood-deep); border: 2px solid var(--gold); border-radius: 8px; padding: 16px;">
+        <div class="ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 480px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px;">
           <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin-bottom: 12px;">
             <div style="font-weight: bold; font-size: 14px; color: var(--text);">🐾 ${T('Companion Pasture', 'ui')}</div>
             <button class="btn btn--ghost" data-homestead-close="1" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; font-size: 12px;">✕</button>
@@ -234,7 +234,7 @@ export function createHomesteadUIRenderer({
 
     return `
       <div class="homestead-mannequin-modal" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
-        <div style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--wood-deep); border: 2px solid var(--gold); border-radius: 8px; padding: 16px;">
+        <div class="ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px;">
           <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin-bottom: 12px;">
             <div style="font-weight: bold; font-size: 14px; color: var(--text);">👗 ${label}</div>
             <button class="btn btn--ghost" data-homestead-close="1" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; font-size: 12px;">✕</button>
@@ -275,7 +275,7 @@ export function createHomesteadUIRenderer({
   function renderHearthModalHtml(buffActive = false, remainingMs = 0) {
     return `
       <div class="homestead-hearth-modal" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
-        <div style="box-sizing: border-box; width: 100%; max-width: 440px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--wood-deep); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; text-align: center;">
+        <div class="ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 440px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; text-align: center;">
           <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin-bottom: 12px;">
             <div style="font-weight: bold; font-size: 14px; color: var(--text);">🔥 ${T('Cozy Hearth', 'ui')}</div>
             <button class="btn btn--ghost" data-homestead-close="1" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; font-size: 12px;">✕</button>

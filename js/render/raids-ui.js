@@ -205,7 +205,7 @@ export function createRaidsUIRenderer({
 
     return `
       <div class="raid-victory-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; box-sizing: border-box; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(9, 5, 2, 0.8); backdrop-filter: blur(4px);">
-        <div class="raid-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 8px; background: var(--wood-deep); border: 2px solid var(--gold); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: var(--text);">
+        <div class="raid-victory-shell ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 8px; background: var(--window-bg); border: 2px solid var(--gold); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9); padding: 20px; color: var(--text);">
           <!-- Header with Title and Close Button -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); padding-bottom: 10px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--gold-bright); text-shadow: 0 2px 4px rgba(0,0,0,0.8); box-sizing: border-box; min-width: 0; word-break: break-word;">
@@ -215,7 +215,7 @@ export function createRaidsUIRenderer({
           </div>
 
           <!-- Tier Crest Badge -->
-          <div class="raid-tier-crest-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.35); border: 1px solid color-mix(in srgb, var(--gold) 25%, transparent); border-radius: 6px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
+          <div class="raid-tier-crest-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 16px; padding: 12px; background: var(--card-bg); border: 1px solid color-mix(in srgb, var(--gold) 25%, transparent); border-radius: 6px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <div class="raid-tier-crest" style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: ${tierColor}; text-shadow: 0 0 12px ${tierColor}; padding: 4px 20px; border: 2px solid ${tierColor}; border-radius: 20px; background: var(--card-bg); margin-bottom: 6px; box-sizing: border-box; min-width: 0; white-space: nowrap;">
               ${esc(tierUpper)}
             </div>
@@ -230,19 +230,19 @@ export function createRaidsUIRenderer({
               ${esc(T('Performance Breakdown', 'ui'))}
             </h3>
             <div class="raid-metrics-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T('Damage Dealt', 'ui'))}:</div>
                 <div style="font-size: 14px; font-weight: bold; color: var(--danger-text); box-sizing: border-box; min-width: 0; word-break: break-word;">${(metrics.damage || 0).toLocaleString()}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T('Break Shield Damage', 'ui'))}:</div>
                 <div style="font-size: 14px; font-weight: bold; color: var(--info); box-sizing: border-box; min-width: 0; word-break: break-word;">${(metrics.breakDamage || 0).toLocaleString()}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T('Adds Slain', 'ui'))}:</div>
                 <div style="font-size: 14px; font-weight: bold; color: var(--gold-bright); box-sizing: border-box; min-width: 0; word-break: break-word;">${metrics.addsKilled || 0}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T('Hazards Dodged', 'ui'))}:</div>
                 <div style="font-size: 14px; font-weight: bold; color: var(--success-text); box-sizing: border-box; min-width: 0; word-break: break-word;">${metrics.hazardsDodged || 0}</div>
               </div>
@@ -255,27 +255,27 @@ export function createRaidsUIRenderer({
               ${esc(T('Spoils Showcase', 'ui'))}
             </h3>
             <div class="raid-spoils-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Zeny', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: var(--gold-bright); box-sizing: border-box; min-width: 0; word-break: break-word;">${cache.zeny ?? 0} Zeny</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Dimensional Shards', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: #ce93d8; box-sizing: border-box; min-width: 0; word-break: break-word;">${cache.dimensional_shard ?? 0}× Shards</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Apex Trophies', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: var(--warn); box-sizing: border-box; min-width: 0; word-break: break-word;">${esc(trophiesText)}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Primal Runes', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: var(--success-text); box-sizing: border-box; min-width: 0; word-break: break-word;">${esc(runesText)}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Feasts', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: var(--success-text); box-sizing: border-box; min-width: 0; word-break: break-word;">${esc(feastText)}</div>
               </div>
-              <div style="box-sizing: border-box; min-width: 0; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="box-sizing: border-box; min-width: 0; background: var(--card-bg); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="font-size: 11px; color: var(--text-muted); box-sizing: border-box; min-width: 0;">${esc(T('Gems', 'ui'))}:</div>
                 <div style="font-size: 12px; font-weight: bold; color: var(--info); box-sizing: border-box; min-width: 0; word-break: break-word;">${esc(gemsText)}</div>
               </div>

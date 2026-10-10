@@ -118,7 +118,7 @@ export function createStrongholdUIRenderer({
         const canUpgrade = hasGP && hasZeny && allMatsHave;
 
         costsAndUpgradeHtml = `
-          <div class="facility-costs" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+          <div class="facility-costs" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: var(--card-bg); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
             <small style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word;">${T('Upgrade Requirements', 'ui')}:</small>
             <div class="cost-item cost-item--gp" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasGP ? 'var(--success-text)' : 'var(--text-muted)'}; word-break: break-word;">${hasGP ? '✓ ' : ''}GP: ${guildPoints ?? 0} / ${nextTierData.costGP}</div>
             <div class="cost-item cost-item--zeny" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: ${hasZeny ? 'var(--success-text)' : 'var(--text-muted)'}; word-break: break-word;">${hasZeny ? '✓ ' : ''}Zeny: ${playerZeny} / ${nextTierData.costZeny}</div>
@@ -190,7 +190,7 @@ export function createStrongholdUIRenderer({
           <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; color: var(--text-muted); word-break: break-word;">
             <span style="color: var(--text-muted);">${T('Trophy', 'ui')}:</span> <b>${pDef.trophyQty}× ${targetTrophyName}</b>
           </div>
-          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
+          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: var(--card-bg); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
             <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 12px; font-weight: bold; color: ${pDef.color}; word-break: break-word;">✦ ${auraName}</div>
             <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; font-size: 11px; color: var(--text-muted); word-break: break-word;">${perksDesc}</div>
           </div>
@@ -292,7 +292,7 @@ export function createStrongholdUIRenderer({
 
     return `
       <div class="siege-victory-overlay" style="position: fixed; inset: 0; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px;">
-        <div class="siege-victory-shell" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: var(--wood-deep); border: 2px solid var(--gold-bright); border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
+        <div class="siege-victory-shell ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 520px; min-width: 0; overflow-x: hidden; background: var(--window-bg); border: 2px solid var(--gold-bright); border-radius: 8px; padding: 24px; text-align: center; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
           <header style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">
             <h2 style="margin: 0; font-size: 24px; color: var(--gold-bright); word-break: break-word; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden;">🏆 ${T('Siege Victory!', 'ui')}</h2>
           </header>

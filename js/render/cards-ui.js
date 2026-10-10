@@ -64,7 +64,7 @@ export function createCardsUIRenderer({
         <div style="font-size: 11px; color: var(--success-text); margin-bottom: 6px;">
           ${getSlotBadge(cardDef.targetSlot)}
         </div>
-        <div style="font-size: 11px; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; margin-bottom: 8px; line-height: 1.4;">
+        <div style="font-size: 11px; background: var(--card-bg); border-radius: 4px; padding: 8px; margin-bottom: 8px; line-height: 1.4;">
           ${statLines.length ? statLines.map(line => `<div style="color: var(--info);">• ${line}</div>`).join('') : `<div style="color: var(--text-muted);">${cardDef.collectionBonus || 'Special Affinity'}</div>`}
         </div>
         <div style="font-size: 10px; color: var(--text-muted); font-style: italic; margin-bottom: 8px; min-height: 28px;">
@@ -168,7 +168,7 @@ export function createCardsUIRenderer({
             <p style="font-size: 11px; color: var(--text-muted); font-style: italic; margin-top: 0; margin-bottom: 10px;">
               "${T(activeMonster.flavor || '', 'monsters')}"
             </p>
-            <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px; margin-bottom: 12px; font-size: 11px;">
+            <div style="background: var(--card-bg); border-radius: 6px; padding: 8px; margin-bottom: 12px; font-size: 11px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                 <span style="color: var(--text-muted);">${T('Kills', 'ui')}:</span>
                 <span style="font-weight: bold; color: var(--text);">${activeMonsterState?.kills || 0}</span>
@@ -180,7 +180,7 @@ export function createCardsUIRenderer({
             </div>
             <div style="margin-bottom: 12px;">
               <h4 style="margin: 0 0 6px 0; font-size: 12px; color: var(--gold-bright);">${T('Drops', 'ui')}</h4>
-              <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 8px;">
+              <div style="background: var(--card-bg); border-radius: 6px; padding: 8px;">
                 ${dropsListHtml || `<div style="color: var(--text-muted); font-size: 10px;">${T('No drops', 'ui')}</div>`}
               </div>
             </div>
@@ -207,10 +207,10 @@ export function createCardsUIRenderer({
           </div>
         </div>
         <div style="display: flex; gap: 16px; flex: 1; min-height: 320px;">
-          <div class="bestiary-monster-list" style="flex: 0 0 220px; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 8px; overflow-y: auto; max-height: 380px;">
+          <div class="bestiary-monster-list" style="flex: 0 0 220px; background: var(--card-bg); border-radius: 6px; padding: 8px; overflow-y: auto; max-height: 380px;">
             ${monsterListHtml || `<div style="color: var(--text-muted); text-align: center;">${T('No monsters', 'ui')}</div>`}
           </div>
-          <div class="bestiary-details-pane" style="flex: 1; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 12px; overflow-y: auto; max-height: 380px;">
+          <div class="bestiary-details-pane" style="flex: 1; background: var(--card-bg); border-radius: 6px; padding: 12px; overflow-y: auto; max-height: 380px;">
             ${detailsPaneHtml}
           </div>
         </div>
@@ -237,11 +237,11 @@ export function createCardsUIRenderer({
     const socketListHtml = sockets.map((s, idx) => {
       const cardDef = s ? catalog[s] : null;
       return `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
           <span style="font-size: 12px; color: ${cardDef ? RARITY_COLORS[cardDef.rarity] : 'var(--text-muted)'};">
             ${idx + 1}. ${cardDef ? T(cardDef.name, 'items') : `[${T('Empty Socket', 'ui')}]`}
           </span>
-          ${cardDef ? `<button class="unsocket-btn" data-slot-index="${idx}" style="font-size: 10px; background: var(--oxblood); color: var(--text); border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer;">${T('Unsocket', 'ui')}</button>` : ''}
+          ${cardDef ? `<button class="unsocket-btn" data-slot-index="${idx}" style="font-size: 10px; background: var(--oxblood); color: var(--on-fill); border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer;">${T('Unsocket', 'ui')}</button>` : ''}
         </div>
       `;
     }).join('');
@@ -254,7 +254,7 @@ export function createCardsUIRenderer({
             <span style="font-size: 12px; font-weight: bold; color: ${RARITY_COLORS[cardDef.rarity]};">${T(cardDef.name, 'items')}</span>
             <div style="font-size: 10px; color: var(--text-muted);">${cardDef.collectionBonus || ''}</div>
           </div>
-          <button class="socket-card-btn" data-card-id="${cardDef.id}" style="font-size: 11px; background: var(--forest); color: var(--text); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+          <button class="socket-card-btn" data-card-id="${cardDef.id}" style="font-size: 11px; background: var(--forest); color: var(--on-fill); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
             ${T('Socket', 'ui')}
           </button>
         </div>
@@ -262,7 +262,7 @@ export function createCardsUIRenderer({
     }).join('');
 
     return `
-      <div class="socket-modal-content" style="background: var(--panel-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; color: var(--text); max-width: 400px;">
+      <div class="socket-modal-content ro-parchment" style="background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; color: var(--text); max-width: 400px;">
         <h3 style="margin: 0 0 12px 0; font-size: 14px; color: var(--gold-bright);">${T('Socket Card into', 'ui')} ${itemInst.name || itemInst.id}</h3>
         <div style="margin-bottom: 12px;">
           <h4 style="margin: 0 0 6px 0; font-size: 12px; color: var(--text-muted);">${T('Current Sockets', 'ui')}</h4>

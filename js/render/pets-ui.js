@@ -211,7 +211,7 @@ export function createPetsUIRenderer({
 
       const feastsHtml = availableFeasts.length > 0
         ? availableFeasts.map(f => `
-            <div class="feast-item" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
+            <div class="feast-item" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--card-bg); border-radius: 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
               <div style="display: flex; align-items: center; gap: 8px; min-width: 0; box-sizing: border-box;">
                 <span style="font-size: 14px;">${f.details.icon}</span>
                 <div style="min-width: 0; box-sizing: border-box;">
@@ -220,7 +220,7 @@ export function createPetsUIRenderer({
                   <div style="font-size: 10px; color: var(--success-text);">+${f.values.loyalty} Loyalty, +${f.values.exp} EXP</div>
                 </div>
               </div>
-              <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${activePet.id}" data-feast-id="${f.id}" style="font-size: 11px; padding: 4px 10px; background: var(--forest); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
+              <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${activePet.id}" data-feast-id="${f.id}" style="font-size: 11px; padding: 4px 10px; background: var(--forest); color: var(--on-fill); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
                 ${T('Feed', 'ui')}
               </button>
             </div>
@@ -271,7 +271,7 @@ export function createPetsUIRenderer({
             </div>
           </div>
 
-          <div class="feast-tray" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="feast-tray" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0; background: var(--card-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
             <div style="font-size: 11px; color: var(--gold-bright); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
               🍖 ${T('Feast Quick-Feed Tray', 'ui')}
             </div>
@@ -283,7 +283,7 @@ export function createPetsUIRenderer({
       `;
     } else {
       activeBannerHtml = `
-        <div class="active-pet-banner empty" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; padding: 20px 16px; border: 1px dashed rgba(255,255,255,0.25); border-radius: 8px; text-align: center; background: rgba(0,0,0,0.2); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <div class="active-pet-banner empty" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; padding: 20px 16px; border: 1px dashed rgba(255,255,255,0.25); border-radius: 8px; text-align: center; background: var(--card-bg); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;">
           <div style="font-size: 28px;">🐾</div>
           <h3 style="margin: 0; font-size: 14px; color: var(--text); font-weight: bold;">${T('No Active Companion Summoned', 'ui')}</h3>
           <p style="margin: 0; font-size: 12px; color: var(--text-muted); max-width: 480px;">${T('Summon an owned companion from your roster below to receive their aura buffs and auto-loot assistance.', 'ui')}</p>
@@ -353,7 +353,7 @@ export function createPetsUIRenderer({
               ${T(petDef.desc, 'ui')}
             </div>
 
-            <div style="background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
+            <div style="background: var(--card-bg); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
               <div style="color: var(--info); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Habitat', 'ui')}:</b> ${T(petDetails.habitat, 'ui')}</div>
               <div style="color: var(--danger-text); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Target Creature', 'ui')}:</b> ${T(petDetails.monsterName, 'ui')}</div>
               <div style="color: var(--success-text); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Required Bait', 'ui')}:</b> ${T(petDetails.baitName, 'ui')}</div>
@@ -408,7 +408,7 @@ export function createPetsUIRenderer({
 
     const feastsListHtml = availableFeasts.length > 0
       ? availableFeasts.map(f => `
-          <div class="feast-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
+          <div class="feast-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; background: var(--card-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 8px; min-width: 0; box-sizing: border-box;">
               <span style="font-size: 20px;">${f.details.icon}</span>
               <div style="min-width: 0; box-sizing: border-box;">
@@ -416,7 +416,7 @@ export function createPetsUIRenderer({
                 <div style="font-size: 11px; color: var(--success-text);">+${f.values.loyalty} Loyalty · +${f.values.exp} EXP</div>
               </div>
             </div>
-            <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${petState.id}" data-feast-id="${f.id}" style="font-size: 12px; padding: 6px 12px; background: var(--forest); color: var(--text); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
+            <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${petState.id}" data-feast-id="${f.id}" style="font-size: 12px; padding: 6px 12px; background: var(--forest); color: var(--on-fill); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
               ${T('Feed', 'ui')}
             </button>
           </div>
@@ -425,7 +425,7 @@ export function createPetsUIRenderer({
 
     return `
       <div class="pet-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pet-feed-modal-title" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-        <div class="pet-modal-shell" style="background: var(--panel-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 20px; width: 100%; max-width: 440px; box-sizing: border-box; overflow-x: hidden; min-width: 0; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.8); position: relative;">
+        <div class="pet-modal-shell ro-parchment" style="background: var(--window-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 20px; width: 100%; max-width: 440px; box-sizing: border-box; overflow-x: hidden; min-width: 0; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.8); position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
             <div style="min-width: 0; box-sizing: border-box;">
               <div style="display: flex; align-items: center; gap: 8px;">
