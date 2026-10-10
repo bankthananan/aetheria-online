@@ -39,8 +39,11 @@ A.loadMap('town_awakening', 10, 10);
 A.updateHud();
 
 console.log('--- 1. Settings Panel Dev Tools Toggle ---');
+A.G.admin = false;
+assert.ok(!A.panelBody('settings').includes('id="admin-toggle"'), 'players off the dev host never see the admin toggle');
+A.G.admin = true;
 const settingsHtml = A.panelBody('settings');
-assert.ok(settingsHtml.includes('id="admin-toggle"'), 'Settings panel body contains #admin-toggle');
+assert.ok(settingsHtml.includes('id="admin-toggle"'), 'Settings panel body contains #admin-toggle for an admin');
 assert.ok(settingsHtml.includes('🛠️'), 'Settings panel body contains dev tools header');
 
 // Test toggling admin via simulated event
@@ -63,6 +66,10 @@ const backquoteEvent = {
   metaKey: false,
   altKey: false,
 };
+A.G.admin = false;
+globalThis.dispatchEvent({ type: 'keydown', ...backquoteEvent });
+assert.equal(A.G.admin, false, 'backquote cannot grant admin to an ordinary player');
+A.G.admin = true;
 globalThis.dispatchEvent({ type: 'keydown', ...backquoteEvent });
 assert.ok(A.G.admin, 'Admin is true after backquote keydown');
 

@@ -121,7 +121,7 @@ const CLASS_CREST = { blade: 'B', berserker: 'D', mage: 'C', ranger: 'F', paladi
 const DEFAULT_HOTKEYS = Array.from({ length: 9 }, (_, i) => `Digit${i + 1}`);
 const RESERVED_HOTKEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyF',
-  'KeyC', 'KeyI', 'KeyK', 'KeyM', 'KeyQ',
+  'KeyC', 'KeyI', 'KeyK', 'KeyM', 'KeyQ', 'KeyB', 'KeyV',
 ]);
 
 // ---- lookups ----
@@ -235,7 +235,7 @@ function normaliseHotkeys(keys) {
     const code = wanted[i];
     if (isBindableHotkey(code) && !seen.has(code)) { out[i] = code; seen.add(code); }
   }
-  const fallbacks = [...DEFAULT_HOTKEYS, 'Digit0', ...'RTYUOPGHJLZXVBNM'.split('').map(x => `Key${x}`)];
+  const fallbacks = [...DEFAULT_HOTKEYS, 'Digit0', ...'RTYUOPGHJLZXVBNM'.split('').map(x => `Key${x}`)].filter(isBindableHotkey);
   for (let i = 0; i < out.length; i++) if (!out[i]) {
     const code = fallbacks.find(x => !seen.has(x)); out[i] = code; seen.add(code);
   }
@@ -5026,12 +5026,29 @@ function clearInput() {
 function pauseGame(reason) {
   const wasPaused=gameClock.isPaused();
   gameClock.pause(reason);
-  if(!wasPaused){clearInput();G.autoFarm=false;AUDIO.pausePlayback();}
+  if(reason!=='modal')G.autoFarm=false;   // opening a menu only freezes the clock; leaving the tab stops Hunt
+  if(!wasPaused){clearInput();AUDIO.pausePlayback();}
 }
 function resumeGameFromPause(reason) {
   const wasPaused=gameClock.isPaused();
   gameClock.resume(reason);
   if(wasPaused&&!gameClock.isPaused()){last=performance.now();AUDIO.resumePlayback();}
+}
+// Escape: close the topmost closable surface through its own close path.
+// Place modals sit above #overlays; job-choice/rebirth overlays are mandatory and never closed here.
+function closeTopmost() {
+  hideSkillTip();
+  cancelHotkeyRebind(false);
+  for (const [id, sel] of [['homestead-modal-container', '[data-homestead-close]'], ['spire-elevator-modal-container', '[data-spire-close]']]) {
+    const mc = document.getElementById(id);
+    if (mc?.childElementCount) { mc.querySelector(sel)?.click(); return true; }
+  }
+  const open = Array.from(document.querySelectorAll('.panel, .dialogue, .slot-picker'));
+  const top = open[open.length - 1]; if (!top) return false;
+  if (top.classList.contains('dialogue')) dlg?.finish();
+  else if (top.dataset.kind === 'guide') closeGuide();
+  else top.remove();
+  return true;
 }
 function syncModalPause() {
   if(!G.running)return;
@@ -5040,7 +5057,7 @@ function syncModalPause() {
 }
 function pauseForInterruption() {
   if(!G.running)return;
-  G.taskGuide=null;G.huntTargetId=null;
+  G.taskGuide=null;
   pauseGame('interruption');saveGame();
   let el=document.getElementById('resume-game');
   if(!el){el=document.createElement('button');el.id='resume-game';el.className='btn';
@@ -5349,7 +5366,7 @@ function hotkeysPanelHtml(p) {
   };
   return `<div class="hotkey-intro"><b>${T('Action keybindings', 'ui')}</b><span>${T('Click a keycap, then press a number or unused letter. If that key is already assigned, the two slots swap.', 'ui')}</span></div>
     <div class="hotkey-grid">${p.hotbar.map(row).join('')}</div>
-    <div class="hotkey-foot"><span>${T('Reserved: WASD, E/F, C/I/K/Q', 'ui')}</span><button class="btn btn--ghost" data-reset-hotkeys="1">${T('Reset to 1–9', 'ui')}</button></div>`;
+    <div class="hotkey-foot"><span>${T('Reserved: WASD, E/F/V, C/I/K/Q/M/B', 'ui')}</span><button class="btn btn--ghost" data-reset-hotkeys="1">${T('Reset to 1–9', 'ui')}</button></div>`;
 }
 
 const style = document.createElement('style');
@@ -6700,11 +6717,11 @@ function panelBody(id) {
         <span>High Contrast Mode</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
-      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
+      ${G.admin || shouldEnableAdminByDefault(p.name) ? `<div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
       <div class="setting-row">
         <span>${T('Admin Mode','ui')}</span>
         <input type="checkbox" id="admin-toggle" ${G.admin ? 'checked' : ''}>
-      </div>
+      </div>` : ''}
     </div>`;
   }
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
@@ -8153,12 +8170,18 @@ function interact(npcId) {
     if (q) lines.push(`Current task — ${q.name}: ${q.description}`);
     else if (pending) lines.push(`Our next chapter is ${pending.name}. Train until Base Level ${pending.minLevel}; I will call for you the moment you are ready.`);
     showDialogue(n.name, lines, () => afterNpcDialogue());
+  } else if (n.role === 'tactician') {
+    const busy = !!G.strongholdState?.active;
+    const lines = content?.dialogue ? [...content.dialogue] : [T('The crystal must hold. Say the word and I will sound the horn.', 'ui')];
+    showDialogue(n.name, lines, () => afterNpcDialogue(), {
+      label: busy ? T('Siege in progress', 'ui') : `⚔ ${T('Begin Crystal Siege', 'ui')}`, disabled: busy, run: startStrongholdSiege,
+    });
   } else { showDialogue(n.name, content?.dialogue || CONTENT.story.intro.slice(0, 2), () => afterNpcDialogue()); }
   return true;
 }
 
 let dlg;
-function showDialogue(name, lines, onClose) {
+function showDialogue(name, lines, onClose, choice = null) {
   if (dlg) dlg.remove();
   let i = 0;
   dlg = document.createElement('div'); dlg.className = 'dialogue';
@@ -8189,15 +8212,21 @@ function showDialogue(name, lines, onClose) {
     return T(line, 'quests');
   });
 
+  const box = dlg;
+  box.finish = () => { box.remove(); if (dlg === box) dlg = null; if (onClose) onClose(); };   // Space, Close and Escape all end here
   const render = () => {
-    const btnText = i < translatedLines.length - 1 ? T('Continue', 'ui') : T('Close', 'ui');
-    dlg.innerHTML = `<div class="dialogue__name">${translatedName}</div><div class="dialogue__text">${translatedLines[i]}</div>
-      <div class="dialogue__choices"><button class="btn"><span>${btnText}</span><kbd>Space</kbd></button></div>`;
-    dlg.querySelector('button').onclick = () => {
+    const last = i >= translatedLines.length - 1;
+    const btnText = last ? T('Close', 'ui') : T('Continue', 'ui');
+    const extra = last && choice ? `<button class="btn btn--primary" data-dlg-choice ${choice.disabled ? 'disabled' : ''}>${esc(choice.label)}</button>` : '';
+    box.innerHTML = `<div class="dialogue__name">${translatedName}</div><div class="dialogue__text">${translatedLines[i]}</div>
+      <div class="dialogue__choices"><button class="btn"><span>${btnText}</span><kbd>Space</kbd></button>${extra}</div>`;
+    box.querySelector('button').onclick = () => {
       i++;
-      if (i >= translatedLines.length) { dlg.remove(); dlg = null; if (onClose) onClose(); }
+      if (i >= translatedLines.length) box.finish();
       else render();
     };
+    const pick = box.querySelector('[data-dlg-choice]');
+    if (pick) pick.onclick = () => { box.finish(); choice.run(); };
   };
   render();
   $('#overlays').appendChild(dlg);
@@ -9115,6 +9144,7 @@ function handleClick(wx, wy) {
 
 // input
 window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' && e.target?.closest?.('input,textarea,select,[contenteditable]')) return;   // typing in a field never fires game keys
   const key = e.key.toLowerCase();
   const code = eventHotkeyCode(e);
   if (G.running && dlg && (key === ' ' || code === 'Space')) {
@@ -9146,7 +9176,7 @@ window.addEventListener('keydown', e => {
   const slot = !e.ctrlKey && !e.metaKey && !e.altKey ? G.player.hotkeys.indexOf(code) : -1;
   if (slot >= 0) { e.preventDefault(); if (!e.repeat) useHotbarSlot(slot); }
   else if (e.repeat) return;
-  else if (key === '`' || key === '~' || code === 'Backquote' || key === 'f2') {
+  else if ((key === '`' || key === '~' || code === 'Backquote' || key === 'f2') && (G.admin || shouldEnableAdminByDefault(G.player?.name))) {
     e.preventDefault();
     if (!G.admin) {
       G.admin = true;
@@ -9166,20 +9196,7 @@ window.addEventListener('keydown', e => {
   else if (key === 'b') togglePanel('book');
   else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
   else if (key === 'v') performParry();
-  else if (key === 'escape') {
-    hideSkillTip();
-    cancelHotkeyRebind(false);
-    const openModals = Array.from(document.querySelectorAll('.panel, .dialogue, .slot-picker'));
-    if (openModals.length > 0) {
-      const topmost = openModals[openModals.length - 1];
-      if (topmost.classList.contains('dialogue')) {
-        topmost.remove();
-        dlg = null;
-      } else {
-        if(topmost.dataset.kind==='guide')closeGuide();else topmost.remove();
-      }
-    }
-  }
+  else if (key === 'escape') closeTopmost();
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
@@ -9198,7 +9215,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, closeTopmost, showDialogue, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
