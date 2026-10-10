@@ -149,8 +149,9 @@ for (const map of Object.values(MAPS)) for (const sp of (map.spawns || [])) if (
 const itemDropSource = itemId => { for (const m of CONTENT.monsters) if (m.drops.some(d => d.itemId === itemId)) return { mon: m.name, monsterId: m.id, map: monsterMapName[m.id], mapId: monsterMapId[m.id] }; return null; };
 const npcLocation = npcId => { for (const map of Object.values(MAPS)) { const npc = (map.npcs || []).find(n => n.id === npcId); if (npc) return { mapId: map.id, npc }; } return null; };
 // shared item-category grouping (inventory + shop buy/sell)
-const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory' || it.type === 'relic') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
-const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Reset Manuals': 3, 'Materials': 4, 'Quest Items': 5 };
+const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory' || it.type === 'relic') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : (it.type === 'consumable' || it.type === 'usable') ? 'Food & Supplies' : it.type === 'taming_bait' ? 'Taming Bait' : it.type === 'card' ? 'Monster Cards' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
+const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Food & Supplies': 3, 'Taming Bait': 4, 'Reset Manuals': 5, 'Monster Cards': 6, 'Materials': 7, 'Quest Items': 8 };
+const USE_TYPES = ['potion', 'consumable', 'usable', 'taming_bait', 'reset'];   // types the bag can Use / double-click
 const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
 // equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
@@ -6750,7 +6751,7 @@ function panelBody(id) {
     const tab = G._bagTab || 'all';
     const tabs = [['all', T('All', 'ui')], ['gear', T('Gear', 'ui')], ['use', T('Use', 'ui')], ['etc', T('Etc', 'ui')], ['quest', T('Quest', 'ui')]];
     const q = (G._invSearch || '').trim().toLowerCase();
-    const inTabK = (it, k) => k === 'all' || (k === 'gear' && ['weapon', 'armor', 'accessory', 'relic'].includes(it.type)) || (k === 'use' && ['potion', 'reset'].includes(it.type)) || (k === 'etc' && it.type === 'material') || (k === 'quest' && it.type === 'quest');
+    const inTabK = (it, k) => k === 'all' || (k === 'gear' && ['weapon', 'armor', 'accessory', 'relic'].includes(it.type)) || (k === 'use' && USE_TYPES.includes(it.type)) || (k === 'etc' && ['material', 'card'].includes(it.type)) || (k === 'quest' && it.type === 'quest');
     const inTab = it => inTabK(it, tab);
     const matchesSearch = (e, it) => {
       if (!q) return true;
@@ -6787,12 +6788,17 @@ function panelBody(id) {
           <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
             <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}</div>`;
       }
-      const act = it.type === 'potion'
-        ? `<button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button><button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button>`
+      const toBar = `<button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button>`;
+      const act = ['potion', 'consumable', 'taming_bait'].includes(it.type) ? `<button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button>${toBar}`
+        : it.type === 'usable' ? `<button class="btn" data-use="${it.id}">${T('Open', 'ui')}</button>`
         : it.type === 'reset' ? `<button class="btn reset-use" data-use="${it.id}">${T('Use', 'ui')}</button>`
-        : it.gem ? `<button class="btn ${G._socketPick === it.id ? 'btn--ghost' : ''}" data-pick-gem="${it.id}">${G._socketPick === it.id ? T('Cancel', 'ui') : T('Socket…', 'ui')}</button>` : '';
+        : (it.gem || it.type === 'card') ? `<button class="btn ${G._socketPick === it.id ? 'btn--ghost' : ''}" data-pick-gem="${it.id}">${G._socketPick === it.id ? T('Cancel', 'ui') : T('Socket…', 'ui')}</button>` : '';
+      const howTo = it.type === 'taming_bait' ? T('How to tame: select a wild creature, beat it below 30% HP, then Use this bait (or press its hotbar key). Each bait only works on its own creature.', 'ui')
+        : it.type === 'card' ? T('Fits {slot} gear. Click Socket…, then click an empty ○ socket on that gear (in this bag or on Status → Equipment). No empty socket? The Trader → Enhance tab can add sockets.', 'ui').replace('{slot}', T(it.targetSlot || 'any', 'ui'))
+        : it.gem ? T('Click Socket…, then click an empty ○ socket on a piece of gear.', 'ui') : '';
+      const pickHint = G._socketPick === it.id ? `<p class="ro-muted">👉 ${T('Now click an empty ○ socket on your gear.', 'ui')}</p>` : '';
       return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b>${T(it.name, 'items')}</b><small class="ro-muted">×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
-        <p class="bag-detail__desc">${T(it.desc, 'items')}</p><div class="bag-detail__actions">${act}${source}</div>`;
+        <p class="bag-detail__desc">${T(it.desc, 'items')}</p>${howTo ? `<p class="bag-howto">${howTo}</p>` : ''}${pickHint}<div class="bag-detail__actions">${act}${source}</div>`;
     };
     const hiddenN = p.inventory.filter(e => !matchesLoot(e, itemById[e.itemId], p.features.loot, p.classId)).length;
     const tabCount = k => p.inventory.filter(e => inTabK(itemById[e.itemId], k)).length;
@@ -7368,7 +7374,7 @@ function wirePanel(id, el) {
     b.ondblclick = () => {   // RO habit: double-click uses a consumable or equips gear
       const k = b.dataset.bagSel, e = G.player.inventory.find(x => (x.uid ? 'u' + x.uid : 'i' + x.itemId) === k); if (!e) return;
       if (e.uid) { if (canUseItem(G.player, itemById[e.itemId])) equip(e.uid); }
-      else if (['potion', 'reset'].includes(itemById[e.itemId].type)) useItem(e.itemId);
+      else if (USE_TYPES.includes(itemById[e.itemId].type)) useItem(e.itemId);
       refreshPanel('inv');
     };
   });

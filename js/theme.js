@@ -149,7 +149,7 @@ body .panel[data-kind="inv"]{width:min(860px,94vw)}
 .bag-slot__ban{left:1px;bottom:1px;font-size:9px!important}
 .bag-detail{position:sticky;top:0;display:grid;gap:6px;font-size:12px;min-width:0}
 .bag-detail__head{display:flex;gap:8px;align-items:center}.bag-detail__head>div{display:grid;gap:2px;min-width:0}.bag-detail__head b{font-size:14px}
-.bag-detail__desc{margin:0}.bag-detail__actions{display:flex;flex-wrap:wrap;gap:5px}
+.bag-detail__desc{margin:0}.bag-howto{margin:0;padding:6px 8px;border-left:3px solid var(--gold);background:var(--card-bg);font-size:11px}.bag-detail__actions{display:flex;flex-wrap:wrap;gap:5px}
 .sell-layout{display:grid;grid-template-columns:auto minmax(200px,1fr);gap:10px;align-items:start}
 .stash-layout{display:grid;grid-template-columns:auto auto;gap:10px;align-items:start}.stash-layout>.bag-detail{grid-column:1/-1;position:static}
 .stash-layout .bag-grid{grid-template-columns:repeat(6,44px)}
