@@ -21,6 +21,7 @@ for (const id of ['char', 'inv', 'skills', 'quest', 'adventure', 'automation', '
 for (const t of ['road', 'bestiary', 'companions', 'spire', 'stronghold', 'homestead']) { G._chronicleTab = t; A.panelBody('world'); }
 for (const t of ['bestiary', 'items', 'elements', 'skills']) { G._bookTab = t; A.panelBody('book'); }
 for (const t of ['buy', 'sell', 'enhance', 'craft', 'storage']) { G._shopTab = t; A.panelBody('shop'); }
+for (const t of [0, 1, 2]) { G._skillTab = t; G._skillSel = A.PROGRESSION.skillTree && Object.keys(A.PROGRESSION.skillTree).find(id => A.skillLevel(G.player, id) > 0); A.panelBody('skills'); }
 for (const t of ['active', 'available', 'done']) {   // every Journal tab and every entry's detail pane
   G._journalTab = t;
   for (const e of A.journalEntries().filter(x => x.status === t)) { G._journalSel = e.key; A.panelBody('quest'); }

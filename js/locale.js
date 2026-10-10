@@ -239,6 +239,9 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Select a skill to see what it does. Double-click to learn.": "เลือกสกิลเพื่อดูรายละเอียด ดับเบิลคลิกเพื่อเรียน",
+      "Learn": "เรียน",
+      "Bar": "แถบลัด",
       "Class": "อาชีพ",
       "Active": "กำลังทำ",
       "Available": "พร้อมรับ",

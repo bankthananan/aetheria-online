@@ -6205,7 +6205,7 @@ function skillsPanelHtml(p) {
     const state = incompatible ? 'locked incompatible' : maxed ? 'maxed' : tierCapped ? 'owned tier-capped' : lv > 0 ? 'owned' : clickable ? 'ready' : 'locked';
     const glyph = isPassive ? '◈' : (SKILL_GLYPH[s.type] || '✦');
     const name = isPassive ? T(pa.name, 'passives') : T(s.name, 'skills');
-    const attr = clickable ? (isPassive ? `data-passive="${id}"` : `data-learn="${id}"`) : '';
+    const attr = `data-skill-sel="${id}"${clickable ? ' data-can-learn="1"' : ''}${G._skillSel === id ? ' aria-pressed="true"' : ''}`;
     const [role, roleClass] = isPassive ? [T('PASSIVE', 'ui'), 'passive'] : roleFor(s);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
     const req = incompatible
@@ -6226,6 +6226,7 @@ function skillsPanelHtml(p) {
   const selectedAdvancedJob = advancedJobFor(p, false);
   const stageLabels = [T('FIRST JOB', 'ui'), T('SECOND JOB', 'ui'), T('ADVANCED JOB', 'ui')];
 
+  const shownTier = [0, 1, 2].includes(G._skillTab) ? G._skillTab : Math.min(p.tierIndex, 2);
   const lanes = [0, 1, 2].map(tier => {
     const activeSet = actives.filter(s => (tree[s.id]?.reqTier || 0) === tier)
       .sort((a, b) => (tree[a.id].reqLevel - tree[b.id].reqLevel) || a.name.localeCompare(b.name));
@@ -6237,6 +6238,16 @@ function skillsPanelHtml(p) {
       : selectedAdvancedJob?.name || T('Choose at Lv 40', 'ui');
 
     let contentHtml = '';
+    // tree grid: column = prerequisite depth inside this chapter, row = DFS order so a child sits beside its parent
+    const treeGrid = list => {
+      const ids = new Set(list.map(s => s.id)), kids = new Map(), pos = new Map();
+      for (const sk of list) { const r = tree[sk.id]?.reqSkill?.id; if (ids.has(r)) (kids.get(r) || kids.set(r, []).get(r)).push(sk); }
+      let maxRow = -1;
+      const place = (sk, col, row) => { pos.set(sk.id, [col, row]); maxRow = Math.max(maxRow, row); (kids.get(sk.id) || []).forEach((k, i) => place(k, col + 1, i ? maxRow + 1 : row)); };
+      for (const sk of list.filter(x => !ids.has(tree[x.id]?.reqSkill?.id))) place(sk, 0, maxRow + 1);
+      const cols = Math.max(1, ...[...pos.values()].map(([c]) => c + 1));
+      return `<div class="ro-skill-tree" style="--tree-cols:${cols}">${list.map(sk => { const [c, r] = pos.get(sk.id); return `<div class="ro-tree-cell" style="grid-column:${c + 1};grid-row:${r + 1}">${cardHtml(sk)}</div>`; }).join('')}</div>`;
+    };
     if (tier === 2) {
       // Branch layout for Tier 3
       const defaultJob = advancedJobsFor(p.classId)[0];
@@ -6268,12 +6279,12 @@ function skillsPanelHtml(p) {
     } else {
       contentHtml = `
       <div class="ro-lane-label">◆ ${T('ACTIVE SKILLS', 'ui')}</div>
-      <div class="ro-skill-list">${activeSet.map(s => cardHtml(s)).join('') || `<small class="ro-empty">${T('No active skills in this chapter.', 'ui')}</small>`}</div>
+      ${activeSet.length ? treeGrid(activeSet) : `<small class="ro-empty">${T('No active skills in this chapter.', 'ui')}</small>`}
       <div class="ro-lane-label passive">◈ ${T('PASSIVE MASTERIES', 'ui')}</div>
       <div class="ro-skill-list passive-list">${passiveSet.map(pa => cardHtml(pa, true)).join('') || `<small class="ro-empty">${T('No passive masteries in this chapter.', 'ui')}</small>`}</div>`;
     }
 
-    return `<section class="ro-job-lane${unlocked ? ' unlocked' : ' locked-job'}" data-tier="${tier}">
+    return `<section class="ro-job-lane${unlocked ? ' unlocked' : ' locked-job'}" data-tier="${tier}"${tier === shownTier ? '' : ' hidden'}>
       <header><span>0${tier + 1}</span><div><small>${stageLabels[tier]}</small><b>${esc(T(tierName || stageLabels[tier], 'classes'))}</b></div><i>${unlocked ? T('UNLOCKED', 'ui') : T('PROMOTION REQUIRED', 'ui')}</i></header>
       ${contentHtml}
     </section>`;
@@ -6294,13 +6305,26 @@ function skillsPanelHtml(p) {
   </section>` : '';
 
   return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}${branchIdentity}
+    <div class="book-tabs ro-job-tabs">${[0, 1, 2].map(t => `<button class="book-tab${t === shownTier ? ' active' : ''}" data-skill-tab="${t}">${['I', 'II', 'III'][t]} · ${esc(T(t === 0 ? PROGRESSION.tiers[p.classId]?.[0]?.name || stageLabels[0] : t === 1 ? selectedBranch?.tiers?.[1]?.name || stageLabels[1] : selectedAdvancedJob?.name || stageLabels[2], 'classes'))}${p.tierIndex < t ? ' 🔒' : ''}</button>`).join('')}</div>
     <div class="ro-skill-graph-wrap">
       <div class="ro-skill-graph" id="skill-graph">
         <svg class="ro-skill-lines" id="skill-lines" aria-hidden="true"></svg>
         ${lanes}
       </div>
     </div>
+    ${skillDetailHtml(p)}
     ${resetNote}${guide}</div>`;
+}
+// sticky strip under the tree: what the selected node does now / next, plus Learn and → Bar
+function skillDetailHtml(p) {
+  const id = G._skillSel;
+  if (!id || p !== G.player) return `<aside class="ro-skill-detail is-empty"><small class="ro-muted">${T('Select a skill to see what it does. Double-click to learn.', 'ui')}</small></aside>`;
+  const isPassive = !!PROGRESSION.passives[id];
+  const lv = skillLevel(p, id), max = isPassive ? PROGRESSION.passives[id].maxLevel : (PROGRESSION.skillTree[id]?.maxLevel || 1);
+  const can = (isPassive ? canLearnPassive(p, id) : canLearn(p, id)) && lv < max;
+  const learn = can ? `<button class="btn btn--primary" ${isPassive ? `data-passive="${id}"` : `data-learn="${id}"`}>${T('Learn', 'ui')} +1 <small>(${p.skillPoints})</small></button>` : '';
+  const bar = !isPassive && lv > 0 ? `<button class="btn" data-assign-skill="${id}">→ ${T('Bar', 'ui')}${hotkeyForSkill(p, id) ? ` <kbd>${hotkeyForSkill(p, id)}</kbd>` : ''}</button>` : '';
+  return `<aside class="ro-skill-detail"><div class="ro-skill-detail__body">${skillNodeTip(id, isPassive)}</div><div class="ro-skill-detail__actions">${learn}${bar}</div></aside>`;
 }
 
 // plain-language "what does it do" line for a skill at level L
@@ -7585,19 +7609,12 @@ function wirePanel(id, el) {
     let tip = document.getElementById('sk-tip');
     if (!tip) { tip = document.createElement('div'); tip.id = 'sk-tip'; tip.className = 'sk-tip'; document.body.appendChild(tip); }
     tip.style.display = 'none';
-    el.querySelectorAll('.ro-skill[data-skill]').forEach(nd => {
-      const show = () => {
-        tip.innerHTML = skillNodeTip(nd.dataset.skill, nd.dataset.kind === 'passive');
-        tip.style.display = 'block'; tip.style.left = '-9999px'; tip.style.top = '0px';
-        const r = nd.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
-        let x = r.right + 12; if (x + tw > innerWidth - 8) x = r.left - tw - 12; if (x < 8) x = 8;
-        let y = r.top + r.height / 2 - th / 2; y = Math.max(8, Math.min(y, innerHeight - th - 8));
-        tip.style.left = x + 'px'; tip.style.top = y + 'px';
-      };
-      nd.addEventListener('mouseenter', show);
-      nd.addEventListener('click', show);          // touch/click also reveals it
-      nd.addEventListener('mouseleave', hideSkillTip);
+    // the detail strip replaces the floating tooltip: click selects, double-click learns
+    el.querySelectorAll('[data-skill-sel]').forEach(nd => {
+      nd.onclick = () => { G._skillSel = nd.dataset.skillSel; refreshPanel('skills'); };
+      nd.ondblclick = () => { if (!nd.dataset.canLearn) return; nd.dataset.kind === 'passive' ? learnPassive(nd.dataset.skillSel) : learnSkill(nd.dataset.skillSel); G._skillSel = nd.dataset.skillSel; refreshPanel('skills'); };
     });
+    el.querySelectorAll('[data-skill-tab]').forEach(b => b.onclick = () => { G._skillTab = +b.dataset.skillTab; refreshPanel('skills'); });
     // Draw SVG dependency lines
     setTimeout(() => renderSkillGraphLines(el), 0);
   }
@@ -7637,6 +7654,7 @@ function renderSkillGraphLines(root = document) {
     const parent = nodeMap.get(node.reqSkill.id);
     if (!parent) return;
 
+    if (!parent.offsetParent || !child.offsetParent) return;   // node sits in a hidden chapter tab
     const rP = parent.getBoundingClientRect();
     const rC = child.getBoundingClientRect();
 
@@ -8523,6 +8541,18 @@ const extraCss = `
 .tree-lv{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
 .skill-learn:disabled{opacity:.35;cursor:default}
 .btn:disabled{opacity:.4;cursor:default;filter:grayscale(.4)}
+.ro-job-tabs{margin:8px 0}
+.ro-skill-tree{display:grid;grid-template-columns:repeat(var(--tree-cols),minmax(178px,1fr));gap:8px 22px;padding:2px 5px 6px;overflow-x:auto}
+.ro-tree-cell{min-width:0}.ro-tree-cell .ro-skill{width:100%}
+.ro-skill[aria-pressed="true"]{outline:2px solid var(--gold);outline-offset:1px}
+.ro-skill.ready.can{box-shadow:0 0 0 2px rgba(95,191,122,.55)}
+.ro-skill.locked:not(.ready){opacity:.62}
+.ro-skill-detail{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;border:2px solid var(--gold);background:var(--parchment-1,#f3e6c4);box-shadow:0 -4px 12px rgba(0,0,0,.18)}
+.ro-skill-detail.is-empty{border-style:dashed;border-color:var(--card-border);box-shadow:none}
+.ro-skill-detail__body{flex:1 1 320px;min-width:0;font-size:13px;line-height:1.5}.ro-skill-detail__actions{display:flex;gap:6px;flex-wrap:wrap}
+.ro-job-lane>header>span{white-space:nowrap}
+.ro-branch-label{margin:6px 5px 2px;font:700 14px var(--font-head);color:var(--book-accent,var(--accent-alt))}
+@media (max-width:680px){.ro-skill-tree{grid-template-columns:repeat(var(--tree-cols),minmax(160px,72vw))}}
 .jr-tabs{margin-bottom:8px}.jr-wrap{display:grid;grid-template-columns:minmax(190px,36%) minmax(0,1fr);gap:10px;align-items:start}
 .jr-list{display:flex;flex-direction:column;gap:2px;padding:6px;max-height:min(52vh,460px);overflow-y:auto;min-width:0}
 .jr-cat{margin:6px 2px 2px;font:700 12px var(--font-head);color:var(--book-accent,var(--accent-alt))}.jr-cat small{color:var(--text-muted);font-weight:400}
@@ -8624,7 +8654,7 @@ const extraCss = `
 .ro-book-stats{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border:1px solid var(--card-border);background:var(--card-bg);font-size:8px;color:var(--text)}.ro-book-stats strong{display:flex;align-items:center;gap:7px;color:color-mix(in srgb,var(--book-accent) 45%,#1d140a);font:700 24px/1 var(--font-head)}.ro-book-stats strong small{color:var(--info);font:800 7px/1.2 var(--font-ui);letter-spacing:1px}.ro-book-stats span b{color:var(--violet);letter-spacing:1px}.ro-book-radar{width:92px;overflow:hidden}.ro-book-radar svg{width:92px;height:88px}
 .ro-job-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:8px}
 .ro-job-lane{min-width:0;border:1px solid var(--card-border);background:var(--card-bg);box-shadow:inset 0 3px 0 color-mix(in srgb,var(--book-accent) 76%,rgba(120,86,40,.22))}
-.ro-job-lane>header{display:grid;grid-template-columns:25px minmax(0,1fr);align-items:center;gap:5px;min-height:46px;padding:6px 7px;border-bottom:1px solid var(--card-border);background:var(--card-bg)}
+.ro-job-lane>header{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:5px;min-height:46px;padding:6px 7px;border-bottom:1px solid var(--card-border);background:var(--card-bg)}
 .ro-job-lane>header>span{grid-row:1/3;color:color-mix(in srgb,var(--book-accent) 45%,#1d140a);font:700 20px/1 var(--font-head)}.ro-job-lane>header div{display:flex;flex-direction:column;min-width:0}.ro-job-lane>header small{color:var(--text-muted);font-size:7px;font-weight:900;letter-spacing:1px}.ro-job-lane>header b{overflow-wrap:anywhere;color:var(--info);font-size:10px;line-height:1.2}.ro-job-lane>header>i{grid-column:2;color:var(--success-text);font-size:7px;font-style:normal;font-weight:800;letter-spacing:.6px}.ro-job-lane.locked-job>header>i{color:var(--danger-text)}
 .ro-lane-label{margin:7px 6px 4px;color:color-mix(in srgb,var(--book-accent) 45%,#1d140a);font-size:9px;font-weight:900;letter-spacing:1px}.ro-lane-label.passive{margin-top:9px;padding-top:7px;border-top:1px dashed var(--card-border);color:var(--violet)}
 .ro-skill-list{display:grid;gap:4px;padding:0 5px}.ro-skill-list.passive-list{padding-bottom:6px}.ro-empty{padding:8px;color:var(--text-muted);font-size:8px;font-style:italic}
