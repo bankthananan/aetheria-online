@@ -11,13 +11,14 @@ export function createGuidance({G,CONTENT,COMBAT,PROGRESSION,MAPS,esc,saveGame,u
   };
   const openGuide=(kind,id)=>{
     if(kind==='skill'?!COMBAT.skills.some(s=>s.id===id):!model({kind,id}).valid)return false;
-    const panel=document.getElementById('panel');
-    if(panel?.dataset.kind!=='guide')origin=panel?{panel:panel.dataset.kind,scrollTop:panel.querySelector('.panel__body')?.scrollTop||0}:null;
-    selection={kind,id};if(panel?.dataset.kind==='guide')panel.remove();togglePanel('guide');return true;
+    // desktop: the guide opens beside the window it came from; compact screens swap, so remember where to return
+    const guide=document.querySelector('.panel[data-kind="guide"]'),from=[...document.querySelectorAll('.panel')].filter(x=>x!==guide).pop();
+    if(!guide)origin=from?{panel:from.dataset.kind,scrollTop:from.querySelector('.panel__body')?.scrollTop||0}:null;
+    selection={kind,id};guide?.remove();togglePanel('guide');return true;
   };
   const closeGuide=()=>{
-    document.getElementById('panel')?.remove();
-    if(origin?.panel){togglePanel(origin.panel);const body=document.querySelector('#panel .panel__body');if(body)body.scrollTop=origin.scrollTop;}
+    document.querySelector('.panel[data-kind="guide"]')?.remove();
+    if(origin?.panel&&!document.querySelector(`.panel[data-kind="${origin.panel}"]`)){togglePanel(origin.panel);const body=document.querySelector(`.panel[data-kind="${origin.panel}"] .panel__body`);if(body)body.scrollTop=origin.scrollTop;}
     origin=null;
   };
   const goalTrackerHtml=()=>{

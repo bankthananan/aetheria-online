@@ -178,7 +178,7 @@
             A.G.player.skillCd = {}; A.G.player.mp = A.G.player.maxMp;
             A.castSkillById(params.get('fxskill'));
           }
-          if (params.get('admin') && ticks > 4 && !document.getElementById('panel')) A.togglePanel('admin');
+          if (params.get('admin') && ticks > 4 && !document.querySelector('.panel')) A.togglePanel('admin');
           if (params.get('slam')) {                 // keep the boss slam telegraph live for the screenshot
             A.G.player.godMode = true;
             const b = A.G.monsters.find(m => m.def.sizeTiles >= 2 && m.alive);
@@ -209,21 +209,21 @@
               A.G.guildBoard = [boarBounty('visual-boar-1'), boarBounty('visual-boar-2'), boarBounty('visual-boar-3')];
             }
             if (params.get('multi')) while (A.G.activeGuilds.length < 3) A.acceptGuild(A.G.guildBoard[0].id);
-            if (!document.getElementById('panel')) A.togglePanel(wantPanel);
+            if (!document.querySelector('.panel')) A.togglePanel(wantPanel);
             if (params.get('hc')) {           // panel=settings&hc=1 — drive the real checkbox + change event, not just the flag
-              const cb = document.querySelector('#panel #hc-toggle');
+              const cb = document.querySelector('.panel #hc-toggle');
               if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
             }
             if (params.get('scrollpanel')) {         // e.g. panel=automation&scrollpanel=9999 → bottom of panel
-              const pane = document.getElementById('panel');   // .panel is the overflow:auto scroller
+              const pane = document.querySelector('.panel');   // .panel is the overflow:auto scroller
               if (pane) pane.scrollTop = +params.get('scrollpanel');
             }
             if (params.get('tip')) {                 // hover a skill node to reveal its tooltip
-              const nodes = document.querySelectorAll('#panel .ro-skill[data-skill]');
+              const nodes = document.querySelectorAll('.panel .ro-skill[data-skill]');
               const nd = nodes[+params.get('tip') || 0];
               if (nd) nd.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
             } else {
-              const sel = wantPanel === 'char' ? '#panel [data-stat="str"]' : '#panel [data-learn]:not([disabled])';
+              const sel = wantPanel === 'char' ? '.panel [data-stat="str"]' : '.panel [data-learn]:not([disabled])';
               const btn = document.querySelector(sel);
               if (btn && (window.__clicks = (window.__clicks || 0) + 1) <= 6) btn.click();
             }

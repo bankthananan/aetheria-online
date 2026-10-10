@@ -3668,7 +3668,7 @@ function guideEvent(kind, n = 1) {
     if (unlocked.length) logMsg(`📘 ${T('New handbook entry', 'ui')}: ${unlocked.map(d => T(d.name, 'quests')).join(', ')} — ${T('Journal (Q)', 'ui')}`, 'sys');
   }
   updateQuestTracker();
-  if ($('#panel')?.dataset.kind === 'quest') refreshPanel('quest');
+  if (panelEl('quest')) refreshPanel('quest');
 }
 function startGuide(id) {
   const def = GUIDE_QUESTS.find(d => d.id === id);
@@ -5129,16 +5129,16 @@ function closeTopmost() {
     const mc = document.getElementById(id);
     if (mc?.childElementCount) { mc.querySelector(sel)?.click(); return true; }
   }
-  const open = Array.from(document.querySelectorAll('.panel, .dialogue, .slot-picker'));
-  const top = open[open.length - 1]; if (!top) return false;
-  if (top.classList.contains('dialogue')) dlg?.finish();
-  else if (top.dataset.kind === 'guide') closeGuide();
-  else top.remove();
+  const overlay = Array.from(document.querySelectorAll('.dialogue, .slot-picker')).pop();
+  if (overlay) { if (overlay.classList.contains('dialogue')) dlg?.finish(); else overlay.remove(); return true; }
+  const top = openPanels().sort((a, b) => (+a.style.zIndex || 0) - (+b.style.zIndex || 0)).pop();
+  if (!top) return false;
+  closePanel(top);
   return true;
 }
 function syncModalPause() {
   if(!G.running)return;
-  const modal=G.jobChoiceOpen||dlg||document.querySelectorAll('.panel, .slot-picker, .job-choice-overlay, .overlay-cut, #hud .hud-menu.open').length>0;
+  const modal=G.jobChoiceOpen||dlg||document.querySelectorAll('.slot-picker, .job-choice-overlay, .overlay-cut, #hud .hud-menu.open').length>0||(compactViewport()&&openPanels().length>0);   // D8: desktop windows keep the world running
   if(modal)pauseGame('modal');else resumeGameFromPause('modal');
 }
 function pauseForInterruption() {
@@ -5281,13 +5281,11 @@ function buildHud() {
     setLanguage(currentLang === 'th' ? 'en' : 'th');
     AUDIO.playSfx('menu');
     buildHud();
-    const openPanel = $('#panel');
-    if (openPanel) {
-      const kind = openPanel.dataset.kind;
-      openPanel.querySelector('.panel__head').innerHTML = `${panelTitle(kind)}<button class="panel__close">✕</button>`;
-      openPanel.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); if(kind==='guide')closeGuide();else openPanel.remove(); };
-      refreshPanel(kind);
+    for (const openPanel of openPanels()) {
+      openPanel.querySelector('.panel__head').innerHTML = `${panelTitle(openPanel.dataset.kind)}<button class="panel__close">✕</button>`;
+      openPanel.querySelector('.panel__close').onclick = () => closePanel(openPanel);
     }
+    refreshPanel();
   };
   if (currentLang === 'th') {
     $('#hud-name').textContent = `${T(p.className, 'classes')} ${p.name}`;
@@ -5400,7 +5398,7 @@ function openSlotPicker(i) {
 let pendingHotkeySlot = null;
 function startHotkeyRebind(slot) {
   pendingHotkeySlot = slot;
-  const panel = $('#panel');
+  const panel = panelEl('hotkeys');
   panel?.querySelectorAll('[data-rebind]').forEach(b => {
     const active = +b.dataset.rebind === slot;
     b.classList.toggle('listening', active);
@@ -5677,16 +5675,59 @@ function renderMinimap() {
 // =====================================================================
 // PANELS
 // =====================================================================
+// ---- RO window model (docs/UI_FLOW_DESIGN.md §1): several windows on desktop, one sheet on compact screens ----
+const panelEl = id => { const el = document.querySelector(`.panel[data-kind="${id}"]`); return el?.dataset?.kind === id ? el : null; };
+const openPanels = () => Array.from(document.querySelectorAll('.panel'));
+const compactViewport = () => (document.body?.dataset?.viewport && document.body.dataset.viewport !== 'desktop') || innerWidth <= 680;
+let panelZ = 20;
+function bringToFront(el) {
+  if (panelZ > 50) { panelZ = 20; openPanels().sort((a, b) => (+a.style.zIndex || 0) - (+b.style.zIndex || 0)).forEach(x => { x.style.zIndex = ++panelZ; }); }   // stay under job-choice (58) / modals
+  el.style.zIndex = ++panelZ;
+}
+function closePanel(el) { hideSkillTip(); cancelHotkeyRebind(false); if (el.dataset.kind === 'guide') closeGuide(); else el.remove(); }
+function setPanelPos(el, x, y) {   // clamp so the title bar stays reachable
+  const w = el.offsetWidth || 400;
+  x = Math.max(8 - w + 120, Math.min(x, innerWidth - 120)); y = Math.max(4, Math.min(y, innerHeight - 48));
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.transform = 'none';
+}
+function placePanel(el, id) {
+  const saved = G.player?.features?.winPos?.[id];
+  if (saved) return setPanelPos(el, saved.x, saved.y);
+  const others = openPanels().filter(x => x !== el);
+  if (others.length === 1 && !G.player?.features?.winPos?.[others[0].dataset.kind]) {   // a pair docks side by side (Status + Satchel, Trader + Satchel …)
+    const half = Math.floor(innerWidth / 2);
+    for (const [x, i] of [[others[0], 0], [el, 1]]) { x.classList.add('is-docked'); setPanelPos(x, i ? half + 6 : Math.max(8, half - x.offsetWidth - 6), 72); }
+    return;
+  }
+  if (others.length) setPanelPos(el, (innerWidth - el.offsetWidth) / 2 + others.length * 28, 72 + others.length * 28);
+}
+function enablePanelDrag(el, id) {
+  const head = el.querySelector('.panel__head');
+  head.addEventListener('pointerdown', e => {
+    if (compactViewport() || e.target.closest('button')) return;
+    const r = el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    head.setPointerCapture?.(e.pointerId);
+    const move = ev => setPanelPos(el, ev.clientX - dx, ev.clientY - dy);
+    const up = () => {
+      head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up);
+      const f = G.player?.features; if (f) { f.winPos = { ...f.winPos, [id]: { x: parseInt(el.style.left, 10), y: parseInt(el.style.top, 10) } }; saveGame(); }
+    };
+    head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+  });
+}
 function togglePanel(id) {
   hideSkillTip();
   cancelHotkeyRebind(false);
-  const existing = $('#panel'); if (existing && existing.dataset.kind === id) { existing.remove(); return; }
-  if (existing) existing.remove();
+  const existing = panelEl(id); if (existing) { closePanel(existing); return; }
+  if (compactViewport()) openPanels().forEach(closePanel);
   const el = document.createElement('div');
-  el.className = 'panel'; el.id = 'panel'; el.dataset.kind = id;
+  el.className = 'panel'; el.dataset.kind = id;
   el.innerHTML = `<div class="panel__head">${panelTitle(id)}<button class="panel__close">✕</button></div><div class="panel__body">${panelBody(id)}</div>`;
   $('#overlays').appendChild(el);
-  el.querySelector('.panel__close').onclick = () => { hideSkillTip(); cancelHotkeyRebind(false); if(id==='guide')closeGuide();else el.remove(); };
+  el.querySelector('.panel__close').onclick = () => closePanel(el);
+  bringToFront(el);
+  el.addEventListener('pointerdown', () => bringToFront(el));
+  if (!compactViewport()) { placePanel(el, id); enablePanelDrag(el, id); }
 
   // Task 1.4: Focus trap cycling inside .panel elements
   el.addEventListener('keydown', e => {
@@ -7229,7 +7270,7 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-guide-back]').forEach(b=>b.onclick=closeGuide);
   el.querySelectorAll('[data-guide-picker]').forEach(b=>b.onchange=()=>{const [kind,id]=b.value.split(':');if(id)openGuide(kind,id);});
   el.querySelectorAll('[data-guide-skill]').forEach(b=>b.onchange=()=>{if(b.value)openGuide('skill',b.value);});
-  el.querySelectorAll('[data-guide-route]').forEach(b=>b.onclick=()=>{if(activateWorldRoute(b.dataset.guideRoute)){G.taskGuide.resumeAutoFarm=false;document.getElementById('panel')?.remove();}});
+  el.querySelectorAll('[data-guide-route]').forEach(b=>b.onclick=()=>{if(activateWorldRoute(b.dataset.guideRoute)){G.taskGuide.resumeAutoFarm=false;panelEl('guide')?.remove();}});
   el.querySelectorAll('[data-protect]').forEach(b=>b.onclick=()=>{setItemProtection(+b.dataset.protect,b.dataset.protected!=='true');refreshPanel(id);});
   el.querySelectorAll('[data-loot-mode]').forEach(b=>b.onchange=()=>{if(['all','usable','affixes'].includes(b.value))G.player.features.loot.mode=b.value;saveGame();refreshPanel(id);});
   el.querySelectorAll('[data-loot-quiet]').forEach(b=>b.onchange=()=>{G.player.features.loot.quiet=b.checked;saveGame();});
@@ -7531,7 +7572,7 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-bag-sel]').forEach(b => {
     b.onclick = () => {
       G._bagSel = b.dataset.bagSel; refreshPanel('inv');
-      if (innerWidth <= 680) requestAnimationFrame(() => $('#panel .bag-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));   // stacked layout: details sit below the grid; after refreshPanel's scroll restore
+      if (innerWidth <= 680) requestAnimationFrame(() => panelEl('inv')?.querySelector('.bag-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));   // stacked layout: details sit below the grid; after refreshPanel's scroll restore
     };
     b.ondblclick = () => {   // RO habit: double-click uses a consumable or equips gear
       const k = b.dataset.bagSel, e = G.player.inventory.find(x => (x.uid ? 'u' + x.uid : 'i' + x.itemId) === k); if (!e) return;
@@ -7544,7 +7585,7 @@ function wirePanel(id, el) {
   if (invSearch) {
     invSearch.oninput = e => {
       const caret = e.target.selectionStart; G._invSearch = e.target.value; refreshPanel('inv');
-      const fresh = $('#panel #inv-search'); if (fresh) { fresh.focus(); fresh.setSelectionRange(caret, caret); }   // re-render replaced the input
+      const fresh = panelEl('inv')?.querySelector('#inv-search'); if (fresh) { fresh.focus(); fresh.setSelectionRange(caret, caret); }   // re-render replaced the input
     };
   }
   const invSort = el.querySelector('#inv-sort-rarity');
@@ -7624,8 +7665,8 @@ function wirePanel(id, el) {
 let resizeTimer = null;
 if (typeof window !== 'undefined') {
   window.addEventListener('resize', () => {
-    const el = document.getElementById('panel');
-    if (el && el.dataset.kind === 'skills') {
+    const el = panelEl('skills');
+    if (el) {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => renderSkillGraphLines(el), 60);
     }
@@ -7907,14 +7948,16 @@ function openHomesteadHearthModal() {
 }
 G.openHomesteadHearthModal = openHomesteadHearthModal;
 
+// re-render `id` and every other open window, so equipping in the Satchel updates Status beside it
+// ponytail: refresh-all is O(open windows) ≤ ~4; add per-panel dependencies only if it gets slow
 function refreshPanel(id) {
-  const el = $('#panel');
-  if (el && el.dataset.kind === id) {
-    const body = el.querySelector('.panel__body');
-    const scrollTop = body.scrollTop;
-    body.innerHTML = panelBody(id);
-    wirePanel(id, el);
-    requestAnimationFrame(() => { body.scrollTop = scrollTop; });
+  for (const el of openPanels()) {
+    const kind = el.dataset.kind, body = el.querySelector('.panel__body');
+    if (id && kind !== id && el.contains(document.activeElement) && document.activeElement?.matches?.('input,textarea,select')) continue;   // don't yank a field the player is typing in
+    const scrollTop = body.scrollTop, paneScroll = el.scrollTop;
+    body.innerHTML = panelBody(kind);
+    wirePanel(kind, el);
+    requestAnimationFrame(() => { body.scrollTop = scrollTop; el.scrollTop = paneScroll; });
   }
 }
 
@@ -8541,6 +8584,11 @@ const extraCss = `
 .tree-lv{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
 .skill-learn:disabled{opacity:.35;cursor:default}
 .btn:disabled{opacity:.4;cursor:default;filter:grayscale(.4)}
+.panel.is-docked{width:min(620px,calc(50vw - 18px))!important;min-width:0!important}
+.panel.is-docked .bag-layout{grid-template-columns:auto auto}.panel.is-docked .bag-layout>.bag-detail{grid-column:1/-1;position:static}.panel.is-docked .bag-grid{grid-template-columns:repeat(6,44px)}
+.panel.is-docked .stash-layout{grid-template-columns:1fr}
+.panel:not(.is-docked) .panel__head{cursor:default}body[data-viewport="desktop"] .panel .panel__head{cursor:move;user-select:none}
+.dialogue{z-index:70}.slot-picker{z-index:80}
 .ro-job-tabs{margin:8px 0}
 .ro-skill-tree{display:grid;grid-template-columns:repeat(var(--tree-cols),minmax(178px,1fr));gap:8px 22px;padding:2px 5px 6px;overflow-x:auto}
 .ro-tree-cell{min-width:0}.ro-tree-cell .ro-skill{width:100%}
@@ -9346,7 +9394,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

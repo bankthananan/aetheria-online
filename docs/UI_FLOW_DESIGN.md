@@ -192,7 +192,7 @@ pendingClaims() → { adventure: n, book: n, world: n, guild: n }   // pure, rea
 | Phase | Scope | Risk |
 |---|---|---|
 | **1. Fix P0s** ✅ `2419f28` | **M1: pause no longer touches `G.autoFarm`** (the loop already skips ticks while paused) · M2 text-field key guard · M3 Escape on dialogue runs its `onClose` · D6 siege via Tactician · Escape via `closeTopmost` · D7 admin gate · reserve B/V · filter hotkey fallbacks · fix Keybindings help text | low; isolated |
-| **2. Window manager** | `panelEl` swap at 8 call sites · multi-open · z-order · drag · saved positions · compact rule · refresh-all | **highest**; touches every panel |
+| **2. Window manager** ✅ | `panelEl` swap at 8 call sites · multi-open · z-order · drag · saved positions · compact rule · refresh-all | **highest**; touches every panel |
 | **3. Window keys** | `WINDOW_KEYS` table, Alt aliases, pause whitelist, HUD labels | low |
 | **4. One home per action** | §3 table, §3b, dead-code removal | medium; Bestiary merge is the largest |
 | **5. Badges** | `pendingClaims` + HUD dots + tracker line | low |
