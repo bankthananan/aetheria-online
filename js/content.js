@@ -938,3 +938,45 @@ const ocaItem = {
 };
 CONTENT.items.push(ocaItem);
 CONTENT.items.old_card_album = ocaItem;
+
+// Adventurer's Handbook — optional guide quests that teach one system each.
+// Runs beside the story (any number active). `grant` is handed over on Start so the
+// player can try the system immediately; `event` is fired by the engine (guideEvent).
+CONTENT.guideQuests = [
+  { id: 'hb_fishing', name: 'Gone Fishing', minLevel: 1, event: 'fish', count: 1,
+    goal: 'Catch a fish.',
+    how: ['Walk to a Fishing Spot (the rippling water — in Whispering Woods it is near the top-left lake).', 'Click the ripple to cast.', 'Press Space when the needle is inside the gold zone.'],
+    rewards: { exp: 30, zeny: 40, items: ['grilled_trout', 'grilled_trout'] } },
+  { id: 'hb_meal', name: 'A Hearty Meal', minLevel: 1, after: 'hb_fishing', event: 'eat', count: 1,
+    goal: 'Eat a food item for a buff.',
+    how: ['Open the Satchel (I) → Use tab → Food & Supplies.', 'Select Grilled Trout and press Use (or →Bar to put it on a hotkey).', 'Food gives a timed combat buff.'],
+    rewards: { exp: 20, zeny: 40, items: ['minor_potion'] } },
+  { id: 'hb_gather', name: 'Herbs & Ore', minLevel: 2, event: 'gather', count: 2,
+    goal: 'Gather from 2 herb or ore nodes.',
+    how: ['Look for sparkling herbs and rocky ore clusters in each zone.', 'Click a node to walk over and harvest it.', 'Nodes regrow after a minute; Moonlight Lotus only blooms at night.'],
+    rewards: { exp: 40, zeny: 60, items: ['minor_potion', 'minor_potion'] } },
+  { id: 'hb_storage', name: 'Safekeeping', minLevel: 2, event: 'deposit', count: 1,
+    goal: 'Put an item into storage.',
+    how: ['Talk to the Trader in town → Storage tab.', 'Double-click an item in your Backpack (or select it and press Deposit).', 'Or press Deposit Mats in the Satchel to store all materials at once.'],
+    rewards: { exp: 20, zeny: 80, items: [] } },
+  { id: 'hb_refine', name: 'Sharper Steel', minLevel: 3, event: 'refine', count: 1,
+    goal: 'Try to enhance a piece of gear.',
+    grant: { zeny: 200, items: ['blessed_ore'] },
+    how: ['Talk to the Trader in town → Enhance tab.', 'Press Refine on your weapon or armor (uses Blessed Ore or refine fragments + zeny).', 'Higher + levels can fail; the gear is never destroyed.'],
+    rewards: { exp: 60, zeny: 100, items: ['blessed_ore'] } },
+  { id: 'hb_socket', name: 'An Open Socket', minLevel: 5, event: 'socket_expand', count: 1,
+    goal: 'Add a socket to a piece of gear.',
+    grant: { zeny: 1500, items: ['wolf_fang', 'wolf_fang', 'wolf_fang', 'wolf_fang', 'wolf_fang'] },
+    how: ['Talk to the Trader in town → Enhance tab.', 'Press Expand socket on your body armor (the first socket costs 1,500 zeny + 5 Wolf Fang).', 'Sockets hold monster cards and elemental runes.'],
+    rewards: { exp: 80, zeny: 150, items: [] } },
+  { id: 'hb_card', name: 'Card Collector', minLevel: 5, after: 'hb_socket', event: 'socket_card', count: 1,
+    goal: 'Socket a monster card into your gear.',
+    grant: { zeny: 0, items: ['card_slime'] },
+    how: ['Monster cards drop from monsters (more with LUK). Here is a Gel Slime Card — it fits armor.', 'Satchel (I) → Etc → Monster Cards → select the card → Socket….', 'Click the empty ○ socket on your armor (in the bag, or Status → Equipment).'],
+    rewards: { exp: 100, zeny: 200, items: [] } },
+  { id: 'hb_tame', name: 'First Companion', minLevel: 4, event: 'tame', count: 1,
+    goal: 'Tame a wild creature.',
+    grant: { zeny: 0, items: ['bait_sweet_gelatin', 'bait_sweet_gelatin', 'bait_sweet_gelatin'] },
+    how: ['Sweet Gelatin tames a Gel Slime (Whispering Woods). Put the bait on your hotbar with →Bar.', 'Select a Gel Slime and hit it until it is below 30% HP.', 'Press the bait’s hotkey while it is still selected. World (M) → Companions lists every pet and its bait.'],
+    rewards: { exp: 120, zeny: 150, items: ['bait_sweet_gelatin'] } },
+];

@@ -106,6 +106,7 @@ const AWO_KEYS = [
   "evaluateMacroRules",
   "exitSubdungeon",
   "expGapFactor",
+  "expandSockets",
   "findGearInstance",
   "findPath",
   "finishGuild",
@@ -122,10 +123,12 @@ const AWO_KEYS = [
   "genGuildQuest",
   "getBgBuffer",
   "getViewport",
+  "guideEvent",
   "guildAllowedDiffs",
   "guildKill",
   "guildPointsNeed",
   "guildTurnIn",
+  "handbookHtml",
   "hasSave",
   "heatDepthAt",
   "heatLevel",
@@ -234,6 +237,7 @@ const AWO_KEYS = [
   "spawnZoneRare",
   "spendStat",
   "startAdvanceQuest",
+  "startGuide",
   "startQuest",
   "statCost",
   "statPointEntitlement",
@@ -260,7 +264,7 @@ const AWO_KEYS = [
   "withdrawItem",
   "worldChronicleHtml",
   "xpForNext",
-  "zoneGuardian"
+  "zoneGuardian",
 ];
 
 const calls = [];

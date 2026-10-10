@@ -19,6 +19,7 @@ import { ExplorationSystem } from './systems/exploration.js';
 import { RareSpawnsSystem } from './systems/rare-spawns.js';
 import { DailiesSystem } from './systems/dailies.js';
 import { MasterySystem, MASTERY_RANKS } from './systems/mastery.js';
+import { emptyHandbook, normaliseHandbook, handbookStatus, startHandbook, recordHandbook } from './systems/handbook.js';
 import * as WhisperingWoods from './zones/whispering-woods/index.js';
 import { normalizeFeatures, normalizeExpansion } from './systems/player-features.js';
 import { createExpansion } from './expansion-runtime.js';
@@ -311,11 +312,11 @@ function socketGem(uid, idx, gemItemId) {
   if (itemById[gemItemId]?.type === 'card') {
     const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
     const cardCheck = cardsSystem.canSocketCard({ ...inst, slot }, gemItemId, idx);
-    if (!cardCheck.canSocket || itemQty(gemItemId) < 1) return false;
+    if (!cardCheck.canSocket || itemQty(gemItemId) < 1) { if (!cardCheck.canSocket) toast(`${T('Cannot socket here', 'ui')}: ${T(cardCheck.reason || '', 'ui')}`, 'bad'); return false; }
     removeItem(gemItemId, 1);
     inst.sockets[idx] = gemItemId;
     cardsSystem.recordCardAcquired(G.bestiary, gemItemId);
-    recompute(G.player);
+    recompute(G.player); guideEvent('socket_card');
     saveGame();
     return true;
   }
@@ -411,6 +412,7 @@ function selfCheck() {
 // =====================================================================
 const G = {
   player: null,
+  handbook: emptyHandbook(),   // Adventurer's Handbook guide quests (systems/handbook.js)
   map: null, mapId: null, tiles: null, legend: null,
   heatField: null,
   monsters: [], npcs: [], portals: [],
@@ -3261,7 +3263,7 @@ function depositItem(idx) {
     if (s) s.qty++; else G.storage.push({ itemId: e.itemId, qty: 1 });
     if (e.qty <= 0) G.player.inventory.splice(idx, 1);
   }
-  AUDIO.playSfx('pickup'); refreshPanel('shop');
+  AUDIO.playSfx('pickup'); guideEvent('deposit'); refreshPanel('shop');
 }
 function withdrawItem(idx) {
   const e = G.storage[idx]; if (!e) return;
@@ -3639,6 +3641,46 @@ function checkQuest(options) {
   if (!q) return;
   updateQuestTracker();
   if (questProgress(q) >= q.objective.count) completeQuest(q, options);
+}
+
+// ---- Adventurer's Handbook (optional guide quests, CONTENT.guideQuests) ----
+const GUIDE_QUESTS = CONTENT.guideQuests || [];
+function guideEvent(kind, n = 1) {
+  if (!G.handbook || !G.player) return;
+  for (const def of recordHandbook(G.handbook, GUIDE_QUESTS, kind, n)) {
+    gainXp(def.rewards.exp); G.player.zeny += def.rewards.zeny;
+    for (const id of def.rewards.items) addItem(id, 1);
+    toast(`📘 ${T('Handbook complete', 'ui')}: ${T(def.name, 'quests')} (+${def.rewards.exp} xp, +${def.rewards.zeny}z)`, 'good');
+    logMsg(`📘 ${T('Handbook complete', 'ui')}: ${T(def.name, 'quests')}`, 'good'); AUDIO.playSfx('quest');
+    const unlocked = GUIDE_QUESTS.filter(d => d.after === def.id && handbookStatus(G.handbook, d, G.player.level) === 'available');
+    if (unlocked.length) logMsg(`📘 ${T('New handbook entry', 'ui')}: ${unlocked.map(d => T(d.name, 'quests')).join(', ')} — ${T('Journal (Q)', 'ui')}`, 'sys');
+  }
+  updateQuestTracker();
+  if ($('#panel')?.dataset.kind === 'quest') refreshPanel('quest');
+}
+function startGuide(id) {
+  const def = GUIDE_QUESTS.find(d => d.id === id);
+  if (!def || !startHandbook(G.handbook, def, G.player.level)) return false;
+  if (def.grant) { G.player.zeny += def.grant.zeny || 0; for (const it of def.grant.items || []) addItem(it, 1); }
+  toast(`📘 ${T(def.name, 'quests')} — ${T(def.goal, 'quests')}`, 'info');
+  saveGame(); updateQuestTracker(); return true;
+}
+function handbookHtml() {
+  const lvl = G.player.level;
+  const rows = GUIDE_QUESTS.map(def => {
+    const st = handbookStatus(G.handbook, def, lvl), prog = G.handbook.active[def.id] || 0;
+    const grant = def.grant ? [def.grant.zeny ? `${def.grant.zeny}z` : '', ...[...new Set(def.grant.items || [])].map(id => `${(def.grant.items || []).filter(x => x === id).length}× ${T(itemById[id].name, 'items')}`)].filter(Boolean).join(', ') : '';
+    const lockWhy = st === 'locked' ? (lvl < (def.minLevel || 1) ? `${T('Unlocks at Lv', 'ui')} ${def.minLevel}` : `${T('After', 'ui')}: ${T(GUIDE_QUESTS.find(d => d.id === def.after)?.name || '', 'quests')}`) : '';
+    return `<div class="ro-box hb-card is-${st}">
+      <div class="hb-card__head"><b>${st === 'done' ? '✓ ' : ''}${T(def.name, 'quests')}</b>
+        ${st === 'available' ? `<button class="btn" data-guide-start="${def.id}">${T('Start', 'ui')}</button>` : st === 'active' ? `<span class="hb-prog">${prog}/${def.count}</span>` : `<span class="ro-muted">${st === 'done' ? T('Complete', 'ui') : lockWhy}</span>`}</div>
+      <span>${T(def.goal, 'quests')}</span>
+      ${st === 'active' ? `<ol class="hb-steps">${def.how.map(h => `<li>${T(h, 'quests')}</li>`).join('')}</ol>` : ''}
+      ${st === 'available' && grant ? `<small class="ro-muted">${T('You receive to try it', 'ui')}: ${grant}</small>` : ''}
+      ${st !== 'done' ? `<small class="ro-muted">${T('Reward', 'ui')}: ${def.rewards.exp} XP, ${def.rewards.zeny}z${def.rewards.items.length ? ', ' + def.rewards.items.map(id => T(itemById[id].name, 'items')).join(', ') : ''}</small>` : ''}</div>`;
+  }).join('');
+  const done = G.handbook.done.length;
+  return `<div class="q-cat">📘 ${T("Adventurer's Handbook", 'ui')} <small class="ro-muted">${done}/${GUIDE_QUESTS.length} · ${T('optional guides — run them alongside the story', 'ui')}</small></div><div class="hb-list">${rows}</div>`;
 }
 
 function completeQuest(q, { suppressDialogue = false } = {}) {
@@ -4749,6 +4791,7 @@ function step(dt) {
       const res = gatheringSystem.harvestNode(intent.id, { dayPhase: curDayPhase });
       if (res?.items) {
         for (const it of res.items) addItem(it.id, it.qty);
+        guideEvent('gather');
         const firstDef = itemById[res.items[0]?.id];
         toast(`🌿 ${T('Harvested', 'ui')} ${firstDef ? T(firstDef.name, 'items') : 'resource'}!`, 'good');
         AUDIO.playSfx('pickup');
@@ -5463,10 +5506,14 @@ function updateQuestTracker() {
         return `<button class="task-link task-link--compact${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}"><span style="color:${ready ? 'var(--success)' : 'var(--text)'}">${g.kind === 'deliver' ? '📦' : '⚔'} ${targetName}: ${prog}/${g.count}${ready ? T(' — report to guild!', 'ui') : ''}</span><br>${bountyLevelHtml(g, true)}</button>`;
       }).join('') + `</div>`;
   }
+  const hbActive = GUIDE_QUESTS.filter(d => G.handbook && d.id in G.handbook.active);
+  const hbNew = G.handbook ? GUIDE_QUESTS.filter(d => handbookStatus(G.handbook, d, G.player.level) === 'available').length : 0;
+  if (hbActive.length || hbNew) html += `<div class="hb-track"><b>📘 ${T('Handbook', 'ui')}</b>${hbActive.map(d => `<div>${T(d.name, 'quests')} — ${G.handbook.active[d.id]}/${d.count}<br><small class="ro-muted">${T(d.how[0], 'quests')}</small></div>`).join('')}${hbNew ? `<button class="task-link task-link--compact" data-panel-open="quest">${hbNew} ${T('new guide(s) — open Journal (Q)', 'ui')}</button>` : ''}</div>`;
   const isCollapsed = el.classList.contains('collapsed');
   const header = `<div class="tracker-header" id="tracker-toggle"><span>📜 ${T('Objectives', 'ui')}</span><span class="tracker-chevron">${isCollapsed ? '▸' : '▾'}</span></div>`;
   el.innerHTML = header + `<div class="tracker-body">${html}</div>`;
   bindGuideLinks(el);
+  el.querySelectorAll('[data-panel-open]').forEach(b => b.onclick = () => togglePanel(b.dataset.panelOpen));
   const tToggle = el.querySelector('#tracker-toggle');
   if (tToggle) {
     tToggle.onclick = (e) => {
@@ -6866,6 +6913,7 @@ function panelBody(id) {
     </div>`;
 
     return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
+      ${handbookHtml()}
       <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
       ${masteryHtml}
       <div style="color:var(--text-muted);font-size:12px;margin-top:6px">${T('Accept and claim bounties with Elder Maro at the guild hall in town.', 'ui')}</div>`;
@@ -7365,6 +7413,7 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-world-route]').forEach(b => b.onclick = () => { if (activateWorldRoute(b.dataset.worldRoute)) el.remove(); });
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
+  el.querySelectorAll('[data-guide-start]').forEach(b => b.onclick = () => { startGuide(b.dataset.guideStart); refreshPanel('quest'); });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
   el.querySelectorAll('[data-bag-sel]').forEach(b => {
     b.onclick = () => {
@@ -7405,6 +7454,7 @@ function wirePanel(id, el) {
         if (existing) existing.qty += item.qty; else G.storage.push({ itemId: item.itemId, qty: item.qty });
         count += item.qty; G.player.inventory.splice(k, 1);
       }
+      if (count) guideEvent('deposit');
       saveGame(); refreshPanel('inv');
       toast(count ? T('Deposited {n} materials into storage.', 'ui').replace('{n}', count) : T('No materials to deposit.', 'ui'), 'info');
     };
@@ -7799,7 +7849,7 @@ function useItem(itemId) {
     G.targetSource = null;
     G.path = null;
     AUDIO.playSfx('quest');
-    toast(`🐾 ${T('Successfully tamed', 'ui')} [${T(petDef.name, 'items')}]!`, 'good');
+    toast(`🐾 ${T('Successfully tamed', 'ui')} [${T(petDef.name, 'items')}]!`, 'good'); guideEvent('tame');
     logMsg(`Successfully tamed ${petDef.name}!`, 'good');
     if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
     saveGame();
@@ -7886,6 +7936,7 @@ function useItem(itemId) {
   if (it.mpRestore) { p.mp = clamp(p.mp + it.mpRestore, 0, p.maxMp); }
   if (it.buff) {
     p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult || 1, flat: it.buff.flat || 0, until: now() + it.buff.durationMs, name: it.name });
+    if (it.type === 'consumable') guideEvent('eat');
     recompute(p);
     toast(`${it.name} — ${it.buff.stat.toUpperCase()} up!`, 'good');
   }
@@ -8010,6 +8061,7 @@ function refineItem(ref) {
   if (p.zeny < cost) { toast('Not enough zeny.', 'bad'); return; }
   p.zeny -= cost;
   const fuel = useFrags ? (removeItem(fragId, nFrags), `${nFrags}× ${itemById[fragId].name}`) : (removeItem('blessed_ore', nOre), `${nOre}× Blessed Ore`);
+  guideEvent('refine');   // an attempt counts — the handbook teaches the action, not the dice
   if (Math.random() * 100 < REFINE_CHANCE[plus]) {
     inst.plus = plus + 1; recompute(p); AUDIO.playSfx('levelup');
     toast(`✨ ${instName(inst)} — refine success!`, 'good'); logMsg(`${instName(inst)} refined with ${fuel}.`, 'good');
@@ -8034,7 +8086,7 @@ function expandSockets(ref) {
     return false;
   }
   AUDIO.playSfx('levelup');
-  recompute(p);
+  recompute(p); guideEvent('socket_expand');
   toast(`✨ ${T('Socket expanded!', 'ui')} (${res.newSockets}/4)`, 'good');
   logMsg(`${instName(inst)} sockets expanded to ${res.newSockets}.`, 'good');
   return true;
@@ -8625,7 +8677,7 @@ function saveGame() {
       guildRankIdx: G.guildRankIdx, guildPoints: G.guildPoints,
       visited: [...G.visited], talked: [...G.talked], guardiansSlain: [...G.guardiansSlain],
       seenMonsters: [...G.seenMonsters], collectedItems: [...G.collectedItems], claimedMilestones: [...G.claimedMilestones],
-      storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best,
+      storage: G.storage, achievements: [...G.achievements], riftBest: G.rift.best, handbook: G.handbook,
       weather: G.weather?.id || 'clear',
       incursion: incursionSystem.serialize(),
       gathering: gatheringSystem.serialize(),
@@ -8739,7 +8791,7 @@ function resumeGame() {
     for (let i = 1; i < ZONE_ORDER.length; i++)
       if (w.visited.includes(ZONE_ORDER[i])) G.guardiansSlain.add(zoneGuardian(ZONE_ORDER[i - 1]));
   G.visited = new Set(w.visited || []); G.talked = new Set(w.talked || []);
-  G.storage = w.storage || []; G.achievements = new Set(w.achievements || []);
+  G.storage = w.storage || []; G.achievements = new Set(w.achievements || []); G.handbook = normaliseHandbook(w.handbook);
   // ponytail: only the best floor is persisted — resuming mid-rift restarts the
   // run fresh at floor 1 (loadMap('celestial_rift', ...) below handles that entry).
   G.rift = { floor: 0, active: false, best: w.riftBest || 0, mutatorId: null, nextBurnAt: 0 };
@@ -8848,7 +8900,7 @@ function begin(classId, name) {
   G.autoState = { phase: 'idle', label: T('Automation ready', 'ui'), detail: T('Track a task or enable Hunt.', 'ui') };
   G.visited = new Set(); G.talked = new Set();
   G.seenMonsters = new Set(); G.collectedItems = new Set(); G.claimedMilestones = new Set();
-  G.storage = []; G.achievements = new Set();
+  G.storage = []; G.achievements = new Set(); G.handbook = emptyHandbook();
   G.activeGuilds = []; G.guildRankIdx = 0; G.guildPoints = 0; G.guardiansSlain = new Set(); refreshGuildBoard();
   preloadSprites();
   $('#root').innerHTML = '';
@@ -8969,7 +9021,7 @@ function handleClick(wx, wy) {
   if (gatheringSystem.getActiveFishing()?.active) {
     const res = gatheringSystem.resolveFishingCast();
     if (res.success) {
-      addItem(res.fishId, 1);
+      addItem(res.fishId, 1); guideEvent('fish');
       const fishDef = itemById[res.fishId];
       toast(`🎣 ${T('Caught', 'ui')} ${fishDef ? T(fishDef.name, 'items') : 'Fish'}!`, 'good');
       AUDIO.playSfx('pickup');
@@ -9026,6 +9078,7 @@ function handleClick(wx, wy) {
         const res = gatheringSystem.harvestNode(clickedNode.id, { dayPhase: curDayPhase });
         if (res?.items) {
           for (const it of res.items) addItem(it.id, it.qty);
+          guideEvent('gather');
           const firstDef = itemById[res.items[0]?.id];
           toast(`🌿 ${T('Harvested', 'ui')} ${firstDef ? T(firstDef.name, 'items') : 'resource'}!`, 'good');
           AUDIO.playSfx('pickup');
@@ -9071,7 +9124,7 @@ window.addEventListener('keydown', e => {
     if (!e.repeat) {
       const res = gatheringSystem.resolveFishingCast();
       if (res.success) {
-        addItem(res.fishId, 1);
+        addItem(res.fishId, 1); guideEvent('fish');
         const fishDef = itemById[res.fishId];
         toast(`🎣 ${T('Caught', 'ui')} ${fishDef ? T(fishDef.name, 'items') : 'Fish'}!`, 'good');
         AUDIO.playSfx('pickup');
@@ -9142,7 +9195,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

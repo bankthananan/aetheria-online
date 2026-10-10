@@ -91,6 +91,15 @@ export function runSelfCheck(engine) {
     errs.push(`item ${item.id} has invalid classReq`);
   for (const m of CONTENT.monsters)
     for (const d of m.drops) if (!itemById[d.itemId]) errs.push(`monster ${m.id} drops unknown ${d.itemId}`);
+  // Adventurer's Handbook: events must be ones the engine fires (guideEvent call sites), items must exist
+  const GUIDE_EVENTS = ['fish', 'eat', 'gather', 'deposit', 'refine', 'socket_expand', 'socket_card', 'tame'];
+  const guideIds = new Set((CONTENT.guideQuests || []).map(g => g.id));
+  for (const g of CONTENT.guideQuests || []) {
+    if (!GUIDE_EVENTS.includes(g.event)) errs.push(`guide ${g.id} has unknown event ${g.event}`);
+    if (!(g.count >= 1) || !Array.isArray(g.how) || !g.how.length) errs.push(`guide ${g.id} needs count >= 1 and how-to steps`);
+    if (g.after && !guideIds.has(g.after)) errs.push(`guide ${g.id} follows unknown ${g.after}`);
+    for (const it of [...(g.rewards?.items || []), ...(g.grant?.items || [])]) if (!itemById[it]) errs.push(`guide ${g.id} references unknown item ${it}`);
+  }
   for (const q of CONTENT.quests) {
     for (const it of q.rewards.items) if (!itemById[it]) errs.push(`quest ${q.id} rewards unknown ${it}`);
     const o = q.objective, allNpcIds = Object.values(MAPS).flatMap(m => m.npcs || []).map(n => n.id);

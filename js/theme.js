@@ -158,6 +158,14 @@ body .panel[data-kind="inv"]{width:min(860px,94vw)}
   .bag-layout{grid-template-columns:1fr}.bag-layout>.bag-tabs{flex-direction:row;flex-wrap:wrap}.bag-vtab{min-width:0;border-right-width:1px;border-bottom-width:3px}
   .bag-grid,.stash-layout .bag-grid{grid-template-columns:repeat(auto-fill,44px)}
   .sell-layout,.stash-layout{grid-template-columns:1fr}.bag-detail{position:static}}
+/* Adventurer's Handbook (guide quests in the Journal + tracker) */
+.hb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;margin-bottom:8px}
+.hb-card{display:grid;gap:4px;align-content:start;font-size:12px}
+.hb-card__head{display:flex;align-items:center;justify-content:space-between;gap:6px}.hb-card__head b{font:700 13px var(--font-head);color:var(--accent-alt)}
+.hb-card.is-active{border-color:var(--gold);grid-column:1/-1}.hb-card.is-done{opacity:.6}.hb-card.is-locked{opacity:.55}
+.hb-prog{font-weight:700;color:var(--success-text)}
+.hb-steps{margin:0;padding-left:18px;display:grid;gap:2px}
+.hb-track{margin-top:6px;padding-top:6px;border-top:1px solid var(--card-border);display:grid;gap:4px}
 /* Loadouts */
 .loadout-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px;margin-top:6px}
 .loadout-row__state{grid-column:1/-1}
