@@ -21,6 +21,10 @@ for (const id of ['char', 'inv', 'skills', 'quest', 'adventure', 'automation', '
 for (const t of ['road', 'bestiary', 'companions', 'spire', 'stronghold', 'homestead']) { G._chronicleTab = t; A.panelBody('world'); }
 for (const t of ['bestiary', 'items', 'elements', 'skills']) { G._bookTab = t; A.panelBody('book'); }
 for (const t of ['buy', 'sell', 'enhance', 'craft', 'storage']) { G._shopTab = t; A.panelBody('shop'); }
+for (const t of ['active', 'available', 'done']) {   // every Journal tab and every entry's detail pane
+  G._journalTab = t;
+  for (const e of A.journalEntries().filter(x => x.status === t)) { G._journalSel = e.key; A.panelBody('quest'); }
+}
 
 const anyTh = Object.assign({}, ...Object.values(L10N.th).map(t => ({ ...t })));
 const exempt = k => !/[A-Za-z]{2}/.test(k) || /^[A-F][+-]?$/.test(k);   // numbers, glyphs, guild rank letters

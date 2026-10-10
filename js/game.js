@@ -3407,31 +3407,16 @@ function storyPhaseBadge(quest) {
   return `<span class="story-phase-badge" style="--phase-color:${phase.color}">${label} ${phase.numeral} · Lv ${phase.levelMin}–${phase.levelMax}</span>`;
 }
 
+// one-line chapter track for the Journal footer: I ●──○──○──○──○ V · name · Lv range
 function storyRoadmapHtml() {
-  const focus = storyFocusQuest();
-  const focusPhase = focus?.phase || (CONTENT.storyPhases.length + 1);
-  return `<div class="story-roadmap">${CONTENT.storyPhases.map(phase => {
-    const cleared = G.won || phase.id < focusPhase;
-    const active = !cleared && phase.id === focusPhase;
-    const waiting = active && G.pendingQuest === focus?.id;
-    
-    let state = cleared ? 'CLEARED' : waiting ? `UNLOCK AT LV ${focus.minLevel}` : active ? 'IN PROGRESS' : 'LOCKED';
-    if (currentLang === 'th') {
-      state = cleared ? 'สำเร็จแล้ว' : waiting ? `ปลดล็อกที่ Lv ${focus.minLevel}` : active ? 'กำลังทำ' : 'ล็อกอยู่';
-    }
-    
-    const symbol = cleared ? '✓' : active ? (waiting ? '◇' : '◆') : '·';
-    const map = MAPS[phase.mapId];
-    const subLabel = currentLang === 'th'
-      ? `ช่วงที่ ${phase.numeral} · เลเวลหลัก ${phase.levelMin}–${phase.levelMax}`
-      : `PHASE ${phase.numeral} · BASE LV ${phase.levelMin}–${phase.levelMax}`;
-      
-    return `<div class="story-phase ${cleared ? 'cleared' : active ? 'active' : 'locked'}" style="--phase-color:${phase.color}">
-      <span class="story-phase__sigil">${symbol}</span>
-      <span class="story-phase__copy"><small>${subLabel}</small><b>${T(phase.name, 'storyPhases')}</b><em>${T(map?.name || phase.mapId, 'maps')}</em></span>
-      <span class="story-phase__state">${state}</span>
-    </div>`;
-  }).join('')}</div>`;
+  const focus = storyFocusQuest(), focusPhase = G.won ? CONTENT.storyPhases.length + 1 : (focus?.phase || CONTENT.storyPhases.length + 1);
+  const cur = CONTENT.storyPhases.find(ph => ph.id === focusPhase);
+  const dots = CONTENT.storyPhases.map(ph => {
+    const st = ph.id < focusPhase ? 'cleared' : ph.id === focusPhase ? 'active' : 'locked';
+    return `<i class="jr-dot is-${st}" style="--phase-color:${ph.color}" title="${esc(T(ph.name, 'storyPhases'))} · Lv ${ph.levelMin}–${ph.levelMax}">${ph.numeral}</i>`;
+  }).join('<span class="jr-rail"></span>');
+  const label = cur ? `${T(cur.name, 'storyPhases')} · ${T(MAPS[cur.mapId]?.name || cur.mapId, 'maps')} · Lv ${cur.levelMin}–${cur.levelMax}` : T('Main story complete', 'ui');
+  return `<div class="jr-roadmap"><span class="jr-road">${dots}</span><small>${label}</small></div>`;
 }
 
 function maybeStartPendingQuest() {
@@ -3692,22 +3677,96 @@ function startGuide(id) {
   toast(`📘 ${T(def.name, 'quests')} — ${T(def.goal, 'quests')}`, 'info');
   saveGame(); updateQuestTracker(); return true;
 }
-function handbookHtml() {
-  const lvl = G.player.level;
-  const rows = GUIDE_QUESTS.map(def => {
-    const st = handbookStatus(G.handbook, def, lvl), prog = G.handbook.active[def.id] || 0;
-    const grant = def.grant ? [def.grant.zeny ? `${def.grant.zeny}z` : '', ...[...new Set(def.grant.items || [])].map(id => `${(def.grant.items || []).filter(x => x === id).length}× ${T(itemById[id].name, 'items')}`)].filter(Boolean).join(', ') : '';
-    const lockWhy = st === 'locked' ? (lvl < (def.minLevel || 1) ? `${T('Unlocks at Lv', 'ui')} ${def.minLevel}` : `${T('After', 'ui')}: ${T(GUIDE_QUESTS.find(d => d.id === def.after)?.name || '', 'quests')}`) : '';
-    return `<div class="ro-box hb-card is-${st}">
-      <div class="hb-card__head"><b>${st === 'done' ? '✓ ' : ''}${T(def.name, 'quests')}</b>
-        ${st === 'available' ? `<button class="btn" data-guide-start="${def.id}">${T('Start', 'ui')}</button>` : st === 'active' ? `<span class="hb-prog">${prog}/${def.count}</span>` : `<span class="ro-muted">${st === 'done' ? T('Complete', 'ui') : lockWhy}</span>`}</div>
-      <span>${T(def.goal, 'quests')}</span>
-      ${st === 'active' ? `<ol class="hb-steps">${def.how.map(h => `<li>${T(h, 'quests')}</li>`).join('')}</ol>` : ''}
-      ${st === 'available' && grant ? `<small class="ro-muted">${T('You receive to try it', 'ui')}: ${grant}</small>` : ''}
-      ${st !== 'done' ? `<small class="ro-muted">${T('Reward', 'ui')}: ${def.rewards.exp} XP, ${def.rewards.zeny}z${def.rewards.items.length ? ', ' + itemListText(def.rewards.items) : ''}</small>` : ''}</div>`;
-  }).join('');
-  const done = G.handbook.done.length;
-  return `<div class="q-cat">📘 ${T("Adventurer's Handbook", 'ui')} <small class="ro-muted">${done}/${GUIDE_QUESTS.length} · ${T('optional guides — run them alongside the story', 'ui')}</small></div><div class="hb-list">${rows}</div>`;
+function handbookCardHtml(def) {
+  const lvl = G.player.level, st = handbookStatus(G.handbook, def, lvl), prog = G.handbook.active[def.id] || 0;
+  const grant = def.grant ? [def.grant.zeny ? `${def.grant.zeny}z` : '', ...[...new Set(def.grant.items || [])].map(id => `${(def.grant.items || []).filter(x => x === id).length}× ${T(itemById[id].name, 'items')}`)].filter(Boolean).join(', ') : '';
+  const lockWhy = st === 'locked' ? (lvl < (def.minLevel || 1) ? `${T('Unlocks at Lv', 'ui')} ${def.minLevel}` : `${T('After', 'ui')}: ${T(GUIDE_QUESTS.find(d => d.id === def.after)?.name || '', 'quests')}`) : '';
+  return `<div class="hb-card is-${st}">
+    <p>${T(def.goal, 'quests')}</p>
+    ${st === 'active' ? `${journalMeter(prog, def.count)}<ol class="hb-steps">${def.how.map(h => `<li>${T(h, 'quests')}</li>`).join('')}</ol>` : ''}
+    ${st === 'available' && grant ? `<small class="ro-muted">${T('You receive to try it', 'ui')}: ${grant}</small>` : ''}
+    ${st === 'locked' ? `<p class="ro-muted">🔒 ${lockWhy}</p>` : ''}
+    ${st !== 'done' ? rewardChipsHtml(def.rewards) : `<p class="jr-done">✓ ${T('Complete', 'ui')}</p>`}
+    ${st === 'available' ? `<div class="jr-actions"><button class="btn btn--primary" data-guide-start="${def.id}">${T('Start', 'ui')}</button></div>` : ''}</div>`;
+}
+
+// ---- Journal (Q): RO quest window — tabs, list on the left, detail on the right ----
+const journalMeter = (cur, max) => `<div class="jr-meter"><div class="ro-meter"><i style="width:${max ? Math.min(100, Math.round(100 * cur / max)) : 0}%"></i></div><b>${Math.min(cur, max)}/${max}</b></div>`;
+function rewardChipsHtml(r) {
+  if (!r) return '';
+  const counts = new Map(); for (const id of r.items || []) counts.set(id, (counts.get(id) || 0) + 1);
+  return `<div class="jr-rewards"><small class="ro-muted">${T('Reward', 'ui')}</small>${r.exp ? `<span class="jr-chip">✦ ${r.exp} XP</span>` : ''}${r.zeny ? `<span class="jr-chip">💰 ${r.zeny}z</span>` : ''}${r.pts ? `<span class="jr-chip">🏅 ${r.pts} ${T('pts', 'ui')}</span>` : ''}${[...counts].map(([id, n]) => `<span class="jr-chip">${itemIconImg(id, 16)} ${esc(T(itemById[id]?.name || id, 'items'))}${n > 1 ? ` ×${n}` : ''}</span>`).join('')}</div>`;
+}
+// every journal row: { key, cat: story|class|guild|handbook, status: active|available|done, name, ...source }
+function journalEntries() {
+  const out = [], focus = storyFocusQuest();
+  for (let q = questById.q_awaken, n = 0; q && n < 300; q = nextQuestFor(q), n++) {   // story chain up to the current chapter = done
+    if (!G.won && q === focus) break;
+    out.push({ key: 'story:' + q.id, cat: 'story', status: 'done', name: T(q.name, 'quests'), quest: q });
+  }
+  if (G.advance) out.push({ key: 'advance', cat: 'class', status: 'active', name: T(G.advance.def.name, 'quests') });
+  if (questById[G.quest]) out.push({ key: 'story:' + G.quest, cat: 'story', status: 'active', name: T(questById[G.quest].name, 'quests'), quest: questById[G.quest] });
+  else if (questById[G.pendingQuest]) out.push({ key: 'story:' + G.pendingQuest, cat: 'story', status: 'available', name: T(questById[G.pendingQuest].name, 'quests'), quest: questById[G.pendingQuest], waiting: true });
+  for (const g of G.activeGuilds) out.push({ key: 'guild:' + g.id, cat: 'guild', status: 'active', name: `${g.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}`, bounty: g });
+  for (const def of GUIDE_QUESTS) {
+    const st = handbookStatus(G.handbook, def, G.player.level);
+    out.push({ key: 'hb:' + def.id, cat: 'handbook', status: st === 'locked' ? 'available' : st, name: T(def.name, 'quests'), guide: def, locked: st === 'locked' });
+  }
+  return out;
+}
+function journalProgress(e) {
+  if (e.quest && e.status === 'active') return [questProgress(e.quest), e.quest.objective.count];
+  if (e.key === 'advance') return [advanceProgress(), G.advance.def.objective.count];
+  if (e.bounty) return e.bounty.kind === 'deliver' ? [Math.min(itemQty(e.bounty.target), e.bounty.count), e.bounty.count] : [e.bounty.progress, e.bounty.count];
+  if (e.guide && e.status === 'active') return [G.handbook.active[e.guide.id] || 0, e.guide.count];
+  return null;
+}
+function journalDetailHtml(e) {
+  const p = G.player;
+  if (!e) return `<p class="ro-muted">${T('Nothing here yet.', 'ui')}</p>`;
+  const nav = (task, id) => `<button class="btn btn--primary" data-task="${task}"${id ? ` data-task-id="${id}"` : ''}>➤ ${T('Navigate', 'ui')}</button>`;
+  if (e.key === 'advance') {
+    const a = G.advance, o = a.def.objective;
+    return `<header><small class="jr-kicker">✦ ${T('class advancement', 'ui')}</small><h3 class="jr-title">${e.name}</h3></header><p>${T(a.def.desc, 'quests')}</p>
+      <div class="jr-objective">${T(o.type, 'ui')} ${objectiveName(o)}</div>${journalMeter(advanceProgress(), o.count)}
+      <div class="jr-actions">${nav('advance')}${a.choiceReady ? `<button class="btn job-choice-open" ${a.ti === 2 ? 'data-advanced-job-choice="1"' : 'data-job-choice="1"'}>✦ ${T(a.ti === 2 ? 'Choose Third Job' : 'Choose Second Job', 'ui')}</button>` : ''}</div>`;
+  }
+  if (e.quest) {
+    const q = e.quest, head = `<header>${storyPhaseBadge(q)}<h3 class="jr-title">${e.name} ${diffBadge(q.difficulty)}</h3><small class="ro-muted">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small></header>`;
+    if (e.status === 'done') return `${head}<p>${T(q.description, 'quests')}</p><p class="jr-done">✓ ${T('Complete', 'ui')}</p>`;
+    if (e.waiting) return `${head}<p class="story-lock-copy">${currentLang === 'th' ? `🔒 ต้องการ <b>เลเวลหลัก ${q.minLevel}</b> เพื่อเริ่มต้นเควสต์นี้ ปัจจุบันคุณเลเวล ${p.level}` : `🔒 Reach <b>Base Lv ${q.minLevel}</b> to begin this quest. You are Lv ${p.level}.`}</p>
+      ${journalMeter(p.level, q.minLevel)}<small class="ro-muted">${T("Keep training through zone hunts and Adventurer's Guild bounties. The chapter starts automatically when you level up.", 'ui')}</small>`;
+    return `${head}<p>${T(q.description, 'quests')}</p><div class="jr-objective">${T(q.objective.type, 'ui')} ${objectiveName(q.objective)}</div>${journalMeter(questProgress(q), q.objective.count)}
+      ${rewardChipsHtml(q.rewards)}<div class="jr-actions">${nav('story', q.id)}</div>`;
+  }
+  if (e.bounty) {
+    const g = e.bounty, ready = g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count);
+    return `<header><small class="jr-kicker">🏰 ${T('Guild bounty', 'ui')}</small><h3 class="jr-title">${e.name} ${diffBadge(g.difficulty)}</h3></header>
+      <small class="jr-where">📍 ${bountyWhere(g)}</small>${bountyLevelHtml(g)}${journalMeter(...journalProgress(e))}
+      ${ready ? `<p class="jr-done">${T(g.kind === 'deliver' ? 'Goods ready — deliver to the guild hall' : 'Complete — report to the guild hall', 'ui')}</p>` : ''}
+      ${rewardChipsHtml({ exp: g.reward.exp, zeny: g.reward.zeny, pts: g.pts || 0 })}<div class="jr-actions">${nav('guild', g.id)}${guildRevokeButton(g)}</div>`;
+  }
+  return `<header><small class="jr-kicker">📘 ${T("Adventurer's Handbook", 'ui')}</small><h3 class="jr-title">${e.name}</h3></header>${handbookCardHtml(e.guide)}`;
+}
+const JOURNAL_CATS = [['class', '✦', 'Class'], ['story', '📖', 'Main Story'], ['guild', '🏰', 'Guild Bounties'], ['handbook', '📘', "Adventurer's Handbook"]];
+function journalHtml() {
+  const all = journalEntries(), tab = G._journalTab || 'active';
+  const counts = { active: 0, available: 0, done: 0 }; for (const e of all) counts[e.status]++;
+  const list = all.filter(e => e.status === tab);
+  const sel = list.find(e => e.key === G._journalSel) || list[0];
+  const rows = JOURNAL_CATS.map(([cat, icon, label]) => {
+    const items = list.filter(e => e.cat === cat); if (!items.length) return '';
+    return `<div class="jr-cat">${icon} ${T(label, 'ui')} <small>${items.length}</small></div>` + items.map(e => {
+      const pr = journalProgress(e);
+      return `<button class="jr-row${e === sel ? ' is-sel' : ''}${e.locked ? ' is-locked' : ''}" data-jr-sel="${e.key}"><span>${e.status === 'done' ? '✓ ' : e.locked || e.waiting ? '🔒 ' : ''}${e.name}</span>${pr ? `<small>${Math.min(pr[0], pr[1])}/${pr[1]}</small>` : ''}</button>`;
+    }).join('');
+  }).join('') || `<p class="ro-muted">${T('Nothing here yet.', 'ui')}</p>`;
+  const tabs = [['active', 'Active'], ['available', 'Available'], ['done', 'Done']].map(([k, label]) =>
+    `<button class="book-tab${tab === k ? ' active' : ''}" data-jr-tab="${k}">${T(label, 'ui')} <small>${counts[k]}</small></button>`).join('');
+  return `<div class="book-tabs jr-tabs">${tabs}</div>
+    <div class="jr-wrap"><nav class="ro-box jr-list">${rows}</nav><section class="ro-box jr-detail">${journalDetailHtml(sel)}</section></div>
+    ${storyRoadmapHtml()}
+    <small class="ro-muted">${T('Accept and claim bounties with Elder Maro at the guild hall in town.', 'ui')}</small>`;
 }
 
 function completeQuest(q, { suppressDialogue = false } = {}) {
@@ -6940,58 +6999,7 @@ function panelBody(id) {
       <aside class="ro-box bag-detail">${sel ? detailHtml(sel) : `<p class="ro-muted">${T('Select an item to see its details.', 'ui')}</p>`}</aside></div>`;
   }
   if (id === 'skills') return skillsPanelHtml(p);
-  if (id === 'quest') {
-    const q = questById[G.quest], pending = questById[G.pendingQuest];
-    let story = q
-      ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="${T('Navigate to this task', 'ui')}">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small><br>${T(q.description, 'quests')}<br>
-          <small>${T('Objective', 'ui')}: ${T(q.objective.type, 'ui')} ${objectiveName(q.objective)} — ${questProgress(q)}/${q.objective.count}</small><br>
-          <small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${q.rewards.exp} XP, ${q.rewards.zeny} Zeny${q.rewards.items.length ? ', ' + itemListText(q.rewards.items) : ''}</small></div>`
-      : pending
-        ? `<div class="q-card story-wait-card">${storyPhaseBadge(pending)}<br><b style="color:var(--accent-alt)">${T('Next ·', 'ui')} ${T(pending.name, 'quests')}</b> ${diffBadge(pending.difficulty)}<br>
-          <span class="story-lock-copy">${currentLang === 'th' ? `🔒 ต้องการ <b>เลเวลหลัก ${pending.minLevel}</b> เพื่อเริ่มต้นเควสต์นี้ ปัจจุบันคุณเลเวล ${p.level}` : `🔒 Reach <b>Base Lv ${pending.minLevel}</b> to begin this quest. You are Lv ${p.level}.`}</span>
-          <div class="story-level-bar"><i style="width:${Math.min(100, Math.round(p.level / pending.minLevel * 100))}%"></i></div>
-          <small style="color:var(--text-muted)">${T("Keep training through zone hunts and Adventurer's Guild bounties. The chapter starts automatically when you level up.", 'ui')}</small></div>`
-        : `<div class="q-card"><i>${T("Main story complete — Aetheria is yours to roam. Take guild bounties below, or turn on auto-farm.", 'ui')}</i></div>`;
-    if (G.advance) {
-      const a = G.advance, o = a.def.objective;
-      story = `<div class="q-card task-card${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="border-color:var(--accent-alt)"><b style="color:var(--accent-alt)">✦ ${T(a.def.name, 'quests')}</b> <small style="color:var(--text-muted)">(${T('class advancement', 'ui')})</small><br>${T(a.def.desc, 'quests')}<br>
-        <small style="color:${advanceProgress() >= o.count ? 'var(--success)' : 'var(--text)'}">${T(o.type, 'ui')} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</small>${a.choiceReady ? `<br><button class="btn job-choice-open" ${a.ti === 2 ? 'data-advanced-job-choice="1"' : 'data-job-choice="1"'}>✦ ${T(a.ti === 2 ? 'Choose Third Job' : 'Choose Second Job', 'ui')}</button>` : ''}</div>` + story;
-    }
-    const bStatus = g => {
-      if (g.kind === 'deliver') { const have = Math.min(itemQty(g.target), g.count);
-        return have >= g.count ? `<b style="color:var(--success)">${T('Goods ready — deliver to the guild hall', 'ui')}</b>` : (currentLang === 'th' ? `มีแล้ว ${have}/${g.count}` : `have ${have}/${g.count}`); }
-      return g.done ? `<b style="color:var(--success)">${T('Complete — report to the guild hall', 'ui')}</b>` : (currentLang === 'th' ? `ความคืบหน้า ${g.progress}/${g.count}` : `Progress ${g.progress}/${g.count}`);
-    };
-    const active = G.activeGuilds.length
-      ? G.activeGuilds.map(g => `<div class="q-card task-card${G.taskGuide?.taskId === g.id ? ' active' : ''}" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}" style="border-color:${(g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count)) ? 'var(--success)' : 'var(--panel-border)'}">
-          <b>${g.kind === 'deliver' ? '📦 ' + T('Deliver', 'ui') : '⚔ ' + T('Cull', 'ui')} ${g.count} ${T(g.targetName, g.kind === 'deliver' ? 'items' : 'monsters')}</b> ${diffBadge(g.difficulty)}<br>
-          <small style="color:var(--accent-alt)">${bountyWhere(g)}</small><br>${bountyLevelHtml(g)}<br>
-          <small>${bStatus(g)} — ${T('Reward', 'ui')}: ${g.reward.exp} XP, ${g.reward.zeny} Zeny, ${g.pts || 0} ${T('pts', 'ui')}</small>
-          <div class="bounty-actions">${guildRevokeButton(g)}</div></div>`).join('')
-      : `<div style="color:var(--text-muted);font-size:12px;margin:4px 0">${T('No bounties accepted.', 'ui')}</div>`;
-
-    // Zone Mastery & Exploration Status
-    const mapKey = G.mapId;
-    const mRank = MasterySystem.getZoneRank(G.mastery, mapKey);
-    const mPts = (G.mastery?.zonePoints && G.mastery.zonePoints[mapKey]) || 0;
-    const discCount = ExplorationSystem.getDiscoveryCount(G.exploration, mapKey);
-    const pois = (G.exploration?.unlockedPOIs && G.exploration.unlockedPOIs[mapKey]) || [];
-
-    const masteryHtml = `<div class="q-cat" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px">
-      <span>🗺 ${T('Zone Mastery & Exploration', 'ui')}</span>
-      <small style="color:var(--accent-alt)">${mRank ? `★ ${mRank.title}` : T('Unranked Explorer', 'ui')} (${mPts} pts)</small>
-    </div>
-    <div class="q-card" style="font-size:12px;line-height:1.5">
-      <div><b>${T(G.map.name, 'maps')}</b> · ${discCount} ${T('tiles charted', 'ui')} · ${pois.length} ${T('Landmarks found', 'ui')}</div>
-      <div style="color:var(--text-muted);font-size:11px;margin-top:2px">${T('Chart uncharted territory, conquer sub-dungeons, and slay rare beasts to earn permanent zone bonuses.', 'ui')}</div>
-    </div>`;
-
-    return `<div class="q-cat">📖 ${T('Main Story', 'ui')} · ${T('Base Lv', 'ui')} 1–${DESIGN.levelCap}</div>${storyRoadmapHtml()}${story}
-      ${handbookHtml()}
-      <div class="q-cat">🏰 ${T('Accepted Bounties', 'ui')} (${G.activeGuilds.length}/${GUILD_MAX_ACTIVE})</div>${active}
-      ${masteryHtml}
-      <div style="color:var(--text-muted);font-size:12px;margin-top:6px">${T('Accept and claim bounties with Elder Maro at the guild hall in town.', 'ui')}</div>`;
-  }
+  if (id === 'quest') return journalHtml();
   if (id === 'guild') {
     const slotsFree = GUILD_MAX_ACTIVE - G.activeGuilds.length;
     const active = G.activeGuilds.length
@@ -7490,6 +7498,11 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-admin]').forEach(b => b.onclick = () => { adminAction(b.dataset.admin); refreshPanel('admin'); });
   el.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { unequip(b.dataset.unequip); refreshPanel('char'); });
   el.querySelectorAll('[data-guide-start]').forEach(b => b.onclick = () => { startGuide(b.dataset.guideStart); refreshPanel('quest'); });
+  el.querySelectorAll('[data-jr-tab]').forEach(b => b.onclick = () => { G._journalTab = b.dataset.jrTab; G._journalSel = null; refreshPanel('quest'); });
+  el.querySelectorAll('[data-jr-sel]').forEach(b => b.onclick = () => {
+    G._journalSel = b.dataset.jrSel; refreshPanel('quest');
+    if (innerWidth <= 680) requestAnimationFrame(() => document.querySelector('.panel[data-kind="quest"] .jr-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  });
   el.querySelectorAll('[data-bagtab]').forEach(b => b.onclick = () => { G._bagTab = b.dataset.bagtab; refreshPanel('inv'); });
   el.querySelectorAll('[data-bag-sel]').forEach(b => {
     b.onclick = () => {
@@ -8510,6 +8523,21 @@ const extraCss = `
 .tree-lv{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
 .skill-learn:disabled{opacity:.35;cursor:default}
 .btn:disabled{opacity:.4;cursor:default;filter:grayscale(.4)}
+.jr-tabs{margin-bottom:8px}.jr-wrap{display:grid;grid-template-columns:minmax(190px,36%) minmax(0,1fr);gap:10px;align-items:start}
+.jr-list{display:flex;flex-direction:column;gap:2px;padding:6px;max-height:min(52vh,460px);overflow-y:auto;min-width:0}
+.jr-cat{margin:6px 2px 2px;font:700 12px var(--font-head);color:var(--book-accent,var(--accent-alt))}.jr-cat small{color:var(--text-muted);font-weight:400}
+.jr-row{display:flex;justify-content:space-between;gap:6px;width:100%;padding:6px 8px;border:1px solid transparent;background:transparent;color:var(--text);text-align:left;font-size:12px;cursor:pointer;min-height:32px;align-items:center}
+.jr-row:hover{border-color:var(--card-border)}.jr-row.is-sel{border-color:var(--gold);background:rgba(214,168,74,.18)}.jr-row.is-locked{color:var(--text-muted)}.jr-row small{color:var(--text-muted);flex:0 0 auto}
+.jr-detail{display:flex;flex-direction:column;gap:8px;padding:12px;min-width:0}.jr-title{margin:2px 0;font:700 18px/1.3 var(--font-head);color:var(--text)}.jr-detail p{margin:0;line-height:1.55;font-size:14px}.jr-detail .jr-objective{font-size:14px}
+.jr-kicker{color:var(--text-muted);font-size:11px;letter-spacing:.4px}.jr-objective{font-weight:700}.jr-where{color:var(--accent-alt)}
+.jr-meter{display:flex;align-items:center;gap:8px}.jr-meter .ro-meter{flex:1;height:8px}.jr-meter b{font-size:12px}
+.jr-rewards{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.jr-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border:1px solid var(--card-border);background:var(--card-bg);font-size:12px}
+.jr-actions{display:flex;flex-wrap:wrap;gap:6px}.jr-done{color:var(--success-text,var(--success));font-weight:700}
+.jr-roadmap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 4px}.jr-road{display:inline-flex;align-items:center}
+.jr-dot{flex:0 0 auto;white-space:nowrap;display:grid;place-items:center;min-width:24px;height:24px;padding:0 4px;box-sizing:border-box;border:2px solid var(--phase-color);border-radius:12px;font:700 9px var(--font-head);font-style:normal;color:var(--text-muted)}
+.jr-dot.is-cleared{background:var(--phase-color);color:var(--on-fill)}.jr-dot.is-active{box-shadow:0 0 0 3px rgba(214,168,74,.35);color:var(--text)}.jr-dot.is-locked{opacity:.45}
+.jr-rail{width:14px;height:2px;background:var(--card-border)}.jr-roadmap>small{flex:1 1 220px;min-width:0}
+@media (max-width:680px){.jr-wrap{grid-template-columns:1fr}.jr-list{max-height:none}}
 .st-star{display:inline-block;margin-right:5px;padding:0 4px;border-radius:3px;background:var(--gold);color:var(--on-fill);font-style:normal;font-size:10px;font-weight:800}
 .stat-row.is-build{background:linear-gradient(90deg,rgba(214,168,74,.22),transparent 70%)}
 .st-ach-wrap>summary{cursor:pointer;list-style-position:inside}
@@ -9287,7 +9315,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

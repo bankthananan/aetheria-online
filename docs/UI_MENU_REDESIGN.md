@@ -263,7 +263,7 @@ rows and chapter chips, which are currently 8–9px.
 |---|---|---|
 | R1 | ✅ **Language**: locale test + fill missing keys + HUD label fix + Thai typography | none (ship first: cheap, broad) |
 | R2 | ✅ **Status**: build ★ highlight, batch spend (+1/+5/+10, Shift = +10, Spend by build), socket picker inline under the clicked slot, achievements collapsed | none |
-| R3 | **Journal**: list + detail, objective verbs, grouped rewards, Navigate/Track | R1 verbs |
+| R3 | ✅ **Journal**: list + detail, objective verbs, grouped rewards, Navigate/Track | R1 verbs |
 | R4 | **Abilities tree**: job tabs, grid, node states, detail strip | none (largest) |
 | R5 | Book zones/silhouettes, Adventures actions, Trader table, Settings regroup, Companions window | flow-design phase 4 |
 

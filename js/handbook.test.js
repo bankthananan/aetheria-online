@@ -17,7 +17,8 @@ const status = id => (G.handbook.done.includes(id) ? 'done' : id in G.handbook.a
 p.level = 1;
 assert.equal(A.startGuide('hb_refine'), false, 'Lv 3 guide cannot start at Lv 1');
 assert.equal(A.startGuide('hb_meal'), false, 'follow-up guide waits for its prerequisite');
-assert.ok(A.handbookHtml().includes('data-guide-start="hb_fishing"'), 'journal offers an available guide');
+G._journalTab = 'available'; G._journalSel = 'hb:hb_fishing';
+assert.ok(A.journalHtml().includes('data-guide-start="hb_fishing"'), 'journal offers an available guide');
 
 // fishing (minigame) → meal unlocks; eating real food completes it
 assert.equal(A.startGuide('hb_fishing'), true);

@@ -239,6 +239,16 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Class": "อาชีพ",
+      "Active": "กำลังทำ",
+      "Available": "พร้อมรับ",
+      "Done": "สำเร็จแล้ว",
+      "Navigate": "นำทาง",
+      "Main story complete": "เนื้อเรื่องหลักจบแล้ว",
+      "Elite": "ยอดฝีมือ",
+      "Guild bounty": "ภารกิจกิลด์",
+      "Guild Bounties": "ภารกิจกิลด์",
+      "Nothing here yet.": "ยังไม่มีรายการ",
       "Per click": "ต่อคลิก",
       "Spend by build": "ลงแต้มตามสายแนะนำ",
       "stats in class growth ratio": "ค่าสถานะตามอัตราการเติบโตของอาชีพ",
