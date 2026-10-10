@@ -300,6 +300,11 @@ function socketStats(inst) {
   }
   return acc;
 }
+// "Grilled Trout ×2" instead of "Grilled Trout, Grilled Trout"
+function itemListText(ids) {
+  const n = new Map(); for (const id of ids) n.set(id, (n.get(id) || 0) + 1);
+  return [...n].map(([id, c]) => T(itemById[id]?.name || id, 'items') + (c > 1 ? ` ×${c}` : '')).join(', ');
+}
 function findGearInstance(uid) {
   const p = G.player, u = +uid;
   for (const slot of EQUIP_SLOTS) if (p.equip[slot]?.uid === u) return p.equip[slot];
@@ -3677,7 +3682,7 @@ function handbookHtml() {
       <span>${T(def.goal, 'quests')}</span>
       ${st === 'active' ? `<ol class="hb-steps">${def.how.map(h => `<li>${T(h, 'quests')}</li>`).join('')}</ol>` : ''}
       ${st === 'available' && grant ? `<small class="ro-muted">${T('You receive to try it', 'ui')}: ${grant}</small>` : ''}
-      ${st !== 'done' ? `<small class="ro-muted">${T('Reward', 'ui')}: ${def.rewards.exp} XP, ${def.rewards.zeny}z${def.rewards.items.length ? ', ' + def.rewards.items.map(id => T(itemById[id].name, 'items')).join(', ') : ''}</small>` : ''}</div>`;
+      ${st !== 'done' ? `<small class="ro-muted">${T('Reward', 'ui')}: ${def.rewards.exp} XP, ${def.rewards.zeny}z${def.rewards.items.length ? ', ' + itemListText(def.rewards.items) : ''}</small>` : ''}</div>`;
   }).join('');
   const done = G.handbook.done.length;
   return `<div class="q-cat">📘 ${T("Adventurer's Handbook", 'ui')} <small class="ro-muted">${done}/${GUIDE_QUESTS.length} · ${T('optional guides — run them alongside the story', 'ui')}</small></div><div class="hb-list">${rows}</div>`;
@@ -3690,7 +3695,7 @@ function completeQuest(q, { suppressDialogue = false } = {}) {
   for (const it of q.rewards.items) addItem(it, 1, 1.4);   // quest gear rolls a bit better
   toast(T('Quest complete: {name}  (+{exp} xp, +{gold}z)', 'ui')
     .replace('{name}', T(q.name, 'quests')).replace('{exp}', q.rewards.exp).replace('{gold}', q.rewards.zeny), 'good');
-  const rewardNames = q.rewards.items.map(id => T(itemById[id].name, 'items')).join(', ');
+  const rewardNames = itemListText(q.rewards.items);
   logMsg(T('Rewards: {items}', 'ui').replace('{items}', rewardNames), 'good');
   AUDIO.playSfx('levelup');
   // reset kill counter for the target so chained kill-quests count fresh
@@ -5156,12 +5161,12 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="quest">${T('Journal (Q)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="automation">${T('⚙ Auto', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="automation">🤖 ${T('Auto', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')}</button>
         <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')}</button>
         <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')}</button>
-        <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Audio', 'ui')}</button>
+        <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Settings', 'ui')}</button>
         ${G.admin ? `<button class="btn btn--ghost hud-more" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost hud-more" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
         <button class="btn btn--ghost hud-more" id="mute-btn">🔊</button>
@@ -5491,7 +5496,7 @@ function updateHud() {
 function updateQuestTracker() {
   const el = $('#quest-tracker'); if (!el) return;
   let html = goalTrackerHtml();
-  const typeName = (t) => { if (currentLang === 'th') { return { kill: 'กำจัด', collect: 'รวบรวม', explore: 'สำรวจ', talk: 'คุยกับ' }[t] || t; } return t; };
+  const typeName = t => T(t, 'ui');   // kill → Defeat / กำจัด
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
     const finalChoice = a.ti === 2;
@@ -5626,7 +5631,7 @@ function togglePanel(id) {
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings & Audio', book: 'Collection Book' }[id], 'ui'); }
+function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings', book: 'Collection Book' }[id], 'ui'); }
 
 function shouldEnableAdminByDefault(name = '') {
   if (name && name.trim().toLowerCase() === 'admin') return true;
@@ -5993,7 +5998,7 @@ function paperDoll(p) {
     return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="${T('Unequip', 'ui')} ${esc(instName(inst))}"` : ''}>
       ${icon}<div style="font-size:10px;line-height:1.25;overflow:hidden">
         <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
-        ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${rc.name}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
+        ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
       </div></div>`;
   }).join('') + `</div>`;
 }
@@ -6545,7 +6550,7 @@ function automationPanelHtml(p = G.player) {
   const poolHtml = pool.length ? pool.map(chip).join('') : `<small class="auto-empty">${T('All learned skills are ranked.', 'ui')}</small>`;
 
   return `<section class="automation-console">
-    <header class="automation-live" data-phase="${esc(state.phase || 'idle')}"><span>◎</span><div><small>${T('LIVE DECISION', 'ui')}</small><b>${esc(state.label || T('Automation ready', 'ui'))}</b><em>${esc(state.detail || '')}</em></div></header>
+    <header class="automation-live" data-phase="${esc(state.phase || 'idle')}"><span>◎</span><div><small>${T('LIVE DECISION', 'ui')}</small><b>${esc(T(state.label || 'Automation ready', 'ui'))}</b><em>${esc(T(state.detail || '', 'ui'))}</em></div></header>
     <div class="automation-objective"><span><small>${T('CURRENT OBJECTIVE', 'ui')}</small><b>${esc(focus)}</b></span><span><small>${T('SAFE HUNT LIMIT', 'ui')}</small><b>Lv ${autoHuntLevelCap(p)}</b></span></div>
     <div class="automation-section"><h3>${T('Hunt Target', 'ui')}</h3><p>${T('Pin the species Hunt should chase; quest guides briefly override it.', 'ui')}</p>${targetHtml}</div>
     <div class="automation-section"><h3>${T('Combat Decisions', 'ui')}</h3><p>${T('Tracking owns travel and target choice. Your clicks always take priority.', 'ui')}</p>
@@ -6620,13 +6625,13 @@ function claimMilestone(id) {
   if (mile.reward.zeny) p.zeny += mile.reward.zeny;
   if (mile.reward.itemId) addItem(mile.reward.itemId, 1);
   const parts = [mile.reward.zeny ? `${mile.reward.zeny}z` : null, mile.reward.itemId ? T(itemById[mile.reward.itemId].name, 'items') : null].filter(Boolean).join(' + ');
-  toast(`🎁 ${mile.label} — ${T('reward', 'ui')}: ${parts}!`, 'good');
+  toast(`🎁 ${T(mile.label, 'ui')} — ${T('reward', 'ui')}: ${parts}!`, 'good');
   updateHud(); saveGame(); refreshPanel('book');
   return true;
 }
 function collectionBookHtml() {
   const tab = BOOK_TABS.some(([k]) => k === G._bookTab) ? G._bookTab : 'bestiary';
-  const tabs = BOOK_TABS.map(([k, label]) => `<button class="book-tab${tab === k ? ' active' : ''}" data-book-tab="${k}">${label}</button>`).join('');
+  const tabs = BOOK_TABS.map(([k, label]) => { const [icon, ...name] = label.split(' '); return `<button class="book-tab${tab === k ? ' active' : ''}" data-book-tab="${k}">${icon} ${T(name.join(' '), 'ui')}</button>`; }).join('');
   const miles = (CONTENT.milestones || []).map(mile => {
     const have = milestoneStat(mile.type), need = milestoneTarget(mile), done = have >= need, claimed = G.claimedMilestones.has(mile.id);
     const pct = Math.min(100, Math.round(100 * have / need));
@@ -6634,7 +6639,7 @@ function collectionBookHtml() {
       : done ? `<button class="btn mile-claim" data-mile-claim="${mile.id}">${T('Claim', 'ui')}</button>`
       : `<span class="mile-progress">${have}/${need}</span>`;
     return `<div class="mile-row${claimed ? ' is-claimed' : done ? ' is-ready' : ''}"><span class="mile-ico">${mile.icon}</span>
-      <div class="mile-main"><b>${mile.label}</b><div class="mile-bar"><div class="mile-fill" style="width:${pct}%"></div></div></div>${btn}</div>`;
+      <div class="mile-main"><b>${T(mile.label, 'ui')}</b><div class="mile-bar"><div class="mile-fill" style="width:${pct}%"></div></div></div>${btn}</div>`;
   }).join('');
   return `<section class="collection-book">
     <div class="book-tabs">${tabs}</div>
@@ -6695,26 +6700,26 @@ function panelBody(id) {
     return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
       <label>${T('Touch controls','ui')} <select id="touch-preference">${['auto','on','off'].map(value=>`<option value="${value}" ${G.player.features.touch===value?'selected':''}>${T({auto:'Automatic',on:'On',off:'Off'}[value],'ui')}</option>`).join('')}</select></label>
       <div>${T('Assign actions','ui')} ${Array.from({length:9},(_,i)=>`<button class="btn" data-edit-slot="${i}">${i+1}</button>`).join(' ')}</div>
-      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head)">🔊 Volume Controls</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head)">🔊 ${T('Volume Controls','ui')}</div>
       <div class="setting-row">
-        <span>Master Volume (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
+        <span>${T('Master Volume','ui')} (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
         <input type="range" id="vol-master" min="0" max="1" step="0.05" value="${v.master}" style="width:140px">
       </div>
       <div class="setting-row">
-        <span>Music Volume (<b id="vol-music-val">${Math.round(v.music * 100)}%</b>)</span>
+        <span>${T('Music Volume','ui')} (<b id="vol-music-val">${Math.round(v.music * 100)}%</b>)</span>
         <input type="range" id="vol-music" min="0" max="1" step="0.05" value="${v.music}" style="width:140px">
       </div>
       <div class="setting-row">
-        <span>SFX Volume (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
+        <span>${T('SFX Volume','ui')} (<b id="vol-sfx-val">${Math.round(v.sfx * 100)}%</b>)</span>
         <input type="range" id="vol-sfx" min="0" max="1" step="0.05" value="${v.sfx}" style="width:140px">
       </div>
-      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">♿ Accessibility & Scaling</div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">♿ ${T('Accessibility & Scaling','ui')}</div>
       <div class="setting-row">
-        <span>UI Scaling (<b id="vol-scale-val">${Math.round((G.uiScale || 1.0) * 100)}%</b>)</span>
+        <span>${T('UI Scaling','ui')} (<b id="vol-scale-val">${Math.round((G.uiScale || 1.0) * 100)}%</b>)</span>
         <input type="range" id="vol-scale" min="0.8" max="1.3" step="0.05" value="${G.uiScale || 1.0}" style="width:140px">
       </div>
       <div class="setting-row">
-        <span>High Contrast Mode</span>
+        <span>${T('High Contrast Mode','ui')}</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
       ${G.admin || shouldEnableAdminByDefault(p.name) ? `<div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
@@ -6779,7 +6784,7 @@ function panelBody(id) {
           ${branch ? `<div class="ro-muted"><span class="ro-id" style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))}</span> · ${esc(T(branch.focus, 'ui'))}</div>` : ''}</div>
         <div class="st-levels">
           <span>${T('Level', 'ui')} <b>${p.level}</b>/${DESIGN.levelCap}</span><span class="ro-muted">XP ${Math.floor(p.xp)}/${xpNeed || 'MAX'}</span>${meter(p.xp, xpNeed)}
-          <span>${T('Job Lv', 'ui')} <b>${p.jobLevel}</b>/${jobCap}</span><span class="ro-muted">Job XP ${jobNeed ? `${Math.floor(p.jobXp)}/${jobNeed}` : 'MAX'}</span>${meter(p.jobXp, jobNeed)}
+          <span>${T('Job Lv', 'ui')} <b>${p.jobLevel}</b>/${jobCap}</span><span class="ro-muted">${T('Job XP', 'ui')} ${jobNeed ? `${Math.floor(p.jobXp)}/${jobNeed}` : 'MAX'}</span>${meter(p.jobXp, jobNeed)}
         </div>
       </header>
       <div class="st-grid">
@@ -6848,7 +6853,7 @@ function panelBody(id) {
         const rc = itemRarity(e), slot = itemSlot(it), usable = canUseItem(p, it);
         const requirement = it.classReq ? `<small class="gear-requirement${usable ? '' : ' locked'}">${T('Required classes', 'ui')}: ${esc(itemClassRequirementText(it))}</small>` : '';
         return `<div class="bag-detail__head">${itemIconImg(dispItemId(e), 40)}<div><b class="rar" style="color:${rc.color}">${esc(instName(e))}</b>
-            <small class="ro-muted"><span class="rar" style="color:${rc.color}">◆${rc.name}</span> · ${T(SLOT_LABEL[slot], 'ui')}${socketDotsHtml(e)}</small></div></div>
+            <small class="ro-muted"><span class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</span> · ${T(SLOT_LABEL[slot], 'ui')}${socketDotsHtml(e)}</small></div></div>
           <div class="bag-detail__stats">${itemMainStatsHtml(e)}</div>${requirement}
           <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}
           <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
@@ -6864,7 +6869,7 @@ function panelBody(id) {
         : it.gem ? T('Click Socket…, then click an empty ○ socket on a piece of gear.', 'ui') : '';
       const pickHint = G._socketPick === it.id ? `<p class="ro-muted">👉 ${T('Now click an empty ○ socket on your gear.', 'ui')}</p>` : '';
       const sr = slotRarity(e);
-      return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b ${sr ? `class="rar" style="color:${sr.color}"` : ''}>${T(it.name, 'items')}</b><small class="ro-muted">${sr ? `<span class="rar" style="color:${sr.color}">◆${sr.name}</span> · ` : ''}×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
+      return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b ${sr ? `class="rar" style="color:${sr.color}"` : ''}>${T(it.name, 'items')}</b><small class="ro-muted">${sr ? `<span class="rar" style="color:${sr.color}">◆${T(sr.name, 'ui')}</span> · ` : ''}×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
         <p class="bag-detail__desc">${T(it.desc, 'items')}</p>${howTo ? `<p class="bag-howto">${howTo}</p>` : ''}${pickHint}<div class="bag-detail__actions">${act}${source}</div>`;
     };
     const hiddenN = p.inventory.filter(e => !matchesLoot(e, itemById[e.itemId], p.features.loot, p.classId)).length;
@@ -6891,7 +6896,7 @@ function panelBody(id) {
     let story = q
       ? `<div class="q-card task-card story-active-card${G.taskGuide?.source === 'story' ? ' active' : ''}" style="--phase-color:${storyPhaseFor(q)?.color || 'var(--accent-alt)'}" data-task="story" data-task-id="${q.id}" title="${T('Navigate to this task', 'ui')}">${storyPhaseBadge(q)}<br><b style="color:var(--accent-alt)">${T(q.name, 'quests')}</b> ${diffBadge(q.difficulty)} <small style="color:var(--text-muted)">${T('Recommended Lv', 'ui')} ${q.minLevel}+</small><br>${T(q.description, 'quests')}<br>
           <small>${T('Objective', 'ui')}: ${T(q.objective.type, 'ui')} ${objectiveName(q.objective)} — ${questProgress(q)}/${q.objective.count}</small><br>
-          <small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${q.rewards.exp} XP, ${q.rewards.zeny} Zeny, ${q.rewards.items.map(i => T(itemById[i].name, 'items')).join(', ')}</small></div>`
+          <small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${q.rewards.exp} XP, ${q.rewards.zeny} Zeny${q.rewards.items.length ? ', ' + itemListText(q.rewards.items) : ''}</small></div>`
       : pending
         ? `<div class="q-card story-wait-card">${storyPhaseBadge(pending)}<br><b style="color:var(--accent-alt)">${T('Next ·', 'ui')} ${T(pending.name, 'quests')}</b> ${diffBadge(pending.difficulty)}<br>
           <span class="story-lock-copy">${currentLang === 'th' ? `🔒 ต้องการ <b>เลเวลหลัก ${pending.minLevel}</b> เพื่อเริ่มต้นเควสต์นี้ ปัจจุบันคุณเลเวล ${p.level}` : `🔒 Reach <b>Base Lv ${pending.minLevel}</b> to begin this quest. You are Lv ${p.level}.`}</span>
@@ -7043,7 +7048,7 @@ function panelBody(id) {
         if (!inst) return `<div class="gear-row ${locked ? 'locked' : ''}"><span class="gear-row__copy">${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${price}z${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${btn}</div>`;
         const rc = itemRarity(inst), slot = itemSlot(it);
         return `<div class="gear-row ${locked ? 'locked' : ''}">
-          <div class="gear-row__copy">${itemIconImg(it.id)} <b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${rc.name}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
+          <div class="gear-row__copy">${itemIconImg(it.id)} <b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${T(rc.name, 'ui')}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
             <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${requirement}
             <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
       };

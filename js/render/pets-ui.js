@@ -354,8 +354,8 @@ export function createPetsUIRenderer({
             </div>
 
             <div style="background: var(--card-bg); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-              <div style="color: var(--info); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Habitat', 'ui')}:</b> ${T(petDetails.habitat, 'ui')}</div>
-              <div style="color: var(--danger-text); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Target Creature', 'ui')}:</b> ${T(petDetails.monsterName, 'ui')}</div>
+              <div style="color: var(--info); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Habitat', 'ui')}:</b> ${petDetails.habitat.split(' / ').map(h => T(h, 'maps')).join(' / ')}</div>
+              <div style="color: var(--danger-text); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Target Creature', 'ui')}:</b> ${petDetails.monsterName.split(' / ').map(m => T(m, 'monsters')).join(' / ')}</div>
               <div style="color: var(--success-text); min-width: 0; box-sizing: border-box;"><b style="color: var(--text-muted);">${T('Required Bait', 'ui')}:</b> ${T(petDetails.baitName, 'ui')}</div>
             </div>
           </div>

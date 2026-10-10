@@ -52,7 +52,7 @@
           if (!setup) {
             setup = true;
             if(params.get('touch')){A.G.player.features.touch=params.get('touch');A.initTouchControls();A.syncRuntimeScale();}
-            if (params.get('lang')) A.setLanguage(params.get('lang'));
+            if (params.get('lang')) { A.setLanguage(params.get('lang')); A.buildHud(); }
             const warp = params.get('map');
             if (warp) A.loadMap(warp, 2, 2);
             else if (params.get('boss')) A.loadMap('sunken_ruins', 3, 3);

@@ -1,15 +1,22 @@
 export let currentLang = (typeof localStorage !== 'undefined' ? localStorage.getItem('awo_lang') : null) || 'en';
 
+const markLang = () => { if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = currentLang; };   // drives the html[lang="th"] type rules
+markLang();
 export function setLanguage(lang) {
   currentLang = lang;
+  markLang();
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('awo_lang', lang);
   }
 }
 
+let thAny = null;   // every Thai namespace merged — a key filed under 'maps' still translates when looked up as 'ui'
 export function T(key, category = 'ui') {
-  if (currentLang === 'th' && L10N.th && L10N.th[category]) {
-    return L10N.th[category][key] || key;
+  if (currentLang === 'th' && L10N.th) {
+    const hit = L10N.th[category]?.[key];
+    if (hit) return hit;
+    thAny ??= Object.assign({}, ...Object.values(L10N.th));
+    return thAny[key] || key;
   }
   if (currentLang === 'en' && L10N.en && L10N.en[category]) {
     return L10N.en[category][key] || key;
@@ -20,6 +27,10 @@ export function T(key, category = 'ui') {
 export const L10N = {
   en: {
     ui: {
+      "kill": "Defeat",
+      "collect": "Collect",
+      "explore": "Explore",
+      "talk": "Talk to",
       "Abyssal Spire": "Abyssal Spire",
       "Ascendant Elevator": "Ascendant Elevator",
       "Floor": "Floor",
@@ -228,6 +239,107 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Common": "ธรรมดา",
+      "Uncommon": "ไม่ธรรมดา",
+      "Rare": "หายาก",
+      "Epic": "มหากาพย์",
+      "Legendary": "ตำนาน",
+      "Bestiary": "สารานุกรมมอนสเตอร์",
+      "Elements": "ธาตุ",
+      "Hunter — slay 100 monsters": "นักล่า — กำจัดมอนสเตอร์ 100 ตัว",
+      "Slayer — slay 1,000 monsters": "ผู้สังหาร — กำจัดมอนสเตอร์ 1,000 ตัว",
+      "Naturalist — discover 14 monsters": "นักธรรมชาติวิทยา — ค้นพบมอนสเตอร์ 14 ชนิด",
+      "Loremaster — discover every monster": "ปราชญ์ตำนาน — ค้นพบมอนสเตอร์ทุกชนิด",
+      "Collector — obtain every piece of gear": "นักสะสม — ครอบครองอุปกรณ์ทุกชิ้น",
+      "Auto": "ออโต้",
+      "Attack": "โจมตี",
+      "Dodge": "หลบ",
+      "Objectives": "เป้าหมาย",
+      "Stamina": "สตามินา",
+      "Stamina — Space to dodge roll, V to parry": "สตามินา — Space เพื่อกลิ้งหลบ, V เพื่อปัดป้อง",
+      "Menu": "เมนู",
+      "Book (B)": "สมุดสะสม (B)",
+      "Settings": "ตั้งค่า",
+      "Transmog appearance": "เปลี่ยนรูปลักษณ์",
+      "Search items / affixes...": "ค้นหาไอเท็ม / ค่าสถานะ...",
+      "Sort by Rarity": "เรียงตามความหายาก",
+      "Sort": "เรียง",
+      "Deposit Materials to Storage": "ฝากวัตถุดิบเข้าคลัง",
+      "Deposit Mats": "ฝากวัตถุดิบ",
+      "Empty socket": "ช่องว่าง",
+      "Choose at Lv 40": "เลือกเมื่อเลเวล 40",
+      "Exclusive to": "เฉพาะ",
+      "INCOMPATIBLE": "ใช้ร่วมไม่ได้",
+      "Zone Mastery & Exploration": "ความชำนาญพื้นที่และการสำรวจ",
+      "Unranked Explorer": "นักสำรวจไร้ยศ",
+      "tiles charted": "ช่องที่สำรวจแล้ว",
+      "Landmarks found": "จุดสังเกตที่พบ",
+      "Chart uncharted territory, conquer sub-dungeons, and slay rare beasts to earn permanent zone bonuses.": "สำรวจดินแดนที่ยังไม่มีในแผนที่ พิชิตดันเจี้ยนย่อย และล่าสัตว์หายาก เพื่อรับโบนัสพื้นที่ถาวร",
+      "Bronze Explorer": "นักสำรวจทองแดง",
+      "Silver Pathdrifter": "นักเดินทางเงิน",
+      "Gold Wanderer": "นักพเนจรทองคำ",
+      "Platinum Sovereign": "จอมราชันแพลทินัม",
+      "Difficulty": "ความยาก",
+      "Easy": "ง่าย",
+      "Normal": "ปกติ",
+      "Hard": "ยาก",
+      "Nightmare": "ฝันร้าย",
+      "Macro Rules": "กฎมาโคร",
+      "IF a resource crosses a threshold THEN act. Checked before built-in recovery.": "ถ้าทรัพยากรข้ามเกณฑ์ ให้ทำการตามกฎ — ตรวจก่อนระบบฟื้นฟูในตัว",
+      "No rules yet — automation uses only its built-in judgment.": "ยังไม่มีกฎ — ระบบอัตโนมัติใช้วิจารณญาณในตัวเท่านั้น",
+      "IF": "ถ้า",
+      "THEN": "ให้",
+      "Threshold percent": "เปอร์เซ็นต์เกณฑ์",
+      "Use item": "ใช้ไอเท็ม",
+      "Cast skill": "ใช้สกิล",
+      "Stop hunt": "หยุดล่า",
+      "Items": "ไอเท็ม",
+      "Skills": "สกิล",
+      "Add Rule": "เพิ่มกฎ",
+      "JSON profile (export / import)": "โปรไฟล์ JSON (ส่งออก / นำเข้า)",
+      "Import JSON": "นำเข้า JSON",
+      "Back": "กลับ",
+      "AETHERIA · ECOLOGICAL ARCHIVES": "AETHERIA · หอจดหมายเหตุนิเวศ",
+      "Documented species, hunting mastery, drop records, and monster card affinities.": "บันทึกสายพันธุ์ ความชำนาญการล่า สถิติดรอป และความเข้ากันของการ์ดมอนสเตอร์",
+      "Rift Incursions": "การบุกรุกรอยแยก",
+      "Card Missing": "ยังไม่มีการ์ด",
+      "No monster selected": "ยังไม่ได้เลือกมอนสเตอร์",
+      "Undiscovered": "ยังไม่ค้นพบ",
+      "Uncollected": "ยังไม่ได้สะสม",
+      "🛡 Armor Slot": "🛡 ช่องเกราะ",
+      "Forest Strider": "นักเดินป่า",
+      "Cards": "การ์ด",
+      "AETHERIA · CHALLENGE GAUNTLET": "AETHERIA · ลานท้าทาย",
+      "Ascend the 100-floor celestial tower or exchange earned Spire Emblems at the Reliquary.": "ไต่หอคอยสวรรค์ 100 ชั้น หรือแลกตรา Spire ที่หอเรลิควารี",
+      "AETHERIA · GUILD STRONGHOLD": "AETHERIA · ป้อมกิลด์",
+      "Facility upgrades, trophy pedestals, and stronghold defenses.": "อัปเกรดสิ่งก่อสร้าง แท่นถ้วยรางวัล และการป้องกันป้อม",
+      "Upgrade Requirements": "เงื่อนไขการอัปเกรด",
+      "Unbuilt.": "ยังไม่ได้สร้าง",
+      "Baseline anvil.": "ทั่งพื้นฐาน",
+      "Barren garden.": "สวนรกร้าง",
+      "Empty sparring yard.": "ลานฝึกว่างเปล่า",
+      "Colossus Vanguard Pedestal": "แท่นกองหน้าโคลอสซัส",
+      "Trophy": "ถ้วยรางวัล",
+      "Voidmaw Singularity Pedestal": "แท่นเอกภาวะวอยด์มอว์",
+      "Zenith Ascendant Pedestal": "แท่นผู้ไต่สู่จุดสูงสุด",
+      "Incursion Vanguard Pedestal": "แท่นกองหน้าการบุกรุก",
+      "Stronghold Facilities": "สิ่งก่อสร้างในป้อม",
+      "Upgrade guild facilities to unlock passive empire perks, crafting bonuses, and daily resources.": "อัปเกรดสิ่งก่อสร้างกิลด์เพื่อปลดล็อกความสามารถติดตัว โบนัสการคราฟต์ และทรัพยากรรายวัน",
+      "Hall of Trophies": "หอถ้วยรางวัล",
+      "Mount mighty boss remnants onto consecrated pedestals to channel permanent account-wide auras.": "ตั้งซากบอสผู้ยิ่งใหญ่บนแท่นศักดิ์สิทธิ์ เพื่อรับออร่าถาวรทั้งบัญชี",
+      "AETHERIA · SOVEREIGN SANCTUARY": "AETHERIA · สถานพำนักแห่งราชัน",
+      "Botanical sanctum plots, companion pasture, armory mannequins, and cozy hearth.": "แปลงปลูกพืช ทุ่งสัตว์เลี้ยง หุ่นชุดเกราะ และเตาผิงอบอุ่น",
+      "Collection Milestones": "หลักชัยการสะสม",
+      "Neutral — no weakness": "ไร้ธาตุ — ไม่มีจุดอ่อน",
+      "weak to": "แพ้ทาง",
+      "An attack of the listed element deals bonus damage to a monster of that type.": "การโจมตีด้วยธาตุที่ระบุจะสร้างความเสียหายเพิ่มต่อมอนสเตอร์ประเภทนั้น",
+      "Volume Controls": "ระดับเสียง",
+      "Master Volume": "เสียงหลัก",
+      "Music Volume": "เสียงเพลง",
+      "SFX Volume": "เสียงเอฟเฟกต์",
+      "Accessibility & Scaling": "การเข้าถึงและขนาด",
+      "UI Scaling": "ขนาด UI",
+      "High Contrast Mode": "โหมดคอนทราสต์สูง",
       "Field guide": "คู่มือผจญภัย",
       "Pinned goal": "เป้าหมายที่ปักหมุด",
       "Pin goal": "ปักหมุดเป้าหมาย",
@@ -1221,6 +1333,7 @@ export const L10N = {
       "Watered (2× Growth Speed)": "รดน้ำแล้ว (โตเร็วขึ้น 2 เท่า)"
     },
     classes: {
+      "Aegis Paragon": "ยอดอัศวินอีจิส",
       // Classes
       "Reborn Blade": "ดาบจุติใหม่",
       "Rift Knight": "อัศวินห้วงมิติ",
@@ -1607,6 +1720,11 @@ export const L10N = {
       "hammer_of_dawn": "ค้อนแสง"
     },
     items: {
+      "A luminescent seal worn by tower conquerors. Grants +220 HP, +16 ATK, and +14 DEF.": "ตราเรืองแสงที่ผู้พิชิตหอคอยสวมใส่ เพิ่ม HP +220, ATK +16 และ DEF +14",
+      "An ascendant catalyst channeling the spire leylines.": "ตัวเร่งแห่งการไต่ระดับ ที่นำพลังสายแร่ของหอคอย",
+      "Wood": "ไม้",
+      "Titan Heart": "หัวใจไททัน",
+      "Voidmaw Eye": "ดวงตาวอยด์มอว์",
       "Worn Dagger": "กริชเก่าๆ",
       "A chipped blade, better than bare fists.": "ใบมีดที่บิ่นแล้ว แต่ก็ยังดีกว่าหมัดเปล่า",
       "Iron Sword": "ดาบเหล็ก",
@@ -2134,6 +2252,7 @@ export const L10N = {
       "Complete a rebirth.": "ผ่านการเกิดใหม่หนึ่งครั้ง",
     },
     monsters: {
+      "Timber Wolf": "หมาป่าไม้",
       "Goblin Scout": "ก็อบลินลาดตระเวน",
       "A quick-footed skirmisher with a slingshot.": "หน่วยลาดตระเวนเท้าไวพร้อมหนังสติ๊กคู่ใจ",
       "Goblin Chieftain": "หัวหน้าก็อบลิน",
@@ -2365,6 +2484,22 @@ export const L10N = {
       "Home can wait a little longer. Aetheria is yours to roam.": "บ้านค่อยรออีกหน่อยก็ได้ Aetheria เป็นดินแดนให้คุณได้ออกเดินทางท่องเที่ยวแล้วตอนนี้"
     },
     quests: {
+      "Gone Fishing": "ออกไปตกปลา",
+      "Catch a fish.": "ตกปลาให้ได้หนึ่งตัว",
+      "A Hearty Meal": "มื้ออิ่มท้อง",
+      "Eat a food item for a buff.": "กินอาหารเพื่อรับบัฟ",
+      "Herbs & Ore": "สมุนไพรและแร่",
+      "Gather from 2 herb or ore nodes.": "เก็บจากจุดสมุนไพรหรือแร่ 2 จุด",
+      "Safekeeping": "ฝากเก็บอย่างปลอดภัย",
+      "Put an item into storage.": "นำไอเท็มเข้าคลัง",
+      "Sharper Steel": "เหล็กที่คมกว่า",
+      "Try to enhance a piece of gear.": "ลองตีบวกอุปกรณ์สักชิ้น",
+      "An Open Socket": "ช่องที่เปิดใหม่",
+      "Add a socket to a piece of gear.": "เพิ่มช่องให้กับอุปกรณ์สักชิ้น",
+      "Card Collector": "นักสะสมการ์ด",
+      "Socket a monster card into your gear.": "ใส่การ์ดมอนสเตอร์ลงในอุปกรณ์",
+      "First Companion": "เพื่อนคู่ใจคนแรก",
+      "Tame a wild creature.": "ฝึกสัตว์ป่าให้เชื่อง",
       "Path of the Spellblade": "เส้นทางสู่นักดาบเวทมนตร์",
       "Unite the blade and the code. Slay the Void Construct.": "ผสานดาบและโค้ดเข้าด้วยกัน จงสังหาร Void Construct",
       "Path of the Vanguard": "เส้นทางสู่แนวหน้าทะลวง",
