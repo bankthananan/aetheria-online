@@ -124,7 +124,7 @@ const DEFAULT_HOTKEYS = Array.from({ length: 9 }, (_, i) => `Digit${i + 1}`);
 const WINDOW_KEYS = [
   ['char', 'KeyC', 'KeyQ', 'KeyA'], ['inv', 'KeyI', 'KeyE'], ['skills', 'KeyK', 'KeyS'], ['quest', 'KeyQ', 'KeyU'],
   ['world', 'KeyM'], ['book', 'KeyB'], ['adventure', 'KeyJ'], ['automation', 'KeyT'], ['loadouts', 'KeyL'],
-  ['guide', 'KeyG'], ['settings', 'KeyO', 'KeyO'],
+  ['guide', 'KeyG'], ['settings', 'KeyO', 'KeyO'], ['pets', 'KeyP'],
 ];
 const windowForKey = (e, code) => e.ctrlKey || e.metaKey ? null
   : WINDOW_KEYS.find(([, plain, ...alt]) => (e.altKey ? alt.includes(code) : plain === code)) || null;
@@ -5293,6 +5293,7 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="adventure" title="${T('Adventures', 'ui')} (J)">✦ ${T('Adventures', 'ui')}</button>
         <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')} (G)</button>
+        <button class="btn btn--ghost hud-more" data-panel="pets">🐾 ${T('Pets', 'ui')} (P)</button>
         <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')} (L)</button>
         <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Settings', 'ui')} (O)</button>
         ${G.admin ? `<button class="btn btn--ghost hud-more" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
@@ -5816,7 +5817,7 @@ function togglePanel(id) {
   wirePanel(id, el);
   AUDIO.playSfx('menu');
 }
-function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings', book: 'Collection Book' }[id], 'ui'); }
+function panelTitle(id) { return T({ guide:'Field guide', loadouts:'Loadouts', adventure:'Adventures', char: 'Status', inv: 'Satchel', skills: 'Abilities', hotkeys: 'Action Keybindings', quest: 'Quest Journal', world: 'World Chronicle', automation: 'Automation Console', guild: "Adventurer's Guild", shop: 'Trader', admin: 'Admin Tools', settings: 'Settings', book: 'Collection Book', pets: 'Companions & Familiars' }[id], 'ui'); }
 
 function shouldEnableAdminByDefault(name = '') {
   if (name && name.trim().toLowerCase() === 'admin') return true;
@@ -6617,7 +6618,7 @@ const WORLD_SIGIL = {
 };
 function worldChronicleHtml() {
   const currentTab = G._chronicleTab || 'road';
-  const tabs = [['road', '🗺', 'Roads of the Outworlder'], ['companions', '🐾', 'Companions & Familiars'],
+  const tabs = [['road', '🗺', 'Roads of the Outworlder'],
     ['spire', '🌀', 'Abyssal Spire'], ['stronghold', '🏰', 'Guild Stronghold'], ['homestead', '🏡', "Adventurer's Homestead"]];
   const tabNav = `<div class="book-tabs chronicle-tabs" role="tablist">${tabs.map(([id, icon, label]) =>
     `<button class="book-tab ${currentTab === id ? 'active' : ''}" data-chronicle-tab="${id}" role="tab" aria-selected="${currentTab === id}">${icon} ${T(label, 'ui')}</button>`).join('')}</div>`;
@@ -6650,22 +6651,6 @@ function worldChronicleHtml() {
       ${tabNav}
       <div class="stronghold-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;">
         ${strongholdUI.renderStrongholdConsoleHtml(strongholdSystem.serialize(), G.player, G.guildPoints)}
-      </div>
-    </section>`;
-  }
-
-  if (currentTab === 'companions') {
-    return `<section class="world-chronicle" style="max-width:860px">
-      <header class="world-head" style="margin-bottom:10px">
-        <div>
-          <small>${T('AETHERIA · COMPANION SANCTUARY', 'ui')}</small>
-          <h2>${T('Companions & Familiars', 'ui')}</h2>
-          <p>${T('Loyal beasts and bonded familiars granting passive auras and auto-loot perks.', 'ui')}</p>
-        </div>
-      </header>
-      ${tabNav}
-      <div class="companions-body">
-        ${petsUI.renderCompanionsTab(G.pets, G.player?.inventory || [])}
       </div>
     </section>`;
   }
@@ -6950,6 +6935,7 @@ function panelBody(id) {
     </div>`;
   }
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
+  if (id === 'pets') return `<div class="companions-body">${petsUI.renderCompanionsTab(G.pets, p.inventory || [])}</div>`;
   if (id === 'world') return worldChronicleHtml();
   if (id === 'automation') return automationPanelHtml(p);
   if (id === 'char') {
@@ -7343,41 +7329,41 @@ function wirePanel(id, el) {
     el.querySelectorAll('[data-book-tab]').forEach(b => b.onclick = () => { G._bookTab = b.dataset.bookTab; refreshPanel('book'); });
     el.querySelectorAll('[data-mile-claim]').forEach(b => b.onclick = () => claimMilestone(b.dataset.mileClaim));
   }
+  el.querySelectorAll('[data-summon-pet]').forEach(b => b.onclick = () => {
+    if (G.pets?.owned?.[b.dataset.summonPet]) {
+      G.pets.activePetId = b.dataset.summonPet;
+      syncPetFollower();
+      recompute(G.player);
+      saveGame();
+      refreshPanel('pets');
+    }
+  });
+  el.querySelectorAll('[data-dismiss-pet]').forEach(b => b.onclick = () => {
+    if (!G.pets) G.pets = { activePetId: null, owned: {} };
+    G.pets.activePetId = null;
+    syncPetFollower();
+    recompute(G.player);
+    saveGame();
+    refreshPanel('pets');
+  });
+  el.querySelectorAll('[data-feed-pet-id]').forEach(b => b.onclick = () => {
+    const petId = b.dataset.feedPetId;
+    const feastId = b.dataset.feastId;
+    if (itemQty(feastId) > 0 && G.pets?.owned?.[petId]) {
+      removeItem(feastId, 1);
+      petsSystem.feedPet(G.pets.owned[petId], feastId);
+      syncPetFollower();
+      if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
+      AUDIO.playSfx('pickup');
+      recompute(G.player);
+      saveGame();
+      refreshPanel('pets');
+    }
+  });
   if (id === 'world') {
     el.querySelectorAll('[data-chronicle-tab]').forEach(b => b.onclick = () => {
       G._chronicleTab = b.dataset.chronicleTab;
       refreshPanel('world');
-    });
-    el.querySelectorAll('[data-summon-pet]').forEach(b => b.onclick = () => {
-      if (G.pets?.owned?.[b.dataset.summonPet]) {
-        G.pets.activePetId = b.dataset.summonPet;
-        syncPetFollower();
-        recompute(G.player);
-        saveGame();
-        refreshPanel('world');
-      }
-    });
-    el.querySelectorAll('[data-dismiss-pet]').forEach(b => b.onclick = () => {
-      if (!G.pets) G.pets = { activePetId: null, owned: {} };
-      G.pets.activePetId = null;
-      syncPetFollower();
-      recompute(G.player);
-      saveGame();
-      refreshPanel('world');
-    });
-    el.querySelectorAll('[data-feed-pet-id]').forEach(b => b.onclick = () => {
-      const petId = b.dataset.feedPetId;
-      const feastId = b.dataset.feastId;
-      if (itemQty(feastId) > 0 && G.pets?.owned?.[petId]) {
-        removeItem(feastId, 1);
-        petsSystem.feedPet(G.pets.owned[petId], feastId);
-        syncPetFollower();
-        if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
-        AUDIO.playSfx('pickup');
-        recompute(G.player);
-        saveGame();
-        refreshPanel('world');
-      }
     });
     el.querySelectorAll('[data-spire-ascend]').forEach(b => b.onclick = () => {
       const targetFloor = parseInt(b.dataset.spireAscend, 10);

@@ -17,8 +17,8 @@ A.adminAction('job5'); A.adminAction('learnall'); A.adminAction('legw');
 A.buildHud(); A.updateHud();   // updateHud refreshes the quest tracker too
 
 const G = A.G;
-for (const id of ['char', 'inv', 'skills', 'quest', 'adventure', 'automation', 'guide', 'loadouts', 'settings', 'hotkeys', 'guild']) A.panelBody(id);
-for (const t of ['road', 'companions', 'spire', 'stronghold', 'homestead']) { G._chronicleTab = t; A.panelBody('world'); }
+for (const id of ['char', 'inv', 'skills', 'quest', 'adventure', 'automation', 'guide', 'loadouts', 'settings', 'hotkeys', 'guild', 'pets']) A.panelBody(id);
+for (const t of ['road', 'spire', 'stronghold', 'homestead']) { G._chronicleTab = t; A.panelBody('world'); }
 for (const t of ['bestiary', 'cards', 'items', 'elements', 'skills']) { G._bookTab = t; A.panelBody('book'); }
 for (const t of ['buy', 'sell', 'enhance', 'craft', 'storage']) { G._shopTab = t; A.panelBody('shop'); }
 for (const t of [0, 1, 2]) { G._skillTab = t; G._skillSel = A.PROGRESSION.skillTree && Object.keys(A.PROGRESSION.skillTree).find(id => A.skillLevel(G.player, id) > 0); A.panelBody('skills'); }

@@ -239,6 +239,7 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Pets": "สัตว์เลี้ยง",
       "Accept & Go": "รับแล้วออกเดินทาง",
       "Hunt": "ล่า",
       "{n} reward ready": "มีรางวัลรอรับ {n} รายการ",

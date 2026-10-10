@@ -277,12 +277,12 @@ document.createElement = function(tag) {
   return el;
 };
 
-A.togglePanel('world');
+A.togglePanel('pets');
 document.createElement = origCreateElement;
 
-assert.ok(wiredFeedBtn, 'Feed button for golden_carp_sashimi wired in World Chronicle companions tab');
+assert.ok(wiredFeedBtn, 'Feed button for golden_carp_sashimi wired in the Companions window');
 wiredFeedBtn.click();
-A.togglePanel('world');
+A.togglePanel('pets');
 
 assert.equal(activePet.loyalty, 100, 'Loyalty clamped at 100');
 assert.equal(activePet.exp, 470, 'EXP increased by 300 to 470');
@@ -540,10 +540,9 @@ A.addItem('grilled_trout', 2);
 A.addItem('smoked_salmon', 1);
 
 // Test via World Chronicle HTML generator
-A.G._chronicleTab = 'companions';
-const chronicleHtml = A.worldChronicleHtml();
-assert.ok(chronicleHtml.includes('AETHERIA · COMPANION SANCTUARY'), 'Chronicle header label');
-assert.ok(chronicleHtml.includes('Companions & Familiars'), 'Chronicle title');
+const petsWindowHtml = A.panelBody('pets');
+assert.ok(petsWindowHtml.includes('active-pet-card'), 'Companions window renders the roster');
+assert.ok(!A.worldChronicleHtml().includes('data-chronicle-tab="companions"'), 'Chronicle no longer hosts companions');
 
 // Test direct component tab render
 const tabHtml = A.G.petsUI.renderCompanionsTab(A.G.pets, A.G.player.inventory);
