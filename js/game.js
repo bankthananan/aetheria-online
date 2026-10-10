@@ -924,6 +924,28 @@ function spendStat(stat) {
   recompute(p);
   AUDIO.playSfx('menu');
 }
+// Status "+" spends `n` pluses on one stat; stops when points run out. Returns how many landed.
+function spendStatTimes(stat, n = 1) {
+  let done = 0;
+  while (done < n && G.player.statPoints >= statCost(G.player, stat)) { spendStat(stat); done++; }
+  return done;
+}
+// the class's three fastest-growing stats, ranked 1..3 — Status stars these rows
+function buildStatRanks(p = G.player) {
+  return Object.fromEntries(Object.entries(p._cls?.statGrowthPerLevel || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k], i) => [k, i + 1]));
+}
+// "Spend by build": n pluses across the starred stats, keeping them in the class's growth ratio
+function spendStatsByBuild(n = 10, p = G.player) {
+  const growth = p._cls?.statGrowthPerLevel || {}, build = Object.keys(buildStatRanks(p));
+  let done = 0;
+  while (done < n) {
+    const k = build.filter(s => p.statPoints >= statCost(p, s))
+      .sort((a, b) => ((p.alloc[a] || 0) + 1) / growth[a] - ((p.alloc[b] || 0) + 1) / growth[b])[0];
+    if (!k) break;
+    spendStat(k); done++;
+  }
+  return done;
+}
 function resetStatPoints(p = G.player) {
   if (!p || !Object.values(p.alloc || {}).some(value => value > 0)) return false;
   p.alloc = { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 };
@@ -5175,6 +5197,7 @@ function buildHud() {
     </div>`;
   renderHotbar();
   initTouchControls();
+  updateQuestTracker();   // the rebuilt tracker starts empty (e.g. after a language switch)
   $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => {
     togglePanel(b.dataset.panel);
     $('#hud .hud-menu')?.classList.remove('open', 'more-open');
@@ -5987,7 +6010,7 @@ function transmogOptionsHtml(p, slot, inst) {
 }
 // paper-doll: 7 equipment slots with icons; click a filled slot to unequip
 function paperDoll(p) {
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">` + EQUIP_SLOTS.map(slot => {
+  const cells = EQUIP_SLOTS.map(slot => {
     const inst = p.equip[slot], it = inst ? itemById[inst.itemId] : null, rc = inst ? itemRarity(inst) : null;
     const icon = inst ? itemIconImg(dispItemId(inst), 26)
       : `<img src="${pxDataURL('item', SLOT_ICON[slot])}" width="26" height="26" style="image-rendering:pixelated;opacity:.22;flex:0 0 26px" alt="">`;
@@ -6000,7 +6023,29 @@ function paperDoll(p) {
         <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
         ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
       </div></div>`;
-  }).join('') + `</div>`;
+  });
+  // the socket picker opens on the row right under the clicked item (2-column grid → after its row)
+  const at = EQUIP_SLOTS.findIndex(slot => p.equip[slot] && G._socketFor?.startsWith(p.equip[slot].uid + ':'));
+  if (at >= 0) cells.splice((at | 1) + 1, 0, socketPickerHtml(p));
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">${cells.join('')}</div>`;
+}
+// in-panel picker for the socket the player clicked (G._socketFor = "uid:idx"): gems fit anywhere,
+// cards only where cardsSystem allows. Cards are permanent once socketed (RO rule).
+function socketCandidates(inst, idx) {
+  const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
+  return G.player.inventory.filter(e => !e.uid && e.qty > 0).map(e => itemById[e.itemId]).filter(it => it && (
+    it.gem || (it.type === 'card' && cardsSystem.canSocketCard({ ...inst, slot }, it.id, idx).canSocket)));
+}
+function socketPickerHtml(p) {
+  if (!G._socketFor) return '';
+  const [uid, idx] = G._socketFor.split(':'), inst = findGearInstance(uid);
+  if (!inst || inst.sockets?.[+idx]) return '';   // gone, or already filled
+  const list = socketCandidates(inst, +idx);
+  return `<div class="ro-box socket-picker-row" style="grid-column:1/-1"><b>◎ ${esc(instName(inst))} · ${T('Socket', 'ui')} ${+idx + 1}</b>
+    ${list.length ? `<div class="socket-picks">${list.map(it => `<button class="btn" data-socket-put="${it.id}">${itemIconImg(it.id, 20)} ${esc(T(it.name, 'items'))} <small>×${itemQty(it.id)}</small></button>`).join('')}</div>
+      <small class="ro-muted">${T('Cards are permanent once socketed.', 'ui')}</small>`
+    : `<p class="ro-muted">${T('No gems or cards in your bag fit this socket.', 'ui')}</p>`}
+    <button class="btn btn--ghost" data-socket-cancel="1">${T('Cancel', 'ui')}</button></div>`;
 }
 
 // ---- Class skill manual --------------------------------------------------
@@ -6755,13 +6800,15 @@ function panelBody(id) {
       luk: 'crit chance'
     };
     
+    const buildRanks = buildStatRanks(p), step = G._statStep || 1;
     const statRow = k => {
       const c = statCost(p, k);
       const titleText = currentLang === 'th'
         ? `ใช้ ${c} ${c > 1 ? T('points', 'ui') : T('point', 'ui')}`
         : `costs ${c} point${c > 1 ? 's' : ''}`;
-      return `<div class="stat-row"><span>${k.toUpperCase()} <b>${s[k]}</b> <small style="color:var(--text-muted)">${STAT_DESC[k]}</small></span>
-        <button class="btn stat-plus" data-stat="${k}" title="${titleText}" ${p.statPoints >= c ? '' : 'disabled'}>+<small style="opacity:.75">${c}</small></button></div>`;
+      const rank = buildRanks[k];
+      return `<div class="stat-row${rank ? ' is-build' : ''}"><span>${rank ? `<i class="st-star" title="${T('Recommended build', 'ui')} #${rank}">★${rank}</i>` : ''}${k.toUpperCase()} <b>${s[k]}</b> <small style="color:var(--text-muted)">${STAT_DESC[k]}</small></span>
+        <button class="btn stat-plus" data-stat="${k}" title="${titleText}" ${p.statPoints >= c ? '' : 'disabled'}>+${step > 1 ? step : ''}<small style="opacity:.75">${step > 1 ? '' : c}</small></button></div>`;
     };
     
     const aspd = Math.round((1 - (p.atkDelay || 1000) / COMBAT.attackSpeedMs) * 100);
@@ -6791,8 +6838,10 @@ function panelBody(id) {
         <section>
           <h3>${T('Stats', 'ui')}</h3>
           <div class="st-points">${T('Unspent stat points:', 'ui')} <b>${p.statPoints}</b> <small class="ro-muted">· ${T('higher stats cost more per +', 'ui')}</small></div>
+          ${p.statPoints ? `<div class="st-step"><span class="ro-muted">${T('Per click', 'ui')}</span>${[1, 5, 10].map(n => `<button class="btn btn--ghost${step === n ? ' is-on' : ''}" data-stat-step="${n}">+${n}</button>`).join('')}
+            <button class="btn" data-stat-auto="${step}" title="${T('Spend by build', 'ui')}: ★ ${T('stats in class growth ratio', 'ui')}">★ ${T('Spend by build', 'ui')} +${step}</button></div>` : ''}
           ${['str','agi','vit','int','dex','luk'].map(statRow).join('')}
-          <div class="ro-muted st-build">${T('Recommended build:', 'ui')} <b>${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
+          <div class="ro-muted st-build">★ ${T('Recommended build:', 'ui')} <b>${Object.keys(buildRanks).map(k => k.toUpperCase()).join(' › ')}</b></div>
         </section>
         <section>
           <h3>${T('Attributes', 'ui')}</h3>
@@ -6813,8 +6862,8 @@ function panelBody(id) {
              <div style="font-size:11px;color:var(--danger-text);margin-top:4px">${T('Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.', 'ui')}</div>`
           : `<div style="font-size:11px;color:var(--text-muted)">${T('Unlocks at Base Lv {lvl}.', 'ui').replace('{lvl}', DESIGN.levelCap)}</div>`}
       </div>
-      <h3>🏆 ${T('Achievements', 'ui')} (${G.achievements.size}/${CONTENT.achievements.length})</h3>
-      <div class="st-achievements">${CONTENT.achievements.map(a => { const got = G.achievements.has(a.id); return `<div class="ro-box st-ach${got ? ' is-got' : ''}">${a.icon} <b>${T(a.name, 'achievements')}</b><small class="ro-muted">${T(a.desc, 'achievements')}</small></div>`; }).join('')}</div>
+      <details class="st-ach-wrap"><summary><h3 style="display:inline">🏆 ${T('Achievements', 'ui')} (${G.achievements.size}/${CONTENT.achievements.length})</h3></summary>
+      <div class="st-achievements">${CONTENT.achievements.map(a => { const got = G.achievements.has(a.id); return `<div class="ro-box st-ach${got ? ' is-got' : ''}">${a.icon} <b>${T(a.name, 'achievements')}</b><small class="ro-muted">${T(a.desc, 'achievements')}</small></div>`; }).join('')}</div></details>
     </div>`;
   }
   if (id === 'inv') {
@@ -7417,7 +7466,9 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-withdraw]').forEach(b => b.onclick = () => withdrawItem(+b.dataset.withdraw));
   el.querySelectorAll('[data-craft]').forEach(b => b.onclick = () => craftItem(b.dataset.craft));
   el.querySelectorAll('[data-shoptab]').forEach(b => b.onclick = () => { G._shopTab = b.dataset.shoptab; refreshPanel('shop'); });
-  el.querySelectorAll('[data-stat]').forEach(b => b.onclick = () => { spendStat(b.dataset.stat); refreshPanel('char'); });
+  el.querySelectorAll('[data-stat]').forEach(b => b.onclick = e => { spendStatTimes(b.dataset.stat, e.shiftKey ? 10 : (G._statStep || 1)); refreshPanel('char'); });
+  el.querySelectorAll('[data-stat-step]').forEach(b => b.onclick = () => { G._statStep = +b.dataset.statStep; refreshPanel('char'); });
+  el.querySelectorAll('[data-stat-auto]').forEach(b => b.onclick = () => { spendStatsByBuild(+b.dataset.statAuto); refreshPanel('char'); });
   el.querySelectorAll('[data-rebirth]').forEach(b => b.onclick = () => {
     if (typeof confirm !== 'function' || confirm(T('Rebirth resets your level, job, skills, and stat points — permanently gaining power. Continue?', 'ui'))) doRebirth();
   });
@@ -7491,10 +7542,17 @@ function wirePanel(id, el) {
   });
   el.querySelectorAll('[data-socket-slot]').forEach(b => b.onclick = e => {
     e.stopPropagation();   // dots can sit inside a doll-slot's data-unequip container
-    if (!G._socketPick) return toast(T('Pick a gem from your bag first.', 'ui'), 'bad');
+    if (!G._socketPick && id !== 'char') return toast(T('Pick a gem from your bag first.', 'ui'), 'bad');
+    if (!G._socketPick) { G._socketFor = G._socketFor === b.dataset.socketSlot ? null : b.dataset.socketSlot; refreshPanel(id); return; }   // open the picker under the doll
     const [uid, idx] = b.dataset.socketSlot.split(':');
     if (socketGem(uid, +idx, G._socketPick)) { G._socketPick = null; toast(T('Gem socketed.', 'ui'), 'good'); refreshPanel(id); }
   });
+  el.querySelectorAll('[data-socket-put]').forEach(b => b.onclick = () => {
+    const [uid, idx] = (G._socketFor || '').split(':');
+    if (socketGem(uid, +idx, b.dataset.socketPut)) { G._socketFor = null; toast(T('Gem socketed.', 'ui'), 'good'); }
+    refreshPanel(id);
+  });
+  el.querySelectorAll('[data-socket-cancel]').forEach(b => b.onclick = () => { G._socketFor = null; refreshPanel(id); });
   // transmog: cosmetic-only appearance swap on an equipped item's own row.
   el.querySelectorAll('[data-transmog]').forEach(sel => {
     sel.onclick = e => e.stopPropagation();          // don't let the doll-slot's unequip fire
@@ -8452,6 +8510,15 @@ const extraCss = `
 .tree-lv{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
 .skill-learn:disabled{opacity:.35;cursor:default}
 .btn:disabled{opacity:.4;cursor:default;filter:grayscale(.4)}
+.st-star{display:inline-block;margin-right:5px;padding:0 4px;border-radius:3px;background:var(--gold);color:var(--on-fill);font-style:normal;font-size:10px;font-weight:800}
+.stat-row.is-build{background:linear-gradient(90deg,rgba(214,168,74,.22),transparent 70%)}
+.st-ach-wrap>summary{cursor:pointer;list-style-position:inside}
+.stat-row .stat-plus{flex:0 0 auto;white-space:nowrap}
+.st-step{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:4px 0 6px}.st-step .btn{padding:3px 9px;min-height:28px}.st-step .btn.is-on{outline:2px solid var(--gold);outline-offset:-2px}
+.doll-slot [data-socket-slot]{width:16px!important;height:16px!important;cursor:pointer;vertical-align:middle;position:relative}
+.doll-slot [data-socket-slot]::after{content:'+';position:absolute;inset:0;display:grid;place-items:center;font:700 12px/1 var(--font-head);color:var(--text-muted);font-style:normal}
+@media (pointer:coarse){.doll-slot [data-socket-slot]{width:24px!important;height:24px!important}}
+.socket-picker-row{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px}.socket-picks{display:flex;flex-wrap:wrap;gap:5px}.socket-picks .btn{display:inline-flex;align-items:center;gap:5px;min-height:32px}
 .doll-slot{display:flex;align-items:center;gap:6px;padding:5px;border:1px solid var(--panel-border);border-radius:6px;background:rgba(0,0,0,.25)}
 .doll-slot[data-unequip]{cursor:pointer}
 .doll-slot[data-unequip]:hover{background:rgba(224,90,74,.18);border-color:var(--danger)}
@@ -9220,7 +9287,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, closeTopmost, showDialogue, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, handbookHtml, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

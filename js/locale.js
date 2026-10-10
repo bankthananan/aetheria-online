@@ -239,6 +239,15 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Per click": "ต่อคลิก",
+      "Spend by build": "ลงแต้มตามสายแนะนำ",
+      "stats in class growth ratio": "ค่าสถานะตามอัตราการเติบโตของอาชีพ",
+      "Recommended build": "สายแนะนำ",
+      "Socket": "ช่องใส่",
+      "Cards are permanent once socketed.": "การ์ดที่ใส่แล้วจะถอดออกไม่ได้",
+      "No gems or cards in your bag fit this socket.": "ไม่มีอัญมณีหรือการ์ดในกระเป๋าที่ใส่ช่องนี้ได้",
+      "Cancel": "ยกเลิก",
+      "Gem socketed.": "ใส่อัญมณีแล้ว",
       "Common": "ธรรมดา",
       "Uncommon": "ไม่ธรรมดา",
       "Rare": "หายาก",
