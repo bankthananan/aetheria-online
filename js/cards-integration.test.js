@@ -256,13 +256,13 @@ console.log('Testing h) World Chronicle Bestiary UI Panel...');
 // ============================================================================
 A.G._chronicleTab = 'road';
 const roadHtml = A.worldChronicleHtml();
-assert.ok(roadHtml.includes('Bestiary Codex'), 'Chronicle includes Bestiary Codex tab button');
+assert.ok(!roadHtml.includes('data-chronicle-tab="bestiary"'), 'card Codex lives in the Book, not the Chronicle');
 assert.ok(roadHtml.includes('Roads of the Outworlder'), 'Chronicle road tab rendered');
 
-A.G._chronicleTab = 'bestiary';
+A.G._bookTab = 'cards';
 A.G._bestiaryZone = 'woods';
-const bestiaryHtml = A.worldChronicleHtml();
-assert.ok(bestiaryHtml.includes('Bestiary Codex'), 'Bestiary tab header rendered');
+const bestiaryHtml = A.collectionBookHtml();
+assert.ok(bestiaryHtml.includes('data-book-tab="cards"'), 'Book has a Cards tab');
 assert.ok(bestiaryHtml.includes('Forest Strider'), 'Milestone banner for Whispering Woods rendered');
 assert.ok(bestiaryHtml.includes('Slime'), 'Slime monster row rendered in Bestiary');
 assert.ok(bestiaryHtml.includes('12/12'), 'Whispering Woods card completion displays 12/12');

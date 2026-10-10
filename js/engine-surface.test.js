@@ -88,6 +88,7 @@ const AWO_KEYS = [
   "craftItem",
   "damageMonster",
   "deleteSave",
+  "depositAllMaterials",
   "depositItem",
   "dispatchPlayerAction",
   "doPromote",

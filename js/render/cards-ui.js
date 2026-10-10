@@ -218,65 +218,6 @@ export function createCardsUIRenderer({
     `.trim();
   }
 
-  function renderSocketModalHtml(itemInst, inventory = []) {
-    if (!itemInst) return '';
-    const sockets = Array.isArray(itemInst.sockets) ? itemInst.sockets : [];
-
-    // Filter available cards in inventory matching itemInst.slot
-    const compatibleCards = inventory.filter(it => {
-      if (!it || it.type !== 'card') return false;
-      const cardDef = catalog[it.id || it.itemId];
-      if (!cardDef) return false;
-      if (cardDef.targetSlot === 'any') return true;
-      if (cardDef.targetSlot === 'weapon') return itemInst.slot === 'weapon';
-      if (cardDef.targetSlot === 'armor') return ['body', 'head', 'hands', 'feet', 'cloak'].includes(itemInst.slot);
-      if (cardDef.targetSlot === 'accessory') return itemInst.slot === 'accessory';
-      return false;
-    });
-
-    const socketListHtml = sockets.map((s, idx) => {
-      const cardDef = s ? catalog[s] : null;
-      return `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
-          <span style="font-size: 12px; color: ${cardDef ? RARITY_COLORS[cardDef.rarity] : 'var(--text-muted)'};">
-            ${idx + 1}. ${cardDef ? T(cardDef.name, 'items') : `[${T('Empty Socket', 'ui')}]`}
-          </span>
-          ${cardDef ? `<button class="unsocket-btn" data-slot-index="${idx}" style="font-size: 10px; background: var(--oxblood); color: var(--on-fill); border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer;">${T('Unsocket', 'ui')}</button>` : ''}
-        </div>
-      `;
-    }).join('');
-
-    const cardOptionsHtml = compatibleCards.map(c => {
-      const cardDef = catalog[c.id || c.itemId];
-      return `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;">
-          <div>
-            <span style="font-size: 12px; font-weight: bold; color: ${RARITY_COLORS[cardDef.rarity]};">${T(cardDef.name, 'items')}</span>
-            <div style="font-size: 10px; color: var(--text-muted);">${cardDef.collectionBonus || ''}</div>
-          </div>
-          <button class="socket-card-btn" data-card-id="${cardDef.id}" style="font-size: 11px; background: var(--forest); color: var(--on-fill); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
-            ${T('Socket', 'ui')}
-          </button>
-        </div>
-      `;
-    }).join('');
-
-    return `
-      <div class="socket-modal-content ro-parchment" style="background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px; color: var(--text); max-width: 400px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 14px; color: var(--gold-bright);">${T('Socket Card into', 'ui')} ${itemInst.name || itemInst.id}</h3>
-        <div style="margin-bottom: 12px;">
-          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: var(--text-muted);">${T('Current Sockets', 'ui')}</h4>
-          ${socketListHtml || `<div style="color: var(--text-muted); font-size: 11px;">${T('No sockets available', 'ui')}</div>`}
-        </div>
-        <div>
-          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: var(--text-muted);">${T('Compatible Cards in Bag', 'ui')}</h4>
-          <div style="max-height: 180px; overflow-y: auto;">
-            ${cardOptionsHtml || `<div style="color: var(--text-muted); font-size: 11px;">${T('No compatible cards in inventory', 'ui')}</div>`}
-          </div>
-        </div>
-      </div>
-    `.trim();
-  }
 
   function drawAlbumOpeningFanfare(ctx, viewW = 832, viewH = 576, progress = 0) {
     if (!ctx) return;
@@ -336,7 +277,6 @@ export function createCardsUIRenderer({
   return {
     renderCardFrameHtml,
     renderBestiaryTab,
-    renderSocketModalHtml,
     drawAlbumOpeningFanfare,
   };
 }

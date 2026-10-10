@@ -29,7 +29,6 @@ test('createCardsUIRenderer factory creates renderer methods', () => {
   const renderer = createCardsUIRenderer();
   assert.ok(typeof renderer.renderCardFrameHtml === 'function');
   assert.ok(typeof renderer.renderBestiaryTab === 'function');
-  assert.ok(typeof renderer.renderSocketModalHtml === 'function');
   assert.ok(typeof renderer.drawAlbumOpeningFanfare === 'function');
 });
 
@@ -99,20 +98,6 @@ test('renderBestiaryTab masks undiscovered drops as ??? while showing discovered
   assert.ok(html.includes('Slime Gel') || html.includes('slime_gel'));
   // minor_potion is NOT discovered yet
   assert.ok(html.includes('Undiscovered') || html.includes('???'));
-});
-
-test('renderSocketModalHtml filters compatible cards for target equipment slot', () => {
-  const renderer = createCardsUIRenderer();
-  const weaponInst = { id: 'iron_sword', name: 'Iron Sword', slot: 'weapon', sockets: [null, null] };
-  const inventory = [
-    { id: 'card_goblin', type: 'card' }, // weapon card
-    { id: 'card_slime', type: 'card' },  // armor card
-  ];
-
-  const html = renderer.renderSocketModalHtml(weaponInst, inventory);
-  assert.ok(html.includes('Iron Sword'));
-  assert.ok(html.includes('Scrap Goblin Card'));
-  assert.ok(!html.includes('Gel Slime Card')); // Slime is armor, shouldn't appear for weapon
 });
 
 test('drawAlbumOpeningFanfare draws sparkles and rays without throwing', () => {

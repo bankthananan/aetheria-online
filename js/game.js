@@ -3291,16 +3291,28 @@ function craftItem(recipeId) {
 }
 
 // ---- town storage chest (kept at the trader): move items between bag and chest ----
-function depositItem(idx) {
-  const e = G.player.inventory[idx]; if (!e || itemById[e.itemId].type === 'quest') return;
+// move one bag entry into Storage; `n` units of a stack (default 1). Returns units moved.
+function depositItem(idx, n = 1, quiet = false) {
+  const e = G.player.inventory[idx]; if (!e || itemById[e.itemId].type === 'quest') return 0;
+  let moved = 1;
   if (e.uid) { G.player.inventory.splice(idx, 1); G.storage.push(e); }
   else {
-    e.qty--;
+    moved = Math.min(n, e.qty); e.qty -= moved;
     const s = G.storage.find(x => !x.uid && x.itemId === e.itemId);
-    if (s) s.qty++; else G.storage.push({ itemId: e.itemId, qty: 1 });
+    if (s) s.qty += moved; else G.storage.push({ itemId: e.itemId, qty: moved });
     if (e.qty <= 0) G.player.inventory.splice(idx, 1);
   }
-  AUDIO.playSfx('pickup'); guideEvent('deposit'); refreshPanel('shop');
+  if (!quiet) { AUDIO.playSfx('pickup'); guideEvent('deposit'); refreshPanel('shop'); }
+  return moved;
+}
+function depositAllMaterials() {
+  let count = 0;
+  for (let k = G.player.inventory.length - 1; k >= 0; k--)
+    if (itemById[G.player.inventory[k].itemId]?.type === 'material') count += depositItem(k, Infinity, true);
+  if (count) { AUDIO.playSfx('pickup'); guideEvent('deposit'); saveGame(); }
+  refreshPanel('shop');
+  toast(count ? T('Deposited {n} materials into storage.', 'ui').replace('{n}', count) : T('No materials to deposit.', 'ui'), 'info');
+  return count;
 }
 function withdrawItem(idx) {
   const e = G.storage[idx]; if (!e) return;
@@ -3508,6 +3520,10 @@ function taskAction(source, taskId) {
   }
   if (source === 'advance') {
     return G.advance ? actionForObjective(G.advance.def.objective, source, G.advance.def.name) : null;
+  }
+  if (source === 'npc') {
+    const loc = npcLocation(taskId);
+    return loc?.mapId ? { source, taskId, mode: 'npc', mapId: loc.mapId, npcId: taskId, label: npcById[taskId]?.name || taskId } : null;
   }
   if (source === 'guild') {
     const bounty = G.activeGuilds.find(g => g.id === taskId);
@@ -5252,9 +5268,9 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="quest">${T('Journal (Q)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="automation">🤖 ${T('Auto', 'ui')} (T)</button>
+        <button class="btn btn--ghost" data-panel="automation" title="${T('Auto', 'ui')} (T)">🤖 ${T('Auto', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')} (J)</button>
+        <button class="btn btn--ghost" data-panel="adventure" title="${T('Adventures', 'ui')} (J)">✦ ${T('Adventures', 'ui')}</button>
         <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')} (G)</button>
         <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')} (L)</button>
         <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Settings', 'ui')} (O)</button>
@@ -5732,8 +5748,10 @@ function togglePanel(id) {
   if (compactViewport()) openPanels().forEach(closePanel);
   const el = document.createElement('div');
   el.className = 'panel'; el.dataset.kind = id;
-  el.innerHTML = `<div class="panel__head">${panelTitle(id)}<button class="panel__close">✕</button></div><div class="panel__body">${panelBody(id)}</div>`;
+  const talk = (id === 'shop' || id === 'guild') && G._panelNpc ? `<button class="panel__talk" title="${T('Talk', 'ui')}">💬</button>` : '';
+  el.innerHTML = `<div class="panel__head">${panelTitle(id)}${talk}<button class="panel__close">✕</button></div><div class="panel__body">${panelBody(id)}</div>`;
   $('#overlays').appendChild(el);
+  el.querySelector('.panel__talk')?.addEventListener('click', () => showDialogue(G._panelNpc.name, G._panelNpc.lines));
   el.querySelector('.panel__close').onclick = () => closePanel(el);
   bringToFront(el);
   el.addEventListener('pointerdown', () => bringToFront(el));
@@ -6565,7 +6583,7 @@ const WORLD_SIGIL = {
 };
 function worldChronicleHtml() {
   const currentTab = G._chronicleTab || 'road';
-  const tabs = [['road', '🗺', 'Roads of the Outworlder'], ['bestiary', '📖', 'Bestiary Codex'], ['companions', '🐾', 'Companions & Familiars'],
+  const tabs = [['road', '🗺', 'Roads of the Outworlder'], ['companions', '🐾', 'Companions & Familiars'],
     ['spire', '🌀', 'Abyssal Spire'], ['stronghold', '🏰', 'Guild Stronghold'], ['homestead', '🏡', "Adventurer's Homestead"]];
   const tabNav = `<div class="book-tabs chronicle-tabs" role="tablist">${tabs.map(([id, icon, label]) =>
     `<button class="book-tab ${currentTab === id ? 'active' : ''}" data-chronicle-tab="${id}" role="tab" aria-selected="${currentTab === id}">${icon} ${T(label, 'ui')}</button>`).join('')}</div>`;
@@ -6598,22 +6616,6 @@ function worldChronicleHtml() {
       ${tabNav}
       <div class="stronghold-chronicle-body" style="box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;">
         ${strongholdUI.renderStrongholdConsoleHtml(strongholdSystem.serialize(), G.player, G.guildPoints)}
-      </div>
-    </section>`;
-  }
-
-  if (currentTab === 'bestiary') {
-    return `<section class="world-chronicle" style="max-width:860px">
-      <header class="world-head" style="margin-bottom:10px">
-        <div>
-          <small>${T('AETHERIA · ECOLOGICAL ARCHIVES', 'ui')}</small>
-          <h2>${T('Bestiary Codex', 'ui')}</h2>
-          <p>${T('Documented species, hunting mastery, drop records, and monster card affinities.', 'ui')}</p>
-        </div>
-      </header>
-      ${tabNav}
-      <div class="bestiary-body">
-        ${cardsUI.renderBestiaryTab(G.bestiary, { selectedZone: G._bestiaryZone || 'woods', selectedMonsterId: G._bestiaryMonsterId || null })}
       </div>
     </section>`;
   }
@@ -6770,7 +6772,7 @@ function applyHighContrast(on) {
 }
 
 // ===== Collection Book (hotkey B) — bestiary / items / elements / skills + milestones =====
-const BOOK_TABS = [['bestiary', '👹 Bestiary'], ['items', '🎒 Items'], ['elements', '🔮 Elements'], ['skills', '📜 Skills']];
+const BOOK_TABS = [['bestiary', '👹 Bestiary'], ['cards', '🃏 Cards'], ['items', '🎒 Items'], ['elements', '🔮 Elements'], ['skills', '📜 Skills']];
 const collectibleItems = () => CONTENT.items.filter(it => isEquip(it.id));
 
 function monsterIconImg(m, sz = 40) {
@@ -6827,6 +6829,7 @@ function collectionBookHtml() {
   </section>`;
 }
 function bookTabHtml(tab) {
+  if (tab === 'cards') return `<div class="bestiary-body">${cardsUI.renderBestiaryTab(G.bestiary, { selectedZone: G._bestiaryZone || 'woods', selectedMonsterId: G._bestiaryMonsterId || null })}</div>`;
   if (tab === 'elements') {
     const rows = TUNING.elements.ids.map(el => {
       const w = weakToElement(el);
@@ -6878,7 +6881,6 @@ function panelBody(id) {
     const v = G.audioVolumes || { master: 1.0, music: 0.8, sfx: 1.0 };
     return `<div style="display:flex;flex-direction:column;gap:12px;padding:8px">
       <label>${T('Touch controls','ui')} <select id="touch-preference">${['auto','on','off'].map(value=>`<option value="${value}" ${G.player.features.touch===value?'selected':''}>${T({auto:'Automatic',on:'On',off:'Off'}[value],'ui')}</option>`).join('')}</select></label>
-      <div>${T('Assign actions','ui')} ${Array.from({length:9},(_,i)=>`<button class="btn" data-edit-slot="${i}">${i+1}</button>`).join(' ')}</div>
       <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head)">🔊 ${T('Volume Controls','ui')}</div>
       <div class="setting-row">
         <span>${T('Master Volume','ui')} (<b id="vol-master-val">${Math.round(v.master * 100)}%</b>)</span>
@@ -6901,6 +6903,9 @@ function panelBody(id) {
         <span>${T('High Contrast Mode','ui')}</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
+      <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">👤 ${T('Account','ui')}</div>
+      <div class="setting-row"><span>${T('Keybindings','ui')}</span><button class="btn" data-open-panel="hotkeys">⌨ ${T('Open','ui')}</button></div>
+      <div class="setting-row"><span>${T('Progress is saved automatically.','ui')}</span><button class="btn" data-return-title="1">${T('Save & return to title','ui')}</button></div>
       ${G.admin || shouldEnableAdminByDefault(p.name) ? `<div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">🛠️ ${T('Developer Tools','ui')}</div>
       <div class="setting-row">
         <span>${T('Admin Mode','ui')}</span>
@@ -7040,7 +7045,7 @@ function panelBody(id) {
           <div class="bag-detail__stats">${itemMainStatsHtml(e)}</div>${requirement}
           <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}
           <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
-            <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}</div>`;
+            <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}<button class="btn btn--ghost" data-refine-route="1" title="${T('Marla refines gear and expands sockets', 'ui')}">🔨 ${T('Refine at Trader', 'ui')} →</button></div>`;
       }
       const toBar = `<button class="btn btn--ghost" data-assign-item="${it.id}" title="${T('Assign to a hotkey', 'ui')}">${T('→Bar', 'ui')}</button>`;
       const act = ['potion', 'consumable', 'taming_bait'].includes(it.type) ? `<button class="btn" data-use="${it.id}">${T('Use', 'ui')}</button>${toBar}`
@@ -7060,8 +7065,7 @@ function panelBody(id) {
     const toolbarHtml = `<div class="bag-bar">
       <span class="bag-zeny">💰 <b>${p.zeny.toLocaleString()}</b> ${T('zeny', 'ui')}</span>
       <input type="search" id="inv-search" class="inv-search-input" placeholder="${T('Search items / affixes...', 'ui')}" value="${esc(G._invSearch || '')}">
-      <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button>
-      <button class="btn btn--ghost" id="inv-deposit-mats" title="${T('Deposit Materials to Storage', 'ui')}">📥 ${T('Deposit Mats', 'ui')}</button></div>
+      <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button></div>
       <details class="bag-filter"${p.features.loot.mode !== 'all' || p.features.loot.quiet ? ' open' : ''}><summary>${T('Loot filter', 'ui')}${hiddenN ? ` · ${hiddenN} ${T('hidden','ui')}` : ''}</summary>
       <div class="inv-toolbar"><label>${T('Loot relevance','ui')} <select data-loot-mode>${['all','usable','affixes'].map(mode=>`<option value="${mode}" ${p.features.loot.mode===mode?'selected':''}>${T({all:'All',usable:'Usable',affixes:'Selected affixes'}[mode],'ui')}</option>`).join('')}</select></label>
       <label><input type="checkbox" data-loot-quiet ${p.features.loot.quiet?'checked':''}> ${T('Quiet irrelevant drops','ui')}</label>
@@ -7158,7 +7162,7 @@ function panelBody(id) {
       const detail = sel ? `<div class="bag-detail__head">${itemIconImg(sel.e.uid ? dispItemId(sel.e) : sel.e.itemId, 40)}<div><b ${slotRarity(sel.e) ? `class="rar" style="color:${slotRarity(sel.e).color}"` : ''}>${esc(sel.e.uid ? instName(sel.e) : T(it.name, 'items'))}</b><small class="ro-muted">${[slotRarity(sel.e)?.name, sel.e.uid ? '' : '×' + sel.e.qty].filter(Boolean).join(' · ')}</small></div></div>
           <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p><div class="bag-detail__actions"><button class="btn" data-${sel.from}="${sel.i}">${T(sel.from === 'deposit' ? 'Deposit' : 'Withdraw', 'ui')}${!sel.e.uid && sel.e.qty > 1 ? ' 1' : ''}</button></div>`
         : `<p class="ro-muted">${T('Select an item, or double-click to move it between chest and backpack.', 'ui')}</p>`;
-      return head + `<p class="ro-muted">${T('Goods left here are kept safe between adventures.', 'ui')}</p>
+      return head + `<div class="stash-bar"><p class="ro-muted">${T('Goods left here are kept safe between adventures.', 'ui')}</p><button class="btn" data-deposit-mats="1">📥 ${T('Deposit all materials', 'ui')}</button></div>
         <div class="stash-layout">${side('📦 ' + T('Storage', 'ui'), all.filter(x => x.from === 'withdraw'), T('The chest is empty.', 'ui'))}${side('🎒 ' + T('Backpack', 'ui'), all.filter(x => x.from === 'deposit'), T('Your backpack is empty.', 'ui'))}
         <aside class="ro-box bag-detail">${detail}</aside></div>`;
     }
@@ -7306,15 +7310,6 @@ function wirePanel(id, el) {
   if (id === 'world') {
     el.querySelectorAll('[data-chronicle-tab]').forEach(b => b.onclick = () => {
       G._chronicleTab = b.dataset.chronicleTab;
-      refreshPanel('world');
-    });
-    el.querySelectorAll('[data-zone]').forEach(b => b.onclick = () => {
-      G._bestiaryZone = b.dataset.zone;
-      G._bestiaryMonsterId = null;
-      refreshPanel('world');
-    });
-    el.querySelectorAll('[data-monster-id]').forEach(b => b.onclick = () => {
-      G._bestiaryMonsterId = b.dataset.monsterId;
       refreshPanel('world');
     });
     el.querySelectorAll('[data-summon-pet]').forEach(b => b.onclick = () => {
@@ -7547,13 +7542,19 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-expand-socket]').forEach(b => b.onclick = () => { expandSockets(b.dataset.expandSocket); refreshPanel('shop'); });
   el.querySelectorAll('[data-deposit]').forEach(b => b.onclick = () => depositItem(+b.dataset.deposit));
   el.querySelectorAll('[data-withdraw]').forEach(b => b.onclick = () => withdrawItem(+b.dataset.withdraw));
+  el.querySelectorAll('[data-return-title]').forEach(b => b.onclick = () => { saveGame(); if (typeof location !== 'undefined') location.reload(); });   // boot shows the title for a saved profile
+  el.querySelectorAll('[data-refine-route]').forEach(b => b.onclick = () => { G._shopTab = 'enhance'; activateTaskGuide('npc', 'merchant'); });
+  el.querySelectorAll('[data-zone]').forEach(b => b.onclick = () => { G._bestiaryZone = b.dataset.zone; G._bestiaryMonsterId = null; refreshPanel('book'); });
+  el.querySelectorAll('[data-monster-id]').forEach(b => b.onclick = () => { G._bestiaryMonsterId = b.dataset.monsterId; refreshPanel('book'); });
+  el.querySelectorAll('[data-deposit-mats]').forEach(b => b.onclick = depositAllMaterials);
   el.querySelectorAll('[data-craft]').forEach(b => b.onclick = () => craftItem(b.dataset.craft));
   el.querySelectorAll('[data-shoptab]').forEach(b => b.onclick = () => { G._shopTab = b.dataset.shoptab; refreshPanel('shop'); });
   el.querySelectorAll('[data-stat]').forEach(b => b.onclick = e => { spendStatTimes(b.dataset.stat, e.shiftKey ? 10 : (G._statStep || 1)); refreshPanel('char'); });
   el.querySelectorAll('[data-stat-step]').forEach(b => b.onclick = () => { G._statStep = +b.dataset.statStep; refreshPanel('char'); });
   el.querySelectorAll('[data-stat-auto]').forEach(b => b.onclick = () => { spendStatsByBuild(+b.dataset.statAuto); refreshPanel('char'); });
   el.querySelectorAll('[data-rebirth]').forEach(b => b.onclick = () => {
-    if (typeof confirm !== 'function' || confirm(T('Rebirth resets your level, job, skills, and stat points — permanently gaining power. Continue?', 'ui'))) doRebirth();
+    if (G._rebirthArmedAt && now() - G._rebirthArmedAt < 5000) { G._rebirthArmedAt = 0; doRebirth(); return; }
+    G._rebirthArmedAt = now(); b.textContent = '⚠ ' + T('Click again to rebirth', 'ui'); b.classList.add('is-armed');
   });
   el.querySelectorAll('[data-learn]').forEach(b => b.onclick = () => { learnSkill(b.dataset.learn); refreshPanel('skills'); });
   el.querySelectorAll('[data-passive]').forEach(b => b.onclick = () => { learnPassive(b.dataset.passive); refreshPanel('skills'); });
@@ -7605,22 +7606,6 @@ function wirePanel(id, el) {
       G.player.inventory.sort((a, b) => (rarRank(b) - rarRank(a)) || ((b.plus || 0) - (a.plus || 0)));
       saveGame();
       refreshPanel('inv');
-    };
-  }
-  const invDep = el.querySelector('#inv-deposit-mats');
-  if (invDep) {
-    invDep.onclick = () => {
-      let count = 0;
-      for (let k = G.player.inventory.length - 1; k >= 0; k--) {
-        const item = G.player.inventory[k];
-        if (itemById[item.itemId]?.type !== 'material') continue;
-        const existing = G.storage.find(x => !x.uid && x.itemId === item.itemId);   // G.storage is the persisted storage (was G.world.storage → crash)
-        if (existing) existing.qty += item.qty; else G.storage.push({ itemId: item.itemId, qty: item.qty });
-        count += item.qty; G.player.inventory.splice(k, 1);
-      }
-      if (count) guideEvent('deposit');
-      saveGame(); refreshPanel('inv');
-      toast(count ? T('Deposited {n} materials into storage.', 'ui').replace('{n}', count) : T('No materials to deposit.', 'ui'), 'info');
     };
   }
   // rune sockets: click a gem to arm it, then click an empty socket dot to insert it.
@@ -8295,6 +8280,7 @@ function interact(npcId) {
   const questFollowup = completesTalkQuest
     ? [...(talkQuest.doneLines || []), ...(nextReady ? (next.startLines || []) : [])]
     : [];
+  const known = G.talked.has(n.id);   // repeat visits skip straight to the service (FR-6); the panel keeps a Talk button
   G.talked.add(n.id);
   checkQuest(completesTalkQuest ? { suppressDialogue: true } : undefined);
   const content = n.content;
@@ -8304,12 +8290,17 @@ function interact(npcId) {
     if (questFollowup.length) showDialogue(npcById[talkQuest.giverNpcId]?.name || 'Elowen', questFollowup, onClose);
     else if (onClose) onClose();
   };
+  const service = (panel, lines, prep) => {
+    G._panelNpc = { name: n.name, lines };
+    const open = () => { prep?.(); if (!panelEl(panel)) togglePanel(panel); else refreshPanel(panel); };
+    if (known && !questFollowup.length) open(); else showDialogue(n.name, lines, () => afterNpcDialogue(open));
+  };
   if (n.role === 'guild') {
-    const lines = [...(content?.dialogue || []), `You currently hold Guild Rank ${GUILD_RANKS[G.guildRankIdx || 0]}.`];
-    showDialogue(n.name, lines, () => afterNpcDialogue(() => togglePanel('guild')));
+    service('guild', [...(content?.dialogue || []), `You currently hold Guild Rank ${GUILD_RANKS[G.guildRankIdx || 0]}.`]);
     return true;
   }
-  if (n.role === 'shop') { G._shopItems = content?.shopItems || []; showDialogue(n.name, content?.dialogue || ['Welcome, traveler.'], () => afterNpcDialogue(() => togglePanel('shop'))); }
+  if (n.role === 'shop') { G._shopItems = content?.shopItems || []; service('shop', content?.dialogue || ['Welcome, traveler.']); }
+  else if (n.role === 'craft' || n.role === 'banker') service('world', content?.dialogue || [T('The Stronghold ledgers are open to you.', 'ui')], () => { G._chronicleTab = 'stronghold'; });
   else if (n.role === 'quest') {
     const q = questById[G.quest];
     const pending = questById[G.pendingQuest];
@@ -8612,6 +8603,9 @@ const extraCss = `
 .ro-branch-label{margin:6px 5px 2px;font:700 14px var(--font-head);color:var(--book-accent,var(--accent-alt))}
 @media (max-width:680px){.ro-skill-tree{grid-template-columns:repeat(var(--tree-cols),minmax(210px,78vw))}
   .ro-tree-cell .ro-skill{grid-template-columns:36px minmax(0,1fr)}.ro-tree-cell .ro-skill-state{grid-column:1/-1;justify-self:start}}
+.panel__talk{margin-left:auto;margin-right:6px;background:none;border:0;font-size:18px;cursor:pointer}
+.stash-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stash-bar p{margin:0}
+.btn.is-armed{background:var(--oxblood,#8a2a1e);color:var(--on-fill)}
 .jr-tabs{margin-bottom:8px}.jr-wrap{display:grid;grid-template-columns:minmax(190px,36%) minmax(0,1fr);gap:10px;align-items:start}
 .jr-list{display:flex;flex-direction:column;gap:2px;padding:6px;max-height:min(52vh,460px);overflow-y:auto;min-width:0}
 .jr-cat{margin:6px 2px 2px;font:700 12px var(--font-head);color:var(--book-accent,var(--accent-alt))}.jr-cat small{color:var(--text-muted);font-weight:400}
@@ -9401,7 +9395,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, depositAllMaterials, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

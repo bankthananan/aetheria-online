@@ -9,7 +9,6 @@ test('1. createPetsUIRenderer factory returns render methods', () => {
   const ui = createPetsUIRenderer();
   assert.ok(typeof ui === 'object' && ui !== null, 'factory returns an object');
   assert.equal(typeof ui.renderCompanionsTab, 'function', 'renderCompanionsTab is a function');
-  assert.equal(typeof ui.renderFeedModalHtml, 'function', 'renderFeedModalHtml is a function');
 });
 
 test('2. renderCompanionsTab renders empty/unsummoned state cleanly', () => {
@@ -187,54 +186,6 @@ test('5. renderCompanionsTab renders 5 roster cards with untamed hints and bait 
   assert.ok(html.includes('Magma Berry Cluster'), 'shows dragon required bait');
 });
 
-test('6. renderFeedModalHtml generates modal shell with close button and feed options', () => {
-  const ui = createPetsUIRenderer();
-  const pet = {
-    id: 'pet_wolf',
-    name: 'Timber Wolf Pup',
-    bondLevel: 3,
-    loyalty: 82,
-    exp: 300,
-  };
-  const inventory = [
-    { itemId: 'golden_carp_sashimi', qty: 2 },
-  ];
-
-  const html = ui.renderFeedModalHtml(pet, inventory);
-
-  // Modal shell & overlay
-  assert.ok(html.includes('pet-modal-overlay'), 'has .pet-modal-overlay class');
-  assert.ok(html.includes('pet-modal-shell'), 'has .pet-modal-shell class');
-  assert.ok(html.includes('role="dialog"'), 'has dialog accessibility role');
-  assert.ok(html.includes('aria-modal="true"'), 'has aria-modal="true" for focus trapping');
-
-  // Close button
-  assert.ok(html.includes('pet-modal-close'), 'has .pet-modal-close class');
-  assert.ok(html.includes('data-modal-close="true"'), 'has data-modal-close attribute');
-
-  // Companion info & devotion
-  assert.ok(html.includes('Timber Wolf Pup'), 'displays pet name');
-  assert.ok(html.includes('★ Devoted'), 'displays devotion badge when loyalty >= 80');
-  assert.ok(html.includes('Bond Lv. 3'), 'displays bond level');
-
-  // Feed options
-  assert.ok(html.includes('Golden Carp Sashimi'), 'displays Golden Carp Sashimi');
-  assert.ok(html.includes('×2'), 'displays quantity');
-  assert.ok(html.includes('data-feed-pet-id="pet_wolf"'), 'feed button has pet id');
-  assert.ok(html.includes('data-feast-id="golden_carp_sashimi"'), 'feed button has feast id');
-
-  // Empty inventory case
-  const emptyHtml = ui.renderFeedModalHtml(pet, []);
-  assert.ok(
-    emptyHtml.includes('Cook feasts via Fishing & Alchemy to feed your companion!'),
-    'modal displays hint when no feast items available'
-  );
-
-  // Null input case
-  const nullHtml = ui.renderFeedModalHtml(null, []);
-  assert.equal(nullHtml, '', 'returns empty string on null pet');
-});
-
 test('7. Boxing containment: verify output HTML uses box-sizing: border-box and min-width: 0 on containers', () => {
   const ui = createPetsUIRenderer();
   const petsState = {
@@ -251,7 +202,6 @@ test('7. Boxing containment: verify output HTML uses box-sizing: border-box and 
   const inventory = [{ itemId: 'grilled_trout', qty: 1 }];
 
   const tabHtml = ui.renderCompanionsTab(petsState, inventory);
-  const modalHtml = ui.renderFeedModalHtml(petsState.owned.pet_slime, inventory);
 
   // Tab containment checks
   assert.ok(tabHtml.includes('box-sizing: border-box'), 'tab HTML specifies box-sizing: border-box');
@@ -260,10 +210,5 @@ test('7. Boxing containment: verify output HTML uses box-sizing: border-box and 
   assert.ok(tabHtml.includes('width: 100%'), 'tab HTML specifies width: 100%');
   assert.ok(tabHtml.includes('max-width: 100%'), 'tab HTML specifies max-width: 100%');
 
-  // Modal containment checks
-  assert.ok(modalHtml.includes('box-sizing: border-box'), 'modal HTML specifies box-sizing: border-box');
-  assert.ok(modalHtml.includes('min-width: 0'), 'modal HTML specifies min-width: 0');
-  assert.ok(modalHtml.includes('overflow-x: hidden'), 'modal HTML specifies overflow-x: hidden');
-  assert.ok(modalHtml.includes('pet-modal-overlay'), 'modal overlay present');
-  assert.ok(modalHtml.includes('pet-modal-shell'), 'modal shell present');
+
 });

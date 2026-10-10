@@ -12,7 +12,7 @@ also removes steps.
 |---|---|---|---|
 | D1 | Smithing location | **Stays at the Trader**. Satchel item details get a "Refine at Trader →" link that routes there (`activateTaskGuide('npc', …)`) | RO smiths are NPCs. The link fixes discoverability without adding a second refine UI |
 | D2 | Multi-window scope | **Desktop: any number of windows, draggable, positions saved. Touch / compact viewport: one at a time** (today's behaviour) | A 390px screen can't show two windows; desktop gets real RO behaviour |
-| D3 | Bestiary merge | **Book › Bestiary is the only bestiary.** The card Codex (zone album milestones + card per monster) moves into it; the Chronicle tab is removed | Book (B) already owns collection and milestones; Chronicle is about the *world* |
+| D3 | Bestiary merge *(shipped as: Book gets a 🃏 Cards tab holding the Codex; Book's discovery grid stays — two data sources, one window)* | **Book › Bestiary is the only bestiary.** The card Codex (zone album milestones + card per monster) moves into it; the Chronicle tab is removed | Book (B) already owns collection and milestones; Chronicle is about the *world* |
 | D4 | Unsocket | **Cards are permanent (RO).** Superseded by `UI_MENU_REDESIGN.md` R-D2: *wire* `renderSocketModalHtml` as the socket picker (minus its unsocket button) instead of deleting it | Matches RO; no unsocket UI exists to keep |
 | D5 | Place model | **Keep remote management** (Chronicle › Stronghold upgrades, pedestals, stipend). Only the *siege* is on-site (D6). The other two idle Stronghold NPCs (`craft` Borgan, `banker` Vane, `maps.js:581`) open the same Stronghold tab as a deep link | Moving upgrades on-site would be more RO-like but **adds steps**, which goes against this pass's goal. Flip D5 if you want RO flavour over speed |
 | D6 | Siege trigger | **Talk to Tactician Cedric** (role `tactician`) → in-game confirm → `startStrongholdSiege()` | Uses an existing NPC on the map; no new interaction type |
@@ -194,7 +194,7 @@ pendingClaims() → { adventure: n, book: n, world: n, guild: n }   // pure, rea
 | **1. Fix P0s** ✅ `2419f28` | **M1: pause no longer touches `G.autoFarm`** (the loop already skips ticks while paused) · M2 text-field key guard · M3 Escape on dialogue runs its `onClose` · D6 siege via Tactician · Escape via `closeTopmost` · D7 admin gate · reserve B/V · filter hotkey fallbacks · fix Keybindings help text | low; isolated |
 | **2. Window manager** ✅ | `panelEl` swap at 8 call sites · multi-open · z-order · drag · saved positions · compact rule · refresh-all | **highest**; touches every panel |
 | **3. Window keys** ✅ | `WINDOW_KEYS` table, Alt aliases, pause whitelist, HUD labels | low |
-| **4. One home per action** | §3 table, §3b, dead-code removal | medium; Bestiary merge is the largest |
+| **4. One home per action** ✅ | §3 table, §3b, dead-code removal | medium; Bestiary merge is the largest |
 | **5. Badges** | `pendingClaims` + HUD dots + tracker line | low |
 
 Phase 1 can ship on its own today. Phase 2 must land before Satchel↔Storage double-click (phase 4).

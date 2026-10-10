@@ -239,6 +239,17 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Deposit all materials": "ฝากวัตถุดิบทั้งหมด",
+      "Account": "บัญชี",
+      "Keybindings": "ปุ่มลัด",
+      "Progress is saved automatically.": "ความคืบหน้าถูกบันทึกอัตโนมัติ",
+      "Save & return to title": "บันทึกและกลับหน้าหลัก",
+      "Click again to rebirth": "คลิกอีกครั้งเพื่อจุติใหม่",
+      "The Stronghold ledgers are open to you.": "บัญชีของป้อมเปิดให้ท่านแล้ว",
+      "Talk": "สนทนา",
+      "Marla refines gear and expands sockets": "มาร์ลาตีบวกอุปกรณ์และเพิ่มช่องใส่",
+      "Refine at Trader": "ไปตีบวกที่ร้านค้า",
+      "Deposited {n} materials into storage.": "ฝากวัตถุดิบ {n} ชิ้นเข้าคลังแล้ว",
       "Reserved": "สงวนไว้",
       "Select a skill to see what it does. Double-click to learn.": "เลือกสกิลเพื่อดูรายละเอียด ดับเบิลคลิกเพื่อเรียน",
       "Learn": "เรียน",

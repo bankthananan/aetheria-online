@@ -385,82 +385,8 @@ export function createPetsUIRenderer({
    * @param {Array} inventory
    * @returns {string} Modal HTML string
    */
-  function renderFeedModalHtml(petState, inventory = []) {
-    if (!petState) return '';
-    const petDef = catalog[petState.id] || { id: petState.id, name: petState.name || 'Companion' };
-    const details = PET_DETAILS[petState.id] || { habitat: 'Wild Habitat', monsterName: 'Wild Creature', baitName: 'Taming Bait', icon: '🐾', color: 'var(--gold)' };
-    const loyalty = petState.loyalty || 0;
-    const isDevoted = loyalty >= 80;
-
-    // Filter inventory for feast items
-    const availableFeasts = [];
-    for (const fId of Object.keys(feastValues)) {
-      const qty = getInventoryQty(inventory, fId);
-      if (qty > 0) {
-        availableFeasts.push({
-          id: fId,
-          qty,
-          values: feastValues[fId],
-          details: FEAST_DETAILS[fId] || { name: fId, icon: '🍲' },
-        });
-      }
-    }
-
-    const feastsListHtml = availableFeasts.length > 0
-      ? availableFeasts.map(f => `
-          <div class="feast-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; background: var(--card-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 8px; min-width: 0; box-sizing: border-box;">
-              <span style="font-size: 20px;">${f.details.icon}</span>
-              <div style="min-width: 0; box-sizing: border-box;">
-                <div style="font-weight: bold; font-size: 12px; color: var(--text);">${T(f.details.name, 'items')} <span style="color: var(--gold-bright);">×${f.qty}</span></div>
-                <div style="font-size: 11px; color: var(--success-text);">+${f.values.loyalty} Loyalty · +${f.values.exp} EXP</div>
-              </div>
-            </div>
-            <button class="btn btn--sm pet-feed-btn" data-feed-pet-id="${petState.id}" data-feast-id="${f.id}" style="font-size: 12px; padding: 6px 12px; background: var(--forest); color: var(--on-fill); border: 1px solid var(--success); border-radius: 4px; cursor: pointer; white-space: nowrap; min-width: 0; box-sizing: border-box;">
-              ${T('Feed', 'ui')}
-            </button>
-          </div>
-        `).join('')
-      : `<div class="feast-hint" style="color: var(--text-muted); font-style: italic; font-size: 12px; padding: 12px; text-align: center; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">${T('Cook feasts via Fishing & Alchemy to feed your companion!', 'ui')}</div>`;
-
-    return `
-      <div class="pet-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pet-feed-modal-title" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-        <div class="pet-modal-shell ro-parchment" style="background: var(--window-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 20px; width: 100%; max-width: 440px; box-sizing: border-box; overflow-x: hidden; min-width: 0; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.8); position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-            <div style="min-width: 0; box-sizing: border-box;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 20px;">${details.icon}</span>
-                <h3 id="pet-feed-modal-title" style="margin: 0; font-size: 14px; color: var(--text);">${T(petDef.name, 'ui')}</h3>
-                ${isDevoted ? `<span class="badge-devoted" style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: var(--wood-deep); min-width: 0; box-sizing: border-box;">★ Devoted</span>` : ''}
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Bond Lv. ${petState.bondLevel || 1} · Loyalty: ${loyalty}/100</div>
-            </div>
-            <button class="pet-modal-close" aria-label="${T('Close', 'ui')}" data-modal-close="true" style="background: transparent; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; padding: 4px; line-height: 1; min-width: 0; box-sizing: border-box;">✕</button>
-          </div>
-
-          <div style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; min-width: 0; box-sizing: border-box;">
-              <span style="color: var(--text-muted);">Loyalty Progress</span>
-              <span style="color: var(--gold-bright); font-weight: bold;">${loyalty}%</span>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; overflow: hidden; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-              <div style="background: linear-gradient(90deg, var(--success), var(--success)); height: 100%; width: ${Math.min(100, Math.max(0, loyalty))}%;"></div>
-            </div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0;">
-            <h4 style="margin: 0; font-size: 12px; color: var(--gold-bright); text-transform: uppercase; letter-spacing: 0.5px;">${T('Feast Quick-Feed', 'ui')}</h4>
-            <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; min-width: 0; max-height: 240px; overflow-y: auto;">
-              ${feastsListHtml}
-            </div>
-          </div>
-        </div>
-      </div>
-    `.trim();
-  }
 
   return {
     renderCompanionsTab,
-    renderFeedModalHtml,
   };
 }
