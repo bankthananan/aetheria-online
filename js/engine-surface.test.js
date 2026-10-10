@@ -180,6 +180,7 @@ const AWO_KEYS = [
   "passiveBonuses",
   "pathTo",
   "pauseGame",
+  "pendingClaims",
   "performDodge",
   "performParry",
   "pinGoal",

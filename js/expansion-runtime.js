@@ -51,11 +51,15 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
     const m=makeMonster({...def,name:rare.name},tile.col*32+16,tile.row*32+16,def.level);
     m.zoneRareId=rare.id;m.hp=m.maxHp=Math.round(m.maxHp*cfg.rareHp);m.atk=m.atkBase=Math.round(m.atk*cfg.rareAtk);G.monsters.push(m);return true;
   };
+  // claim rules shared by the Adventures window and the HUD reward badge
+  const dailyClaimable=d=>!G.dailies.claimedDailies[d.id]&&d.progress>=d.required;
+  const masteryClaimable=(r,mapId=G.mapId)=>!(G.mastery.claimedRanks[mapId]||{})[r.rank]&&r.reqPoints<=(G.mastery.zonePoints[mapId]||0);
+  const pendingAdventureClaims=()=>(G.dailies?.activeDailies||[]).filter(dailyClaimable).length+(G.mastery?MASTERY_RANKS.filter(r=>masteryClaimable(r)).length:0);
   const adventurePanelHtml=()=>{
     refreshDailies();
     const pts=G.mastery.zonePoints[G.mapId]||0, claimed=G.mastery.claimedRanks[G.mapId]||{};
     const dailies=G.dailies.activeDailies.map(d=>{
-      const done=G.dailies.claimedDailies[d.id], ready=d.progress>=d.required;
+      const done=G.dailies.claimedDailies[d.id], ready=dailyClaimable(d)||done;
       return `<div class="ro-box adv-row"><div class="adv-row__main"><b>${T('Defeat','ui')} ${esc(T(CONTENT.monsters.find(m=>m.id===d.targetId)?.name||d.targetId,'monsters'))}</b>
         <div class="ro-meter"><i style="width:${Math.min(100,100*d.progress/d.required)}%"></i></div>
         <span class="ro-muted">${d.progress}/${d.required} · ${cfg.dailyZeny}z · ${cfg.dailyXp} XP</span></div>
@@ -65,7 +69,7 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
       const got=claimed[r.rank], need=Math.max(0,r.reqPoints-pts);
       return `<div class="ro-box adv-rank${got?' is-claimed':''}"><b>${T(r.title,'ui')}</b><span class="ro-muted">${r.reqPoints} ${T('pts','ui')}</span>
         <span>${T(r.label,'ui')}</span>
-        ${got?`<span class="adv-rank__state">✓ ${T('Claimed','ui')}</span>`:need?`<span class="ro-muted">${T('{n} more pts','ui').replace('{n}',need)}</span>`:`<button class="btn" data-mastery-claim="${r.rank}">${T('Claim','ui')}</button>`}</div>`;
+        ${got?`<span class="adv-rank__state">✓ ${T('Claimed','ui')}</span>`:!masteryClaimable(r)?`<span class="ro-muted">${T('{n} more pts','ui').replace('{n}',need)}</span>`:`<button class="btn" data-mastery-claim="${r.rank}">${T('Claim','ui')}</button>`}</div>`;
     }).join('');
     const travel=G.mapId==='town_awakening'?Object.keys(G.mastery.claimedRanks).filter(id=>G.mastery.claimedRanks[id]?.gold&&MAPS[id]&&G.visited.has(id)).map(id=>`<button class="btn" data-mastery-travel="${esc(id)}">${T('Free travel','ui')} · ${esc(T(MAPS[id].name,'maps'))}</button>`).join(''):'';
     const inWoods=G.mapId==='whispering_woods';
@@ -81,5 +85,5 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
     ${G.dungeonState.currentDungeonId?`<button class="btn" data-dungeon-exit>${T('Return to entrance','ui')}</button>`:''}</div>
     ${inWoods?'':`<p class="ro-muted">${T('Use the marked entrance in Whispering Woods.','ui')}</p>`}</section>`;
   };
-  return {refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml};
+  return {pendingAdventureClaims,refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml};
 }

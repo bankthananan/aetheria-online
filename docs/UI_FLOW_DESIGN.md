@@ -195,7 +195,7 @@ pendingClaims() → { adventure: n, book: n, world: n, guild: n }   // pure, rea
 | **2. Window manager** ✅ | `panelEl` swap at 8 call sites · multi-open · z-order · drag · saved positions · compact rule · refresh-all | **highest**; touches every panel |
 | **3. Window keys** ✅ | `WINDOW_KEYS` table, Alt aliases, pause whitelist, HUD labels | low |
 | **4. One home per action** ✅ | §3 table, §3b, dead-code removal | medium; Bestiary merge is the largest |
-| **5. Badges** | `pendingClaims` + HUD dots + tracker line | low |
+| **5. Badges** ✅ | `pendingClaims` + HUD dots + tracker line | low |
 
 Phase 1 can ship on its own today. Phase 2 must land before Satchel↔Storage double-click (phase 4).
 

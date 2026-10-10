@@ -3513,6 +3513,23 @@ function actionForObjective(objective, source, taskId) {
   return null;
 }
 
+const bountyReady = g => (g.kind === 'deliver' ? itemQty(g.target) >= g.count : !!g.done);
+const milestoneClaimable = mile => !G.claimedMilestones.has(mile.id) && milestoneStat(mile.type) >= milestoneTarget(mile);
+// rewards waiting anywhere, by the window that owns the claim (FR-4). Recomputed at most once a second.
+let claimCache = { at: -1e9, v: null };
+function pendingClaims() {
+  if (now() - claimCache.at < 1000 && claimCache.v) return claimCache.v;
+  const mature = homesteadSystem.getPlots?.().filter(pl => pl.cropId && pl.stage === 3).length || 0;   // STAGE_MATURE
+  const v = {
+    adventure: pendingAdventureClaims(),
+    book: (CONTENT.milestones || []).filter(milestoneClaimable).length,
+    world: (strongholdSystem.canClaimDailyStipend?.() ? 1 : 0) + mature,
+    quest: G.activeGuilds.filter(bountyReady).length,
+  };
+  v.total = v.adventure + v.book + v.world + v.quest;
+  claimCache = { at: now(), v };
+  return v;
+}
 function taskAction(source, taskId) {
   if (source === 'story') {
     const q = questById[G.quest];
@@ -3528,7 +3545,7 @@ function taskAction(source, taskId) {
   if (source === 'guild') {
     const bounty = G.activeGuilds.find(g => g.id === taskId);
     if (!bounty) return null;
-    const ready = bounty.kind === 'deliver' ? itemQty(bounty.target) >= bounty.count : bounty.done;
+    const ready = bountyReady(bounty);
     if (ready) {
       const location = npcLocation('elder');
       return { source, taskId, mode: 'npc', mapId: location.mapId, npcId: 'elder', label: 'Elder Maro' };
@@ -3766,7 +3783,7 @@ function journalDetailHtml(e) {
       ${rewardChipsHtml(q.rewards)}<div class="jr-actions">${nav('story', q.id)}</div>`;
   }
   if (e.bounty) {
-    const g = e.bounty, ready = g.done || (g.kind === 'deliver' && itemQty(g.target) >= g.count);
+    const g = e.bounty, ready = bountyReady(g);
     return `<header><small class="jr-kicker">🏰 ${T('Guild bounty', 'ui')}</small><h3 class="jr-title">${e.name} ${diffBadge(g.difficulty)}</h3></header>
       <small class="jr-where">📍 ${bountyWhere(g)}</small>${bountyLevelHtml(g)}${journalMeter(...journalProgress(e))}
       ${ready ? `<p class="jr-done">${T(g.kind === 'deliver' ? 'Goods ready — deliver to the guild hall' : 'Complete — report to the guild hall', 'ui')}</p>` : ''}
@@ -5559,7 +5576,9 @@ function updateHud() {
   const kbtn = $('#hud').querySelector('[data-panel="skills"]');
   if (kbtn) kbtn.textContent = T('Abilities (K)', 'ui') + (p.skillPoints ? ` +${p.skillPoints}` : '');
   const mBadge = $('#mobile-menu-badge');
-  if (mBadge) mBadge.style.display = (p.statPoints || p.skillPoints) ? 'block' : 'none';
+  const claims = pendingClaims();
+  for (const k of ['adventure', 'book', 'world', 'quest']) $('#hud').querySelector(`[data-panel="${k}"]`)?.classList.toggle('has-claim', claims[k] > 0);
+  if (mBadge) mBadge.style.display = (p.statPoints || p.skillPoints || claims.total) ? 'block' : 'none';
   const dv = $('#danger-vignette');
   if (dv) dv.classList.toggle('danger-active', hpRatio > 0 && hpRatio <= 0.25);
   const mpips = $('#momentum-pips');
@@ -5602,6 +5621,11 @@ function updateHud() {
 function updateQuestTracker() {
   const el = $('#quest-tracker'); if (!el) return;
   let html = goalTrackerHtml();
+  const claims = pendingClaims();
+  if (claims.total) {
+    const owner = ['adventure', 'book', 'world', 'quest'].find(k => claims[k] > 0);
+    html = `<button class="task-link claims-link" data-claims-open="${owner}">🎁 ${T(claims.total === 1 ? '{n} reward ready' : '{n} rewards ready', 'ui').replace('{n}', claims.total)}</button>` + html;
+  }
   const typeName = t => T(t, 'ui');   // kill → Defeat / กำจัด
   if (G.advance) {
     const a = G.advance, o = a.def.objective, done = advanceProgress() >= o.count;
@@ -5654,6 +5678,12 @@ function updateQuestTracker() {
     };
   }
   el.querySelectorAll('[data-task]').forEach(task => task.onclick = () => activateTaskGuide(task.dataset.task, task.dataset.taskId));
+  el.querySelectorAll('[data-claims-open]').forEach(b => b.onclick = () => {
+    const id = b.dataset.claimsOpen, c = pendingClaims();
+    if (id === 'world') G._chronicleTab = strongholdSystem.canClaimDailyStipend?.() ? 'stronghold' : 'homestead';
+    if (id === 'quest') G._journalTab = 'active';
+    if (!panelEl(id)) togglePanel(id); else refreshPanel(id);
+  });
   el.querySelectorAll('[data-job-choice]').forEach(button => button.onclick = () => showJobChoice(G.player));
   refreshPanel('quest'); refreshPanel('guild');   // live-update open windows (bg progress/completions)
 }
@@ -8603,6 +8633,8 @@ const extraCss = `
 .ro-branch-label{margin:6px 5px 2px;font:700 14px var(--font-head);color:var(--book-accent,var(--accent-alt))}
 @media (max-width:680px){.ro-skill-tree{grid-template-columns:repeat(var(--tree-cols),minmax(210px,78vw))}
   .ro-tree-cell .ro-skill{grid-template-columns:36px minmax(0,1fr)}.ro-tree-cell .ro-skill-state{grid-column:1/-1;justify-self:start}}
+#hud [data-panel].has-claim{position:relative}#hud [data-panel].has-claim::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#e0795f;box-shadow:0 0 0 1px #2a1a0c}
+.claims-link{font-weight:700;color:var(--gold-bright,#ffd24d)}
 .panel__talk{margin-left:auto;margin-right:6px;background:none;border:0;font-size:18px;cursor:pointer}
 .stash-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stash-bar p{margin:0}
 .btn.is-armed{background:var(--oxblood,#8a2a1e);color:var(--on-fill)}
@@ -9395,7 +9427,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, depositAllMaterials, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, pendingClaims, depositAllMaterials, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
@@ -9405,7 +9437,7 @@ if (typeof window !== 'undefined')
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
 
-const {refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});
+const {pendingAdventureClaims,refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});
 Object.assign(window.__AWO,{refreshDailies,claimDaily,claimMastery,setZoneDifficulty,enterSubdungeon,exitSubdungeon,spawnZoneRare});
 Object.assign(window.__AWO,{gameClock,pauseGame,resumeGameFromPause,clearInput,dispatchPlayerAction,initTouchControls,getViewport:()=>runtimeViewport,syncRuntimeScale,masteryTravel});
 const {saveLoadout,renameLoadout,applyLoadout,setItemProtection,loadoutPanelHtml}=createEquipmentFeatures({G,itemById,itemSlot,canUseItem,canUseSkill:(p,id)=>skillLevel(p,id)>0&&branchAllowsSkill(p,id)&&skillsFor(p.combatClass).some(s=>s.id===id),recompute,saveGame,renderHotbar,esc});

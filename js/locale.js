@@ -239,6 +239,8 @@ export const L10N = {
   },
   th: {
     ui: {
+      "{n} reward ready": "มีรางวัลรอรับ {n} รายการ",
+      "{n} rewards ready": "มีรางวัลรอรับ {n} รายการ",
       "Deposit all materials": "ฝากวัตถุดิบทั้งหมด",
       "Account": "บัญชี",
       "Keybindings": "ปุ่มลัด",
