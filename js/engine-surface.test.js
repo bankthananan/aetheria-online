@@ -19,6 +19,7 @@ const AWO_KEYS = [
   "SOCKET_BOUNDS",
   "TILE_PHASES",
   "TILE_PHASE_MS",
+  "WINDOW_KEYS",
   "WORLD_ORDER",
   "ZONE_ORDER",
   "acceptGuild",

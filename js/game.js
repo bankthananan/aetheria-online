@@ -119,9 +119,19 @@ const guildPointsNeed = i => 15 + i * 12;                // points to advance fr
 const SKILL_GLYPH = { melee: '†', ranged: '➶', aoe: '✦', buff: '◇', heal: '+' };
 const CLASS_CREST = { blade: 'B', berserker: 'D', mage: 'C', ranger: 'F', paladin: 'L', monk: 'I', elementalist: 'S' };
 const DEFAULT_HOTKEYS = Array.from({ length: 9 }, (_, i) => `Digit${i + 1}`);
+// window keys: [panel, plain key, ...Alt+ aliases]. Alt aliases follow RO (Alt+E items, Alt+Q equip/status, Alt+A status, Alt+S skills).
+// ponytail: static table; make it rebindable when a player asks
+const WINDOW_KEYS = [
+  ['char', 'KeyC', 'KeyQ', 'KeyA'], ['inv', 'KeyI', 'KeyE'], ['skills', 'KeyK', 'KeyS'], ['quest', 'KeyQ', 'KeyU'],
+  ['world', 'KeyM'], ['book', 'KeyB'], ['adventure', 'KeyJ'], ['automation', 'KeyT'], ['loadouts', 'KeyL'],
+  ['guide', 'KeyG'], ['settings', 'KeyO', 'KeyO'],
+];
+const windowForKey = (e, code) => e.ctrlKey || e.metaKey ? null
+  : WINDOW_KEYS.find(([, plain, ...alt]) => (e.altKey ? alt.includes(code) : plain === code)) || null;
+const windowKeyLabel = id => (WINDOW_KEYS.find(w => w[0] === id)?.[1] || '').replace('Key', '');
 const RESERVED_HOTKEYS = new Set([
-  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyF',
-  'KeyC', 'KeyI', 'KeyK', 'KeyM', 'KeyQ', 'KeyB', 'KeyV',
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyF', 'KeyV',
+  ...WINDOW_KEYS.map(w => w[1]),
 ]);
 
 // ---- lookups ----
@@ -5242,12 +5252,12 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="quest">${T('Journal (Q)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="world">${T('World (M)', 'ui')}</button>
         <button class="btn btn--ghost" id="farm-btn">${T('⚔ Hunt (F)', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="automation">🤖 ${T('Auto', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="automation">🤖 ${T('Auto', 'ui')} (T)</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
-        <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')}</button>
-        <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')}</button>
-        <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')}</button>
-        <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Settings', 'ui')}</button>
+        <button class="btn btn--ghost" data-panel="adventure">✦ ${T('Adventures', 'ui')} (J)</button>
+        <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')} (G)</button>
+        <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')} (L)</button>
+        <button class="btn btn--ghost hud-more" data-panel="settings">⚙ ${T('Settings', 'ui')} (O)</button>
         ${G.admin ? `<button class="btn btn--ghost hud-more" data-panel="admin" style="color:#ffd24d;border-color:#ffd24d">⚙ ${T('Admin', 'ui')}</button>` : ''}
         <button class="btn btn--ghost hud-more" id="lang-btn" title="${T('Change Language', 'ui')}">🌐 ${currentLang === 'th' ? 'EN' : 'TH'}</button>
         <button class="btn btn--ghost hud-more" id="mute-btn">🔊</button>
@@ -5451,7 +5461,7 @@ function hotkeysPanelHtml(p) {
   };
   return `<div class="hotkey-intro"><b>${T('Action keybindings', 'ui')}</b><span>${T('Click a keycap, then press a number or unused letter. If that key is already assigned, the two slots swap.', 'ui')}</span></div>
     <div class="hotkey-grid">${p.hotbar.map(row).join('')}</div>
-    <div class="hotkey-foot"><span>${T('Reserved: WASD, E/F/V, C/I/K/Q/M/B', 'ui')}</span><button class="btn btn--ghost" data-reset-hotkeys="1">${T('Reset to 1–9', 'ui')}</button></div>`;
+    <div class="hotkey-foot"><span>${T('Reserved', 'ui') + ': WASD, E/F/V, ' + WINDOW_KEYS.map(w => windowKeyLabel(w[0])).join('/')}</span><button class="btn btn--ghost" data-reset-hotkeys="1">${T('Reset to 1–9', 'ui')}</button></div>`;
 }
 
 const style = document.createElement('style');
@@ -9349,8 +9359,9 @@ window.addEventListener('keydown', e => {
   }
   if (G.running && captureHotkeyBinding(e)) return;
   syncModalPause();
-  if(gameClock.isPaused() && !['escape','c','i','k','m','q','b','`','~','f2'].includes(key) && code !== 'Backquote')return;
-  G.keys[key] = true;
+  const win = windowForKey(e, code);
+  if(gameClock.isPaused() && !win && !['escape','`','~','f2'].includes(key) && code !== 'Backquote')return;
+  if (!(e.altKey && win)) G.keys[key] = true;   // Alt+A / Alt+S open windows, they never walk
   if (!G.running) return;
   const slot = !e.ctrlKey && !e.metaKey && !e.altKey ? G.player.hotkeys.indexOf(code) : -1;
   if (slot >= 0) { e.preventDefault(); if (!e.repeat) useHotbarSlot(slot); }
@@ -9365,14 +9376,10 @@ window.addEventListener('keydown', e => {
       togglePanel('admin');
     }
   }
+  else if (win) { e.preventDefault(); togglePanel(win[0]); }
+  else if (e.altKey) return;                     // unbound Alt combos never fall through to E/F/V
   else if (key === 'f') toggleFarm();
   else if (key === 'e') interact();
-  else if (key === 'c') togglePanel('char');
-  else if (key === 'i') togglePanel('inv');
-  else if (key === 'k') togglePanel('skills');
-  else if (key === 'm') togglePanel('world');
-  else if (key === 'q') togglePanel('quest');
-  else if (key === 'b') togglePanel('book');
   else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
   else if (key === 'v') performParry();
   else if (key === 'escape') closeTopmost();
@@ -9394,7 +9401,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

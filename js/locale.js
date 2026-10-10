@@ -239,6 +239,7 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Reserved": "สงวนไว้",
       "Select a skill to see what it does. Double-click to learn.": "เลือกสกิลเพื่อดูรายละเอียด ดับเบิลคลิกเพื่อเรียน",
       "Learn": "เรียน",
       "Bar": "แถบลัด",
