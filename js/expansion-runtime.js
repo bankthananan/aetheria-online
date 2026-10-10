@@ -63,7 +63,7 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
       return `<div class="ro-box adv-row"><div class="adv-row__main"><b>${T('Defeat','ui')} ${esc(T(CONTENT.monsters.find(m=>m.id===d.targetId)?.name||d.targetId,'monsters'))}</b>
         <div class="ro-meter"><i style="width:${Math.min(100,100*d.progress/d.required)}%"></i></div>
         <span class="ro-muted">${d.progress}/${d.required} · ${cfg.dailyZeny}z · ${cfg.dailyXp} XP</span></div>
-        <button class="btn" data-daily-claim="${esc(d.id)}" ${!ready||done?'disabled':''}>${T(done?'Claimed':'Claim','ui')}</button></div>`;
+        ${!ready&&!done?`<button class="btn btn--ghost" data-task="hunt" data-task-id="${esc(d.targetId)}">➤ ${T('Hunt','ui')}</button>`:''}<button class="btn" data-daily-claim="${esc(d.id)}" ${!ready||done?'disabled':''}>${T(done?'Claimed':'Claim','ui')}</button></div>`;
     }).join('');
     const ranks=MASTERY_RANKS.map(r=>{
       const got=claimed[r.rank], need=Math.max(0,r.reqPoints-pts);

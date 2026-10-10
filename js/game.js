@@ -3538,6 +3538,10 @@ function taskAction(source, taskId) {
   if (source === 'advance') {
     return G.advance ? actionForObjective(G.advance.def.objective, source, G.advance.def.name) : null;
   }
+  if (source === 'hunt') {   // Adventures dailies: walk to the species' zone and hunt it
+    const mapId = monsterMapId[taskId];
+    return mapId ? { source, taskId, mode: 'hunt', monsterId: taskId, mapId, label: monById[taskId]?.name || taskId } : null;
+  }
   if (source === 'npc') {
     const loc = npcLocation(taskId);
     return loc?.mapId ? { source, taskId, mode: 'npc', mapId: loc.mapId, npcId: taskId, label: npcById[taskId]?.name || taskId } : null;
@@ -6887,10 +6891,12 @@ function bookTabHtml(tab) {
         <small class="book-src">${bookItemSource(it.id)}</small></div>`;
     }).join('')}</div>`;
   }
-  // bestiary (default)
-  return `<div class="book-grid">${CONTENT.monsters.map(m => {
+  // bestiary (default): grouped by the zone a monster spawns in; undiscovered ones show as silhouettes
+  const zones = new Map();
+  for (const m of CONTENT.monsters) { const z = monsterMapName[m.id] || 'Rift Incursions'; (zones.get(z) || zones.set(z, []).get(z)).push(m); }
+  return [...zones].map(([zone, list]) => `<h4 class="book-zone">${esc(T(zone, 'maps'))} <small>${list.filter(m => G.seenMonsters.has(m.id)).length}/${list.length}</small></h4><div class="book-grid">${list.map(m => {
     const seen = G.seenMonsters.has(m.id);
-    if (!seen) return `<div class="book-card locked"><span class="book-lock">?</span><b>???</b></div>`;
+    if (!seen) return `<div class="book-card locked"><div class="book-card-head"><span class="book-silhouette">${monsterIconImg(m, 34)}</span><b>???</b></div><small>Lv ${m.level}</small></div>`;
     const el = m.element || 'physical', w = weakToElement(el), kills = G.killCounts[m.id] || 0;
     const drops = (m.drops || []).map(d => esc(T(itemById[d.itemId]?.name || d.itemId, 'items'))).join(', ') || '—';
     return `<div class="book-card"><div class="book-card-head">${monsterIconImg(m, 34)}<b>${esc(T(m.name, 'monsters'))}</b></div>
@@ -6898,7 +6904,7 @@ function bookTabHtml(tab) {
       <small>${elementChip(el)} ${w ? `${T('weak to', 'ui')} ${elementChip(w)}` : ''}</small>
       <small class="book-src">${T('Drops', 'ui')}: ${drops}</small>
       <small class="book-kills">${T('Defeated', 'ui')}: <b>${kills}</b></small></div>`;
-  }).join('')}</div>`;
+  }).join('')}</div>`).join('');
 }
 
 function panelBody(id) {
@@ -7133,7 +7139,7 @@ function panelBody(id) {
     }</div>`;
     const board = (G.guildBoard || []).map(bq => `<div class="q-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
       <span>${diffBadge(bq.difficulty)} ${bq.kind === 'deliver' ? T('Deliver', 'ui') : T('Cull', 'ui')} ${bq.count} <b>${T(bq.targetName, bq.kind === 'deliver' ? 'items' : 'monsters')}</b><br><small style="color:var(--accent-alt)">${bountyWhere(bq)}</small><br>${bountyLevelHtml(bq)}<br><small style="color:var(--text-muted)">${T('Reward', 'ui')}: ${bq.reward.exp} XP, ${bq.reward.zeny} Zeny · <b style="color:var(--accent-alt)">${bq.pts} ${T('guild pts', 'ui')}</b></small></span>
-      <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button></div></div>`).join('');
+      <button class="btn" data-guild="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept', 'ui')}</button><button class="btn btn--primary" data-guild-go="${bq.id}" ${slotsFree ? '' : 'disabled'}>${T('Accept & Go', 'ui')} ➤</button></div></div>`).join('');
     const boardHead = `<div class="q-cat guild-board-head"><span>📋 ${T('Available Bounties', 'ui')}</span><button class="btn btn--ghost" data-guildrefresh="1">↻ ${T('Refresh Board', 'ui')}</button></div>`;
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
     const unlocks = ri < GUILD_HARD_AT ? (currentLang === 'th' ? `เควสต์ระดับยากเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_HARD_AT], 'ui')}` : `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}`) : ri < GUILD_ELITE_AT ? (currentLang === 'th' ? `เควสต์ระดับอีลิทเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_ELITE_AT], 'ui')}` : `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}`) : T('all bounty tiers unlocked', 'ui');
@@ -7556,7 +7562,7 @@ function wirePanel(id, el) {
       refreshPanel('automation');
     };
   });
-  el.querySelectorAll('[data-task]').forEach(task => task.onclick = event => { event.stopPropagation(); activateTaskGuide(task.dataset.task, task.dataset.taskId); });
+  el.querySelectorAll('[data-task]').forEach(task => task.onclick = event => { event.stopPropagation(); activateTaskGuide(task.dataset.task, task.dataset.taskId); if (compactViewport()) openPanels().forEach(closePanel); });   // a full-screen sheet would keep the world paused
   el.querySelectorAll('[data-job-choice]').forEach(button => button.onclick = event => { event.stopPropagation(); showJobChoice(G.player); });
   el.querySelectorAll('[data-advanced-job-choice]').forEach(button => button.onclick = event => { event.stopPropagation(); showAdvancedJobChoice(G.player); });
   el.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { useItem(b.dataset.use); refreshPanel(id); });
@@ -7589,6 +7595,7 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-learn]').forEach(b => b.onclick = () => { learnSkill(b.dataset.learn); refreshPanel('skills'); });
   el.querySelectorAll('[data-passive]').forEach(b => b.onclick = () => { learnPassive(b.dataset.passive); refreshPanel('skills'); });
   el.querySelectorAll('[data-guild]').forEach(b => b.onclick = () => { acceptGuild(b.dataset.guild); refreshPanel(id); });
+  el.querySelectorAll('[data-guild-go]').forEach(b => b.onclick = () => { const id = b.dataset.guildGo; acceptGuild(id); if (G.activeGuilds.some(g => g.id === id)) { panelEl('guild')?.remove(); activateTaskGuide('guild', id); } else refreshPanel(id); });
   el.querySelectorAll('[data-guildrefresh]').forEach(b => b.onclick = () => rerollGuildBoard());
   el.querySelectorAll('[data-guildclaim]').forEach(b => b.onclick = () => { claimGuild(b.dataset.guildclaim); refreshPanel(id); });
   el.querySelectorAll('[data-guildrevoke]').forEach(b => b.onclick = event => {
@@ -8635,6 +8642,8 @@ const extraCss = `
   .ro-tree-cell .ro-skill{grid-template-columns:36px minmax(0,1fr)}.ro-tree-cell .ro-skill-state{grid-column:1/-1;justify-self:start}}
 #hud [data-panel].has-claim{position:relative}#hud [data-panel].has-claim::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#e0795f;box-shadow:0 0 0 1px #2a1a0c}
 .claims-link{font-weight:700;color:var(--gold-bright,#ffd24d)}
+.book-zone{margin:10px 2px 4px;font:700 13px var(--font-head)}.book-zone small{color:var(--text-muted);font-weight:400}
+.book-silhouette>*{filter:brightness(0);opacity:.35}
 .panel__talk{margin-left:auto;margin-right:6px;background:none;border:0;font-size:18px;cursor:pointer}
 .stash-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stash-bar p{margin:0}
 .btn.is-armed{background:var(--oxblood,#8a2a1e);color:var(--on-fill)}
