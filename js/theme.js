@@ -65,6 +65,25 @@ export const THEME = {
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+/* ===== Aetheria x RO window template (docs/UI_UX_DESIGN.md#template) =====
+   Two surfaces share one token vocabulary. Dark surfaces (HUD, title, tooltips) use :root values;
+   parchment surfaces flip the same tokens to ink, so any component written against tokens renders on both.
+   --on-fill never flips: it is the label colour for solid dark fills (forest/oxblood/gold-deep buttons). */
+:root{--on-fill:#f7edce;--violet:#b388ff;
+  --window-bg:var(--paper-grain),linear-gradient(135deg,var(--parchment-light),var(--parchment))}
+#hud .quest-tracker,.ro-parchment,body .panel .panel__body{
+  --text:#302619;--text-muted:#5c4e36;--accent-alt:#6b4a10;--gold-bright:#6b4a10;--gold:#9c7a34;
+  --success-text:#2f5e30;--danger-text:#8f2a27;--info:#1f4c78;--warn:#7f4a0c;--violet:#5b3a9e;
+  --success:#4f7a4a;--panel-border:#92733c;
+  --card-bg:rgba(255,248,228,.55);--card-border:rgba(120,86,40,.45)}
+.ro-parchment{color:var(--text);background:var(--window-bg)}
+/* identity colours (rarity, elements, pets, grades) are tuned for dark UI; outline them on parchment */
+body .panel .panel__body .rar,.ro-parchment .rar,.ro-id{text-shadow:-1px 0 #2b1c0c,1px 0 #2b1c0c,0 -1px #2b1c0c,0 1px #2b1c0c}
+/* inset box + section header: the two building blocks inside every window */
+.ro-box{padding:8px 10px;background:var(--card-bg);border:1px solid var(--card-border);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.ro-sec{display:flex;align-items:center;gap:6px;margin:10px 0 6px;color:var(--accent-alt);font:700 13px var(--font-head)}
+.ro-sec:after{content:"";flex:1;height:1px;background:var(--card-border)}
+
 html,body{min-width:280px}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);line-height:1.4}
 button,input,select,textarea{font:inherit;letter-spacing:0}
@@ -163,13 +182,13 @@ body[data-viewport="portrait"] #hud .hud-more-toggle,body[data-viewport="landsca
 
 /* Dialogue uses parchment as a focused medieval reading surface. */
 .dialogue{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);width:min(680px,92vw);
-  background:#12213a;border:2px solid #d3dae1;border-radius:2px;box-shadow:inset 0 0 0 2px #314b73,var(--panel-shadow);
+  background:var(--wood-deep);border:2px solid var(--gold);border-radius:2px;box-shadow:inset 0 0 0 2px rgba(116,80,29,.4),var(--panel-shadow);
   padding:10px 12px;z-index:20}
 .dialogue__name{font-family:var(--font-head);color:var(--accent-alt);font-size:15px;font-weight:700;margin:0 0 6px 4px}
 .dialogue__text{min-height:48px;padding:9px 11px;border:1px solid var(--brass);background:var(--parchment);
   color:var(--parchment-ink);font-family:Georgia,Cambria,"Times New Roman",serif;font-size:14px;line-height:1.45}
 .dialogue__choices{display:flex;flex-direction:column;gap:4px;margin-top:8px}
-.dialogue__choices .btn{text-align:left;justify-content:flex-start;background:#172a47;border:1px solid #8f9caf;color:var(--text);font-weight:700}
+.dialogue__choices .btn{text-align:left;justify-content:flex-start;background:var(--wood-deep);border:1px solid var(--gold);color:var(--text);font-weight:700}
 .dialogue__choices .btn:hover{background:#604923;border-color:#f0d47d;color:#fff9de}
 
 /* Log, toast, and combat numbers */
@@ -211,11 +230,11 @@ body[data-viewport="portrait"] #hud .hud-more-toggle,body[data-viewport="landsca
 .panel .sk-node.can:hover{background:#2a4a77;outline:1px solid #f0d47d;transform:translateY(-1px)}
 .panel .sk-node .sk-lv{border-radius:1px;background:#080d14}
 .panel .sk-band{color:#9fc3ea}
-.sk-tip,.slot-picker{background:#132440;border:2px solid #cbd4dd;border-radius:2px;
-  box-shadow:inset 0 0 0 2px #314b73,3px 3px 0 rgba(0,0,0,.65)}
+.sk-tip,.slot-picker{background:var(--wood-deep);border:2px solid var(--gold);border-radius:2px;
+  box-shadow:inset 0 0 0 2px rgba(116,80,29,.4),3px 3px 0 rgba(0,0,0,.65)}
 .sk-tip .tip-eff{color:#f1d675}
 .sk-tip .tip-flav{color:#b8c1ce}
-.slot-picker .sp-head{border-bottom-color:#7e8da1}
+.slot-picker .sp-head{border-bottom-color:var(--gold-deep)}
 .slot-picker .sp-row{border-radius:1px}
 .slot-picker .sp-row:hover{background:#6d5424;color:#fff4c2}
 .hud .job-bar{background:#0a111d;border:none}
@@ -312,12 +331,10 @@ body .panel .panel__head{position:sticky;top:0;z-index:3;min-height:40px;padding
   font-size:17px;text-shadow:1px 2px #160b05;box-shadow:inset 0 -1px #8f6634}
 body .panel .panel__head:before{content:"◆";margin-right:8px;color:#f4dc95;font:10px var(--font-ui)}
 body .panel .panel__body{padding:13px 15px;color:var(--parchment-ink);background:var(--paper-grain),linear-gradient(135deg,var(--parchment-light),var(--parchment));
-  --text:#302619;--text-muted:#67583f;--accent-alt:#785719;--panel-border:#92733c;--success:#3f6748;overflow-wrap:anywhere}
+  overflow-wrap:anywhere}
 body .panel .panel__close{flex:0 0 27px;width:27px;height:25px;border:2px solid var(--gold);background:linear-gradient(#694625,#351e0f);
   color:#fff1bf;box-shadow:inset 0 0 0 1px #8b6030;line-height:19px}
 body .panel .panel__close:hover{background:#782c35;border-color:#f0c988;color:#fff}
-/* rarity colors are tuned for dark UI; a 1px pixel outline keeps them legible on parchment */
-body .panel .panel__body .rar{text-shadow:-1px 0 #2b1c0c,1px 0 #2b1c0c,0 -1px #2b1c0c,0 1px #2b1c0c}
 .guide-controls{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end;margin-bottom:10px}
 .guide-controls label{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:11px;font-weight:700;color:var(--text-muted)}
 .guide-controls select{width:100%;min-width:0}
@@ -385,7 +402,7 @@ body .dialogue{max-height:calc(100vh - 98px);overflow:auto;padding:12px 14px;bac
 body .dialogue .dialogue__name{display:inline-block;margin:0 0 7px;padding:3px 10px;border:1px solid #d8b55e;background:#27150b;
   color:var(--gold-bright);font-size:16px;text-shadow:1px 1px #000}
 body .dialogue .dialogue__text{min-height:54px;padding:11px 13px;border:2px solid #9c7b3e;background:var(--paper-grain),linear-gradient(135deg,var(--parchment-light),var(--parchment));
-  color:var(--parchment-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+  color:var(--parchment-ink);box-shadow:inset 0 0 0 1px rgba(116,80,29,.4);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 body .dialogue .dialogue__choices{gap:5px;margin-top:9px}
 body .dialogue .dialogue__choices .btn{border-color:#bb9450;background:linear-gradient(#624222,#321d0e);color:#fff2c3}
 body .dialogue .dialogue__choices .btn:hover{background:linear-gradient(#765126,#452a12);border-color:var(--gold-bright)}
@@ -416,12 +433,12 @@ body .title-screen{background:linear-gradient(rgba(23,17,12,.40),rgba(24,13,7,.6
 body .title-inner{max-width:920px;padding:26px 24px;border:4px solid var(--gold);outline:3px solid #180c06;
   background:var(--wood-grain),linear-gradient(135deg,rgba(81,53,29,.96),rgba(24,13,7,.97));box-shadow:inset 0 0 0 2px #76502d,6px 7px 0 rgba(8,4,2,.68)}
 body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter-spacing:0}
-.title-screen .account-bar{border-color:#7f8da0;border-radius:2px;background:#13233c}
-.title-screen .signin-panel{border-color:#cbd4dd;border-radius:2px;background:#142744;
-  box-shadow:inset 0 0 0 2px #314b73,4px 5px 0 rgba(0,0,0,.65)}
-.title-screen .signin-input,#hero-name{border-radius:1px!important;border-color:#9aa8b9!important;background:#090f18!important;color:var(--text)!important}
-.title-screen .class-card{border-radius:2px;background:#172a47;border-color:#9ba8b8;outline-color:var(--accent-alt)!important;box-shadow:inset 0 0 0 1px #314b73,2px 2px 0 #080d14}
-.title-screen .class-card:hover{background:#23416b;border-color:#efd16f;transform:translateY(-1px)}
+.title-screen .account-bar{border-color:var(--gold-deep);border-radius:2px;background:var(--wood-deep)}
+.title-screen .signin-panel{border-color:var(--gold);border-radius:2px;background:var(--wood-deep);
+  box-shadow:inset 0 0 0 2px rgba(116,80,29,.4),4px 5px 0 rgba(0,0,0,.65)}
+.title-screen .signin-input,#hero-name{border-radius:1px!important;border-color:var(--gold)!important;background:var(--wood-deep)!important;color:var(--text)!important}
+.title-screen .class-card{border-radius:2px;background:var(--wood-deep);border-color:var(--gold);outline-color:var(--accent-alt)!important;box-shadow:inset 0 0 0 1px rgba(116,80,29,.4),2px 2px 0 rgba(116,80,29,.4)}
+.title-screen .class-card:hover{background:var(--wood-deep);border-color:#efd16f;transform:translateY(-1px)}
 .title-screen .cc-name{font-family:var(--font-head);color:#efd16f}
 
 @keyframes dmgRise{
@@ -500,11 +517,10 @@ body .title-h1{font-size:38px;color:#efd16f;text-shadow:2px 2px 0 #69252f;letter
 .elem-chip{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:3px;font-size:9px;font-weight:800;line-height:15px;vertical-align:middle;white-space:nowrap}
 .collection-book{display:flex;flex-direction:column;gap:10px}
 .book-tabs{display:flex;gap:4px;flex-wrap:wrap}
-.chronicle-tabs{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(214,182,108,.3)}
-.chronicle-tabs .book-tab:not(.active){color:#d2c29b;background:rgba(0,0,0,.35);border-color:rgba(214,182,108,.35)}
-.chronicle-tabs .book-tab:not(.active):hover{color:var(--gold-bright);border-color:var(--gold)}
-.book-tab{white-space:nowrap;padding:5px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(120,90,50,.5);color:var(--text,#e8dcc0);font-size:11px;font-weight:700;cursor:pointer;border-radius:3px}
-.book-tab.active{background:var(--gold-deep,#74501d);color:var(--gold-bright,#f2d88a);border-color:var(--gold,#d6b45a)}
+.chronicle-tabs{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--card-border)}
+.book-tab{white-space:nowrap;padding:5px 10px;background:var(--card-bg);border:1px solid var(--card-border);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;border-radius:2px}
+.book-tab:hover{border-color:var(--gold)}
+.book-tab.active{background:#74501d;color:#f2d88a;border-color:#d6b45a}
 .book-pane{min-height:160px}
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .book-card{display:flex;flex-direction:column;gap:2px;padding:7px;background:rgba(0,0,0,.28);border:1px solid rgba(120,90,50,.4);border-radius:4px}
