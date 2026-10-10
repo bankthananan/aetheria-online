@@ -71,7 +71,7 @@ export const THEME = {
    --on-fill never flips: it is the label colour for solid dark fills (forest/oxblood/gold-deep buttons). */
 :root{--on-fill:#f7edce;--violet:#b388ff;
   --window-bg:var(--paper-grain),linear-gradient(135deg,var(--parchment-light),var(--parchment))}
-#hud .quest-tracker,.ro-parchment,body .panel .panel__body{
+#hud .quest-tracker,.ro-parchment,body .panel .panel__body,body .sk-tip{
   --text:#302619;--text-muted:#5c4e36;--accent-alt:#6b4a10;--gold-bright:#6b4a10;--gold:#9c7a34;
   --success-text:#2f5e30;--danger-text:#8f2a27;--info:#1f4c78;--warn:#7f4a0c;--violet:#5b3a9e;
   --success:#4f7a4a;--panel-border:#92733c;
@@ -83,6 +83,50 @@ body .panel .panel__body .rar,.ro-parchment .rar,.ro-id{text-shadow:-1px 0 #2b1c
 .ro-box{padding:8px 10px;background:var(--card-bg);border:1px solid var(--card-border);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
 .ro-sec{display:flex;align-items:center;gap:6px;margin:10px 0 6px;color:var(--accent-alt);font:700 13px var(--font-head)}
 .ro-sec:after{content:"";flex:1;height:1px;background:var(--card-border)}
+body .panel .panel__body h3:not([class]),.ro-parchment h3:not([class]){display:flex;align-items:center;gap:6px;margin:12px 0 6px;color:var(--accent-alt);font:700 13px var(--font-head)}
+body .panel .panel__body h3:not([class]):first-child,.ro-parchment h3:not([class]):first-child{margin-top:0}
+body .panel .panel__body h3:not([class]):after,.ro-parchment h3:not([class]):after{content:"";flex:1;height:1px;background:var(--card-border)}
+/* form fields on parchment: light field, umber line, gold focus */
+:is(.ro-parchment,body .panel .panel__body) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){
+  min-height:26px;padding:3px 7px;background:#fbf5e4;color:var(--text);border:1px solid var(--card-border);border-radius:2px;
+  box-shadow:inset 1px 1px 0 rgba(120,86,40,.18);font-size:12px}
+:is(.ro-parchment,body .panel .panel__body) :is(input,select,textarea):focus-visible{outline:2px solid #b8862b;outline-offset:1px}
+:is(.ro-parchment,body .panel .panel__body) :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#74501d}
+/* meter: thin progress bar for counts (dailies, mastery, bounties) */
+.ro-meter{height:6px;background:rgba(120,86,40,.18);border:1px solid var(--card-border);overflow:hidden}
+.ro-meter>i{display:block;height:100%;background:var(--success)}
+.ro-muted{color:var(--text-muted);font-size:11px}
+/* Adventures */
+.adv-list{display:grid;gap:6px}
+.adv-row{display:flex;align-items:center;gap:10px}.adv-row__main{flex:1;min-width:0;display:grid;gap:4px}
+.adv-zone{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.adv-diff{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+.adv-ranks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.adv-rank{display:grid;gap:3px;align-content:start;font-size:12px}.adv-rank>b{font:700 13px var(--font-head);color:var(--accent-alt)}.adv-rank .btn{justify-self:start}
+.adv-rank.is-claimed{border-color:var(--success)}.adv-rank__state{color:var(--success-text);font-weight:700}
+.adv-actions{display:flex;flex-wrap:wrap;gap:6px}
+/* Status window (RO layout: identity header, stats | attributes, then gear / rebirth / achievements) */
+.st-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.st-name{color:var(--accent-alt);font:700 15px var(--font-head)}
+.st-levels{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;font-size:12px}.st-levels .ro-meter{grid-column:1/-1;margin-bottom:4px}
+.st-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+.st-points{margin-bottom:4px;color:var(--accent-alt);font-size:12px}
+.st-build b{letter-spacing:2px;color:var(--violet)}
+.st-derived{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4px 8px;margin:0;font-size:12px}
+.st-derived dt{color:var(--text-muted)}.st-derived dd{margin:0;font-weight:700;color:var(--text)}
+.st-radar{display:flex;justify-content:center;margin-top:6px}
+.st-rebirth{display:grid;gap:4px}
+.st-achievements{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:5px}
+.st-ach{display:grid;gap:1px;font-size:12px;opacity:.5}.st-ach.is-got{opacity:1;border-color:var(--gold)}
+@media (max-width:680px){.st-head,.st-grid{grid-template-columns:1fr}.st-derived{grid-template-columns:auto 1fr}}
+/* Guild header */
+.guild-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.guild-rank{flex-shrink:0;padding:4px 10px;background:#74501d;color:#f2d88a;border:1px solid #d6b45a;font:700 14px var(--font-head)}
+.guild-head__prog{flex:1;min-width:0;display:grid;gap:3px;font-size:12px}
+/* Loadouts */
+.loadout-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px;margin-top:6px}
+.loadout-row__state{grid-column:1/-1}
+@media (max-width:680px){.loadout-row{grid-template-columns:1fr 1fr 1fr}.loadout-row input{grid-column:1/-1}}
 
 html,body{min-width:280px}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);line-height:1.4}
@@ -349,8 +393,7 @@ body .panel .bag-tab:hover{border-color:#6e4b1d;color:#382812}
 body .panel .bag-tab.on{background:linear-gradient(#7b5928,#5d3e18);border-color:#3d270e;color:#fff3c0;box-shadow:inset 0 0 0 1px #c5a057}
 
 .inv-toolbar{display:flex;gap:8px;align-items:center;margin:6px 0 10px;flex-wrap:wrap}
-.inv-search-input{flex:1;min-width:140px;padding:5px 8px;font-size:11px;background:rgba(20,13,8,.85);color:#fff;border:1px solid var(--gold);border-radius:2px}
-.inv-search-input:focus{outline:none;border-color:var(--gold-bright);box-shadow:0 0 6px rgba(240,212,125,.5)}
+.inv-search-input{flex:1;min-width:140px}
 
 body .panel .q-card{border:2px solid #92733c;background:var(--paper-grain),#eee0bb;box-shadow:2px 2px 0 rgba(80,51,21,.22)}
 body .panel[data-kind="quest"] .panel__body,body .panel[data-kind="guild"] .panel__body{color:var(--quest-ink);background:var(--paper-grain),var(--quest-paper)}

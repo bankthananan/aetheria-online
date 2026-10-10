@@ -5421,7 +5421,7 @@ function updateQuestTracker() {
     html += a.choiceReady
       ? `<button class="task-link job-choice-ready" ${finalChoice ? 'data-advanced-job-choice="1"' : 'data-job-choice="1"'} style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)"><b style="color:#f0d47d">✦ ${T(finalChoice ? 'Choose Third Job' : 'Choose Second Job', 'ui')}</b><br><span>${T('Your trial is complete. Choose one permanent specialization.', 'ui')}</span></button>`
       : `<button class="task-link${G.taskGuide?.source === 'advance' ? ' active' : ''}" data-task="advance" title="${T('Navigate to this task', 'ui')}" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(224,182,76,.35)">
-        <b style="color:#e6a23c">✦ ${T(a.def.name, 'quests')}</b><br>${T(a.def.desc, 'quests')}<br>
+        <b style="color:var(--warn)">✦ ${T(a.def.name, 'quests')}</b><br>${T(a.def.desc, 'quests')}<br>
         <span style="color:${done ? 'var(--success)' : 'var(--text)'}">▸ ${typeName(o.type)} ${objectiveName(o)}: ${advanceProgress()}/${o.count}</span></button>`;
   }
   const q = questById[G.quest], pending = questById[G.pendingQuest];
@@ -6169,7 +6169,7 @@ function skillNodeTip(id, isPassive) {
 
     let hint = '';
     if (lv >= pa.maxLevel) {
-      hint = `<div class="tip-hint" style="color:#e6bd54">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed'}</div>`;
+      hint = `<div class="tip-hint" style="color:var(--accent-alt)">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed'}</div>`;
     } else if (can) {
       hint = `<div class="tip-hint" style="color:var(--success)">${currentLang === 'th' ? `คลิกเพื่อ${lv ? 'อัปเกรด' : 'เรียนรู้'} (ใช้ 1 แต้ม)` : `Click to ${lv ? 'raise' : 'learn'} (1 point)`}</div>`;
     }
@@ -6178,7 +6178,7 @@ function skillNodeTip(id, isPassive) {
     const displayDesc = lv ? `ปัจจุบัน: ${T(pa.desc, 'passives').replace('{v}', pa.per * lv)}` : `แต่ละเลเวล: ${T(pa.desc, 'passives').replace('{v}', pa.per)}`;
     const displayDescEn = lv ? `Now: ${pa.desc.replace('{v}', pa.per * lv)}` : `Each level: ${pa.desc.replace('{v}', pa.per)}`;
 
-    return `<div class="tip-name" style="color:#6fb0ef">${displayName} <small style="color:var(--text-muted)">· ${currentLang === 'th' ? 'ติดตัว' : 'passive'}</small></div>
+    return `<div class="tip-name" style="color:var(--info)">${displayName} <small style="color:var(--text-muted)">· ${currentLang === 'th' ? 'ติดตัว' : 'passive'}</small></div>
       <div class="tip-eff">${currentLang === 'th' ? displayDesc : displayDescEn}</div>
       <div class="tip-row">${currentLang === 'th' ? 'เลเวล' : 'Level'} <b>${lv}/${pa.maxLevel}</b>${lv < pa.maxLevel ? ` · ${currentLang === 'th' ? 'ถัดไป' : 'next'}: <b>${nxt}</b>` : ''}</div>
       <div class="tip-flav">${currentLang === 'th' ? 'เพิ่มโบนัสสถานะถาวร — ทำงานตลอดเวลา' : 'Permanent stat bonus — always on.'}</div>${need}${previewNote}${hint}`;
@@ -6233,7 +6233,7 @@ function skillNodeTip(id, isPassive) {
   
   let hint = '';
   if (lv >= max) {
-    hint = `<div class="tip-hint" style="color:#e6bd54">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed out'}</div>`;
+    hint = `<div class="tip-hint" style="color:var(--accent-alt)">${currentLang === 'th' ? 'ระดับสูงสุด' : 'Maxed out'}</div>`;
   } else if (!gates.length) {
     hint = `<div class="tip-hint" style="color:var(--success)">${currentLang === 'th' ? `คลิกเพื่อ${lv ? 'อัปเกรด' : 'เรียนรู้'} (ใช้ 1 แต้ม)` : `Click to ${lv ? 'upgrade' : 'learn'} (1 point)`}</div>`;
   }
@@ -6686,39 +6686,50 @@ function panelBody(id) {
       ? `ระดับอาชีพ ${p.tierIndex + 1}${choiceNext ? ` · เลือกอาชีพขั้นสองที่ Lv ${nextBase?.reqLevel || 15}` : next ? ` · ถัดไป: <b style="color:var(--text)">${T(next.name, 'classes')}</b> ที่ Lv ${next.reqLevel}` : ` · ${T('max advancement', 'ui')}`}`
       : `Tier ${p.tierIndex + 1}${choiceNext ? ` · choose a second job @ Lv ${nextBase?.reqLevel || 15}` : next ? ` · next: <b style="color:var(--text)">${next.name}</b> @ Lv ${next.reqLevel}` : ' · max advancement'}`;
       
-    return `<div style="display:flex;gap:22px;flex-wrap:wrap">
-      <div style="min-width:230px">
-        <b style="color:var(--accent-alt)">${p.name}</b> — ${T(p.className, 'classes')}
-        <div style="color:var(--text-muted);font-size:12px;margin:2px 0 8px">
-          ${tierText}<br>
-          ${branch ? `<span style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))} · ${esc(T(branch.focus, 'ui'))}</span><br>` : ''}
-          ${T('Level', 'ui')} <b style="color:var(--text)">${p.level}</b>/${DESIGN.levelCap} &nbsp; XP ${Math.floor(p.xp)}/${p.level >= DESIGN.levelCap ? 'MAX' : xpForNext(p.level)}<br>
-          ${T('Job Lv', 'ui')} <b style="color:#6fb0ef">${p.jobLevel}/${activeJobLevelCap(p)}</b> &nbsp; Job XP ${p.jobLevel >= activeJobLevelCap(p) ? 'MAX' : `${Math.floor(p.jobXp)}/${jobXpForNext(p.jobLevel)}`}
+    const xpNeed = p.level >= DESIGN.levelCap ? 0 : xpForNext(p.level), jobCap = activeJobLevelCap(p), jobNeed = p.jobLevel >= jobCap ? 0 : jobXpForNext(p.jobLevel);
+    const meter = (cur, need) => `<div class="ro-meter"><i style="width:${need ? Math.min(100, 100 * cur / need) : 100}%"></i></div>`;
+    const derived = [[T('ATK', 'ui'), p.atkStat], [T('DEF', 'ui'), p.physDef], [T('HIT', 'ui'), p.hit], [T('FLEE', 'ui'), p.flee],
+      [T('CRIT', 'ui'), p.critChance + '%'], [T('ASPD', 'ui'), '+' + aspd + '%'], [T('Max HP', 'ui'), p.maxHp], [T('Max MP', 'ui'), p.maxMp],
+      [T('Move', 'ui'), '+' + move + '%'], ...(p.rangeBonus ? [[T('Reach', 'ui'), '+' + p.rangeBonus.toFixed(1) + ' ' + T('tiles', 'ui')]] : [])];
+    return `<div class="st-window">
+      <header class="ro-box st-head">
+        <div><b class="st-name">${p.name}</b> — ${T(p.className, 'classes')}
+          <div class="ro-muted">${tierText}</div>
+          ${branch ? `<div class="ro-muted"><span class="ro-id" style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))}</span> · ${esc(T(branch.focus, 'ui'))}</div>` : ''}</div>
+        <div class="st-levels">
+          <span>${T('Level', 'ui')} <b>${p.level}</b>/${DESIGN.levelCap}</span><span class="ro-muted">XP ${Math.floor(p.xp)}/${xpNeed || 'MAX'}</span>${meter(p.xp, xpNeed)}
+          <span>${T('Job Lv', 'ui')} <b>${p.jobLevel}</b>/${jobCap}</span><span class="ro-muted">Job XP ${jobNeed ? `${Math.floor(p.jobXp)}/${jobNeed}` : 'MAX'}</span>${meter(p.jobXp, jobNeed)}
         </div>
-        <div style="font-size:12px;margin-bottom:6px;color:var(--text-muted)">${T('Recommended build:', 'ui')} <b style="color:#c77dff;letter-spacing:2px">${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
-        <div style="color:var(--accent-alt);margin-bottom:6px">${T('Unspent stat points:', 'ui')} <b>${p.statPoints}</b> <small style="color:var(--text-muted)">· ${T('higher stats cost more per +', 'ui')}</small></div>
-        ${['str','agi','vit','int','dex','luk'].map(statRow).join('')}
+      </header>
+      <div class="st-grid">
+        <section>
+          <h3>${T('Stats', 'ui')}</h3>
+          <div class="st-points">${T('Unspent stat points:', 'ui')} <b>${p.statPoints}</b> <small class="ro-muted">· ${T('higher stats cost more per +', 'ui')}</small></div>
+          ${['str','agi','vit','int','dex','luk'].map(statRow).join('')}
+          <div class="ro-muted st-build">${T('Recommended build:', 'ui')} <b>${recommendedBuild(p._cls.statGrowthPerLevel)}</b></div>
+        </section>
+        <section>
+          <h3>${T('Attributes', 'ui')}</h3>
+          <dl class="ro-box st-derived">${derived.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+          <div class="st-radar">${svgRadar(s)}</div>
+        </section>
       </div>
-      <div style="color:var(--text-muted);min-width:240px">
-        <div style="display:flex;justify-content:center;margin-bottom:4px">${svgRadar(s)}</div>
-        ${T('ATK', 'ui')} <b style="color:var(--text)">${p.atkStat}</b> &nbsp; ${T('DEF', 'ui')} <b style="color:var(--text)">${p.physDef}</b><br>
-        ${T('HIT', 'ui')} ${p.hit} &nbsp; ${T('FLEE', 'ui')} ${p.flee} &nbsp; ${T('CRIT', 'ui')} ${p.critChance}%<br>
-        ${T('Max HP', 'ui')} ${p.maxHp} &nbsp; ${T('Max MP', 'ui')} ${p.maxMp}<br>
-        ${T('ASPD', 'ui')} <b style="color:var(--text)">+${aspd}%</b> · ${T('Move', 'ui')} <b style="color:var(--text)">+${move}%</b>${p.rangeBonus ? ` · ${T('Reach', 'ui')} <b style="color:var(--text)">+${p.rangeBonus.toFixed(1)}</b> ${T('tiles', 'ui')}` : ''}<br>
-        <div style="color:var(--accent-alt);margin:10px 0 6px">${T('Equipment', 'ui')}</div>
-        ${gearBuildAdviceHtml(p)}
-        ${equippedGearSummaryHtml(p)}
-        ${paperDoll(p)}
-        <div style="color:var(--accent-alt);margin:10px 0 6px">✦ ${T('Rebirth', 'ui')}${p.rebirths ? ` <b style="color:#c77dff">×${p.rebirths}</b>` : ''}</div>
+      <h3>${T('Equipment', 'ui')}</h3>
+      ${gearBuildAdviceHtml(p)}
+      ${equippedGearSummaryHtml(p)}
+      ${paperDoll(p)}
+      <h3>✦ ${T('Rebirth', 'ui')}${p.rebirths ? ` ×${p.rebirths}` : ''}</h3>
+      <div class="ro-box st-rebirth">
         <div style="font-size:12px">${T('Each rebirth: +{s} all stats, +{p}% HP/MP — forever.', 'ui').replace('{s}', TUNING.rebirthStatBonus).replace('{p}', Math.round(TUNING.rebirthHpMpPct * 100))}</div>
-        <div style="font-size:12px;color:#e2695f">${T('The world bites back: each rebirth gives monsters +{h}% HP, +{d}% DEF, and +{a}% ATK. Retained attack gear adds early-run HP that fades by max level; EXP rises +{x}%.', 'ui').replace('{h}', Math.round(TUNING.rebirthMonsterHpMult * 100)).replace('{d}', Math.round(TUNING.rebirthMonsterDefMult * 100)).replace('{a}', Math.round(TUNING.rebirthMonsterAtkMult * 100)).replace('{x}', Math.round(TUNING.rebirthMonsterExp * 100))}</div>
+        <div style="font-size:12px;color:var(--danger-text)">${T('The world bites back: each rebirth gives monsters +{h}% HP, +{d}% DEF, and +{a}% ATK. Retained attack gear adds early-run HP that fades by max level; EXP rises +{x}%.', 'ui').replace('{h}', Math.round(TUNING.rebirthMonsterHpMult * 100)).replace('{d}', Math.round(TUNING.rebirthMonsterDefMult * 100)).replace('{a}', Math.round(TUNING.rebirthMonsterAtkMult * 100)).replace('{x}', Math.round(TUNING.rebirthMonsterExp * 100))}</div>
         ${p.level >= DESIGN.levelCap
           ? `<button class="btn" data-rebirth="1" style="margin-top:6px">✦ ${T('Rebirth now', 'ui')}</button>
-             <div style="font-size:11px;color:#e2695f;margin-top:4px">${T('Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.', 'ui')}</div>`
+             <div style="font-size:11px;color:var(--danger-text);margin-top:4px">${T('Resets level, job, skills, and stat points. Keeps gear, zeny, guild rank, and the world.', 'ui')}</div>`
           : `<div style="font-size:11px;color:var(--text-muted)">${T('Unlocks at Base Lv {lvl}.', 'ui').replace('{lvl}', DESIGN.levelCap)}</div>`}
-        <div style="color:var(--accent-alt);margin:10px 0 6px">🏆 ${T('Achievements', 'ui')} (${G.achievements.size}/${CONTENT.achievements.length})</div>
-        ${CONTENT.achievements.map(a => { const got = G.achievements.has(a.id); return `<div style="opacity:${got ? 1 : .45};padding:1px 0;font-size:12px">${a.icon} <b style="color:${got ? 'var(--text)' : 'var(--text-muted)'}">${T(a.name, 'achievements')}</b> — <small>${T(a.desc, 'achievements')}</small></div>`; }).join('')}
-      </div></div>`;
+      </div>
+      <h3>🏆 ${T('Achievements', 'ui')} (${G.achievements.size}/${CONTENT.achievements.length})</h3>
+      <div class="st-achievements">${CONTENT.achievements.map(a => { const got = G.achievements.has(a.id); return `<div class="ro-box st-ach${got ? ' is-got' : ''}">${a.icon} <b>${T(a.name, 'achievements')}</b><small class="ro-muted">${T(a.desc, 'achievements')}</small></div>`; }).join('')}</div>
+    </div>`;
   }
   if (id === 'inv') {
     if (!p.inventory.length) return `<div style="color:var(--accent-alt);margin-bottom:8px">💰 ${p.zeny} ${T('zeny', 'ui')}</div><i>${T('Bag is empty.', 'ui')}</i>`;
@@ -6855,9 +6866,11 @@ function panelBody(id) {
     const boardHead = `<div class="q-cat guild-board-head"><span>📋 ${T('Available Bounties', 'ui')}</span><button class="btn btn--ghost" data-guildrefresh="1">↻ ${T('Refresh Board', 'ui')}</button></div>`;
     const ri = G.guildRankIdx || 0, pts = G.guildPoints || 0, atMax = ri >= GUILD_RANKS.length - 1;
     const unlocks = ri < GUILD_HARD_AT ? (currentLang === 'th' ? `เควสต์ระดับยากเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_HARD_AT], 'ui')}` : `hard bounties at ${GUILD_RANKS[GUILD_HARD_AT]}`) : ri < GUILD_ELITE_AT ? (currentLang === 'th' ? `เควสต์ระดับอีลิทเปิดเมื่อยศ ${T(GUILD_RANKS[GUILD_ELITE_AT], 'ui')}` : `elite bounties at ${GUILD_RANKS[GUILD_ELITE_AT]}`) : T('all bounty tiers unlocked', 'ui');
-    const rankHead = `<div class="q-cat" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-      <span>🏅 <span style="font-size:12px;background:rgba(230,189,84,.15);border:1px solid #e6bd54;border-radius:9px;padding:1px 9px;color:#e6bd54">${currentLang === 'th' ? 'ยศ ' + T(GUILD_RANKS[ri], 'ui') : 'Rank ' + GUILD_RANKS[ri]}</span></span>
-      <small style="color:var(--text-muted);font-weight:400">${atMax ? T('MAX rank', 'ui') : `${pts}/${guildPointsNeed(ri)} pts ${currentLang === 'th' ? 'เพื่อเลื่อนเป็น' : 'to'} ${T(GUILD_RANKS[ri + 1], 'ui')}`} · ${unlocks}</small></div>`;
+    const rankHead = `<div class="ro-box guild-head">
+      <span class="guild-rank">${currentLang === 'th' ? 'ยศ ' + T(GUILD_RANKS[ri], 'ui') : 'Rank ' + GUILD_RANKS[ri]}</span>
+      <div class="guild-head__prog"><span>${atMax ? T('MAX rank', 'ui') : `${pts}/${guildPointsNeed(ri)} pts ${currentLang === 'th' ? 'เพื่อเลื่อนเป็น' : 'to'} ${T(GUILD_RANKS[ri + 1], 'ui')}`}</span>
+        <div class="ro-meter"><i style="width:${atMax ? 100 : Math.min(100, 100 * pts / guildPointsNeed(ri))}%"></i></div>
+        <small class="ro-muted">${unlocks}</small></div></div>`;
     return `${rankHead}<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${T("Points scale with the bounty's region (deeper zones pay far more) × its difficulty.", 'ui')}</div>${active}${acceptHint}${boardHead}${board}`;
   }
   if (id === 'shop') {
@@ -6866,8 +6879,8 @@ function panelBody(id) {
     const guildRankIdx = G.guildRankIdx || 0, storyRankIdx = storyShopRankIdx();
     
     const guildRankText = currentLang === 'th'
-      ? `ยศร้านค้า <b style="color:#e6bd54">${T(GUILD_RANKS[rankIdx], 'ui')}</b> · กิลด์ ${T(GUILD_RANKS[guildRankIdx], 'ui')} / เนื้อเรื่อง ${T(GUILD_RANKS[storyRankIdx], 'ui')}`
-      : `Trader Rank <b style="color:#e6bd54">${GUILD_RANKS[rankIdx]}</b> · Guild ${GUILD_RANKS[guildRankIdx]} / Story ${GUILD_RANKS[storyRankIdx]}`;
+      ? `ยศร้านค้า <b style="color:var(--accent-alt)">${T(GUILD_RANKS[rankIdx], 'ui')}</b> · กิลด์ ${T(GUILD_RANKS[guildRankIdx], 'ui')} / เนื้อเรื่อง ${T(GUILD_RANKS[storyRankIdx], 'ui')}`
+      : `Trader Rank <b style="color:var(--accent-alt)">${GUILD_RANKS[rankIdx]}</b> · Guild ${GUILD_RANKS[guildRankIdx]} / Story ${GUILD_RANKS[storyRankIdx]}`;
 
     const head = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <span style="color:var(--accent-alt)">💰 ${p.zeny} ${T('zeny', 'ui')}</span>
@@ -8526,7 +8539,7 @@ button.flow-skill{cursor:pointer}.flow-skill.learned{color:var(--info);border-co
   .skill-flow{width:82vw}.flow-grid{display:flex;flex-direction:column;gap:4px}.flow-arrow{height:12px;transform:rotate(90deg)}.flow-copy{min-height:0}.flow-legend span:last-child{margin-left:0}
   .hotkey-grid{grid-template-columns:1fr;min-width:78vw}
   .world-head{padding:9px;gap:8px}.world-head h2{font-size:17px}.world-seal{flex-basis:54px;height:54px}.world-road{padding:7px 2px}.world-node{grid-template-columns:38px minmax(0,1fr);gap:7px;padding:8px}.world-sigil{width:36px;height:36px;font-size:18px}.world-node-head{gap:6px}.world-copy p{font-size:10px}.world-facts{grid-template-columns:1fr}.world-fact{white-space:normal}.world-link{margin-left:20px}.world-foot span:last-child{margin-left:0}
-  .gear-row{flex-direction:column}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
+  .gear-row{flex-wrap:wrap;gap:6px}.gear-row__copy{flex-basis:100%}.gear-row>.btn{align-self:flex-start}.gear-compare__head{align-items:flex-start;flex-direction:column;gap:1px}
   .automation-console{width:84vw}.auto-toggle-grid,.auto-profile-grid,.auto-target-grid,.auto-slot-grid{grid-template-columns:1fr}.automation-objective{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){#hud .hotbar-shell .finisher-ready,.keycap.listening{animation:none}}

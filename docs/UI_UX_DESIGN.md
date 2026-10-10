@@ -37,6 +37,15 @@ Rules for new UI:
 3. A solid dark fill with a label uses `--on-fill`, never `--text`.
 4. Inline-only "containment" (`min-width:0`, `overflow-x:hidden`, ellipsis) belongs on containers, never on badges or labels.
 
+Template parts added in the menus redesign: bare `<h3>` in a parchment surface renders as a section header with a
+rule; inputs, dropdowns and textareas are parchment fields with a gold focus ring; `.ro-meter` (progress bar); `.ro-muted` (secondary text).
+The skill tooltip (`.sk-tip`) is in the parchment scope.
+
+Menus rebuilt on the template: **Status** (RO layout: identity header with Level and Job meters, base stats beside a
+derived-attributes table, then equipment, rebirth and an achievements grid), **Adventures** (daily meters, mastery rank
+cards with readable perks instead of `moveSpeed_5`, inline difficulty), **Loadouts** (state hints, Apply disabled outside
+town), **Guild** header (rank badge and progress meter), and Satchel actions on phones (one row).
+
 Not carried over from RO (deliberately): vertical inventory tabs (the Satchel's horizontal filters cover the same
 need and fit phone width) and window minimize `[_]` (panels are modal one-at-a-time; nothing to minimize to).
 

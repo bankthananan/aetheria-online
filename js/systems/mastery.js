@@ -1,10 +1,10 @@
 // js/systems/mastery.js - Zone mastery tracking and milestone perks.
 
 export const MASTERY_RANKS = [
-  { rank: 'bronze', reqPoints: 100, perk: 'moveSpeed_5', title: 'Bronze Explorer' },
-  { rank: 'silver', reqPoints: 250, perk: 'dropRate_10', title: 'Silver Pathdrifter' },
-  { rank: 'gold',   reqPoints: 500, perk: 'freeTeleport', title: 'Gold Wanderer' },
-  { rank: 'platinum', reqPoints: 1000, perk: 'globalExp_3', title: 'Platinum Sovereign' },
+  { rank: 'bronze', reqPoints: 100, perk: 'moveSpeed_5', label: 'Move speed +5% in this zone', title: 'Bronze Explorer' },
+  { rank: 'silver', reqPoints: 250, perk: 'dropRate_10', label: 'Drop rate +10% in this zone', title: 'Silver Pathdrifter' },
+  { rank: 'gold',   reqPoints: 500, perk: 'freeTeleport', label: 'Free travel here from town', title: 'Gold Wanderer' },
+  { rank: 'platinum', reqPoints: 1000, perk: 'globalExp_3', label: 'EXP +3% in every zone', title: 'Platinum Sovereign' },
 ];
 
 export const MasterySystem = {

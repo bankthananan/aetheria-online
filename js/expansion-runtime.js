@@ -53,14 +53,33 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
   };
   const adventurePanelHtml=()=>{
     refreshDailies();
-    return `<section class="adventure-content"><h3>${T('Daily challenges','ui')}</h3>${G.dailies.activeDailies.map(d=>`<div class="q-card">${T('Defeat','ui')} ${esc(T(CONTENT.monsters.find(m=>m.id===d.targetId)?.name||d.targetId,'monsters'))} · ${d.progress}/${d.required}<br>${cfg.dailyZeny}z · ${cfg.dailyXp} XP <button class="btn" data-daily-claim="${esc(d.id)}" ${d.progress<d.required||G.dailies.claimedDailies[d.id]?'disabled':''}>${T(G.dailies.claimedDailies[d.id]?'Claimed':'Claim','ui')}</button></div>`).join('')}
-    <h3>${T('Zone Mastery & Exploration','ui')}</h3><p>${esc(T(G.map.name,'maps'))} · ${G.mastery.zonePoints[G.mapId]||0} ${T('pts','ui')}</p>
-    ${MASTERY_RANKS.map(r=>`<button class="btn" data-mastery-claim="${r.rank}" ${(G.mastery.zonePoints[G.mapId]||0)<r.reqPoints||G.mastery.claimedRanks[G.mapId]?.[r.rank]?'disabled':''}>${T(r.title,'ui')} · ${r.reqPoints} · ${T(r.perk,'ui')}</button>`).join(' ')}
-    <p>${T('Zone difficulty applies to new spawns.','ui')}</p><select data-zone-difficulty aria-label="${T('Difficulty','ui')}">${['normal','hard','nightmare'].map(t=>`<option value="${t}" ${(G.zoneDifficulty[G.mapId]||'normal')===t?'selected':''}>${T(t[0].toUpperCase()+t.slice(1),'ui')}</option>`).join('')}</select>
-    ${G.mapId==='town_awakening'?Object.keys(G.mastery.claimedRanks).filter(id=>G.mastery.claimedRanks[id]?.gold&&MAPS[id]&&G.visited.has(id)).map(id=>`<button class="btn" data-mastery-travel="${esc(id)}">${T('Free travel','ui')} · ${esc(T(MAPS[id].name,'maps'))}</button>`).join(''):''}
-    <h3>${T('Dungeons','ui')}</h3><p>${T('Use the marked entrance in Whispering Woods.','ui')}</p>
-    ${[zone.GOBLIN_CAVE,zone.ELDER_HOLLOW].map(d=>`<button class="btn" data-dungeon-enter="${d.id}" ${G.mapId!=='whispering_woods'?'disabled':''}>${esc(T(d.name,'maps'))}${G.dungeonState.clearedDungeons[d.id]?' ✓':''}</button>`).join(' ')}
-    ${G.dungeonState.currentDungeonId?`<button class="btn" data-dungeon-exit>${T('Return to entrance','ui')}</button>`:''}</section>`;
+    const pts=G.mastery.zonePoints[G.mapId]||0, claimed=G.mastery.claimedRanks[G.mapId]||{};
+    const dailies=G.dailies.activeDailies.map(d=>{
+      const done=G.dailies.claimedDailies[d.id], ready=d.progress>=d.required;
+      return `<div class="ro-box adv-row"><div class="adv-row__main"><b>${T('Defeat','ui')} ${esc(T(CONTENT.monsters.find(m=>m.id===d.targetId)?.name||d.targetId,'monsters'))}</b>
+        <div class="ro-meter"><i style="width:${Math.min(100,100*d.progress/d.required)}%"></i></div>
+        <span class="ro-muted">${d.progress}/${d.required} · ${cfg.dailyZeny}z · ${cfg.dailyXp} XP</span></div>
+        <button class="btn" data-daily-claim="${esc(d.id)}" ${!ready||done?'disabled':''}>${T(done?'Claimed':'Claim','ui')}</button></div>`;
+    }).join('');
+    const ranks=MASTERY_RANKS.map(r=>{
+      const got=claimed[r.rank], need=Math.max(0,r.reqPoints-pts);
+      return `<div class="ro-box adv-rank${got?' is-claimed':''}"><b>${T(r.title,'ui')}</b><span class="ro-muted">${r.reqPoints} ${T('pts','ui')}</span>
+        <span>${T(r.label,'ui')}</span>
+        ${got?`<span class="adv-rank__state">✓ ${T('Claimed','ui')}</span>`:need?`<span class="ro-muted">${T('{n} more pts','ui').replace('{n}',need)}</span>`:`<button class="btn" data-mastery-claim="${r.rank}">${T('Claim','ui')}</button>`}</div>`;
+    }).join('');
+    const travel=G.mapId==='town_awakening'?Object.keys(G.mastery.claimedRanks).filter(id=>G.mastery.claimedRanks[id]?.gold&&MAPS[id]&&G.visited.has(id)).map(id=>`<button class="btn" data-mastery-travel="${esc(id)}">${T('Free travel','ui')} · ${esc(T(MAPS[id].name,'maps'))}</button>`).join(''):'';
+    const inWoods=G.mapId==='whispering_woods';
+    return `<section class="adventure-content">
+    <h3>${T('Daily challenges','ui')}</h3><div class="adv-list">${dailies}</div>
+    <h3>${T('Zone Mastery & Exploration','ui')}</h3>
+    <div class="adv-zone"><span><b>${esc(T(G.map.name,'maps'))}</b> · ${pts} ${T('pts','ui')}</span>
+      <label class="adv-diff">${T('Zone difficulty','ui')} <select data-zone-difficulty aria-label="${T('Difficulty','ui')}">${['normal','hard','nightmare'].map(t=>`<option value="${t}" ${(G.zoneDifficulty[G.mapId]||'normal')===t?'selected':''}>${T(t[0].toUpperCase()+t.slice(1),'ui')}</option>`).join('')}</select></label></div>
+    <div class="adv-ranks">${ranks}</div>
+    <p class="ro-muted">${T('Zone difficulty applies to new spawns.','ui')}</p>${travel?`<div class="adv-actions">${travel}</div>`:''}
+    <h3>${T('Dungeons','ui')}</h3>
+    <div class="adv-actions">${[zone.GOBLIN_CAVE,zone.ELDER_HOLLOW].map(d=>`<button class="btn" data-dungeon-enter="${d.id}" ${inWoods?'':'disabled'}>${esc(T(d.name,'maps'))}${G.dungeonState.clearedDungeons[d.id]?' ✓':''}</button>`).join('')}
+    ${G.dungeonState.currentDungeonId?`<button class="btn" data-dungeon-exit>${T('Return to entrance','ui')}</button>`:''}</div>
+    ${inWoods?'':`<p class="ro-muted">${T('Use the marked entrance in Whispering Woods.','ui')}</p>`}</section>`;
   };
   return {refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml};
 }

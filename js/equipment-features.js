@@ -24,9 +24,14 @@ export function createEquipmentFeatures({G,itemById,itemSlot,canUseItem,canUseSk
     const e=[...G.player.inventory,...Object.values(G.player.equip),...G.storage].find(e=>e?.uid===Number(uid));
     if(!e)return false;e.protected=value===true;saveGame();return true;
   };
-  const loadoutPanelHtml=()=>`<h3>${T('Loadouts','ui')}</h3><p>${T('Switch loadouts in town','ui')}</p>${[0,1].map(i=>{
+  const loadoutPanelHtml=()=>{
+    const inTown=G.mapId==='town_awakening';
+    return `<p class="ro-muted">${T('Save your worn gear as a set, then apply it in town to swap everything at once.','ui')}${inTown?'':` <b>${T('Switch loadouts in town','ui')}</b>`}</p>${[0,1].map(i=>{
     const p=G.player.features.loadouts[i];
-    return `<div class="q-card"><input aria-label="${T('Loadout name','ui')} ${i+1}" data-loadout-name="${i}" maxlength="48" value="${esc(p?.name||'Set '+(i+1))}"><button class="btn" data-loadout-save="${i}">${T(p?'Overwrite':'Save','ui')}</button><button class="btn" data-loadout-rename="${i}" ${p?'':'disabled'}>${T('Rename','ui')}</button><button class="btn" data-loadout-apply="${i}" ${p?'':'disabled'}>${T('Apply','ui')}</button></div>`;
+    return `<div class="ro-box loadout-row"><input aria-label="${T('Loadout name','ui')} ${i+1}" data-loadout-name="${i}" maxlength="48" value="${esc(p?.name||'Set '+(i+1))}">
+      <button class="btn" data-loadout-save="${i}">${T(p?'Overwrite':'Save','ui')}</button><button class="btn" data-loadout-rename="${i}" ${p?'':'disabled'}>${T('Rename','ui')}</button><button class="btn" data-loadout-apply="${i}" ${p&&inTown?'':'disabled'}>${T('Apply','ui')}</button>
+      <span class="ro-muted loadout-row__state">${p?T('Saved','ui'):T('Empty — save your worn gear here','ui')}</span></div>`;
   }).join('')}`;
+  };
   return {saveLoadout,renameLoadout,applyLoadout,setItemProtection,loadoutPanelHtml};
 }
