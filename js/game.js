@@ -7262,18 +7262,21 @@ function panelBody(id) {
         const expLabel = `+ ${T('Expand Sockets ({n}/4)', 'ui').replace('{n}', sCount)}`;
         expBtn = `<button class="btn btn--ghost" data-expand-socket="${ref}" ${expCheck?.canExpand ? '' : 'disabled'} title="${expTitle}" style="font-size:11px;padding:3px 8px">${expLabel}</button>`;
       }
-      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid rgba(201,162,75,.15)">
-        <span>${itemIconImg(inst.itemId)} ${badge}<b class="rar" style="color:${rc.color}">${instName(inst)}</b> — ${plus}/${REFINE_MAX} · ${REFINE_CHANCE[plus]}% ${T('success', 'ui')} ${socketDotsHtml(inst)}<br>
-          <small style="color:var(--text-muted)">${fuelTxt}</small></span>
-        <div style="display:flex;gap:6px;align-items:center">
-          ${expBtn}
-          <button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} (${cost}z)</button>
-        </div></div>`;
+      const fuelOk = frags >= nFrags || itemQty('blessed_ore') >= nOre, zenyOk = p.zeny >= cost, maxed = plus >= REFINE_MAX;
+      const viaOre = frags < nFrags && itemQty('blessed_ore') >= nOre;
+      const need = maxed ? 'MAX' : `<span class="${fuelOk ? 'enh-ok' : 'enh-miss'}">${viaOre ? `${nOre}× ${esc(T('Blessed Ore', 'items'))}` : `${nFrags}× ${esc(T(fragName, 'items'))} (${frags})`}</span>${zenyOk ? '' : ` <span class="enh-miss">· ${cost}z</span>`}`;
+      return `<div class="enh-row${disabled && !maxed ? ' is-short' : ''}">
+        <span class="enh-item">${itemIconImg(inst.itemId)} ${badge}<b class="rar" style="color:${rc.color}">${instName(inst)}</b> ${socketDotsHtml(inst)}</span>
+        <span class="enh-plus">+${plus}<small>/${REFINE_MAX}</small></span>
+        <span class="enh-chance">${maxed ? '—' : REFINE_CHANCE[plus] + '%'}</span>
+        <span class="enh-need">${need}</span>
+        <span class="enh-act">${expBtn}<button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} <small>${cost}z</small></button></span></div>`;
     };
     const wornRows = EQUIP_SLOTS.filter(slot => p.equip[slot]).map(slot => enhRow(p.equip[slot], slot, slot)).join('');
     const bagRows = p.inventory.filter(e => e.uid).map(e => enhRow(e, e.uid, null)).join('');
+    const enhHead = `<div class="enh-row enh-headrow"><span>${T('Item', 'ui')}</span><span>${T('Level', 'ui')}</span><span>%</span><span>${T('Needs', 'ui')}</span><span></span></div>`;
     const enhBody =
-      `<div class="bag-cat" style="color:var(--success)">⚔ ${T('Currently Equipped', 'ui')}</div>` +
+      `<div class="bag-cat" style="color:var(--success)">⚔ ${T('Currently Equipped', 'ui')}</div>` + enhHead +
       (wornRows || `<small style="color:var(--text-muted)">${T('Nothing equipped.', 'ui')}</small>`) +
       `<div class="bag-cat">🎒 ${T('In Bag', 'ui')}</div>` +
       (bagRows || `<small style="color:var(--text-muted)">${T('No spare equipment in the bag.', 'ui')}</small>`);
@@ -8630,6 +8633,11 @@ const extraCss = `
 .claims-link{font-weight:700;color:var(--gold-bright,#ffd24d)}
 .book-zone{margin:10px 2px 4px;font:700 13px var(--font-head)}.book-zone small{color:var(--text-muted);font-weight:400}
 .book-silhouette>*{filter:brightness(0);opacity:.35}
+.enh-row{display:grid;grid-template-columns:minmax(150px,1fr) 44px 44px 112px 262px;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--card-border);font-size:12px}
+.enh-headrow{font-size:11px;color:var(--text-muted);border-bottom-width:2px}.enh-plus{font:700 14px var(--font-head)}.enh-plus small{color:var(--text-muted);font-weight:400}
+.enh-row.is-short .enh-item{opacity:.7}.enh-miss{color:var(--danger-text,#b3402a);font-weight:700}.enh-ok{color:var(--success-text,#2f7a45)}
+.enh-act{display:flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap}.enh-act .btn{padding:4px 7px;font-size:11px}.enh-act .btn small{opacity:.8;margin-left:4px}.enh-act .btn{white-space:nowrap}.enh-item{min-width:0;overflow-wrap:anywhere}
+@media (max-width:680px){.enh-row{grid-template-columns:1fr auto}.enh-chance,.enh-headrow{display:none}.enh-need{grid-column:1/-1}.enh-act{grid-column:1/-1;justify-content:flex-start}}
 .panel__talk{margin-left:auto;margin-right:6px;background:none;border:0;font-size:18px;cursor:pointer}
 .stash-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stash-bar p{margin:0}
 .btn.is-armed{background:var(--oxblood,#8a2a1e);color:var(--on-fill)}
