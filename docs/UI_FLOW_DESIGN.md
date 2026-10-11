@@ -3,7 +3,9 @@
 Input: `docs/UI_FLOW_AUDIT.md` (matrix, friction list, FR-1…FR-7). Output: the design for
 `/sc:implement`. No code is written here.
 
-## 0. Decisions taken (defaults — flip any before implementing)
+## Status: phases 1–5 shipped; plus a 20-minute siege cooldown (`TUNING.siegeCooldownMs`)
+
+## 0. Decisions taken (all built as written unless a row says otherwise)
 
 The audit left 7 questions open. Each one is answered here with the most RO-faithful option that
 also removes steps.
@@ -140,7 +142,7 @@ const WINDOW_KEYS = [
 |---|---|---|
 | Zone Mastery | Adventures | Journal shows one line, "Mastery: rank N →", linking to Adventures |
 | Trophies | Book › Milestones | Status › Achievements becomes a single count line linking to Book |
-| Gear sets | Loadouts (anywhere in town) | Mannequins stay as Homestead flavour, but **read and write the same loadout slots A/B**, so there's one set of saved gear (needs a save migration for existing mannequin contents) |
+| Gear sets | Loadouts (anywhere in town) | *Not merged (corrected):* Mannequins hold physical item copies while Loadouts reference bag gear, so they are different features; the Loadouts window explains the difference |
 | Loot rules | Automation | Satchel loot filter stays (it's visual filtering); add a link to the Automation loot rules |
 | Names | | "⚙ Audio" → "⚙ Settings"; "⚙ Auto" → "🤖 Auto"; "Field guide" stays and gets key G; "Handbook" stays inside Journal |
 

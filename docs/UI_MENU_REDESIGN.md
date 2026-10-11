@@ -265,15 +265,19 @@ rows and chapter chips, which are currently 8–9px.
 | R2 | ✅ **Status**: build ★ highlight, batch spend (+1/+5/+10, Shift = +10, Spend by build), socket picker inline under the clicked slot, achievements collapsed | none |
 | R3 | ✅ **Journal**: list + detail, objective verbs, grouped rewards, Navigate/Track | R1 verbs |
 | R4 | ✅ **Abilities tree**: job tabs, grid, node states, detail strip | none (largest) |
-| R5 | ◐ Book zones/silhouettes ✅, Adventures Hunt ✅, Guild Accept & Go ✅, Settings Account section ✅, Companions window (P) ✅ · Trader Enhance table ✅, Automation Macro Rules folded ✅, dungeon level/boss ✅ · Loadouts↔Mannequins **not merged**: Loadouts store references to bag gear, Mannequins physically hold item copies, so a merge risks item loss; the Loadouts window now explains the difference | flow-design phase 4 |
+| R5 | ✅ Book zones/silhouettes ✅, Adventures Hunt ✅, Guild Accept & Go ✅, Settings Account section ✅, Companions window (P) ✅ · Trader Enhance table ✅, Automation Macro Rules folded ✅, dungeon level/boss ✅ · Loadouts↔Mannequins **not merged**: Loadouts store references to bag gear, Mannequins physically hold item copies, so a merge risks item loss; the Loadouts window now explains the difference | flow-design phase 4 |
 
 Each phase is verified per CLAUDE.md:
 - **Node harness**, for example: spending 50 points takes ≤ 5 actions; socket via the Status picker; Journal Navigate starts a task guide; a learnable node has the `.learnable` class; the TH probe reports 0 runs for the touched panel.
 - **Brave**: 1280 and true 390px, EN and TH, with `tilephase`/`anim` frozen.
 
-## Decisions to confirm
+## Status: all phases shipped (R1–R5)
 
-- **R-D1**: Status merges Equipment and Stats into one two-column window (RO style), instead of keeping a separate Equipment window (RO Alt+Q vs Alt+A). Recommended: **merged**.
+Plan complete as of 2026-10-11 on `main`. Left out on purpose: Loadouts↔Mannequins merge (see R5). Decisions below were confirmed by building them.
+
+## Decisions
+
+- **R-D1** *(shipped)*: Status merges Equipment and Stats into one two-column window (RO style), instead of keeping a separate Equipment window (RO Alt+Q vs Alt+A). Recommended: **merged**.
 - **R-D2** *(shipped differently)*: the Status socket picker was built in `game.js` (`socketPickerHtml`/`socketCandidates`), not by wiring `cards-ui.renderSocketModalHtml`. That helper is card-only and reads an inventory shape the game doesn't use, while the picker needs gems too. `renderSocketModalHtml` stays dead code; delete it with its tests in phase 4.
-- **R-D3**: Companions gets its own window and key `P`.
-- **R-D4**: the skill tree is laid out automatically from prerequisite data, with no hand-placed coordinates. If an auto layout looks wrong for a class, add an optional `col/row` hint in `progression.js`.
+- **R-D3** *(shipped)*: Companions gets its own window and key `P`.
+- **R-D4** *(shipped)*: the skill tree is laid out automatically from prerequisite data, with no hand-placed coordinates. If an auto layout looks wrong for a class, add an optional `col/row` hint in `progression.js`.

@@ -1,3 +1,5 @@
+> **Status (2026-10-11):** every P0/P1/P2 item here is addressed in `UI_FLOW_DESIGN.md` / `UI_MENU_REDESIGN.md`; both plans are shipped on `main`.
+
 # UI Flow Audit — "many features in many places" (Oct 2026)
 
 Requirements discovery only (`/sc:brainstorm`). No code changed. Next step: `/sc:design` for the
@@ -104,7 +106,7 @@ Every menu surface, with what it holds and what's wrong with its flow. ✅ = no 
 | **Adventures** | Dailies, Dungeons, Zone Mastery + difficulty + free travel | No hotkey. Mastery duplicated in Journal |
 | **⚙ Auto** | Hunt target, recovery profile, skill priority, macro rules, JSON import/export | No hotkey. Loot rules split from the Satchel loot filter. Otherwise ✅ |
 | **Field guide** (`⋯`) | Pin goal, item/skill lookup, recipes, routes | Hidden behind `⋯`, no hotkey. Overlaps Book (lookup) and the Journal (goals) |
-| **Loadouts** (`⋯`) | Save/rename/apply worn gear sets, "switch in town" | **Homestead Mannequins A/B do the same job** (save and swap a gear set) |
+| **Loadouts** (`⋯`) | Save/rename/apply worn gear sets, "switch in town" | Homestead Mannequins A/B look similar but store physical item copies (not a duplicate; see UI_MENU_REDESIGN R5) |
 | **⚙ Audio** (`⋯`) | Touch, Assign actions, volumes, UI scale, contrast, Admin toggle | Mislabelled. Duplicate assign row. Player-visible admin (P0-3) |
 | **Keybindings** (⌨) | Rebind 9 slots, reset | Help text "Reserved: WASD, E/F, C/I/K/Q" is stale: it omits M, B and V |
 | **Trader** (NPC) | Buy, Sell, Enhance (refine + sockets), Craft, Storage (chest and backpack side by side) | Dialogue replayed each visit (P2-10). Storage is already RO-style side by side: ✅ |
@@ -127,7 +129,7 @@ Every menu surface, with what it holds and what's wrong with its flow. ✅ = no 
 - **M2 (P0): keys fire while typing.** keydown has no text-field guard. A synthetic `i` aimed at an `<input>` gets past the handler (`G.keys.i = true`). This affects Satchel search, the loadout name field and the sign-in name.
 - **M3 (P1): Escape on NPC dialogue drops the service.** It removes `dlg` without calling `onClose`, so the Trader/Guild panel never opens.
 - **M4 (P1): alt-tab forgets your route and hunt target** (`pauseForInterruption` clears `taskGuide` and `huntTargetId`).
-- **M5 (P1) duplicates:** Zone Mastery (Journal + Adventures), trophies (Status Achievements + Book Milestones), gear sets (Loadouts + Mannequins).
+- **M5 (P1) duplicates:** Zone Mastery (Journal + Adventures), trophies (Status Achievements + Book Milestones), ~~gear sets (Loadouts + Mannequins)~~ — not actually duplicates, see above.
 - **M6 (P2) naming:** "Book", "Handbook", "Field guide", "Class skill manual", "Bestiary Codex" are five book-like names. There are also two `⚙` icons.
 - **M7 (P2):** Keybindings help text is stale. There's no in-game "return to title".
 
