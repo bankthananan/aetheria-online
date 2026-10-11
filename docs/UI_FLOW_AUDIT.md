@@ -1,4 +1,5 @@
-> **Status (2026-10-11):** every P0/P1/P2 item here is addressed in `UI_FLOW_DESIGN.md` / `UI_MENU_REDESIGN.md`; both plans are shipped on `main`.
+> **Status (2026-10-11):** all P0 items and most P1/P2 items are fixed on `main` via `UI_FLOW_DESIGN.md` / `UI_MENU_REDESIGN.md`.
+> **Deliberately not done:** the six overlapping "what next" surfaces (HUD tracker, Journal, Field guide, Adventures, Chronicle Roads, Book milestones) were only helped by reward badges, not merged; Zone Mastery still appears in Adventures (full detail) and the Journal footer is gone, so that duplicate is resolved; Loadouts vs Mannequins is not a duplicate; Field guide still overlaps Book lookups.
 
 # UI Flow Audit — "many features in many places" (Oct 2026)
 
