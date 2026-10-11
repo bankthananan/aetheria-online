@@ -239,6 +239,7 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Boss": "บอส",
       "Item": "ไอเท็ม",
       "Needs": "ต้องใช้",
       "Pets": "สัตว์เลี้ยง",

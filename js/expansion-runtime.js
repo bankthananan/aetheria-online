@@ -81,7 +81,9 @@ export function createExpansion({G,DESIGN,CONTENT,MAPS,zone,gainXp,saveGame,load
     <div class="adv-ranks">${ranks}</div>
     <p class="ro-muted">${T('Zone difficulty applies to new spawns.','ui')}</p>${travel?`<div class="adv-actions">${travel}</div>`:''}
     <h3>${T('Dungeons','ui')}</h3>
-    <div class="adv-actions">${[zone.GOBLIN_CAVE,zone.ELDER_HOLLOW].map(d=>`<button class="btn" data-dungeon-enter="${d.id}" ${inWoods?'':'disabled'}>${esc(T(d.name,'maps'))}${G.dungeonState.clearedDungeons[d.id]?' ✓':''}</button>`).join('')}
+    <div class="adv-actions">${[zone.GOBLIN_CAVE,zone.ELDER_HOLLOW].map(d=>{
+      const lv=(d.spawns||[]).flatMap(x=>x.levelRange||[]),boss=CONTENT.monsters.find(m=>m.id===d.boss?.monsterId);
+      return `<button class="btn adv-dungeon" data-dungeon-enter="${d.id}" ${inWoods?'':'disabled'}><b>${esc(T(d.name,'maps'))}${G.dungeonState.clearedDungeons[d.id]?' ✓':''}</b>${lv.length?`<small>Lv ${Math.min(...lv)}–${Math.max(...lv)}</small>`:''}${boss?`<small>${T('Boss','ui')}: ${esc(T(boss.name,'monsters'))}</small>`:''}</button>`;}).join('')}
     ${G.dungeonState.currentDungeonId?`<button class="btn" data-dungeon-exit>${T('Return to entrance','ui')}</button>`:''}</div>
     ${inWoods?'':`<p class="ro-muted">${T('Use the marked entrance in Whispering Woods.','ui')}</p>`}</section>`;
   };

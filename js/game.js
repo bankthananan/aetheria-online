@@ -6758,7 +6758,7 @@ function automationPanelHtml(p = G.player) {
     <div class="automation-section"><h3>${T('Skill Priority', 'ui')}</h3><p>${T('Drag skills into rank order. Automation casts the top ready skill; unranked skills use its own judgment.', 'ui')}</p>
       <div class="auto-slot-grid">${slotHtml}</div><div class="auto-skill-pool">${poolHtml}</div></div>
     <div class="automation-section"><h3>${T('Recovery Profile', 'ui')}</h3><p>${T('Choose how early automation recovers. Potion cooldown is always respected.', 'ui')}</p><div class="auto-profile-grid">${profiles}</div></div>
-    <div class="automation-section"><h3>${T('Macro Rules', 'ui')}</h3><p>${T('IF a resource crosses a threshold THEN act. Checked before built-in recovery.', 'ui')}</p>
+    <details class="automation-section"${(cfg.rules || []).length ? ' open' : ''}><summary><h3 style="display:inline">${T('Macro Rules', 'ui')}</h3> <small class="ro-muted">(${(cfg.rules || []).length})</small></summary><p>${T('IF a resource crosses a threshold THEN act. Checked before built-in recovery.', 'ui')}</p>
       <div class="macro-rule-list">${(cfg.rules || []).map((r, i) => `<div class="macro-rule"><code>${T('IF', 'ui')} ${r.when === 'hp_pct' ? 'HP' : 'MP'} ${r.op === '<' ? '&lt;' : '&gt;'} ${Math.round(r.value * 100)}% ${T('THEN', 'ui')} ${r.action === 'use_item' ? `${T('use', 'ui')} ${esc(T(itemById[r.arg]?.name || r.arg, 'items'))}` : r.action === 'cast_skill' ? `${T('cast', 'ui')} ${esc(T(COMBAT.skills.find(s => s.id === r.arg)?.name || r.arg, 'skills'))}` : T('stop hunt', 'ui')}</code><button class="macro-rule__del" data-macro-del="${i}" aria-label="${T('Delete rule', 'ui')}">×</button></div>`).join('')
         || `<small class="auto-empty">${T('No rules yet — automation uses only its built-in judgment.', 'ui')}</small>`}</div>
       <div class="macro-builder">
@@ -6777,7 +6777,7 @@ function automationPanelHtml(p = G.player) {
       <details class="macro-json"><summary>${T('JSON profile (export / import)', 'ui')}</summary>
         <textarea id="macro-json" rows="3" spellcheck="false">${esc(JSON.stringify(cfg.rules || []))}</textarea>
         <button class="btn" id="macro-json-apply">${T('Import JSON', 'ui')}</button></details>
-    </div>
+    </details>
     <footer class="automation-foot">⚠ ${T('Death stops Hunt and route guidance. Stronger monsters remain ignored until you choose them manually.', 'ui')}</footer>
   </section>`;
 }
@@ -8638,6 +8638,7 @@ const extraCss = `
 .enh-row.is-short .enh-item{opacity:.7}.enh-miss{color:var(--danger-text,#b3402a);font-weight:700}.enh-ok{color:var(--success-text,#2f7a45)}
 .enh-act{display:flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap}.enh-act .btn{padding:4px 7px;font-size:11px}.enh-act .btn small{opacity:.8;margin-left:4px}.enh-act .btn{white-space:nowrap}.enh-item{min-width:0;overflow-wrap:anywhere}
 @media (max-width:680px){.enh-row{grid-template-columns:1fr auto}.enh-chance,.enh-headrow{display:none}.enh-need{grid-column:1/-1}.enh-act{grid-column:1/-1;justify-content:flex-start}}
+.adv-dungeon{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}.adv-dungeon small{font-size:11px;opacity:.85}
 .panel__talk{margin-left:auto;margin-right:6px;background:none;border:0;font-size:18px;cursor:pointer}
 .stash-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.stash-bar p{margin:0}
 .btn.is-armed{background:var(--oxblood,#8a2a1e);color:var(--on-fill)}
