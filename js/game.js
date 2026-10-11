@@ -8335,10 +8335,11 @@ function interact(npcId) {
     else if (pending) lines.push(`Our next chapter is ${pending.name}. Train until Base Level ${pending.minLevel}; I will call for you the moment you are ready.`);
     showDialogue(n.name, lines, () => afterNpcDialogue());
   } else if (n.role === 'tactician') {
-    const busy = !!G.strongholdState?.active;
+    const busy = !!G.strongholdState?.active, wait = busy ? 0 : strongholdSystem.siegeCooldownLeft(TUNING.siegeCooldownMs);
     const lines = content?.dialogue ? [...content.dialogue] : [T('The crystal must hold. Say the word and I will sound the horn.', 'ui')];
     showDialogue(n.name, lines, () => afterNpcDialogue(), {
-      label: busy ? T('Siege in progress', 'ui') : `⚔ ${T('Begin Crystal Siege', 'ui')}`, disabled: busy, run: startStrongholdSiege,
+      label: busy ? T('Siege in progress', 'ui') : wait ? `⏳ ${T('Horn ready in {m} min', 'ui').replace('{m}', Math.ceil(wait / 60000))}` : `⚔ ${T('Begin Crystal Siege', 'ui')}`,
+      disabled: busy || wait > 0, run: startStrongholdSiege,
     });
   } else { showDialogue(n.name, content?.dialogue || CONTENT.story.intro.slice(0, 2), () => afterNpcDialogue()); }
   return true;

@@ -265,7 +265,7 @@ rows and chapter chips, which are currently 8–9px.
 | R2 | ✅ **Status**: build ★ highlight, batch spend (+1/+5/+10, Shift = +10, Spend by build), socket picker inline under the clicked slot, achievements collapsed | none |
 | R3 | ✅ **Journal**: list + detail, objective verbs, grouped rewards, Navigate/Track | R1 verbs |
 | R4 | ✅ **Abilities tree**: job tabs, grid, node states, detail strip | none (largest) |
-| R5 | ◐ Book zones/silhouettes ✅, Adventures Hunt ✅, Guild Accept & Go ✅, Settings Account section ✅, Companions window (P) ✅ · Trader Enhance table ✅, Automation Macro Rules folded ✅, dungeon level/boss ✅ · still open: Loadouts↔Mannequins sharing (needs save migration, awaiting a decision) | flow-design phase 4 |
+| R5 | ◐ Book zones/silhouettes ✅, Adventures Hunt ✅, Guild Accept & Go ✅, Settings Account section ✅, Companions window (P) ✅ · Trader Enhance table ✅, Automation Macro Rules folded ✅, dungeon level/boss ✅ · Loadouts↔Mannequins **not merged**: Loadouts store references to bag gear, Mannequins physically hold item copies, so a merge risks item loss; the Loadouts window now explains the difference | flow-design phase 4 |
 
 Each phase is verified per CLAUDE.md:
 - **Node harness**, for example: spending 50 points takes ≤ 5 actions; socket via the Status picker; Journal Navigate starts a task guide; a learnable node has the `.learnable` class; the TH probe reports 0 runs for the touched panel.

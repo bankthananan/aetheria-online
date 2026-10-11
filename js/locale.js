@@ -239,6 +239,8 @@ export const L10N = {
   },
   th: {
     ui: {
+      "Loadouts remember which gear you wear. Homestead Mannequins physically hold a copy of your gear.": "ชุดอุปกรณ์จำว่าคุณสวมอะไรอยู่ ส่วนหุ่นโชว์ในบ้านจะเก็บสำเนาอุปกรณ์ไว้จริง",
+      "Horn ready in {m} min": "แตรศึกพร้อมในอีก {m} นาที",
       "Boss": "บอส",
       "Item": "ไอเท็ม",
       "Needs": "ต้องใช้",

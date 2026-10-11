@@ -152,6 +152,7 @@ export const DESIGN = {
     expGapMax: 1.50,           // ...and up to this much for fighting above your level (reached at +2)
     dropLevelBias: 0.11,       // rarity bias added per monster level
     dropLuckBias: 0.012,       // rarity bias added per point of player LUK
+    siegeCooldownMs: 1200000,  // Crystal Siege: 20 min after a siege ends (win or lose) before Cedric sounds the horn again
     shopStockMs: 300000,       // rolled trader gear stays stable for five minutes
     shopRarityBiasPerRank: 0.18, // guild rank gradually improves rolled shop rarity
     shopFeaturedRarityBias: 1.25, // featured rank gear gets a noticeably better roll

@@ -26,7 +26,7 @@ export function createEquipmentFeatures({G,itemById,itemSlot,canUseItem,canUseSk
   };
   const loadoutPanelHtml=()=>{
     const inTown=G.mapId==='town_awakening';
-    return `<p class="ro-muted">${T('Save your worn gear as a set, then apply it in town to swap everything at once.','ui')}${inTown?'':` <b>${T('Switch loadouts in town','ui')}</b>`}</p>${[0,1].map(i=>{
+    return `<p class="ro-muted">${T('Save your worn gear as a set, then apply it in town to swap everything at once.','ui')}${inTown?'':` <b>${T('Switch loadouts in town','ui')}</b>`}<br><small>${T('Loadouts remember which gear you wear. Homestead Mannequins physically hold a copy of your gear.','ui')}</small></p>${[0,1].map(i=>{
     const p=G.player.features.loadouts[i];
     return `<div class="ro-box loadout-row"><input aria-label="${T('Loadout name','ui')} ${i+1}" data-loadout-name="${i}" maxlength="48" value="${esc(p?.name||'Set '+(i+1))}">
       <button class="btn" data-loadout-save="${i}">${T(p?'Overwrite':'Save','ui')}</button><button class="btn" data-loadout-rename="${i}" ${p?'':'disabled'}>${T('Rename','ui')}</button><button class="btn" data-loadout-apply="${i}" ${p&&inTown?'':'disabled'}>${T('Apply','ui')}</button>

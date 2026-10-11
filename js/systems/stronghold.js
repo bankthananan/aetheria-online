@@ -156,6 +156,7 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
   };
 
   let lastStipendClaimAt = 0;
+  let lastSiegeEndAt = 0;   // persisted; drives the siege cooldown
   const harvestNodes = [];
   let activeSiege = null;
 
@@ -374,6 +375,7 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
     }
     const reward = SIEGE_REWARDS[grade];
     activeSiege.active = false;
+    lastSiegeEndAt = now();
     return {
       success: true,
       grade,
@@ -388,13 +390,20 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
       activeSiege.failure = true;
       activeSiege.cooldownUntil = now() + 60000;
     }
+    lastSiegeEndAt = now();
     return { success: false, reason: 'Crystal Shattered' };
   }
 
   // --- Serialization ---
 
+  // ms left before another siege may start (0 = ready)
+  function siegeCooldownLeft(cooldownMs) {
+    return lastSiegeEndAt ? Math.max(0, lastSiegeEndAt + cooldownMs - now()) : 0;
+  }
+
   function serialize() {
     return {
+      lastSiegeEndAt,
       facilities: { ...facilities },
       trophies: { ...trophies },
       lastStipendClaimAt,
@@ -417,6 +426,7 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
           }
         }
       }
+      if (Number.isFinite(data.lastSiegeEndAt) && data.lastSiegeEndAt >= 0) lastSiegeEndAt = data.lastSiegeEndAt;
       if (typeof data.lastStipendClaimAt === 'number') {
         lastStipendClaimAt = data.lastStipendClaimAt;
       }
@@ -447,5 +457,6 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
     failSiege,
     serialize,
     deserialize,
+    siegeCooldownLeft,
   };
 }
