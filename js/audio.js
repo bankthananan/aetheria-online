@@ -111,6 +111,18 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['A4','C5','E5','G#5','E5','C5','A4','R','F5','A5','C6','A5','G#5','F5','E5','R'],
     bass: ['A2','A2','F2','F2','D2','D2','E2','E2'], pad: ['A3','E4','G#4'],
   },
+  glitched_monolith: { // synthesized digital decay, whole-tone / hexatonic arpeggios
+    bpm: 128, leadWave: 'sawtooth', bassWave: 'square', padWave: 'sine',
+    leadPeak: 0.13, bassPeak: 0.17, padPeak: 0.05, leadGate: 0.55, padEvery: 4, swing: 0.06,
+    lead: ['C5','D#5','F#5','A5','G#5','E5','C5','R','D5','F5','G#5','B5','A#5','F#5','D5','R'],
+    bass: ['C2','F#2','D2','G#2','C2','A#2','D2','B2'], pad: ['C4','F#3','D4','G#3'],
+  },
+  source_core_subdungeon: { // rapid clockwork overdrive at the computational core
+    bpm: 146, leadWave: 'square', bassWave: 'sawtooth', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.18, padPeak: 0.045, leadGate: 0.50, padEvery: 8, swing: 0.02,
+    lead: ['E5','G#5','B5','E6','D#6','B5','G#5','R','F#5','A#5','C#6','F#6','E6','C#6','A#5','R'],
+    bass: ['E2','E2','G#2','G#2','F#2','F#2','B2','B2'], pad: ['E3','B3','G#3'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.

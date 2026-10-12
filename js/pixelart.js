@@ -2445,6 +2445,7 @@ const item = {
     '    kkkkkkkk    ',
     '', '', '', '', '', ''),
 };
+item.armor = item.plate;
 
 // Regional annex species inherit proven six-frame silhouettes, then receive
 // their own palette-authored frame data so each remains visually identifiable.
@@ -2468,6 +2469,11 @@ for (const [id, base, remap] of [
   ['frostbite_matron', 'frost_revenant', { b: 'w', c: 'I', z: 'u' }],
   ['magma_golem_core', 'ruin_golem', { b: 'r', c: 'O', z: 'R' }],
   ['singularity_herald', 'nullking', { p: 'u', q: 'U', c: 'x' }],
+  ['memory_phantom', 'shade', { p: 'c', q: 'l', c: 'x' }],
+  ['overtime_wraith', 'ice_wraith', { l: 'r', c: 'O', z: 'R' }],
+  ['compiler_golem', 'ruin_golem', { b: 'A', c: 'a', z: 'm' }],
+  ['debug_drone', 'void_wisp', { p: 'y', q: 'Y', c: 'x' }],
+  ['system_architect', 'nullking', { p: 'g', q: 'G', c: 'x' }],
 ]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
 
 // Guild Stronghold Siege Monsters
@@ -2571,6 +2577,13 @@ export const ITEM_ICON = {
   seed_ember_blossom: 'scroll',
   golden_grain: 'ore',
   artisan_bread: 'potred',
+  // Transcendent Source Gear Set (Band 6 Lv 85)
+  architect_blade: 'sword',
+  firewall_hauberk: 'armor',
+  terminal_visor: 'helm',
+  overclock_ring: 'ring',
+  subroutine_boots: 'boots',
+  essence_lightning: 'gem',
 };
 
 export const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };

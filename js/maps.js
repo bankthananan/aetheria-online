@@ -1,6 +1,7 @@
 // js/maps.js - connected isekai regions. Tile art = string rows, decoded by legend.
 // ponytail: string-rows over 2D arrays; content team parses rows[y][x] -> legend[char].
 import { REGIONAL_DUNGEONS } from './zones/regional-dungeons.js';
+import { GLITCHED_MONOLITH_MAPS } from './zones/glitched-monolith.js';
 
 const LEGEND = {
   // Bright, controlled 16-bit regional colors: warm civilization, cool wilderness,
@@ -502,6 +503,7 @@ export const MAPS = {
       { x: 1, y: 1, toMap: 'dragon_caldera', toX: 39, toY: 30, label: 'Back to Caldera' },
       { x: 3, y: 1, toMap: 'celestial_rift', toX: 2, toY: 2, label: 'Enter the Celestial Rift' },
       { x: 5, y: 1, toMap: 'ar_singularity_vault', toX: 2, toY: 2, label: 'Enter Singularity Vault' },
+      { x: 38, y: 28, toMap: 'glitched_monolith', toX: 2, toY: 2, label: 'Enter the Glitched Monolith' },
     ],
   },
 
@@ -625,6 +627,13 @@ export const MAPS = {
 };
 
 for (const [id, dungeon] of Object.entries(REGIONAL_DUNGEONS)) {
+  MAPS[id] = {
+    ...dungeon,
+    legend: LEGEND,
+  };
+}
+
+for (const [id, dungeon] of Object.entries(GLITCHED_MONOLITH_MAPS)) {
   MAPS[id] = {
     ...dungeon,
     legend: LEGEND,

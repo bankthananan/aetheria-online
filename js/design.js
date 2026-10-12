@@ -123,6 +123,7 @@ export const DESIGN = {
 
   // ---- central balance knobs (edit here, not scattered through the engine) ----
   tuning: {
+    maxLevel: 100,
     presentation: {touchScale:.8},
     zoneDifficulty: {
       NORMAL: {id:'normal',name:'Normal',hpMult:1,atkMult:1,defMult:1,expMult:1,dropChanceMult:1,affixBonusChance:0,canSpawnCorrupted:false},

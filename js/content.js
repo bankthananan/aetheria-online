@@ -296,6 +296,44 @@ export const CONTENT = {
       level: 80, hp: 3600, atk: 260, def: 95, exp: 28000, spriteColor: "#b388ff", sizeTiles: 2, boss: true,
       drops: [{ itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
       behavior: "aggressive"
+    },
+
+    // ===== Band 6 Glitched Monolith & Source Core Endgame Monsters =====
+    {
+      id: "memory_phantom", element: "void", name: "Memory Phantom",
+      flavor: "A flickering residual image of forgotten data wandering the corrupted halls.",
+      level: 82, hp: 1400, atk: 220, def: 85, exp: 6800, spriteColor: "#80deea", sizeTiles: 1,
+      drops: [{ itemId: "shade_dust", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "overtime_wraith", element: "void", name: "Overtime Wraith",
+      flavor: "A spectral salaryman bound to eternal deadlines, weeping exhausted static.",
+      level: 85, hp: 1650, atk: 245, def: 95, exp: 8200, element: "void",
+      spriteColor: "#ef5350", sizeTiles: 1,
+      drops: [{ itemId: "golem_core", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "compiler_golem", element: "physical", name: "Compiler Golem",
+      flavor: "An obsidian automaton assembling fractured reality into fatal logic loops.",
+      level: 88, hp: 2200, atk: 270, def: 110, exp: 10500, spriteColor: "#78909c", sizeTiles: 1,
+      drops: [{ itemId: "star_iron", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "debug_drone", element: "lightning", name: "Debug Drone",
+      flavor: "A hovering sentinel purging unexpected anomalies with crackling electric surges.",
+      level: 84, hp: 1500, atk: 235, def: 90, exp: 7400, spriteColor: "#ffee58", sizeTiles: 1,
+      drops: [{ itemId: "essence_lightning", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "system_architect", element: "void", name: "System Architect",
+      flavor: "The crowned root authority compiling the glitched foundation of this realm.",
+      level: 95, hp: 4200, atk: 300, def: 100, exp: 35000, spriteColor: "#69f0ae", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
+      behavior: "aggressive"
     }
   ],
 
@@ -512,7 +550,15 @@ export const CONTENT = {
     { id: "seed_moonflower", name: "Moonflower Seeds", type: "material", desc: "Luminescent mystical seeds blossoming into moonlight lotus flowers.", price: 100, value: 100, rarity: "uncommon" },
     { id: "seed_ember_blossom", name: "Ember Blossom Seeds", type: "material", desc: "Warm volcanic seeds that sprout into radiant ember blossoms.", price: 120, value: 120, rarity: "uncommon" },
     { id: "golden_grain", name: "Golden Grain", type: "material", desc: "Sun-ripened cereal grain harvested from the homestead botanical sanctum.", price: 40, value: 40, rarity: "common" },
-    { id: "artisan_bread", name: "Artisan Bread", type: "consumable", desc: "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).", hpRestore: 500, buff: { stat: "hp", flat: 150, durationMs: 900000 }, price: 250, value: 250, rarity: "uncommon" }
+    { id: "artisan_bread", name: "Artisan Bread", type: "consumable", desc: "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).", hpRestore: 500, buff: { stat: "hp", flat: 150, durationMs: 900000 }, price: 250, value: 250, rarity: "uncommon" },
+
+    // ===== Transcendent Source Gear Set (Band 6 Lv 85) =====
+    { id: "architect_blade", name: "Architect Blade", type: "weapon", slot: "weapon", desc: "A crystalline broadsword forged from source logic, humming with computational power.", gearLevel: 85, atk: 95, statBonuses: { atk: 95, str: 15, int: 15 }, price: 5000, value: 5000, rarity: "epic", classReq: null },
+    { id: "firewall_hauberk", name: "Firewall Hauberk", type: "armor", slot: "chest", desc: "Reinforced energy-mesh armor that intercepts hostile intrusion packets.", gearLevel: 85, def: 65, statBonuses: { def: 65, hpMax: 350, vit: 15 }, price: 4500, value: 4500, rarity: "epic", classReq: null },
+    { id: "terminal_visor", name: "Terminal Visor", type: "armor", slot: "head", desc: "A sensor visor rendering data streams and weakness vectors directly into the retinas.", gearLevel: 85, def: 40, statBonuses: { def: 40, int: 12, dex: 10 }, price: 4000, value: 4000, rarity: "epic", classReq: null },
+    { id: "overclock_ring", name: "Overclock Ring", type: "accessory", slot: "accessory", desc: "A superconducting band forcing reflex pathways beyond safe operating parameters.", gearLevel: 85, statBonuses: { agi: 12, critChance: 8 }, price: 4200, value: 4200, rarity: "epic", classReq: null },
+    { id: "subroutine_boots", name: "Subroutine Boots", type: "armor", slot: "feet", desc: "Lightweight treads executing predictive pathing routines before the foot lands.", gearLevel: 85, def: 35, statBonuses: { def: 35, flee: 15, agi: 10 }, price: 3800, value: 3800, rarity: "epic", classReq: null },
+    { id: "essence_lightning", name: "Lightning Essence", type: "material", desc: "A crackling electrostatic charge condensed into crystal.", price: 75, value: 75, rarity: "uncommon" }
   ],
 
   npcs: [

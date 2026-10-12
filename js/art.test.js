@@ -126,6 +126,8 @@ const expandedMinimums = {
   ar_singularity_vault: [22, 16],
   guild_stronghold: [32, 24],
   player_homestead: [28, 20],
+  glitched_monolith: [44, 34],
+  source_core_subdungeon: [24, 18],
 };
 const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
 

@@ -89,6 +89,8 @@ const MAP_MUSIC = {
   ft_glacial_chasm: 'ft_glacial_chasm',
   dc_obsidian_foundry: 'dc_obsidian_foundry',
   ar_singularity_vault: 'ar_singularity_vault',
+  glitched_monolith: 'glitched_monolith',
+  source_core_subdungeon: 'source_core_subdungeon',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.
@@ -172,7 +174,7 @@ const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
 const SLOT_LABEL = { weapon: 'Weapon', head: 'Head', body: 'Body', hands: 'Hands', cloak: 'Cloak', feet: 'Feet', accessory: 'Accessory', relic: 'Relic' };
 const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
-const itemSlot = it => it.type === 'weapon' ? 'weapon' : it.type === 'accessory' ? 'accessory' : it.type === 'relic' ? 'relic' : (it.slot || 'body');
+const itemSlot = it => it.type === 'weapon' ? 'weapon' : it.type === 'accessory' ? 'accessory' : it.type === 'relic' ? 'relic' : (it.slot === 'chest' ? 'body' : (it.slot || 'body'));
 
 // ---- compile formula strings (strict mode: no `with`, so destructure a scope) ----
 const VARS = ['baseHp','vit','level','int','str','dex','weaponAtk','armorDef','agi','luk','attackerAtk','defenderDef','isCrit'];

@@ -2349,7 +2349,20 @@ export const L10N = {
       "Golden Grain": "รวงข้าวสาลีทองคำ",
       "Sun-ripened cereal grain harvested from the homestead botanical sanctum.": "ธัญพืชสุกปลั่งใต้แสงตะวันที่เก็บเกี่ยวจากสวนพฤกษศาสตร์ในบ้านพัก",
       "Artisan Bread": "ขนมปังฝีมือช่าง",
-      "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).": "ขนมปังอบสดใหม่จากเตาผิง ฟื้นฟู 500 HP และมอบบัฟอิ่มหนำ (+150 Max HP และฟื้นฟู 10 HP ทุก 5 วินาที เป็นเวลา 15 นาที)"
+      "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).": "ขนมปังอบสดใหม่จากเตาผิง ฟื้นฟู 500 HP และมอบบัฟอิ่มหนำ (+150 Max HP และฟื้นฟู 10 HP ทุก 5 วินาที เป็นเวลา 15 นาที)",
+      // Transcendent Source Gear Set (Band 6 Lv 85)
+      "Architect Blade": "ดาบแห่งสถาปัตย์",
+      "A crystalline broadsword forged from source logic, humming with computational power.": "ดาบใหญ่ผลึกที่หลอมจากตรรกะแห่งซอร์สโค้ด ฮัมเพลงด้วยพลังแห่งการประมวลผล",
+      "Firewall Hauberk": "เสื้อเกราะไฟร์วอลล์",
+      "Reinforced energy-mesh armor that intercepts hostile intrusion packets.": "เกราะตาข่ายพลังงานเสริมแกร่งที่สกัดกั้นแพ็กเก็ตการบุกรุกของศัตรู",
+      "Terminal Visor": "กระบังหน้าเทอร์มินัล",
+      "A sensor visor rendering data streams and weakness vectors directly into the retinas.": "กระบังหน้าเซนเซอร์ที่แสดงผลกระแสข้อมูลและเวกเตอร์จุดอ่อนตรงสู่เรตินา",
+      "Overclock Ring": "แหวนโอเวอร์คล็อก",
+      "A superconducting band forcing reflex pathways beyond safe operating parameters.": "แถบตัวนำยิ่งยวดที่เร่งปฏิกิริยาสะท้อนกลับเกินขีดจำกัดความปลอดภัย",
+      "Subroutine Boots": "รองเท้าซับรูทีน",
+      "Lightweight treads executing predictive pathing routines before the foot lands.": "รองเท้าน้ำหนักเบาที่ประมวลผลเส้นทางล่วงหน้าก่อนที่เท้าจะแตะพื้น",
+      "Lightning Essence": "แก่นแท้แห่งสายฟ้า",
+      "A crackling electrostatic charge condensed into crystal.": "ประจุไฟฟ้าสถิตที่ส่งเสียงเปรี๊ยะ ถูกควบแน่นเป็นผลึก"
     },
     achievements: {
       "First Blood": "เลือดแรก",
@@ -2522,7 +2535,18 @@ export const L10N = {
       "Siege Archer": "พลธนูยิงถล่มปิดล้อม",
       "Sharpshooter unleashing arcing volleys past citadel parapets.": "พลแม่นปืนที่ยิงห่าธนูวิถีโค้งข้ามเชิงเทินป้อมปราการ",
       "Siege Warlord": "แม่ทัพอสูรศึกปิดล้อม",
-      "A colossal warlord clad in siege plate, brandishing an iron battering ram.": "แม่ทัพร่างยักษ์ในเกราะปิดล้อม กวัดแกว่งท่อนซุงกระทุ้งเหล็กกล้า"
+      "A colossal warlord clad in siege plate, brandishing an iron battering ram.": "แม่ทัพร่างยักษ์ในเกราะปิดล้อม กวัดแกว่งท่อนซุงกระทุ้งเหล็กกล้า",
+      // Band 6 Glitched Monolith & Source Core Endgame Monsters
+      "Memory Phantom": "วิญญาณแห่งความทรงจำ",
+      "A flickering residual image of forgotten data wandering the corrupted halls.": "ภาพตกค้างที่ริบหรี่ของข้อมูลที่ถูกลืม เลื่อนลอยอยู่ในโถงทางเดินที่แปดเปื้อน",
+      "Overtime Wraith": "เรธทำงานล่วงเวลา",
+      "A spectral salaryman bound to eternal deadlines, weeping exhausted static.": "วิญญาณมนุษย์เงินเดือนที่ผูกพันกับกำหนดส่งงานนิรันดร์ ร่ำไห้ด้วยสัญญาณรบกวนที่เหนื่อยล้า",
+      "Compiler Golem": "โกเลมคอมไพเลอร์",
+      "An obsidian automaton assembling fractured reality into fatal logic loops.": "จักรกลหินออบซิเดียนที่รวบรวมเศษเสี้ยวความเป็นจริงเข้าสู่วังวนตรรกะมรณะ",
+      "Debug Drone": "โดรนดีบัก",
+      "A hovering sentinel purging unexpected anomalies with crackling electric surges.": "ยามลาดตระเวนลอยตัวที่กำจัดความผิดปกติที่คาดไม่ถึงด้วยคลื่นกระแสไฟฟ้าที่ปะทุ",
+      "System Architect": "สถาปนิกแห่งระบบ",
+      "The crowned root authority compiling the glitched foundation of this realm.": "ผู้กุมอำนาจระดับรูทผู้สวมมงกุฎ คอมไพล์รากฐานที่บกพร่องของอาณาจักรนี้"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
@@ -3043,7 +3067,22 @@ export const L10N = {
       "Enter Obsidian Foundry": "เข้าสู่โรงหล่อหินออบซิเดียน",
       "Exit to Dragon Caldera": "กลับสู่แอ่งภูเขาไฟมังกร",
       "Enter Singularity Vault": "เข้าสู่ห้องนิรภัยเอกภาวะ",
-      "Exit to Astral Rift": "กลับสู่รอยแยกดวงดารา"
+      "Exit to Astral Rift": "กลับสู่รอยแยกดวงดารา",
+      // Band 6 Glitched Monolith & Source Core Endgame
+      "Glitched Monolith": "เสาหินกลิตช์",
+      "Source Core": "แกนกลางแห่งซอร์ส",
+      "Corrupted glyphs shimmer along obsidian pillars. Reality flickers like a failing CRT.": "อักขระที่เสียหายส่องประกายตามเสาหินออบซิเดียน ความเป็นจริงกะพริบเหมือนจอ CRT ที่กำลังจะพัง",
+      "The air hums with overclocked computational energy. The System Architect awaits.": "อากาศฮัมด้วยพลังการประมวลผลที่โอเวอร์คล็อก สถาปนิกแห่งระบบกำลังรอคอย",
+      "The Uncompiled Boundary": "พรมแดนที่ยังไม่ถูกคอมไพล์",
+      "Monolith of the Lost Runtime": "เสาหินแห่งรันไทม์ที่สาบสูญ",
+      "Heart of the Machine": "หัวใจแห่งจักรกล",
+      "The Fractured Terminal": "เทอร์มินัลแตกร้าว",
+      "The Kernel Altar": "แท่นบูชาเคอร์เนล",
+      "A colossal monolith standing at the edge of reality where uncompiled game code and raw memories bleed into physical architecture.": "เสาหินขนาดยักษ์ที่ตั้งอยู่สุดขอบความเป็นจริง ที่ซึ่งโค้ดเกมที่ยังไม่ได้คอมไพล์และความทรงจำดิบไหลซึมเข้าสู่สถาปัตยกรรมทางกายภาพ",
+      "The pulsating core of the Glitched Monolith where the System Architect commands the primordial logic of Aetheria.": "แกนกลางที่เต้นเป็นจังหวะของเสาหินกลิตช์ ที่ซึ่งสถาปนิกแห่งระบบบัญชาการตรรกะดั้งเดิมของเอเธเรีย",
+      "Enter the Glitched Monolith": "เข้าสู่เสาหินกลิตช์",
+      "Enter Source Core": "เข้าสู่แกนกลางแห่งซอร์ส",
+      "Return to Glitched Monolith": "กลับสู่เสาหินกลิตช์"
     },
     passives: {
       "Iron Body": "กายาเหล็กกล้า",
