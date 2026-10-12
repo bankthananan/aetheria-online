@@ -85,6 +85,10 @@ const MAP_MUSIC = {
   ww_elder_hollow: 'ww_elder_hollow',
   guild_stronghold: 'sanctuary',
   player_homestead: 'player_homestead',
+  sr_drowned_catacombs: 'sr_drowned_catacombs',
+  ft_glacial_chasm: 'ft_glacial_chasm',
+  dc_obsidian_foundry: 'dc_obsidian_foundry',
+  ar_singularity_vault: 'ar_singularity_vault',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.

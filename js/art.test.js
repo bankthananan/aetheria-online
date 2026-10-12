@@ -120,6 +120,10 @@ const expandedMinimums = {
   abyssal_spire: [24, 18],
   ww_goblin_cave: [22, 16],
   ww_elder_hollow: [24, 18],
+  sr_drowned_catacombs: [22, 16],
+  ft_glacial_chasm: [22, 16],
+  dc_obsidian_foundry: [22, 16],
+  ar_singularity_vault: [22, 16],
   guild_stronghold: [32, 24],
   player_homestead: [28, 20],
 };

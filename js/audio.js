@@ -87,6 +87,30 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['G4','B4','D5','G5','E5','D5','B4','R','C5','E5','G5','E5','D5','C5','A4','R'],
     bass: ['G2','G2','E2','E2','C2','C2','D2','D2'], pad: ['G3','B3','C4','D4'],
   },
+  sr_drowned_catacombs: { // sunken crypt echoes in C minor
+    bpm: 110, leadWave: 'sine', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.12, bassPeak: 0.16, padPeak: 0.04, leadGate: 0.65, padEvery: 4, swing: 0.02,
+    lead: ['C4','Eb4','F4','G4','F4','Eb4','C4','R','Eb4','G4','Bb4','G4','F4','Eb4','D4','R'],
+    bass: ['C2','C2','Ab2','Ab2','Bb2','Bb2','G2','G2'], pad: ['C3','Eb3','G3'],
+  },
+  ft_glacial_chasm: { // crisp crystal chasm in D minor
+    bpm: 124, leadWave: 'triangle', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.17, padPeak: 0.05, leadGate: 0.60, padEvery: 4, swing: -0.02,
+    lead: ['D4','F4','A4','D5','C5','A4','F4','R','Bb4','D5','F5','D5','C5','Bb4','A4','R'],
+    bass: ['D2','D2','Bb2','Bb2','C3','C3','A2','A2'], pad: ['D3','F3','A3'],
+  },
+  dc_obsidian_foundry: { // intense pulsing forge in E minor
+    bpm: 144, leadWave: 'sawtooth', bassWave: 'square', padWave: 'triangle',
+    leadPeak: 0.12, bassPeak: 0.18, padPeak: 0.04, leadGate: 0.50, padEvery: 8, swing: 0.04,
+    lead: ['E4','G4','B4','E5','D5','B4','G4','R','A4','C5','E5','C5','B4','A4','G4','R'],
+    bass: ['E2','E2','C3','C3','A2','A2','B2','B2'], pad: ['E3','B3'],
+  },
+  ar_singularity_vault: { // cosmic gravitational pulse in A minor
+    bpm: 120, leadWave: 'sine', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.15, bassPeak: 0.16, padPeak: 0.06, leadGate: 0.85, padEvery: 4, swing: -0.05,
+    lead: ['A4','C5','E5','G#5','E5','C5','A4','R','F5','A5','C6','A5','G#5','F5','E5','R'],
+    bass: ['A2','A2','F2','F2','D2','D2','E2','E2'], pad: ['A3','E4','G#4'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.

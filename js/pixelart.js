@@ -2464,6 +2464,10 @@ for (const [id, base, remap] of [
   ['constellation_mite', 'void_wisp', { p: 'u', q: 'U', c: 'x' }],
   ['void_stalker', 'star_reaver', { p: 'u', q: 'U', c: 'x' }],
   ['void_herald', 'void_construct', { p: 'u', q: 'U', c: 'x' }],
+  ['lich_malakar', 'drowned_acolyte', { p: 'u', q: 'U', c: 'x' }],
+  ['frostbite_matron', 'frost_revenant', { b: 'w', c: 'I', z: 'u' }],
+  ['magma_golem_core', 'ruin_golem', { b: 'r', c: 'O', z: 'R' }],
+  ['singularity_herald', 'nullking', { p: 'u', q: 'U', c: 'x' }],
 ]) if (!monster[id] && monster[base]) monster[id] = recolorMonster(monster[base], remap);
 
 // Guild Stronghold Siege Monsters

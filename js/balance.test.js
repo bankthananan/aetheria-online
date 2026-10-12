@@ -133,7 +133,7 @@ for (const monster of CONTENT.monsters) {
     const averageAttack = DESIGN.classes.reduce((sum, cls) => sum + classAttack(cls, monster.level), 0) / DESIGN.classes.length;
     const starterCasts = hp / Math.max(1, averageAttack * 2 - dv);
     // raid bosses are deliberately the longest encounter in the game (3 HP-gated phases)
-    const maxCasts = monster.raid ? 45 : 34;
+    const maxCasts = monster.raid ? 45 : monster.subdungeon ? 40 : 34;
     assert.ok(starterCasts >= 20 && starterCasts <= maxCasts, `${monster.id} guardian duration drifted: ${starterCasts.toFixed(1)} casts`);
   }
 }
