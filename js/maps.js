@@ -417,7 +417,7 @@ export const MAPS = {
     portals: [
       { x: 2, y: 3, toMap: 'whispering_woods', toX: 37, toY: 31, label: 'Back to Woods' },   // beside the pad, not on it (no bounce-back)
       { x: 20, y: 24, toMap: 'frostpeak_tundra', toX: 2, toY: 2, label: 'To Frostpeak Tundra' },
-      { x: 26, y: 3, toMap: 'sr_drowned_catacombs', toX: 1, toY: 1, label: 'Enter Drowned Catacombs' },
+      { x: 26, y: 3, toMap: 'sr_drowned_catacombs', toX: 2, toY: 2, label: 'Enter Drowned Catacombs' },
     ],
   },
 
@@ -444,7 +444,7 @@ export const MAPS = {
     portals: [
       { x: 1, y: 1, toMap: 'sunken_ruins', toX: 20, toY: 23, label: 'Back to Ruins' },
       { x: 38, y: 28, toMap: 'dragon_caldera', toX: 2, toY: 2, label: 'To Dragon Caldera' },
-      { x: 38, y: 26, toMap: 'ft_glacial_chasm', toX: 1, toY: 1, label: 'Enter Glacial Chasm' },
+      { x: 38, y: 26, toMap: 'ft_glacial_chasm', toX: 2, toY: 2, label: 'Enter Glacial Chasm' },
     ],
   },
 
@@ -471,7 +471,7 @@ export const MAPS = {
     portals: [
       { x: 1, y: 1, toMap: 'frostpeak_tundra', toX: 37, toY: 28, label: 'Back to Frostpeak' },
       { x: 40, y: 30, toMap: 'astral_rift', toX: 2, toY: 2, label: 'To the Astral Rift' },
-      { x: 38, y: 30, toMap: 'dc_obsidian_foundry', toX: 1, toY: 1, label: 'Enter Obsidian Foundry' },
+      { x: 38, y: 30, toMap: 'dc_obsidian_foundry', toX: 2, toY: 2, label: 'Enter Obsidian Foundry' },
     ],
   },
 
@@ -500,7 +500,7 @@ export const MAPS = {
     portals: [
       { x: 1, y: 1, toMap: 'dragon_caldera', toX: 39, toY: 30, label: 'Back to Caldera' },
       { x: 3, y: 1, toMap: 'celestial_rift', toX: 2, toY: 2, label: 'Enter the Celestial Rift' },
-      { x: 5, y: 1, toMap: 'ar_singularity_vault', toX: 1, toY: 1, label: 'Enter Singularity Vault' },
+      { x: 5, y: 1, toMap: 'ar_singularity_vault', toX: 2, toY: 2, label: 'Enter Singularity Vault' },
     ],
   },
 

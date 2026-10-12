@@ -272,28 +272,28 @@ export const CONTENT = {
     {
       id: "lich_malakar", element: "void", name: "Lich Malakar",
       flavor: "An ancient high priest who bound his soul to the flooded crypts.",
-      level: 28, hp: 1300, atk: 78, def: 30, exp: 3800, spriteColor: "#8e69c7", sizeTiles: 2, boss: true, subdungeon: true,
+      level: 28, hp: 1300, atk: 78, def: 30, exp: 3800, spriteColor: "#8e69c7", sizeTiles: 2, boss: true,
       drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.5 }],
       behavior: "aggressive"
     },
     {
       id: "frostbite_matron", element: "ice", name: "Frostbite Matron",
       flavor: "A towering ice-brood sovereign slumbering in the glacial chasm.",
-      level: 44, hp: 1750, atk: 115, def: 46, exp: 8600, spriteColor: "#a0e8ff", sizeTiles: 2, boss: true, subdungeon: true,
+      level: 44, hp: 1750, atk: 115, def: 46, exp: 8600, spriteColor: "#a0e8ff", sizeTiles: 2, boss: true,
       drops: [{ itemId: "ice_core", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.6 }],
       behavior: "aggressive"
     },
     {
       id: "magma_golem_core", element: "fire", name: "Magma Golem Core",
       flavor: "A molten construct fueled by the primordial heat of the caldera.",
-      level: 60, hp: 2900, atk: 185, def: 88, exp: 16000, spriteColor: "#ff5722", sizeTiles: 2, boss: true, subdungeon: true,
+      level: 60, hp: 2900, atk: 185, def: 88, exp: 16000, spriteColor: "#ff5722", sizeTiles: 2, boss: true,
       drops: [{ itemId: "dragon_heart", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.8 }],
       behavior: "aggressive"
     },
     {
       id: "singularity_herald", element: "void", name: "Singularity Herald",
       flavor: "A cosmic harbinger guarding the vault where space-time collapses.",
-      level: 80, hp: 4200, atk: 260, def: 120, exp: 28000, spriteColor: "#b388ff", sizeTiles: 2, boss: true, subdungeon: true,
+      level: 80, hp: 3600, atk: 260, def: 95, exp: 28000, spriteColor: "#b388ff", sizeTiles: 2, boss: true,
       drops: [{ itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
       behavior: "aggressive"
     }

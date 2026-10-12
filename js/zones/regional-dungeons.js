@@ -12,6 +12,7 @@ export const sr_drowned_catacombs = {
   },
   width: 22,
   height: 16,
+  band: [16, 28],
   tiles: [
     '######################',
     '#PFFFFwwwwFFFFFFFFFFw#',
@@ -30,11 +31,16 @@ export const sr_drowned_catacombs = {
     '#FFFFFFFFwwwwwwwwwwww#',
     '######################',
   ],
-  playerStart: { x: 1, y: 1 },
+  playerStart: { x: 2, y: 2 },
   portals: [
-    { x: 1, y: 1, toMap: 'sunken_ruins', toX: 26, toY: 3, label: 'Exit to Sunken Ruins' },
+    { x: 1, y: 1, toMap: 'sunken_ruins', toX: 26, toY: 4, label: 'Exit to Sunken Ruins' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'mire_leech', count: 4, depth: [0.0, 0.35], levelRange: [16, 20] },
+    { monsterId: 'shade', count: 6, depth: [0.30, 0.70], levelRange: [18, 24] },
+    { monsterId: 'drowned_acolyte', count: 4, depth: [0.65, 0.95], levelRange: [24, 28] },
+    { monsterId: 'lich_malakar', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'lich_malakar',
@@ -55,6 +61,7 @@ export const ft_glacial_chasm = {
   },
   width: 22,
   height: 16,
+  band: [31, 44],
   tiles: [
     'MMMMMMMMMMMMMMMMMMMMMM',
     'MPSSSSIIIISSSSSSSSSSIM',
@@ -73,11 +80,16 @@ export const ft_glacial_chasm = {
     'MSSSSSSSSIIIIIIIIIIIIM',
     'MMMMMMMMMMMMMMMMMMMMMM',
   ],
-  playerStart: { x: 1, y: 1 },
+  playerStart: { x: 2, y: 2 },
   portals: [
-    { x: 1, y: 1, toMap: 'frostpeak_tundra', toX: 38, toY: 26, label: 'Exit to Frostpeak Tundra' },
+    { x: 1, y: 1, toMap: 'frostpeak_tundra', toX: 38, toY: 27, label: 'Exit to Frostpeak Tundra' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'frost_wolf', count: 5, depth: [0.0, 0.35], levelRange: [31, 35] },
+    { monsterId: 'ice_wraith', count: 5, depth: [0.30, 0.70], levelRange: [35, 40] },
+    { monsterId: 'rime_harpy', count: 4, depth: [0.65, 0.95], levelRange: [40, 44] },
+    { monsterId: 'frostbite_matron', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'frostbite_matron',
@@ -98,6 +110,7 @@ export const dc_obsidian_foundry = {
   },
   width: 22,
   height: 16,
+  band: [46, 60],
   tiles: [
     'MMMMMMMMMMMMMMMMMMMMMM',
     'MPDDDDDDDDDDDDDDDDDDDM',
@@ -116,11 +129,16 @@ export const dc_obsidian_foundry = {
     'MDDDDDDDDDDDDDDDDDDDDM',
     'MMMMMMMMMMMMMMMMMMMMMM',
   ],
-  playerStart: { x: 1, y: 1 },
+  playerStart: { x: 2, y: 2 },
   portals: [
-    { x: 1, y: 1, toMap: 'dragon_caldera', toX: 38, toY: 30, label: 'Exit to Dragon Caldera' },
+    { x: 1, y: 1, toMap: 'dragon_caldera', toX: 38, toY: 29, label: 'Exit to Dragon Caldera' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'ember_imp', count: 5, depth: [0.0, 0.35], levelRange: [46, 51] },
+    { monsterId: 'sand_stalker', count: 5, depth: [0.30, 0.70], levelRange: [51, 56] },
+    { monsterId: 'magma_beetle', count: 4, depth: [0.65, 0.95], levelRange: [55, 60] },
+    { monsterId: 'magma_golem_core', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'magma_golem_core',
@@ -141,6 +159,7 @@ export const ar_singularity_vault = {
   },
   width: 22,
   height: 16,
+  band: [61, 80],
   tiles: [
     'OOOOOOOOOOOOOOOOOOOOOO',
     'OPXXXXXXXXXXXXXXXXXXXO',
@@ -159,11 +178,16 @@ export const ar_singularity_vault = {
     'OXXXXXXXXXXXXXXXXXXXXO',
     'OOOOOOOOOOOOOOOOOOOOOO',
   ],
-  playerStart: { x: 1, y: 1 },
+  playerStart: { x: 2, y: 2 },
   portals: [
-    { x: 1, y: 1, toMap: 'astral_rift', toX: 5, toY: 1, label: 'Exit to Astral Rift' },
+    { x: 1, y: 1, toMap: 'astral_rift', toX: 5, toY: 2, label: 'Exit to Astral Rift' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'void_wisp', count: 5, depth: [0.0, 0.35], levelRange: [61, 66] },
+    { monsterId: 'star_reaver', count: 5, depth: [0.30, 0.70], levelRange: [66, 72] },
+    { monsterId: 'rift_manta', count: 4, depth: [0.65, 0.95], levelRange: [75, 80] },
+    { monsterId: 'singularity_herald', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'singularity_herald',
