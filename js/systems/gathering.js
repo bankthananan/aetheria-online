@@ -76,6 +76,30 @@ export const ORE_CATALOG = {
     rarity: 'rare',
     desc: 'Geothermally compressed crystal pulsating with concentrated elemental heat.',
   },
+  voidstone_ore: {
+    id: 'voidstone_ore',
+    name: 'Voidstone Ore',
+    type: NODE_TYPES.ORE,
+    icon: '🌑',
+    rarity: 'rare',
+    desc: 'Resonating dark mineral mined from astral fissures.',
+  },
+  pyrite_ore: {
+    id: 'pyrite_ore',
+    name: 'Pyrite Ore',
+    type: NODE_TYPES.ORE,
+    icon: '✨',
+    rarity: 'common',
+    desc: "Glinting fool's gold vein rich in sulfur compounds.",
+  },
+  silicon_crystal: {
+    id: 'silicon_crystal',
+    name: 'Silicon Crystal',
+    type: NODE_TYPES.ORE,
+    icon: '💎',
+    rarity: 'uncommon',
+    desc: 'Semi-conductive crystalline strata formed under intense cold pressure.',
+  },
 };
 
 export const FISH_CATALOG = {
@@ -127,6 +151,30 @@ export const FISH_CATALOG = {
     rarity: 'legendary',
     desc: 'Legendary radiant fish of fortune with razor-sharp reflexes and peerless flavor.',
   },
+  cosmic_jellyfish: {
+    id: 'cosmic_jellyfish',
+    name: 'Cosmic Jellyfish',
+    type: 'fish',
+    icon: '🪼',
+    rarity: 'rare',
+    desc: 'Translucent creature drifting across the astral fabric.',
+  },
+  void_ray: {
+    id: 'void_ray',
+    name: 'Void Ray',
+    type: 'fish',
+    icon: '🐟',
+    rarity: 'uncommon',
+    desc: 'Dark-finned ray gliding silently through gravity wells.',
+  },
+  spring_bass: {
+    id: 'spring_bass',
+    name: 'Spring Bass',
+    type: 'fish',
+    icon: '🐠',
+    rarity: 'common',
+    desc: 'Plump freshwater bass raised in homestead garden ponds.',
+  },
 };
 
 export const STORM_WEATHER_IDS = ['verdant_rain', 'stellar_drift', 'cosmic_eclipse'];
@@ -136,6 +184,8 @@ export const MAP_BASE_FISH = {
   sunken_ruins: 'abyssal_bass',
   frostpeak_tundra: 'glacial_salmon',
   dragon_caldera: 'magma_koi',
+  astral_rift: 'void_ray',
+  player_homestead: 'spring_bass',
 };
 
 export const HARVEST_RESPAWN_MS = 60000;
@@ -162,6 +212,27 @@ export const MAP_RESOURCE_NODES = {
     { id: 'node_dc_ember_1', mapId: 'dragon_caldera', type: NODE_TYPES.HERB, resourceId: 'ember_blossom', x: 16, y: 14 },
     { id: 'node_dc_crystal_1', mapId: 'dragon_caldera', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 28, y: 18 },
     { id: 'node_dc_ripple_1', mapId: 'dragon_caldera', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'magma_koi', x: 22, y: 10 },
+  ],
+  astral_rift: [
+    { id: 'node_ar_voidstone_1', mapId: 'astral_rift', type: NODE_TYPES.ORE, resourceId: 'voidstone_ore', x: 12, y: 10 },
+    { id: 'node_ar_ripple_1', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'cosmic_jellyfish', x: 26, y: 14 },
+    { id: 'node_ar_ripple_2', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'void_ray', x: 34, y: 22 },
+  ],
+  player_homestead: [
+    { id: 'node_hs_quarry_1', mapId: 'player_homestead', type: NODE_TYPES.ORE, resourceId: 'copper_ore', x: 18, y: 6 },
+    { id: 'node_hs_pond_1', mapId: 'player_homestead', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'spring_bass', x: 8, y: 14 },
+  ],
+  ww_goblin_cave: [
+    { id: 'node_gc_iron_1', mapId: 'ww_goblin_cave', type: NODE_TYPES.ORE, resourceId: 'iron_vein', x: 10, y: 8 },
+  ],
+  sr_drowned_catacombs: [
+    { id: 'node_sr_pyrite_1', mapId: 'sr_drowned_catacombs', type: NODE_TYPES.ORE, resourceId: 'pyrite_ore', x: 12, y: 8 },
+  ],
+  ft_glacial_chasm: [
+    { id: 'node_ft_silicon_1', mapId: 'ft_glacial_chasm', type: NODE_TYPES.ORE, resourceId: 'silicon_crystal', x: 10, y: 8 },
+  ],
+  dc_obsidian_foundry: [
+    { id: 'node_dc_crystal_1', mapId: 'dc_obsidian_foundry', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 12, y: 10 },
   ],
 };
 
@@ -216,7 +287,7 @@ export function createGatheringSystem({ now = Date.now, rnd = Math.random } = {}
     return results;
   }
 
-  function harvestNode(nodeId, { dayPhase } = {}) {
+  function harvestNode(nodeId, { dayPhase, precisionStrike = false } = {}) {
     const node = ALL_AUTHORED_NODES.get(nodeId);
     if (!node) return null;
 
@@ -233,6 +304,25 @@ export function createGatheringSystem({ now = Date.now, rnd = Math.random } = {}
 
     state.harvested = true;
     state.cooldownRemainingMs = HARVEST_RESPAWN_MS;
+
+    if (node.type === NODE_TYPES.ORE) {
+      const isPrecision = !!precisionStrike || (rnd() < 0.25);
+      if (isPrecision) {
+        return {
+          success: true,
+          precision: true,
+          items: [
+            { id: node.resourceId, qty: 2 },
+            { id: 'blessed_ore', qty: 1 },
+          ],
+        };
+      }
+      return {
+        success: true,
+        precision: false,
+        items: [{ id: node.resourceId, qty: 1 }],
+      };
+    }
 
     return {
       success: true,

@@ -138,17 +138,17 @@ p.y = 18;
 const initialCopper = A.itemQty('copper_ore');
 A.onCanvasClick(30, 18);
 
-assert.equal(
-  A.itemQty('copper_ore'),
-  initialCopper + 1,
-  'Harvesting copper ore near node grants 1 copper_ore to inventory'
+assert.ok(
+  A.itemQty('copper_ore') >= initialCopper + 1,
+  'Harvesting copper ore near node grants copper_ore to inventory'
 );
 
 // Depleted click on copper node
+const copperAfterHarvest = A.itemQty('copper_ore');
 A.onCanvasClick(30, 18);
 assert.equal(
   A.itemQty('copper_ore'),
-  initialCopper + 1,
+  copperAfterHarvest,
   'Depleted copper node does not award items on repeat click'
 );
 

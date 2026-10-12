@@ -2515,7 +2515,9 @@ export const ITEM_ICON = {
   // Gathering: herbs, ores, fish, elixirs, feasts
   silverleaf: 'gem_green', frost_lily: 'gem_blue', ember_blossom: 'gem_red', sunken_kelp: 'gem_green', moonlight_lotus: 'gem_blue',
   copper_ore: 'gem_red', iron_vein: 'gem', caldera_crystal: 'gem_red',
+  voidstone_ore: 'ore', pyrite_ore: 'ore', silicon_crystal: 'gem',
   glowing_trout: 'gem_blue', abyssal_bass: 'tide_core', glacial_salmon: 'gem_blue', magma_koi: 'gem_red', stormfin: 'storm_core', golden_carp: 'core',
+  cosmic_jellyfish: 'crawler_shell', void_ray: 'crawler_shell', spring_bass: 'crawler_shell',
   draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
   grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
   // Monster cards & card album

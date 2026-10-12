@@ -226,7 +226,19 @@ export const L10N = {
       "Developer Tools": "Developer Tools",
       "Admin Mode": "Admin Mode",
       "Dev Tools (Admin Mode) enabled": "Dev Tools (Admin Mode) enabled",
-      "Dev Tools (Admin Mode) disabled": "Dev Tools (Admin Mode) disabled"
+      "Dev Tools (Admin Mode) disabled": "Dev Tools (Admin Mode) disabled",
+      "Voidstone Ore": "Voidstone Ore",
+      "Resonating dark mineral mined from astral fissures.": "Resonating dark mineral mined from astral fissures.",
+      "Pyrite Ore": "Pyrite Ore",
+      "Glinting fool's gold vein rich in sulfur compounds.": "Glinting fool's gold vein rich in sulfur compounds.",
+      "Silicon Crystal": "Silicon Crystal",
+      "Semi-conductive crystalline strata formed under intense cold pressure.": "Semi-conductive crystalline strata formed under intense cold pressure.",
+      "Cosmic Jellyfish": "Cosmic Jellyfish",
+      "Translucent creature drifting across the astral fabric.": "Translucent creature drifting across the astral fabric.",
+      "Void Ray": "Void Ray",
+      "Dark-finned ray gliding silently through gravity wells.": "Dark-finned ray gliding silently through gravity wells.",
+      "Spring Bass": "Spring Bass",
+      "Plump freshwater bass raised in homestead garden ponds.": "Plump freshwater bass raised in homestead garden ponds."
     },
     maps: {
       "Guild Stronghold": "Guild Stronghold",
@@ -2077,6 +2089,12 @@ export const L10N = {
       "Caldera Crystal": "คริสตัลแอ่งภูเขาไฟ",
       "A crystalline prism formed under volcanic pressure.": "ปริซึมคริสตัลที่ก่อตัวขึ้นภายใต้แรงดันภูเขาไฟ",
       "Geothermally compressed crystal pulsating with concentrated elemental heat.": "คริสตัลที่ถูกอัดด้วยความร้อนใต้พิภพเต้นตุบๆ ด้วยพลังงานธาตุความร้อนเข้มข้น",
+      "Voidstone Ore": "แร่หินวอยด์สโตน",
+      "Resonating dark mineral mined from astral fissures.": "แร่ธาตุมืดก้องกังวานที่ขุดได้จากรอยแยกดวงดาว",
+      "Pyrite Ore": "แร่ไพไรต์",
+      "Glinting fool's gold vein rich in sulfur compounds.": "สายแร่ทองคนโง่ทอประกายที่อุดมด้วยสารประกอบกำมะถัน",
+      "Silicon Crystal": "คริสตัลซิลิคอน",
+      "Semi-conductive crystalline strata formed under intense cold pressure.": "ชั้นหินคริสตัลกึ่งตัวนำที่ก่อตัวภายใต้แรงดันเย็นยะเยือกยวดยิ่ง",
 
       "Glowing Trout": "เทราต์เรืองแสง",
       "A vibrant river fish shimmering with freshwater essence.": "ปลาน้ำจืดสีสดใสที่ส่องประกายด้วยแก่นแท้แห่งสายน้ำ",
@@ -2096,6 +2114,12 @@ export const L10N = {
       "Golden Carp": "ปลาคาร์ปทองคำ",
       "A legendary golden fish said to bring boundless fortune.": "ปลาทองคำในตำนานที่เล่าขานกันว่าจะนำพาโชคลาภมาให้อย่างไร้ขีดจำกัด",
       "Legendary radiant fish of fortune with razor-sharp reflexes and peerless flavor.": "ปลาทองคำนำโชคในตำนานที่ส่องสว่าง มีปฏิกิริยาว่องไวและรสชาติไร้ที่เปรียบ",
+      "Cosmic Jellyfish": "แมงกะพรุนคอสมิก",
+      "Translucent creature drifting across the astral fabric.": "สิ่งมีชีวิตโปร่งแสงที่ลอยล่องผ่านผืนผ้าดวงดาว",
+      "Void Ray": "ปลากระเบนวอยด์",
+      "Dark-finned ray gliding silently through gravity wells.": "ปลากระเบนครีบดำร่อนอย่างเงียบเชียบผ่านบ่อแรงโน้มถ่วง",
+      "Spring Bass": "เบสน้ำพุ",
+      "Plump freshwater bass raised in homestead garden ponds.": "ปลาเบสน้ำจืดตัวอวบที่เลี้ยงในสระน้ำสวนโฮมสเตด",
 
       // Consumables / Elixirs / Feasts
       "Draught of Vitality": "น้ำยาแห่งพลังชีวิต",

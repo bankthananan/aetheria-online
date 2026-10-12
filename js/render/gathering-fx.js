@@ -15,6 +15,9 @@ const ORE_PALETTES = {
   copper_ore: '#ffb74d',
   iron_vein: '#90a4ae',
   caldera_crystal: '#ff4081',
+  voidstone_ore: '#7e57c2',
+  pyrite_ore: '#ffd54f',
+  silicon_crystal: '#4fc3f7',
 };
 
 export function createGatheringRenderer({ T = (s) => s } = {}) {

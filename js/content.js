@@ -446,6 +446,9 @@ export const CONTENT = {
     { id: "copper_ore", name: "Copper Ore", type: "material", desc: "Raw copper mined from surface rock veins.", price: 30, value: 30, rarity: "common" },
     { id: "iron_vein", name: "Iron Ore", type: "material", desc: "Dense iron ore smelted for sturdy equipment and plating.", price: 60, value: 60, rarity: "uncommon" },
     { id: "caldera_crystal", name: "Caldera Crystal", type: "material", desc: "A crystalline prism formed under volcanic pressure.", price: 150, value: 150, rarity: "rare" },
+    { id: "voidstone_ore", name: "Voidstone Ore", type: "material", desc: "Resonating dark mineral mined from astral fissures.", price: 220, value: 220, rarity: "rare" },
+    { id: "pyrite_ore", name: "Pyrite Ore", type: "material", desc: "Glinting fool's gold vein rich in sulfur compounds.", price: 45, value: 45, rarity: "common" },
+    { id: "silicon_crystal", name: "Silicon Crystal", type: "material", desc: "Semi-conductive crystalline strata formed under intense cold pressure.", price: 80, value: 80, rarity: "uncommon" },
 
     { id: "glowing_trout", name: "Glowing Trout", type: "material", desc: "A vibrant river fish shimmering with freshwater essence.", price: 45, value: 45, rarity: "common" },
     { id: "abyssal_bass", name: "Abyssal Bass", type: "material", desc: "A heavy deep-sea fish from sunken ruins.", price: 75, value: 75, rarity: "uncommon" },
@@ -453,6 +456,9 @@ export const CONTENT = {
     { id: "magma_koi", name: "Magma Koi", type: "material", desc: "A resilient fish swimming in subterranean thermal pools.", price: 130, value: 130, rarity: "rare" },
     { id: "stormfin", name: "Stormfin", type: "material", desc: "An electric fish that only surfaces during atmospheric storms.", price: 200, value: 200, rarity: "epic" },
     { id: "golden_carp", name: "Golden Carp", type: "material", desc: "A legendary golden fish said to bring boundless fortune.", price: 500, value: 500, rarity: "legendary" },
+    { id: "cosmic_jellyfish", name: "Cosmic Jellyfish", type: "material", desc: "Translucent creature drifting across the astral fabric.", price: 250, value: 250, rarity: "rare" },
+    { id: "void_ray", name: "Void Ray", type: "material", desc: "Dark-finned ray gliding silently through gravity wells.", price: 180, value: 180, rarity: "uncommon" },
+    { id: "spring_bass", name: "Spring Bass", type: "material", desc: "Plump freshwater bass raised in homestead garden ponds.", price: 50, value: 50, rarity: "common" },
 
     // ===== Consumables / Elixirs / Feasts =====
     { id: "draught_vitality", name: "Draught of Vitality", type: "consumable", desc: "Increases Max HP by +200 for 5 minutes.", buff: { stat: "hp", flat: 200, durationMs: 300000 }, price: 120, value: 120, rarity: "uncommon" },
