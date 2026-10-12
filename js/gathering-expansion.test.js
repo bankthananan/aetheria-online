@@ -76,3 +76,21 @@ test('gathering expansion: non-precision mining and palettes/icons verification'
   assert.equal(fishSession.targetFish, 'spring_bass');
 });
 
+test('all gathering node IDs across MAP_RESOURCE_NODES are unique', () => {
+  const seenIds = new Set();
+  const duplicateIds = [];
+
+  for (const [mapId, nodes] of Object.entries(MAP_RESOURCE_NODES)) {
+    for (const node of nodes) {
+      if (seenIds.has(node.id)) {
+        duplicateIds.push({ id: node.id, mapId });
+      }
+      seenIds.add(node.id);
+    }
+  }
+
+  assert.deepEqual(duplicateIds, [], `Found duplicate gathering node IDs: ${JSON.stringify(duplicateIds)}`);
+  assert.equal(seenIds.has('node_dc_foundry_crystal_1'), true, 'node_dc_foundry_crystal_1 must exist');
+});
+
+

@@ -232,7 +232,7 @@ export const MAP_RESOURCE_NODES = {
     { id: 'node_ft_silicon_1', mapId: 'ft_glacial_chasm', type: NODE_TYPES.ORE, resourceId: 'silicon_crystal', x: 10, y: 8 },
   ],
   dc_obsidian_foundry: [
-    { id: 'node_dc_crystal_1', mapId: 'dc_obsidian_foundry', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 12, y: 10 },
+    { id: 'node_dc_foundry_crystal_1', mapId: 'dc_obsidian_foundry', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 12, y: 10 },
   ],
 };
 
