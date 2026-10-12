@@ -489,6 +489,7 @@ export const MAPS = {
       { monsterId: 'void_wisp', count: 13, depth: [0.00, 0.32], levelRange: [61, 66] },
       { monsterId: 'star_reaver', count: 11, depth: [0.22, 0.52], levelRange: [66, 71] },
       { monsterId: 'astral_knight', count: 9, depth: [0.45, 0.72], levelRange: [71, 75] },
+      { monsterId: 'void_construct', count: 2, depth: [0.45, 0.85], levelRange: [65, 75] },
       { monsterId: 'rift_manta', count: 7, depth: [0.65, 0.96], levelRange: [75, 79] },
       { monsterId: 'constellation_mite', count: 1, depth: [0.66, 0.74], levelRange: [69, 72] },
       { monsterId: 'nullking', count: 1 },

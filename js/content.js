@@ -72,7 +72,7 @@ export const CONTENT = {
 
     // ===== Hybrid Job Bosses =====
     { id: "void_construct", element: "void", name: "Void Construct", flavor: "A geometric nightmare of hard light and heavy gravity.",
-      level: 60, hp: 2800, atk: 180, def: 85, exp: 15000, spriteColor: "#1a1a24", sizeTiles: 2, rare: true,
+      level: 70, hp: 1000, atk: 184, def: 58, exp: 4900, spriteColor: "#1a1a24", sizeTiles: 1, rare: true,
       drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "shade_dust", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }], behavior: "aggressive" },
 
     // ===== Expansion monsters (Frostpeak & Dragon Caldera) =====
