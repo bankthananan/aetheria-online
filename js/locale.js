@@ -235,6 +235,41 @@ export const L10N = {
       "The Botanical Sanctum": "The Botanical Sanctum",
       "Enter Homestead": "Enter Homestead",
       "Exit to Town": "Exit to Town"
+    },
+    classes: {
+      "Arcane Archer": "Arcane Archer",
+      "Dreadnought": "Dreadnought",
+      "Storm Templar": "Storm Templar",
+      "Chi Tempest": "Chi Tempest",
+      "Spellblade": "Spellblade",
+      "Vanguard": "Vanguard",
+      "Hybrid: Arcane Archer": "Hybrid: Arcane Archer",
+      "Hybrid: Dreadnought": "Hybrid: Dreadnought",
+      "Hybrid: Storm Templar": "Hybrid: Storm Templar",
+      "Hybrid: Spellblade": "Hybrid: Spellblade",
+      "Hybrid: Vanguard": "Hybrid: Vanguard",
+    },
+    skills: {
+      "Arcane Arrow Barrage": "Arcane Arrow Barrage",
+      "Summoned crystalline arrows pierce reality itself.": "Summoned crystalline arrows pierce reality itself.",
+      "Colossal Onslaught": "Colossal Onslaught",
+      "Unstoppable momentum shatters enemy defenses.": "Unstoppable momentum shatters enemy defenses.",
+      "Tempest Sanctuary": "Tempest Sanctuary",
+      "A holy storm ring heals allies while shocking transgressors.": "A holy storm ring heals allies while shocking transgressors.",
+      "Cyclone Lotus Kick": "Cyclone Lotus Kick",
+      "Whirling martial arts generate a vortex drawing enemies inward.": "Whirling martial arts generate a vortex drawing enemies inward.",
+    },
+    quests: {
+      "Path of the Dreadnought": "Path of the Dreadnought",
+      "Become an unbreakable juggernaut. Slay the Void Construct.": "Become an unbreakable juggernaut. Slay the Void Construct.",
+      "Path of the Arcane Archer": "Path of the Arcane Archer",
+      "Infuse arrows with raw code. Slay the Void Construct.": "Infuse arrows with raw code. Slay the Void Construct.",
+      "Path of the Storm Templar": "Path of the Storm Templar",
+      "Call down divine thunder. Slay the Void Construct.": "Call down divine thunder. Slay the Void Construct.",
+      "Path of the Spellblade": "Path of the Spellblade",
+      "Unite the blade and the code. Slay the Void Construct.": "Unite the blade and the code. Slay the Void Construct.",
+      "Path of the Vanguard": "Path of the Vanguard",
+      "Unite fist and faith. Slay the Void Construct.": "Unite fist and faith. Slay the Void Construct.",
     }
   },
   th: {
@@ -1416,6 +1451,15 @@ export const L10N = {
       "Cinder Archon": "อาร์คอนเถ้าคุไฟ",
       "Hybrid: Spellblade": "ไฮบริด: นักดาบเวทมนตร์",
       "Hybrid: Vanguard": "ไฮบริด: แนวหน้าทะลวง",
+      "Arcane Archer": "นักธนูเวทมนตร์",
+      "Dreadnought": "เดรดนอท",
+      "Storm Templar": "เทมพลาร์สายฟ้า",
+      "Chi Tempest": "พายุลมปราณ",
+      "Spellblade": "นักดาบเวทมนตร์",
+      "Vanguard": "แนวหน้าทะลวง",
+      "Hybrid: Arcane Archer": "ไฮบริด: นักธนูเวทมนตร์",
+      "Hybrid: Dreadnought": "ไฮบริด: เดรดนอท",
+      "Hybrid: Storm Templar": "ไฮบริด: เทมพลาร์สายฟ้า",
 
       // Class Flavors
       "The salaryman who read every tank guide and finally gets to main one.": "พนักงานออฟฟิศที่อ่านไกด์สายแทงก์มาทุกเล่ม และในที่สุดก็ได้เล่นเป็นตัวหลักเสียที",
@@ -1684,7 +1728,15 @@ export const L10N = {
       "Elemental Strike": "โจมตีผสานธาตุ",
       "Blade and code unite. The elements obey.": "ดาบและโค้ดผสานรวมกัน ธรรมชาติทั้งมวลต้องจำนน",
       "Phalanx": "ฟารังซ์หอกโล่",
-      "Impenetrable shield, divine judgment.": "โล่ที่ไม่มีวันถูกทะลวง พ่วงมาด้วยคำพิพากษาแห่งสวรรค์"
+      "Impenetrable shield, divine judgment.": "โล่ที่ไม่มีวันถูกทะลวง พ่วงมาด้วยคำพิพากษาแห่งสวรรค์",
+      "Arcane Arrow Barrage": "ห่าศรเวทมนตร์",
+      "Summoned crystalline arrows pierce reality itself.": "ศรคริสตัลที่ถูกอัญเชิญทะลวงผ่านความเป็นจริง",
+      "Colossal Onslaught": "โถมโจมตีมหึมา",
+      "Unstoppable momentum shatters enemy defenses.": "โมเมนตัมที่ไม่อาจหยุดยั้งทำลายการป้องกันของศัตรู",
+      "Tempest Sanctuary": "วิหารวาตภัย",
+      "A holy storm ring heals allies while shocking transgressors.": "วงแหวนพายุศักดิ์สิทธิ์รักษาพันธมิตรพร้อมกับช็อตผู้บุกรุก",
+      "Cyclone Lotus Kick": "เตะบัวไซโคลน",
+      "Whirling martial arts generate a vortex drawing enemies inward.": "วิทยายุทธ์หมุนวนสร้างพายุหมุนดึงดูดศัตรูเข้าสู่ศูนย์กลาง"
     },
     skills_short: {
       "rift_slash": "รอยแยก",
@@ -1761,7 +1813,11 @@ export const L10N = {
       "gore": "ขย้ำแผล",
       "frostfire": "เพลิงน้ำแข็ง",
       "venom_shot": "ศรพิษ",
-      "hammer_of_dawn": "ค้อนแสง"
+      "hammer_of_dawn": "ค้อนแสง",
+      "arcane_arrow_barrage": "ห่าศรเวท",
+      "colossal_onslaught": "โถมมหึมา",
+      "tempest_sanctuary": "วิหารพายุ",
+      "cyclone_lotus_kick": "เตะบัวหมุน"
     },
     items: {
       "A luminescent seal worn by tower conquerors. Grants +220 HP, +16 ATK, and +14 DEF.": "ตราเรืองแสงที่ผู้พิชิตหอคอยสวมใส่ เพิ่ม HP +220, ATK +16 และ DEF +14",
@@ -2556,6 +2612,12 @@ export const L10N = {
       "Unite the blade and the code. Slay the Void Construct.": "ผสานดาบและโค้ดเข้าด้วยกัน จงสังหาร Void Construct",
       "Path of the Vanguard": "เส้นทางสู่แนวหน้าทะลวง",
       "Unite fist and faith. Slay the Void Construct.": "ผสานหมัดและศรัทธาเข้าด้วยกัน จงสังหาร Void Construct",
+      "Path of the Dreadnought": "เส้นทางสู่เดรดนอท",
+      "Become an unbreakable juggernaut. Slay the Void Construct.": "กลายเป็นจักกะนอทที่ไม่มีวันพังทลาย จงสังหาร Void Construct",
+      "Path of the Arcane Archer": "เส้นทางสู่นักธนูเวทมนตร์",
+      "Infuse arrows with raw code. Slay the Void Construct.": "ผสานศรธนูด้วยรหัสบริสุทธิ์ จงสังหาร Void Construct",
+      "Path of the Storm Templar": "เส้นทางสู่เทมพลาร์สายฟ้า",
+      "Call down divine thunder. Slay the Void Construct.": "เรียกอสุนีบาตศักดิ์สิทธิ์ลงมา จงสังหาร Void Construct",
       "A Strange Awakening": "การตื่นขึ้นที่แปลกประหลาด",
       "You've woken in a world not your own. Speak with Elowen, then step through the town portal into the Whispering Woods and prove you're able by clearing three slimes.": "คุณตื่นขึ้นมาในโลกที่ไม่คุ้นเคย คุยกับอีโลเวน จากนั้นก้าวผ่านประตูมิติของเมืองไปยังป่า Whispering Woods เพื่อพิสูจน์ตนเองด้วยการกำจัดสไลม์ 3 ตัว",
       "Easy, hero. Breathe — crossing the veil is rougher than it looks. The dizziness passes.": "ใจเย็นๆ ฮีโร่เอ๋ย หายใจลึกๆ — การข้ามม่านมิติมันโหดร้ายกว่าที่ตาเห็น อาการเวียนหัวจะค่อยๆ หายไปเอง",
@@ -3055,3 +3117,5 @@ export const L10N = {
     }
   }
 };
+
+export const LOCALES = L10N;

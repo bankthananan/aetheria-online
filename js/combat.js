@@ -156,6 +156,10 @@ export const COMBAT = {
     // hybrid
     { id: "elemental_strike", classId: "spellblade", name: "Elemental Strike", flavor: "Blade and code unite. The elements obey.", mpCost: 40, cooldownMs: 12000, type: "aoe", power: 4.0, range: 4, radius: 2, hotkey: "7", effect: "burn", finisher: true },
     { id: "phalanx",          classId: "vanguard",   name: "Phalanx",          flavor: "Impenetrable shield, divine judgment.",  mpCost: 35, cooldownMs: 20000, type: "buff", power: 2.0, range: 0, radius: 0, hotkey: "7", effect: null, finisher: false },
+    { id: "arcane_arrow_barrage", classId: "arcane_archer", name: "Arcane Arrow Barrage", flavor: "Summoned crystalline arrows pierce reality itself.", mpCost: 38, cooldownMs: 9000, type: "aoe", power: 3.8, range: 7, radius: 2, hotkey: "7", effect: "slow", finisher: true },
+    { id: "colossal_onslaught", classId: "dreadnought", name: "Colossal Onslaught", flavor: "Unstoppable momentum shatters enemy defenses.", mpCost: 35, cooldownMs: 8000, type: "melee", power: 4.2, range: 2, radius: 0, hotkey: "7", effect: "sunder", finisher: true },
+    { id: "tempest_sanctuary", classId: "storm_templar", name: "Tempest Sanctuary", flavor: "A holy storm ring heals allies while shocking transgressors.", mpCost: 40, cooldownMs: 14000, type: "aoe", power: 3.5, range: 0, radius: 3, hotkey: "7", effect: "stun", finisher: true },
+    { id: "cyclone_lotus_kick", classId: "chi_tempest", name: "Cyclone Lotus Kick", flavor: "Whirling martial arts generate a vortex drawing enemies inward.", mpCost: 36, cooldownMs: 10000, type: "aoe", power: 3.9, range: 1, radius: 3, hotkey: "7", effect: "slow", finisher: true },
   ],
 
   statusEffects: {
@@ -200,3 +204,5 @@ export const COMBAT = {
     healColor:   "#6ec6ff", // sky blue, distinct from the orange crit
   },
 };
+
+for (const s of COMBAT.skills) COMBAT.skills[s.id] = s;
