@@ -13,6 +13,8 @@ test('hybrid job matrix contains all 6 archetypes with valid skills', () => {
     'chi_tempest'
   ];
 
+  const allTiers = Object.values(PROGRESSION.tiers).flat();
+
   for (const id of expectedHybrids) {
     const hybrid = PROGRESSION.hybridJobs[id];
     assert.ok(hybrid, `Hybrid ${id} must exist in PROGRESSION.hybridJobs`);
@@ -22,5 +24,8 @@ test('hybrid job matrix contains all 6 archetypes with valid skills', () => {
 
     const skill = (COMBAT.skills.find ? COMBAT.skills.find(s => s.id === hybrid.signatureSkillId) : null) || COMBAT.skills[hybrid.signatureSkillId];
     assert.ok(skill, `Signature skill ${hybrid.signatureSkillId} must exist in COMBAT.skills`);
+
+    const tierEntry = allTiers.find(t => t.isHybrid && t.name === `Hybrid: ${hybrid.name}`);
+    assert.ok(tierEntry, `Hybrid ${id} (${hybrid.name}) must be referenced in PROGRESSION.tiers with isHybrid: true`);
   }
 });

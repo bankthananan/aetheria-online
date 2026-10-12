@@ -248,6 +248,7 @@ export const L10N = {
       "Hybrid: Storm Templar": "Hybrid: Storm Templar",
       "Hybrid: Spellblade": "Hybrid: Spellblade",
       "Hybrid: Vanguard": "Hybrid: Vanguard",
+      "Hybrid: Chi Tempest": "Hybrid: Chi Tempest",
     },
     skills: {
       "Arcane Arrow Barrage": "Arcane Arrow Barrage",
@@ -266,6 +267,8 @@ export const L10N = {
       "Infuse arrows with raw code. Slay the Void Construct.": "Infuse arrows with raw code. Slay the Void Construct.",
       "Path of the Storm Templar": "Path of the Storm Templar",
       "Call down divine thunder. Slay the Void Construct.": "Call down divine thunder. Slay the Void Construct.",
+      "Path of the Chi Tempest": "Path of the Chi Tempest",
+      "Unite martial arts and the storm. Slay the Void Construct.": "Unite martial arts and the storm. Slay the Void Construct.",
       "Path of the Spellblade": "Path of the Spellblade",
       "Unite the blade and the code. Slay the Void Construct.": "Unite the blade and the code. Slay the Void Construct.",
       "Path of the Vanguard": "Path of the Vanguard",
@@ -1460,6 +1463,7 @@ export const L10N = {
       "Hybrid: Arcane Archer": "ไฮบริด: นักธนูเวทมนตร์",
       "Hybrid: Dreadnought": "ไฮบริด: เดรดนอท",
       "Hybrid: Storm Templar": "ไฮบริด: เทมพลาร์สายฟ้า",
+      "Hybrid: Chi Tempest": "ไฮบริด: พายุลมปราณ",
 
       // Class Flavors
       "The salaryman who read every tank guide and finally gets to main one.": "พนักงานออฟฟิศที่อ่านไกด์สายแทงก์มาทุกเล่ม และในที่สุดก็ได้เล่นเป็นตัวหลักเสียที",
@@ -2618,6 +2622,8 @@ export const L10N = {
       "Infuse arrows with raw code. Slay the Void Construct.": "ผสานศรธนูด้วยรหัสบริสุทธิ์ จงสังหาร Void Construct",
       "Path of the Storm Templar": "เส้นทางสู่เทมพลาร์สายฟ้า",
       "Call down divine thunder. Slay the Void Construct.": "เรียกอสุนีบาตศักดิ์สิทธิ์ลงมา จงสังหาร Void Construct",
+      "Path of the Chi Tempest": "เส้นทางสู่พายุลมปราณ",
+      "Unite martial arts and the storm. Slay the Void Construct.": "ผสานวิทยายุทธ์และพายุเข้าด้วยกัน จงสังหาร Void Construct",
       "A Strange Awakening": "การตื่นขึ้นที่แปลกประหลาด",
       "You've woken in a world not your own. Speak with Elowen, then step through the town portal into the Whispering Woods and prove you're able by clearing three slimes.": "คุณตื่นขึ้นมาในโลกที่ไม่คุ้นเคย คุยกับอีโลเวน จากนั้นก้าวผ่านประตูมิติของเมืองไปยังป่า Whispering Woods เพื่อพิสูจน์ตนเองด้วยการกำจัดสไลม์ 3 ตัว",
       "Easy, hero. Breathe — crossing the veil is rougher than it looks. The dizziness passes.": "ใจเย็นๆ ฮีโร่เอ๋ย หายใจลึกๆ — การข้ามม่านมิติมันโหดร้ายกว่าที่ตาเห็น อาการเวียนหัวจะค่อยๆ หายไปเอง",
@@ -3117,5 +3123,3 @@ export const L10N = {
     }
   }
 };
-
-export const LOCALES = L10N;

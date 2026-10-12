@@ -449,7 +449,7 @@ export const PROGRESSION = {
       { name: 'Iron Fist',        reqLevel: 1 },
       { name: 'Ki Adept',         reqLevel: 15, bonus: { str: 4, agi: 4 }, advance: { name: 'Trial of the Ki Adept', desc: 'Discipline is forged in battle. Fell 5 Dire Wolves with your fists.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Grandmaster',      reqLevel: 40, bonus: { str: 8, agi: 6, vit: 3 }, advance: { name: 'Rite of the Grandmaster', desc: 'Still the storm within — banish 5 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
-      { name: 'Hybrid: Vanguard', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Vanguard', desc: 'Unite fist and faith. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
+      { name: 'Hybrid: Chi Tempest', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Chi Tempest', desc: 'Unite martial arts and the storm. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
     stormcaller: [
       { name: 'Stormcaller',      reqLevel: 1 },
