@@ -5,6 +5,7 @@
 import {
   CROP_DEFINITIONS,
   MANNEQUIN_SLOTS,
+  CULINARY_FEASTS,
 } from '../systems/homestead.js';
 import { CONTENT } from '../content.js';
 
@@ -40,6 +41,7 @@ export function createHomesteadUIRenderer({
   T = (s) => s,
   CROP_DEFINITIONS: cropDefs = CROP_DEFINITIONS,
   MANNEQUIN_SLOTS: mannequinSlots = MANNEQUIN_SLOTS,
+  CULINARY_FEASTS: feasts = CULINARY_FEASTS,
 } = {}) {
 
   /**
@@ -292,6 +294,105 @@ export function createHomesteadUIRenderer({
           <button class="btn btn--good" data-homestead-rest-hearth="1" style="box-sizing: border-box; min-width: 0; padding: 8px 18px; font-size: 12px;">
             🔥 ${T('Rest by the Hearth', 'ui')}
           </button>
+          <div style="box-sizing: border-box; min-width: 0; margin-top: 10px;">
+            <button class="btn btn--secondary" data-homestead-open-culinary="1" style="box-sizing: border-box; min-width: 0; padding: 6px 14px; font-size: 11px;">
+              🍳 ${T('Culinary Stove & Feasts', 'ui')}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Renders the Culinary Stove & Feast cooking dialog.
+   */
+  function renderCulinaryDialogHtml(playerInventory = []) {
+    const feastsList = Object.values(feasts || {});
+    const feastCards = feastsList.map(feast => {
+      const durationStr = formatDuration(feast.durationMs);
+      const multPct = Math.round(((feast.buff?.mult || 1) - 1) * 100);
+      const flatBonus = feast.buff?.flat || 0;
+      const statLabel = (feast.buff?.stat || 'all').toUpperCase();
+      const bonusText = multPct > 0
+        ? `+${multPct}% ${statLabel}${flatBonus ? ` & +${flatBonus}` : ''}`
+        : `+${flatBonus} ${statLabel}`;
+
+      let canCook = true;
+      const ingredientRows = (feast.ingredients || []).map(ing => {
+        const primaryQty = getItemQty(playerInventory, ing.itemId);
+        const altQty = ing.altId ? getItemQty(playerInventory, ing.altId) : 0;
+        const totalOwned = primaryQty + altQty;
+        const met = totalOwned >= ing.qty;
+        if (!met) canCook = false;
+
+        const nameLabel = ing.altId
+          ? `${T(itemName(ing.itemId), 'items')} / ${T(itemName(ing.altId), 'items')}`
+          : T(itemName(ing.itemId), 'items');
+
+        return `
+          <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+            <span style="box-sizing: border-box; min-width: 0; color: var(--text-muted);">${esc(nameLabel)}:</span>
+            <span style="box-sizing: border-box; min-width: 0; color: ${met ? 'var(--success-text)' : 'var(--danger-text)'}; font-weight: bold;">${totalOwned}/${ing.qty}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="homestead-feast-card" style="box-sizing: border-box; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+          <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="box-sizing: border-box; min-width: 0; font-weight: bold; font-size: 13px; color: var(--gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(T(feast.name, 'items'))}</div>
+            <span class="badge" style="box-sizing: border-box; min-width: 0; background: color-mix(in srgb, var(--info) 20%, transparent); color: var(--info); border: 1px solid var(--info); padding: 2px 6px; border-radius: 4px; font-size: 10px;">${esc(bonusText)} · ${durationStr}</span>
+          </div>
+          <p style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--text-muted); margin: 0 0 8px 0; line-height: 1.3;">${esc(T(feast.desc, 'items'))}</p>
+          <div style="box-sizing: border-box; min-width: 0; background: rgba(0, 0, 0, 0.2); border-radius: 4px; padding: 6px 8px; margin-bottom: 8px;">
+            ${ingredientRows}
+          </div>
+          <button class="btn ${canCook ? 'btn--good' : 'btn--disabled'}" data-homestead-cook="${esc(feast.id)}" ${canCook ? '' : 'disabled'} style="box-sizing: border-box; min-width: 0; width: 100%; padding: 6px 12px; font-size: 11px;">
+            🍳 ${T('Cook Feast', 'ui')}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Artificing: Card Transmutation
+    const cardItems = (playerInventory || []).filter(s => {
+      const sid = s?.id || s?.itemId || '';
+      return sid.startsWith('card_') && (typeof s.qty === 'number' ? s.qty : 1) > 0;
+    });
+    const totalCards = cardItems.reduce((acc, c) => acc + (typeof c.qty === 'number' ? c.qty : 1), 0);
+    const canTransmute = totalCards >= 3;
+
+    return `
+      <div class="homestead-culinary-modal" style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; padding: 12px;">
+        <div class="ro-parchment" style="box-sizing: border-box; width: 100%; max-width: 480px; min-width: 0; overflow-x: hidden; margin: 0 auto; background: var(--window-bg); border: 2px solid var(--gold); border-radius: 8px; padding: 16px;">
+          <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin-bottom: 12px;">
+            <div style="box-sizing: border-box; min-width: 0; font-weight: bold; font-size: 14px; color: var(--text);">🍳 ${T('Culinary Stove & Feast Kitchen', 'ui')}</div>
+            <button class="btn btn--ghost" data-homestead-close="1" style="box-sizing: border-box; min-width: 0; padding: 2px 8px; font-size: 12px;">✕</button>
+          </div>
+          <p style="box-sizing: border-box; min-width: 0; font-size: 12px; color: var(--text-muted); margin: 0 0 12px 0;">
+            Prepare long-lasting gourmet feasts infused with hearth serenity and astral flavor using harvest crops and catches.
+          </p>
+
+          <div style="box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; margin-bottom: 14px;">
+            ${feastCards}
+          </div>
+
+          <!-- Card Transmutation Artificing -->
+          <div style="box-sizing: border-box; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px;">
+            <div style="box-sizing: border-box; min-width: 0; font-weight: bold; font-size: 12px; color: var(--gold-bright); margin-bottom: 4px;">🃏 ${T('Card Transmutation & Artificing', 'ui')}</div>
+            <p style="box-sizing: border-box; min-width: 0; font-size: 11px; color: var(--text-muted); margin: 0 0 8px 0;">
+              Transmute 3 surplus monster cards from your bag into an Old Card Album.
+            </p>
+            <div style="box-sizing: border-box; min-width: 0; display: flex; align-items: center; justify-content: space-between;">
+              <span style="box-sizing: border-box; min-width: 0; font-size: 11px; color: ${canTransmute ? 'var(--success-text)' : 'var(--text-muted)'};">
+                Monster Cards: ${totalCards}/3
+              </span>
+              <button class="btn ${canTransmute ? 'btn--primary' : 'btn--disabled'}" data-homestead-transmute="1" ${canTransmute ? '' : 'disabled'} style="box-sizing: border-box; min-width: 0; padding: 4px 12px; font-size: 11px;">
+                🔮 ${T('Transmute 3 Cards', 'ui')}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -362,6 +463,9 @@ export function createHomesteadUIRenderer({
     renderPastureModalHtml: renderPastureDialogHtml,
     renderMannequinModalHtml,
     renderHearthModalHtml,
+    renderCulinaryDialogHtml,
+    renderCulinaryModalHtml: renderCulinaryDialogHtml,
+    renderFeastModalHtml: renderCulinaryDialogHtml,
     renderHomesteadOverviewHtml,
     renderHomesteadChronicleTabHtml: renderHomesteadOverviewHtml,
   };

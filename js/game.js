@@ -58,7 +58,7 @@ import { createSpireUIRenderer } from './render/spire-ui.js';
 import { createStrongholdSystem, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_WAVE_TEMPLATES, SIEGE_REWARDS } from './systems/stronghold.js';
 import { createStrongholdRenderer } from './render/stronghold-fx.js';
 import { createStrongholdUIRenderer } from './render/stronghold-ui.js';
-import { createHomesteadSystem, CROP_DEFINITIONS, MANNEQUIN_SLOTS, PASTURE_FORAGE_TABLE, HEARTH_BUFF_DURATION_MS } from './systems/homestead.js';
+import { createHomesteadSystem, CROP_DEFINITIONS, MANNEQUIN_SLOTS, PASTURE_FORAGE_TABLE, HEARTH_BUFF_DURATION_MS, CULINARY_FEASTS } from './systems/homestead.js';
 import { createHomesteadRenderer } from './render/homestead-fx.js';
 import { createHomesteadUIRenderer } from './render/homestead-ui.js';
 
@@ -237,7 +237,7 @@ const strongholdFx = createStrongholdRenderer({ T, PX });
 const strongholdUI = createStrongholdUIRenderer({ T, FACILITY_DEFINITIONS, TROPHY_PEDESTAL_DEFINITIONS, SIEGE_REWARDS });
 const homesteadSystem = createHomesteadSystem({ now, rnd: () => Math.random() });
 const homesteadFx = createHomesteadRenderer({ T, PX });
-const homesteadUI = createHomesteadUIRenderer({ T, CROP_DEFINITIONS, MANNEQUIN_SLOTS });
+const homesteadUI = createHomesteadUIRenderer({ T, CROP_DEFINITIONS, MANNEQUIN_SLOTS, CULINARY_FEASTS });
 const chance = p => Math.random() < p;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const isDamageSkill = s => ['melee', 'ranged', 'aoe'].includes(s?.type);
@@ -1163,13 +1163,15 @@ function equippedItem(p, slot) { return p.equip[slot] ? itemById[p.equip[slot].i
 
 function buffMult(p, stat) {
   let m = 1;
-  for (const b of (p.buffs || [])) if (b.until > now() && (b.stat === stat || b.stat === 'all')) m *= (b.mult || 1);
+  const buffs = Array.isArray(p.buffs) ? p.buffs : Object.values(p.buffs || {});
+  for (const b of buffs) if (b && (b.until == null || b.until > now()) && (b.stat === stat || b.stat === 'all')) m *= (b.mult || 1);
   return m;
 }
 
 function buffFlat(p, stat) {
   let f = 0;
-  for (const b of (p.buffs || [])) if (b.until > now() && b.stat === stat) f += (b.flat || 0);
+  const buffs = Array.isArray(p.buffs) ? p.buffs : Object.values(p.buffs || {});
+  for (const b of buffs) if (b && (b.until == null || b.until > now()) && (b.stat === stat || b.stat === 'all')) f += (b.flat || 0);
   return f;
 }
 
@@ -1317,6 +1319,9 @@ function recompute(p, fill) {
   if (homesteadSystem && homesteadSystem.isHearthBuffActive()) {
     p.expMult = (p.expMult || 1) * 1.10;
   }
+  p.hpMax = p.maxHp;
+  p.atk = Math.round(p.atkStat * buffMult(p, 'atk'));
+  p.def = Math.round(p.physDef * buffMult(p, 'def'));
 
   if (fill) { p.hp = p.maxHp; p.mp = p.maxMp; }
   p.hp = clamp(p.hp, 0, p.maxHp);
@@ -4797,7 +4802,13 @@ function step(dt) {
   // achievements poll (cheap declarative checks, one integration point)
   if (now() >= (G._nextAchAt || 0)) { G._nextAchAt = now() + 2000; checkAchievements(); }
   // prune buffs
-  p.buffs = p.buffs.filter(b => b.until > now());
+  if (Array.isArray(p.buffs)) {
+    p.buffs = p.buffs.filter(b => b.until > now());
+  } else if (p.buffs && typeof p.buffs === 'object') {
+    for (const [k, b] of Object.entries(p.buffs)) {
+      if (b && b.until <= now()) delete p.buffs[k];
+    }
+  }
   // Momentum decays out of combat
   const _M = TUNING.momentum;
   if (p.momentum > 0 && now() - p.lastSkillAt > _M.decayMs) { p.momentum--; p.lastSkillAt = now(); }
@@ -7960,6 +7971,11 @@ function openHomesteadHearthModal() {
   mc.querySelectorAll('[data-homestead-close]').forEach(b => {
     b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
   });
+  mc.querySelectorAll('[data-homestead-open-culinary]').forEach(b => {
+    b.onclick = () => {
+      openHomesteadCulinaryModal();
+    };
+  });
   mc.querySelectorAll('[data-homestead-rest-hearth]').forEach(b => {
     b.onclick = () => {
       const res = homesteadSystem.restAtHearth(G.player);
@@ -7974,6 +7990,63 @@ function openHomesteadHearthModal() {
   });
 }
 G.openHomesteadHearthModal = openHomesteadHearthModal;
+
+function openHomesteadCulinaryModal() {
+  if (typeof document === 'undefined') return;
+  let mc = document.getElementById('homestead-modal-container');
+  if (!mc) {
+    mc = document.createElement('div');
+    mc.id = 'homestead-modal-container';
+    mc.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:hidden;';
+    document.body.appendChild(mc);
+  }
+  mc.style.display = 'flex';
+  mc.innerHTML = homesteadUI.renderCulinaryDialogHtml(G.player?.inventory || []);
+  mc.querySelectorAll('[data-homestead-close]').forEach(b => {
+    b.onclick = () => { mc.style.display = 'none'; mc.innerHTML = ''; };
+  });
+  mc.querySelectorAll('[data-homestead-cook]').forEach(b => {
+    b.onclick = () => {
+      const feastId = b.dataset.homesteadCook;
+      const res = homesteadSystem.cookFeast(G.player, feastId);
+      if (res.success) {
+        recompute(G.player);
+        AUDIO.playSfx('pickup');
+        toast(`🍳 ${T('Feast Cooked', 'ui')}!`, 'good');
+        saveGame();
+        openHomesteadCulinaryModal();
+      } else {
+        toast(`❌ ${T('Missing ingredients', 'ui')}`, 'bad');
+      }
+    };
+  });
+  mc.querySelectorAll('[data-homestead-transmute]').forEach(b => {
+    b.onclick = () => {
+      const inv = G.player?.inventory || [];
+      const cards = [];
+      for (const slot of inv) {
+        const id = slot?.id || slot?.itemId || '';
+        if (id.startsWith('card_')) {
+          const qty = typeof slot.qty === 'number' ? slot.qty : 1;
+          for (let i = 0; i < qty && cards.length < 3; i++) {
+            cards.push(id);
+          }
+        }
+        if (cards.length === 3) break;
+      }
+      if (cards.length === 3) {
+        const res = homesteadSystem.transmuteCards(G.player, cards);
+        if (res.success) {
+          AUDIO.playSfx('menu');
+          toast(`🔮 ${T('Cards Transmuted into Old Card Album!', 'ui')}`, 'good');
+          saveGame();
+          openHomesteadCulinaryModal();
+        }
+      }
+    };
+  });
+}
+G.openHomesteadCulinaryModal = openHomesteadCulinaryModal;
 
 // re-render `id` and every other open window, so equipping in the Satchel updates Status beside it
 // ponytail: refresh-all is O(open windows) ≤ ~4; add per-panel dependencies only if it gets slow

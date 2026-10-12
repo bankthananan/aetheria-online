@@ -551,6 +551,11 @@ export const CONTENT = {
     { id: "seed_ember_blossom", name: "Ember Blossom Seeds", type: "material", desc: "Warm volcanic seeds that sprout into radiant ember blossoms.", price: 120, value: 120, rarity: "uncommon" },
     { id: "golden_grain", name: "Golden Grain", type: "material", desc: "Sun-ripened cereal grain harvested from the homestead botanical sanctum.", price: 40, value: 40, rarity: "common" },
     { id: "artisan_bread", name: "Artisan Bread", type: "consumable", desc: "Freshly baked hearth bread. Restores 500 HP and grants the Nourished buff (+150 Max HP and +10 HP/5s regen for 15 min).", hpRestore: 500, buff: { stat: "hp", flat: 150, durationMs: 900000 }, price: 250, value: 250, rarity: "uncommon" },
+    { id: "artisan_hearth_bread", name: "Artisan Hearth Bread", type: "consumable", desc: "Warm crusty bread baked in the homestead hearth oven. Grants +15% Max HP for 30m.", hpRestore: 600, buff: { stat: "hp", mult: 1.15, durationMs: 1800000 }, price: 300, value: 300, rarity: "uncommon" },
+    { id: "pan_seared_salmon", name: "Pan-Seared Salmon", type: "consumable", desc: "Crispy arctic salmon seared over embers. Grants +15% ATK for 30m.", hpRestore: 800, buff: { stat: "atk", mult: 1.15, durationMs: 1800000 }, price: 400, value: 400, rarity: "rare" },
+    { id: "celestial_banquet", name: "Celestial Banquet", type: "consumable", desc: "A grand feast infused with astral flavors. Grants +20% to all stats for 40m.", hpRestore: 99999, buff: { stat: "all", mult: 1.20, durationMs: 2400000 }, price: 1200, value: 1200, rarity: "epic" },
+    { id: "produce_golden_wheat", name: "Golden Wheat Sheaf", type: "material", desc: "Freshly harvested golden wheat from the homestead sanctum.", price: 40, value: 40, rarity: "common" },
+    { id: "produce_silverleaf", name: "Silverleaf Sprig", type: "material", desc: "Cultivated silverleaf harvested from botanical plots.", price: 35, value: 35, rarity: "common" },
 
     // ===== Transcendent Source Gear Set (Band 6 Lv 85) =====
     { id: "architect_blade", name: "Architect Blade", type: "weapon", slot: "weapon", desc: "A crystalline broadsword forged from source logic, humming with computational power.", gearLevel: 85, atk: 95, statBonuses: { atk: 95, str: 15, int: 15 }, price: 5000, value: 5000, rarity: "epic", classReq: null },

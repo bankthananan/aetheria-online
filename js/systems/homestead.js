@@ -80,6 +80,42 @@ export const PASTURE_FORAGE_TABLE = {
 export const HEARTH_BUFF_DURATION_MS = 1800000; // 30 minutes
 export const PETTING_COOLDOWN_MS = 86400000; // 24 hours
 
+export const CULINARY_FEASTS = {
+  artisan_hearth_bread: {
+    id: 'artisan_hearth_bread',
+    name: 'Artisan Hearth Bread',
+    desc: 'Warm crusty bread baked in the homestead hearth oven. Grants +15% Max HP & +10 DEF for 30 minutes.',
+    ingredients: [
+      { itemId: 'produce_golden_wheat', altId: 'golden_grain', qty: 2 },
+      { itemId: 'produce_silverleaf', altId: 'silverleaf', qty: 2 },
+    ],
+    durationMs: 1800000,
+    buff: { stat: 'hp', mult: 1.15, flat: 10, durationMs: 1800000 },
+  },
+  pan_seared_salmon: {
+    id: 'pan_seared_salmon',
+    name: 'Pan-Seared Salmon',
+    desc: 'Crispy arctic salmon seared over embers. Grants +15% ATK for 30 minutes.',
+    ingredients: [
+      { itemId: 'glacial_salmon', qty: 1 },
+      { itemId: 'ember_blossom', qty: 1 },
+    ],
+    durationMs: 1800000,
+    buff: { stat: 'atk', mult: 1.15, flat: 15, durationMs: 1800000 },
+  },
+  celestial_banquet: {
+    id: 'celestial_banquet',
+    name: 'Celestial Banquet',
+    desc: 'A grand feast infused with astral flavors. Grants +20% to all stats for 40 minutes.',
+    ingredients: [
+      { itemId: 'golden_carp', altId: 'cosmic_jellyfish', qty: 1 },
+      { itemId: 'moonlight_lotus', qty: 2 },
+    ],
+    durationMs: 2400000,
+    buff: { stat: 'all', mult: 1.20, flat: 25, durationMs: 2400000 },
+  },
+};
+
 export const STAGE_EMPTY = 0;
 export const STAGE_SEEDLING = 1;
 export const STAGE_VEGETATIVE = 2;
@@ -114,6 +150,33 @@ function getPetCategory(petId = '') {
   return 'general';
 }
 
+function countInInventory(inventory, itemId) {
+  if (!Array.isArray(inventory)) return 0;
+  return inventory
+    .filter(s => s && (s.itemId === itemId || s.id === itemId))
+    .reduce((sum, s) => sum + (typeof s.qty === 'number' ? s.qty : 1), 0);
+}
+
+function deductFromInventory(inventory, itemId, qty = 1) {
+  if (!Array.isArray(inventory) || qty <= 0) return false;
+  let remaining = qty;
+  for (let i = 0; i < inventory.length && remaining > 0; i++) {
+    const s = inventory[i];
+    if (s && (s.itemId === itemId || s.id === itemId)) {
+      const curQty = typeof s.qty === 'number' ? s.qty : 1;
+      if (curQty <= remaining) {
+        remaining -= curQty;
+        inventory.splice(i, 1);
+        i--;
+      } else {
+        s.qty -= remaining;
+        remaining = 0;
+      }
+    }
+  }
+  return remaining === 0;
+}
+
 function addItemToInventory(inventory, itemId, qty = 1) {
   if (!Array.isArray(inventory)) return;
   const existing = inventory.find(slot => slot && (slot.itemId === itemId || slot.id === itemId) && !slot.uid);
@@ -124,7 +187,7 @@ function addItemToInventory(inventory, itemId, qty = 1) {
       existing.qty = 1 + qty;
     }
   } else {
-    inventory.push({ itemId, qty });
+    inventory.push({ id: itemId, itemId, qty });
   }
 }
 
@@ -485,6 +548,79 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     hearthBuffExpiresAt = typeof data.hearthBuffExpiresAt === 'number' ? data.hearthBuffExpiresAt : 0;
   }
 
+  function cookFeast(player, feastId) {
+    const feast = CULINARY_FEASTS[feastId];
+    if (!feast) return { success: false, reason: 'invalid_feast' };
+
+    const inv = player?.inventory || [];
+    // Verify required ingredients (supporting itemId and altId)
+    for (const ing of feast.ingredients) {
+      const primaryCount = countInInventory(inv, ing.itemId);
+      const altCount = ing.altId ? countInInventory(inv, ing.altId) : 0;
+      if (primaryCount + altCount < ing.qty) {
+        return { success: false, reason: 'missing_ingredients' };
+      }
+    }
+
+    // Deduct ingredients
+    for (const ing of feast.ingredients) {
+      const primaryCount = countInInventory(inv, ing.itemId);
+      const deductPrimary = Math.min(ing.qty, primaryCount);
+      if (deductPrimary > 0) {
+        deductFromInventory(inv, ing.itemId, deductPrimary);
+      }
+      const deductAlt = ing.qty - deductPrimary;
+      if (deductAlt > 0 && ing.altId) {
+        deductFromInventory(inv, ing.altId, deductAlt);
+      }
+    }
+
+    // Add buff to player
+    if (!player.buffs) {
+      player.buffs = {};
+    }
+    if (Array.isArray(player.buffs)) {
+      player.buffs.push({
+        id: feastId,
+        stat: feast.buff.stat,
+        mult: feast.buff.mult,
+        flat: feast.buff.flat,
+        until: now() + feast.durationMs,
+        durationMs: feast.durationMs,
+        name: feast.name,
+      });
+      player.buffs[feastId] = { ...feast.buff, durationMs: feast.durationMs, until: now() + feast.durationMs };
+    } else if (typeof player.buffs === 'object') {
+      player.buffs[feastId] = { ...feast.buff, durationMs: feast.durationMs, until: now() + feast.durationMs };
+    }
+
+    // Grants 1 consumable feast item to player's inventory as well
+    addItemToInventory(player.inventory, feastId, 1);
+
+    return { success: true, feast: feastId };
+  }
+
+  function transmuteCards(player, cardIds) {
+    if (!Array.isArray(cardIds) || cardIds.length !== 3) {
+      return { success: false, reason: 'invalid_card_count' };
+    }
+    const inv = player?.inventory || [];
+    const needed = {};
+    for (const cid of cardIds) {
+      needed[cid] = (needed[cid] || 0) + 1;
+    }
+    for (const [cid, qty] of Object.entries(needed)) {
+      if (countInInventory(inv, cid) < qty) {
+        return { success: false, reason: 'missing_cards' };
+      }
+    }
+    for (const [cid, qty] of Object.entries(needed)) {
+      deductFromInventory(inv, cid, qty);
+    }
+    addItemToInventory(inv, 'old_card_album', 1);
+    return { success: true, resultItemId: 'old_card_album' };
+  }
+
   return {
     getPlots,
     getPlot,
@@ -506,6 +642,8 @@ export function createHomesteadSystem({ now = Date.now, rnd = Math.random } = {}
     restAtHearth,
     isHearthBuffActive,
     getHearthBuffTimeRemaining,
+    cookFeast,
+    transmuteCards,
     serialize,
     deserialize,
   };

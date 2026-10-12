@@ -133,3 +133,20 @@ test('homestead-ui: renderHomesteadOverviewHtml renders cohesive dashboard with 
   assert.ok(html.includes('min-width: 0'));
   assert.ok(html.includes('overflow-x: hidden'));
 });
+
+test('homestead-ui: renderCulinaryDialogHtml renders feasts, cook buttons and card transmutation', () => {
+  const ui = createHomesteadUIRenderer();
+  const inventory = [
+    { itemId: 'produce_golden_wheat', qty: 5 },
+    { itemId: 'produce_silverleaf', qty: 5 },
+    { id: 'card_slime', qty: 3 }
+  ];
+
+  const html = ui.renderCulinaryDialogHtml(inventory);
+  assert.ok(html.includes('data-homestead-cook="artisan_hearth_bread"'), 'renders cook button for feast');
+  assert.ok(html.includes('data-homestead-transmute="1"'), 'renders card transmutation button');
+  assert.ok(html.includes('box-sizing: border-box'));
+  assert.ok(html.includes('min-width: 0'));
+  assert.ok(html.includes('overflow-x: hidden'));
+});
+

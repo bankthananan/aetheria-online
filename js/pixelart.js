@@ -2526,6 +2526,8 @@ export const ITEM_ICON = {
   cosmic_jellyfish: 'crawler_shell', void_ray: 'crawler_shell', spring_bass: 'crawler_shell',
   draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
   grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
+  artisan_hearth_bread: 'crawler_shell', pan_seared_salmon: 'crawler_shell', celestial_banquet: 'core',
+  produce_golden_wheat: 'ore', produce_silverleaf: 'gem_green',
   // Monster cards & card album
   old_card_album: 'scroll',
   card_slime: 'card', card_goblin: 'card', card_goblin_scout: 'card', card_goblin_chieftain: 'card',
