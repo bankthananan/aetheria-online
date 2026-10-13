@@ -42,7 +42,7 @@ import { createWeatherRenderer } from './render/weather-fx.js';
 import { createRuneSystem } from './systems/runes.js';
 import { createIncursionSystem, INCURSION_STATES } from './systems/incursions.js';
 import { createRiftRenderer } from './render/rift-fx.js';
-import { createGatheringSystem } from './systems/gathering.js';
+import { createGatheringSystem, MAP_RESOURCE_NODES, FISH_CATALOG, ORE_CATALOG, HERB_CATALOG } from './systems/gathering.js';
 import { createGatheringRenderer } from './render/gathering-fx.js';
 import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './systems/cards.js';
 import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
@@ -5281,7 +5281,7 @@ function buildHud() {
           <div class="bar boss-stagger-bar"><div class="fill" id="boss-stagger-fill"></div></div>
         </div>
       </div>
-      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div><div id="minimap-weather" style="position:absolute;top:2px;right:6px;max-width:calc(100% - 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600;pointer-events:auto;cursor:help"></div></div>
+      <div class="minimap"><canvas id="minimap-canvas" width="136" height="136"></canvas><div id="minimap-nodes" style="position:absolute;top:2px;left:6px;display:flex;gap:4px;font-size:9px;font-weight:700;pointer-events:none;text-shadow:1px 1px 2px #000;z-index:10"></div><div id="minimap-tooltip" style="position:absolute;display:none;pointer-events:none;background:rgba(20,13,8,0.94);border:1px solid var(--gold);color:#f5e7bb;padding:2px 6px;font-size:9px;font-weight:700;white-space:nowrap;border-radius:2px;box-shadow:0 3px 8px rgba(0,0,0,0.8);z-index:25"></div><div id="minimap-name" style="position:absolute;bottom:2px;left:6px;font-size:10px;color:var(--text-muted)"></div><div id="minimap-weather" style="position:absolute;top:2px;right:6px;max-width:calc(100% - 12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600;pointer-events:auto;cursor:help"></div></div>
       <button id="mobile-menu-btn" class="mobile-menu-btn btn btn--ghost" type="button" aria-label="${T('Menu', 'ui')}">
         <span class="m-icon">☰</span> <span class="m-label">${T('Menu', 'ui')}</span><span id="mobile-menu-badge" class="hud-badge-dot" style="display:none"></span>
       </button>
@@ -5322,6 +5322,7 @@ function buildHud() {
   renderHotbar();
   initTouchControls();
   updateQuestTracker();   // the rebuilt tracker starts empty (e.g. after a language switch)
+  setupMinimapInteractions();
   $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => {
     togglePanel(b.dataset.panel);
     $('#hud .hud-menu')?.classList.remove('open', 'more-open');
@@ -5726,25 +5727,170 @@ function updateMinimap() {
   $('#minimap-name').textContent = T(G.map.name, 'maps');
 }
 
+function setupMinimapInteractions() {
+  const miniCanvas = $('#minimap-canvas');
+  const miniTip = $('#minimap-tooltip');
+  if (!miniCanvas) return;
+  miniCanvas.onmousemove = (e) => {
+    if (!G.map) return;
+    const rect = miniCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const col = Math.floor(((e.clientX - rect.left) / rect.width) * G.map.width);
+    const row = Math.floor(((e.clientY - rect.top) / rect.height) * G.map.height);
+    const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+    const nodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
+    const hitNode = nodes.find(n => Math.hypot(n.x - col, n.y - row) <= 1.8);
+    const hitNpc = !hitNode ? G.npcs.find(n => Math.hypot(n.x - col, n.y - row) <= 1.8) : null;
+    const hitPortal = (!hitNode && !hitNpc) ? G.portals.find(p => Math.hypot(p.x - col, p.y - row) <= 1.8) : null;
+    if (hitNode || hitNpc || hitPortal) {
+      miniCanvas.style.cursor = 'pointer';
+      if (miniTip) {
+        let text = '';
+        if (hitNode) {
+          const isReady = !hitNode.harvested && (hitNode.cooldownRemainingMs || 0) <= 0;
+          const icon = hitNode.type === 'ore' ? '⛏️' : hitNode.type === 'water_ripple' ? '🎣' : '🌿';
+          const def = hitNode.type === 'water_ripple' ? FISH_CATALOG[hitNode.resourceId]
+            : hitNode.type === 'ore' ? ORE_CATALOG[hitNode.resourceId]
+            : HERB_CATALOG[hitNode.resourceId];
+          const name = def?.name || hitNode.resourceId;
+          text = `${icon} ${T(name, 'items')}${isReady ? '' : ` (${T('Depleted', 'ui')})`}`;
+        } else if (hitNpc) {
+          text = `💬 ${T(hitNpc.name, 'npcs')}`;
+        } else if (hitPortal) {
+          text = `🌀 ${T(hitPortal.label || 'Portal', 'ui')}`;
+        }
+        miniTip.textContent = text;
+        miniTip.style.display = 'block';
+        const tipX = Math.min(rect.width - 65, Math.max(2, e.clientX - rect.left - 20));
+        const tipY = Math.max(2, e.clientY - rect.top - 24);
+        miniTip.style.left = `${tipX}px`;
+        miniTip.style.top = `${tipY}px`;
+      }
+    } else {
+      miniCanvas.style.cursor = 'crosshair';
+      if (miniTip) miniTip.style.display = 'none';
+    }
+  };
+  miniCanvas.onmouseleave = () => {
+    miniCanvas.style.cursor = 'default';
+    if (miniTip) miniTip.style.display = 'none';
+  };
+  miniCanvas.onclick = (e) => {
+    if (!G.map) return;
+    const rect = miniCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const col = Math.floor(((e.clientX - rect.left) / rect.width) * G.map.width);
+    const row = Math.floor(((e.clientY - rect.top) / rect.height) * G.map.height);
+    const targetWx = Math.max(16, Math.min(G.map.width * TS - 16, col * TS + TS / 2));
+    const targetWy = Math.max(16, Math.min(G.map.height * TS - 16, row * TS + TS / 2));
+    handleClick(targetWx, targetWy);
+  };
+}
+
 function renderMinimap() {
   const c = $('#minimap-canvas'); if (!c || !miniBase) return;
   const mctx = c.getContext('2d');
   const sx = c.width / G.map.width, sy = c.height / G.map.height;
   mctx.drawImage(miniBase, 0, 0);
+
   for (const m of G.monsters) if (m.alive) {
     const focused = G.huntTargetId === m.def.id;
     mctx.fillStyle = focused ? '#ffd24d' : m.def.sizeTiles >= 2 ? '#fff' : m.def.spriteColor;
     const size = focused ? 5 : m.def.sizeTiles >= 2 ? 4 : 2;
     mctx.fillRect((m.x / TS) * sx - size / 2, (m.y / TS) * sy - size / 2, size, size);
   }
+
+  for (const pt of G.portals) {
+    mctx.fillStyle = '#ce93d8';
+    mctx.fillRect(pt.x * sx - 1, pt.y * sy - 1, 3, 3);
+  }
+
   for (const n of G.npcs) { mctx.fillStyle = '#ffd76a'; mctx.fillRect(n.x * sx - 1, n.y * sy - 1, 3, 3); }
+
   const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
   const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
+  let oreCount = 0, fishCount = 0, herbCount = 0;
+  const t = now() / 1000;
   for (const nd of gatherNodes) {
-    if (nd.harvested || (nd.cooldownRemainingMs || 0) > 0) continue;
-    mctx.fillStyle = nd.type === 'herb' ? '#81c784' : nd.type === 'ore' ? '#ffb74d' : '#4fc3f7';
-    mctx.fillRect(nd.x * sx - 1, nd.y * sy - 1, 3, 3);
+    const isReady = !nd.harvested && (nd.cooldownRemainingMs || 0) <= 0;
+    if (isReady) {
+      if (nd.type === 'ore') oreCount++;
+      else if (nd.type === 'water_ripple') fishCount++;
+      else if (nd.type === 'herb') herbCount++;
+    }
+    const mx = nd.x * sx + sx / 2;
+    const my = nd.y * sy + sy / 2;
+    if (!isReady) {
+      mctx.save();
+      mctx.strokeStyle = 'rgba(160, 160, 160, 0.45)';
+      mctx.lineWidth = 1;
+      mctx.beginPath();
+      mctx.arc(mx, my, 2.5, 0, Math.PI * 2);
+      mctx.stroke();
+      mctx.restore();
+      continue;
+    }
+    mctx.save();
+    if (nd.type === 'ore') {
+      const r = 3.5;
+      mctx.beginPath();
+      mctx.moveTo(mx, my - r);
+      mctx.lineTo(mx + r, my);
+      mctx.lineTo(mx, my + r);
+      mctx.lineTo(mx - r, my);
+      mctx.closePath();
+      mctx.fillStyle = '#ffb74d';
+      mctx.fill();
+      mctx.strokeStyle = '#211208';
+      mctx.lineWidth = 1.2;
+      mctx.stroke();
+      const pulse = 0.5 + 0.5 * Math.sin(t * 3.5);
+      mctx.strokeStyle = `rgba(255, 224, 130, ${(0.6 * pulse).toFixed(2)})`;
+      mctx.beginPath();
+      mctx.arc(mx, my, r + 1.5, 0, Math.PI * 2);
+      mctx.stroke();
+    } else if (nd.type === 'water_ripple') {
+      const r = 3.5;
+      mctx.beginPath();
+      mctx.arc(mx, my, r, 0, Math.PI * 2);
+      mctx.fillStyle = '#29b6f6';
+      mctx.fill();
+      mctx.strokeStyle = '#012e54';
+      mctx.lineWidth = 1.2;
+      mctx.stroke();
+      const rippleFrac = (now() % 1600) / 1600;
+      mctx.strokeStyle = `rgba(129, 212, 250, ${(1 - rippleFrac).toFixed(2)})`;
+      mctx.beginPath();
+      mctx.arc(mx, my, r + rippleFrac * 3.5, 0, Math.PI * 2);
+      mctx.stroke();
+    } else {
+      const r = 3.2;
+      mctx.beginPath();
+      mctx.arc(mx, my, r, 0, Math.PI * 2);
+      mctx.fillStyle = '#69f0ae';
+      mctx.fill();
+      mctx.strokeStyle = '#1b5e20';
+      mctx.lineWidth = 1.2;
+      mctx.stroke();
+      mctx.fillStyle = '#ffffff';
+      mctx.fillRect(mx - 0.5, my - 0.5, 1, 1);
+    }
+    mctx.restore();
   }
+
+  const nodeBadgesEl = $('#minimap-nodes');
+  if (nodeBadgesEl) {
+    const parts = [];
+    if (oreCount > 0) parts.push(`<span style="color:#ffb74d">⛏️${oreCount}</span>`);
+    if (fishCount > 0) parts.push(`<span style="color:#4fc3f7">🎣${fishCount}</span>`);
+    if (herbCount > 0) parts.push(`<span style="color:#81c784">🌿${herbCount}</span>`);
+    const h = parts.join(' ');
+    if (nodeBadgesEl._prevHtml !== h) {
+      nodeBadgesEl.innerHTML = h;
+      nodeBadgesEl._prevHtml = h;
+    }
+  }
+
   if (G.taskGuide && !G.huntTargetId) {
     let goal = null;
     if (G.taskGuide.mapId === G.mapId && G.taskGuide.mode === 'npc') goal = G.npcs.find(n => n.id === G.taskGuide.npcId);
@@ -6714,12 +6860,29 @@ function worldChronicleHtml() {
     const route = current
       ? `<span class="world-you-are-here">◆ ${T('YOU ARE HERE', 'ui')}</span>`
       : `<button class="btn btn--ghost world-route${routed ? ' active' : ''}" data-world-route="${id}">${routed ? '◆ ' + T('Route active', 'ui') : '➤ ' + T('Plot route', 'ui')}</button>`;
+    const mapNodes = MAP_RESOURCE_NODES[id] || [];
+    const resTypes = [];
+    if (mapNodes.some(n => n.type === 'ore')) {
+      const ores = [...new Set(mapNodes.filter(n => n.type === 'ore').map(n => ORE_CATALOG[n.resourceId]?.name || n.resourceId))].map(s => T(s, 'items')).join(', ');
+      resTypes.push(`⛏️ ${ores}`);
+    }
+    if (mapNodes.some(n => n.type === 'water_ripple')) {
+      const fish = [...new Set(mapNodes.filter(n => n.type === 'water_ripple').map(n => FISH_CATALOG[n.resourceId]?.name || n.resourceId))].map(s => T(s, 'items')).join(', ');
+      resTypes.push(`🎣 ${fish}`);
+    }
+    if (mapNodes.some(n => n.type === 'herb')) {
+      const herbs = [...new Set(mapNodes.filter(n => n.type === 'herb').map(n => HERB_CATALOG[n.resourceId]?.name || n.resourceId))].map(s => T(s, 'items')).join(', ');
+      resTypes.push(`🌿 ${herbs}`);
+    }
+    const gatheringFact = resTypes.length > 0
+      ? `<span class="world-fact"><small>${T('GATHERING', 'ui')}</small>${esc(resTypes.join(' · '))}</span>`
+      : '';
     return `<article class="world-node known${current ? ' current' : ''}${routed ? ' routing' : ''}">
       <div class="world-sigil">${WORLD_SIGIL[id] || '◆'}</div>
       <div class="world-copy">
         <div class="world-node-head"><div><span class="world-province">${esc(T(c.province, 'maps'))}</span><b>${esc(T(map.name, 'maps'))}</b><em>${esc(T(c.epithet, 'maps'))}</em></div>${route}</div>
         <p>${esc(T(c.lore, 'maps'))}</p>
-        <div class="world-facts"><span class="world-fact"><small>${T('LANDMARK', 'ui')}</small>${esc(T(c.landmark, 'maps'))}</span><span class="world-fact"><small>${T('THREAT', 'ui')}</small>${threat}</span>${guardianFact}</div>
+        <div class="world-facts"><span class="world-fact"><small>${T('LANDMARK', 'ui')}</small>${esc(T(c.landmark, 'maps'))}</span><span class="world-fact"><small>${T('THREAT', 'ui')}</small>${threat}</span>${guardianFact}${gatheringFact}</div>
       </div></article>`;
   }).map((node, index) => {
     if (index >= WORLD_ORDER.length - 1) return node;
