@@ -354,9 +354,9 @@ export const MAPS = {
     spawns: [
       { monsterId: 'slime', count: 18, depth: [0.00, 0.28], levelRange: [1, 5] },
       { monsterId: 'goblin', count: 14, depth: [0.20, 0.58], levelRange: [3, 8] },
+      { monsterId: 'mossback_beetle', count: 6, depth: [0.35, 0.68], levelRange: [5, 8] },
       { monsterId: 'wolf', count: 10, depth: [0.48, 0.82], levelRange: [7, 11] },
       { monsterId: 'thornback_boar', count: 6, depth: [0.68, 0.96], levelRange: [10, 15] },
-      { monsterId: 'mossback_beetle', count: 1, depth: [0.78, 0.90], levelRange: [5, 8] },
       { monsterId: 'elderwood_treant', count: 1 },
     ],
     npcs: [

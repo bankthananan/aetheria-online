@@ -2557,6 +2557,8 @@ export const ITEM_ICON = {
   mirage_pike: 'crawler_shell', bog_gar: 'crawler_shell', thunder_eel: 'storm_core', blind_cavefish: 'crawler_shell', quantum_glitchfish: 'core',
   draught_vitality: 'potred', tonic_swiftness: 'potblue', brew_berserker: 'potred', elixir_ironbark: 'potblue', essence_night: 'potblue',
   grilled_trout: 'crawler_shell', smoked_salmon: 'siren_scale', golden_carp_sashimi: 'core',
+  spiced_steppe_pike: 'crawler_shell', mire_spore_stew: 'crawler_shell', tempest_eel_skewer: 'storm_core',
+  abyssal_cavefish_broth: 'crawler_shell', quantum_glitch_fillet: 'core',
   artisan_hearth_bread: 'crawler_shell', pan_seared_salmon: 'crawler_shell', celestial_banquet: 'core',
   produce_golden_wheat: 'ore', produce_silverleaf: 'gem_green',
   // Monster cards & card album

@@ -7895,14 +7895,25 @@ function wirePanel(id, el) {
   });
   el.querySelectorAll('[data-socket-slot]').forEach(b => b.onclick = e => {
     e.stopPropagation();   // dots can sit inside a doll-slot's data-unequip container
-    if (!G._socketPick && id !== 'char') return toast(T('Pick a gem from your bag first.', 'ui'), 'bad');
+    if (!G._socketPick && id !== 'char') return toast(T('Pick a card or gem from your bag first.', 'ui'), 'bad');
     if (!G._socketPick) { G._socketFor = G._socketFor === b.dataset.socketSlot ? null : b.dataset.socketSlot; refreshPanel(id); return; }   // open the picker under the doll
     const [uid, idx] = b.dataset.socketSlot.split(':');
-    if (socketGem(uid, +idx, G._socketPick)) { G._socketPick = null; toast(T('Gem socketed.', 'ui'), 'good'); refreshPanel(id); }
+    const pickId = G._socketPick;
+    const isCard = itemById[pickId]?.type === 'card';
+    if (socketGem(uid, +idx, pickId)) {
+      G._socketPick = null;
+      toast(T(isCard ? 'Card socketed.' : 'Gem socketed.', 'ui'), 'good');
+      refreshPanel(id);
+    }
   });
   el.querySelectorAll('[data-socket-put]').forEach(b => b.onclick = () => {
     const [uid, idx] = (G._socketFor || '').split(':');
-    if (socketGem(uid, +idx, b.dataset.socketPut)) { G._socketFor = null; toast(T('Gem socketed.', 'ui'), 'good'); }
+    const pickId = b.dataset.socketPut;
+    const isCard = itemById[pickId]?.type === 'card';
+    if (socketGem(uid, +idx, pickId)) {
+      G._socketFor = null;
+      toast(T(isCard ? 'Card socketed.' : 'Gem socketed.', 'ui'), 'good');
+    }
     refreshPanel(id);
   });
   el.querySelectorAll('[data-socket-cancel]').forEach(b => b.onclick = () => { G._socketFor = null; refreshPanel(id); });
@@ -8437,14 +8448,23 @@ function useItem(itemId) {
     return true;
   }
   // shared potion cooldown: unlimited chug-rate made every level wall face-tankable
-  if (it.hpRestore || it.mpRestore) {
+  if (it.type === 'potion' && (it.hpRestore || it.mpRestore)) {
     if (now() < (p.potionCdUntil || 0)) { logMsg('Catch your breath — potion not ready.', 'sys'); return false; }
     p.potionCdUntil = now() + TUNING.potionCdMs;
   }
   if (it.hpRestore) { p.hp = clamp(p.hp + it.hpRestore, 0, p.maxHp); }
   if (it.mpRestore) { p.mp = clamp(p.mp + it.mpRestore, 0, p.maxMp); }
   if (it.buff) {
-    p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult || 1, flat: it.buff.flat || 0, until: now() + it.buff.durationMs, name: it.name });
+    if (!Array.isArray(p.buffs)) p.buffs = [];
+    const existing = p.buffs.find(b => b && b.name === it.name);
+    if (existing) {
+      existing.until = Math.max(existing.until, now() + it.buff.durationMs);
+      existing.mult = it.buff.mult || 1;
+      existing.flat = it.buff.flat || 0;
+      existing.stat = it.buff.stat;
+    } else {
+      p.buffs.push({ stat: it.buff.stat, mult: it.buff.mult || 1, flat: it.buff.flat || 0, until: now() + it.buff.durationMs, name: it.name });
+    }
     if (it.type === 'consumable') guideEvent('eat');
     recompute(p);
     toast(`${it.name} — ${it.buff.stat.toUpperCase()} up!`, 'good');

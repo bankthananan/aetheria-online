@@ -691,6 +691,11 @@ export const CONTENT = {
     { id: "essence_night", name: "Essence of Midnight", type: "consumable", desc: "Increases Critical Damage by +20% for 4 minutes.", buff: { stat: "critDmg", mult: 1.20, durationMs: 240000 }, price: 250, value: 250, rarity: "epic" },
     { id: "grilled_trout", name: "Grilled Trout", type: "consumable", desc: "Savory grilled fish. Restores 400 HP and grants +10 ATK for 5 minutes.", hpRestore: 400, buff: { stat: "atk", flat: 10, durationMs: 300000 }, price: 80, value: 80, rarity: "common" },
     { id: "smoked_salmon", name: "Smoked Salmon", type: "consumable", desc: "Rich smoked salmon. Restores 600 HP and grants +15 DEF for 5 minutes.", hpRestore: 600, buff: { stat: "def", flat: 15, durationMs: 300000 }, price: 120, value: 120, rarity: "uncommon" },
+    { id: "spiced_steppe_pike", name: "Spiced Steppe Pike", type: "consumable", desc: "Seared mirage pike rubbed with sunroot thistle. Restores 450 HP and grants +15 ATK for 10 minutes.", hpRestore: 450, buff: { stat: "atk", flat: 15, durationMs: 600000 }, price: 150, value: 150, rarity: "uncommon" },
+    { id: "mire_spore_stew", name: "Mire Spore Stew", type: "consumable", desc: "Hearty swamp stew simmered with bog gar and ghost spore shrooms. Restores 550 HP and grants +25 DEF for 10 minutes.", hpRestore: 550, buff: { stat: "def", flat: 25, durationMs: 600000 }, price: 200, value: 200, rarity: "uncommon" },
+    { id: "tempest_eel_skewer", name: "Tempest Eel Skewer", type: "consumable", desc: "Charbroiled thunder eel seasoned with storm petals. Restores 700 HP and grants +12% ATK for 15 minutes.", hpRestore: 700, buff: { stat: "atk", mult: 1.12, durationMs: 900000 }, price: 320, value: 320, rarity: "rare" },
+    { id: "abyssal_cavefish_broth", name: "Abyssal Cavefish Broth", type: "consumable", desc: "Rich subterranean broth prepared from blind cavefish and void polyp. Restores 850 HP and grants +15% DEF for 15 minutes.", hpRestore: 850, buff: { stat: "def", mult: 1.15, durationMs: 900000 }, price: 420, value: 420, rarity: "rare" },
+    { id: "quantum_glitch_fillet", name: "Quantum Glitch Fillet", type: "consumable", desc: "A phase-shifting delicacy cooked with binary fungus. Restores 1200 HP and grants +15% to all stats for 20 minutes.", hpRestore: 1200, buff: { stat: "all", mult: 1.15, durationMs: 1200000 }, price: 650, value: 650, rarity: "epic" },
     { id: "golden_carp_sashimi", name: "Golden Carp Sashimi", type: "consumable", desc: "Delicacy fit for emperors. Fully restores HP/MP and grants +10% to all stats for 10 minutes.", hpRestore: 99999, mpRestore: 99999, buff: { stat: "all", mult: 1.10, durationMs: 600000 }, price: 1000, value: 1000, rarity: "legendary" },
 
     // ===== Taming Baits =====
@@ -1105,6 +1110,11 @@ export const CONTENT = {
     { id: "r_essence_night", out: "essence_night", cost: 350, mats: [{ itemId: "moonlight_lotus", qty: 1 }, { itemId: "abyssal_bass", qty: 1 }] },
     { id: "r_grilled_trout", out: "grilled_trout", cost: 50, mats: [{ itemId: "glowing_trout", qty: 1 }, { itemId: "silverleaf", qty: 1 }] },
     { id: "r_smoked_salmon", out: "smoked_salmon", cost: 80, mats: [{ itemId: "glacial_salmon", qty: 1 }, { itemId: "frost_lily", qty: 1 }] },
+    { id: "r_spiced_steppe_pike", out: "spiced_steppe_pike", cost: 90, mats: [{ itemId: "mirage_pike", qty: 1 }, { itemId: "sunroot_thistle", qty: 1 }] },
+    { id: "r_mire_spore_stew", out: "mire_spore_stew", cost: 130, mats: [{ itemId: "bog_gar", qty: 1 }, { itemId: "ghost_spore_shroom", qty: 1 }] },
+    { id: "r_tempest_eel_skewer", out: "tempest_eel_skewer", cost: 220, mats: [{ itemId: "thunder_eel", qty: 1 }, { itemId: "storm_petal", qty: 1 }] },
+    { id: "r_abyssal_cavefish_broth", out: "abyssal_cavefish_broth", cost: 300, mats: [{ itemId: "blind_cavefish", qty: 1 }, { itemId: "void_polyp", qty: 1 }] },
+    { id: "r_quantum_glitch_fillet", out: "quantum_glitch_fillet", cost: 450, mats: [{ itemId: "quantum_glitchfish", qty: 1 }, { itemId: "binary_fungus", qty: 1 }] },
     { id: "r_golden_carp_sashimi", out: "golden_carp_sashimi", cost: 500, mats: [{ itemId: "golden_carp", qty: 1 }, { itemId: "moonlight_lotus", qty: 1 }] },
     {
       id: "r_old_card_album",
