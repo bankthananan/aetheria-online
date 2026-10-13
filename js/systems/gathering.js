@@ -371,6 +371,7 @@ export const MAP_RESOURCE_NODES = {
   ashen_steppes: [
     { id: 'node_as_pyrite_1', mapId: 'ashen_steppes', type: NODE_TYPES.ORE, resourceId: 'pyrite_ore', x: 14, y: 12 },
     { id: 'node_as_thistle_1', mapId: 'ashen_steppes', type: NODE_TYPES.HERB, resourceId: 'sunroot_thistle', x: 28, y: 22 },
+    { id: 'node_as_dune_1', mapId: 'ashen_steppes', type: NODE_TYPES.HERB, resourceId: 'dune_blossom', x: 32, y: 14 },
     { id: 'node_as_ripple_1', mapId: 'ashen_steppes', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'mirage_pike', x: 20, y: 10 },
   ],
   frostpeak_tundra: [
@@ -381,6 +382,7 @@ export const MAP_RESOURCE_NODES = {
   twilight_mire: [
     { id: 'node_tm_iron_1', mapId: 'twilight_mire', type: NODE_TYPES.ORE, resourceId: 'muck_iron', x: 14, y: 12 },
     { id: 'node_tm_spore_1', mapId: 'twilight_mire', type: NODE_TYPES.HERB, resourceId: 'ghost_spore_shroom', x: 28, y: 22 },
+    { id: 'node_tm_glowshroom_1', mapId: 'twilight_mire', type: NODE_TYPES.HERB, resourceId: 'glowshroom_bloom', x: 32, y: 14, nightOnly: true },
     { id: 'node_tm_ripple_1', mapId: 'twilight_mire', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'bog_gar', x: 22, y: 12 },
   ],
   dragon_caldera: [
@@ -391,21 +393,25 @@ export const MAP_RESOURCE_NODES = {
   tempest_spires: [
     { id: 'node_ts_cobalt_1', mapId: 'tempest_spires', type: NODE_TYPES.ORE, resourceId: 'cobalt_ore', x: 14, y: 12 },
     { id: 'node_ts_petal_1', mapId: 'tempest_spires', type: NODE_TYPES.HERB, resourceId: 'storm_petal', x: 28, y: 22 },
+    { id: 'node_ts_iris_1', mapId: 'tempest_spires', type: NODE_TYPES.HERB, resourceId: 'charged_iris', x: 32, y: 14 },
     { id: 'node_ts_ripple_1', mapId: 'tempest_spires', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'thunder_eel', x: 20, y: 10 },
   ],
   sunless_chasm: [
     { id: 'node_sc_darksteel_1', mapId: 'sunless_chasm', type: NODE_TYPES.ORE, resourceId: 'darksteel_ore', x: 14, y: 12 },
+    { id: 'node_sc_polyp_1', mapId: 'sunless_chasm', type: NODE_TYPES.HERB, resourceId: 'void_polyp', x: 32, y: 14 },
     { id: 'node_sc_orchid_1', mapId: 'sunless_chasm', type: NODE_TYPES.HERB, resourceId: 'shadow_orchid', x: 28, y: 22, nightOnly: true },
     { id: 'node_sc_ripple_1', mapId: 'sunless_chasm', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'blind_cavefish', x: 24, y: 12 },
   ],
   astral_rift: [
     { id: 'node_ar_voidstone_1', mapId: 'astral_rift', type: NODE_TYPES.ORE, resourceId: 'voidstone_ore', x: 12, y: 10 },
+    { id: 'node_ar_bloom_1', mapId: 'astral_rift', type: NODE_TYPES.HERB, resourceId: 'nebula_bloom', x: 20, y: 18 },
     { id: 'node_ar_ripple_1', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'cosmic_jellyfish', x: 26, y: 14 },
     { id: 'node_ar_ripple_2', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'void_ray', x: 34, y: 22 },
   ],
   glitched_monolith: [
     { id: 'node_gm_matrix_1', mapId: 'glitched_monolith', type: NODE_TYPES.ORE, resourceId: 'matrix_ore', x: 14, y: 12 },
     { id: 'node_gm_fungus_1', mapId: 'glitched_monolith', type: NODE_TYPES.HERB, resourceId: 'binary_fungus', x: 28, y: 22 },
+    { id: 'node_gm_anomaly_1', mapId: 'glitched_monolith', type: NODE_TYPES.HERB, resourceId: 'source_anomaly', x: 32, y: 14 },
     { id: 'node_gm_ripple_1', mapId: 'glitched_monolith', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'quantum_glitchfish', x: 20, y: 10 },
   ],
   player_homestead: [

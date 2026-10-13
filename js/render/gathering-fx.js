@@ -9,6 +9,17 @@ const HERB_PALETTES = {
   frost_lily: '#80d8ff',       // cyan-white glacial frost
   sunken_kelp: '#4db6ac',      // teal marine kelp
   silverleaf: '#a5d6a7',       // pale mint silver
+  sunroot_thistle: '#e6c66e',  // dry golden amber
+  dune_blossom: '#ff8a80',     // vibrant desert coral
+  ghost_spore_shroom: '#b39ddb', // pale bioluminescent violet
+  glowshroom_bloom: '#69f0ae', // radiant neon green
+  storm_petal: '#ffff00',      // electric spark yellow
+  charged_iris: '#b388ff',     // ionized deep purple
+  shadow_orchid: '#7c4dff',    // deep abyssal orchid
+  void_polyp: '#80deea',       // pale aquatic void polyp
+  nebula_bloom: '#ea80fc',     // celestial nebula pink
+  binary_fungus: '#00e676',    // matrix terminal green
+  source_anomaly: '#00e5ff',   // overclocked cyan core
 };
 
 const ORE_PALETTES = {
@@ -18,6 +29,10 @@ const ORE_PALETTES = {
   voidstone_ore: '#7e57c2',
   pyrite_ore: '#ffd54f',
   silicon_crystal: '#4fc3f7',
+  muck_iron: '#6d4c41',        // dark peat iron brown
+  cobalt_ore: '#3d5afe',       // vivid cobalt blue
+  darksteel_ore: '#37474f',    // dark slate shadowsteel
+  matrix_ore: '#00e5ff',       // glowing glitch cyan
 };
 
 export function createGatheringRenderer({ T = (s) => s } = {}) {
