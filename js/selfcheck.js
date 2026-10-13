@@ -370,7 +370,7 @@ export function selfCheck(engine) {
     NPC_BY_ROLE: { shop: 'npc_shopkeeper', guild: 'elder', quest: 'npc_guide', story: 'npc_storyteller' },
     REFINE_FRAG: ['wolf_fang', 'shade_dust', 'star_iron'],
     SLOT_ICON,
-    ZONE_ORDER: ['whispering_woods', 'sunken_ruins', 'frostpeak_tundra', 'dragon_caldera', 'astral_rift'],
+    ZONE_ORDER: ['whispering_woods', 'sunken_ruins', 'ashen_steppes', 'frostpeak_tundra', 'twilight_mire', 'dragon_caldera', 'tempest_spires', 'sunless_chasm', 'astral_rift', 'glitched_monolith'],
     advancedJobConfig: classId => PROGRESSION.advancedJobs?.[classId] || null,
     chance: p => Math.random() < p,
     itemById,

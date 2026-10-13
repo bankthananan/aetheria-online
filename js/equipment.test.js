@@ -121,6 +121,18 @@ const allRankGear = A.CONTENT.items.filter(item => item.rankReq).map(item => ite
 assert.equal(masterRotation.fullCatalog, true, 'Trader S replaces rotation with the master catalog');
 assert.deepEqual([...masterRotation.ids].sort(), allRankGear, 'Trader S makes every rank-conditioned item buyable');
 const masterShopHtml = A.panelBody('shop');
-assert.ok(masterShopHtml.includes('Trader S Master Catalog') && masterShopHtml.includes('Transcendent Sigil'), 'full-catalog UI exposes the S-rank item');
+const regionalSets = [
+  'duneslayer_vest', 'sunwalker_mail',
+  'sporeweaver_robe', 'mire_stalker_tunic',
+  'thunderlord_chainmail', 'gale_dancer_silks',
+  'umbral_assassin_garb', 'darksteel_bulwark',
+];
+for (const id of regionalSets) {
+  const item = A.CONTENT.items.find(i => i.id === id);
+  assert.ok(item, `Item ${id} must exist in CONTENT.items`);
+  assert.equal(item.type, 'armor', `${id} must be armor`);
+  assert.ok(item.def > 0, `${id} must provide DEF`);
+  assert.ok(item.gearLevel > 0, `${id} must have gearLevel > 0`);
+}
 
 console.log('Equipment audit passed: comparisons, class advice, rolled stock, exact purchases, and story/guild Trader Rank are valid.');

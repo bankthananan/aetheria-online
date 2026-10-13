@@ -33,7 +33,7 @@ import { runSelfCheck } from './selfcheck.js';
 import { createTileRenderer } from './render/tiles.js';
 import { createCombatFx } from './render/combat-fx.js';
 import { createBossMechanics } from './systems/boss-mechanics.js';
-import { createGuild } from './systems/guild.js';
+import { createGuild, ZONE_PREREQUISITES } from './systems/guild.js';
 import { createEliteSystem } from './systems/elite-monsters.js';
 import { drawEliteAura, drawEliteShield, drawMoltenHazards } from './render/elite-fx.js';
 import { createRelicSystem } from './systems/relics.js';
@@ -2673,7 +2673,17 @@ function killMonster(m) {
     const zi = ZONE_ORDER.findIndex(mid => zoneGuardian(mid) === m.def.id);
     refreshGuildBoard();
     refreshPanel('world');
-    if (zi >= 0 && ZONE_ORDER[zi + 1]) toast(`🏰 Guardian slain — the guild now posts bounties for ${MAPS[ZONE_ORDER[zi + 1]].name}!`, 'good');
+    if (zi >= 0) {
+      const slainZone = ZONE_ORDER[zi];
+      const newlyUnlocked = ZONE_ORDER.filter(targetZone => {
+        const prereqs = ZONE_PREREQUISITES[targetZone] || [];
+        return prereqs.includes(slainZone);
+      });
+      if (newlyUnlocked.length > 0) {
+        const names = newlyUnlocked.map(z => MAPS[z]?.name || z).join(', ');
+        toast(`🏰 Guardian slain — the guild now posts bounties for ${names}!`, 'good');
+      }
+    }
   }
   // Celestial Rift: clearing every monster in the current wave advances the floor
   if (G.rift.active && G.mapId === 'celestial_rift' && G.monsters.every(mo => !mo.alive)) {
@@ -3879,7 +3889,11 @@ function completeQuest(q, { suppressDialogue = false } = {}) {
 
 // guild bounty regions unlock by CONQUEST, not tourism: slaying a zone's guardian
 // earns the guild's trust for the NEXT zone. Woods are always posted.
-const ZONE_ORDER = ['whispering_woods', 'sunken_ruins', 'frostpeak_tundra', 'dragon_caldera', 'astral_rift'];
+const ZONE_ORDER = [
+  'whispering_woods', 'sunken_ruins', 'ashen_steppes',
+  'frostpeak_tundra', 'twilight_mire', 'dragon_caldera',
+  'tempest_spires', 'sunless_chasm', 'astral_rift', 'glitched_monolith'
+];
 const WORLD_ORDER = ['town_awakening', ...ZONE_ORDER];
 const zoneGuardian = mid => MAPS[mid].spawns.map(sp => monById[sp.monsterId]).find(d => d?.sizeTiles >= 2)?.id;
 
@@ -3928,6 +3942,7 @@ const {
   rerollShop,
   ZONE_ORDER,
   zoneGuardian,
+  ZONE_PREREQUISITES,
   GUILD_RANKS,
   GUILD_HARD_AT,
   GUILD_ELITE_AT,
@@ -6791,8 +6806,9 @@ function skillNodeTip(id, isPassive) {
 function hideSkillTip() { const t = document.getElementById('sk-tip'); if (t) t.style.display = 'none'; }
 
 const WORLD_SIGIL = {
-  town_awakening: '⌂', whispering_woods: '♣', sunken_ruins: '†',
-  frostpeak_tundra: '▲', dragon_caldera: '♨', astral_rift: '✦',
+  town_awakening: '⌂', whispering_woods: '♣', sunken_ruins: '†', ashen_steppes: '≈',
+  frostpeak_tundra: '▲', twilight_mire: '❦', dragon_caldera: '♨',
+  tempest_spires: '⚡', sunless_chasm: '▼', astral_rift: '✦', glitched_monolith: '👾',
 };
 function worldChronicleHtml() {
   const currentTab = G._chronicleTab || 'road';
@@ -7307,11 +7323,23 @@ function panelBody(id) {
           <span class="bounty-actions"><button class="btn btn--ghost" data-task="guild" data-task-id="${g.id}" title="${T('Navigate to this task', 'ui')}">➤</button><button class="btn" data-guildclaim="${g.id}" ${ready ? '' : 'disabled'}>${g.kind === 'deliver' ? T('Turn in', 'ui') : T('Claim', 'ui')}</button>${guildRevokeButton(g)}</span></div></div>`;
       }).join('') : '';
     let lockHint = '';
-    for (let i = 1; i < ZONE_ORDER.length; i++) if (!G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) {
-      lockHint = currentLang === 'th'
-        ? `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 ปราบ <b>${T(monById[zoneGuardian(ZONE_ORDER[i - 1])].name, 'monsters')}</b> (${T(MAPS[ZONE_ORDER[i - 1]].name, 'maps')}) เพื่อปลดล็อกเควสต์ของ <b>${T(MAPS[ZONE_ORDER[i]].name, 'maps')}</b></div>`
-        : `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 Slay <b>${monById[zoneGuardian(ZONE_ORDER[i - 1])].name}</b> (${MAPS[ZONE_ORDER[i - 1]].name}) to unlock <b>${MAPS[ZONE_ORDER[i]].name}</b> bounties.</div>`;
-      break;
+    for (let i = 1; i < ZONE_ORDER.length; i++) {
+      const zoneId = ZONE_ORDER[i];
+      const prereqs = ZONE_PREREQUISITES[zoneId] || [];
+      const isUnlocked = !prereqs.length || prereqs.some(p => G.guardiansSlain.has(zoneGuardian(p)));
+      if (!isUnlocked) {
+        const reqNames = prereqs.map(p => {
+          const gId = zoneGuardian(p);
+          const gName = gId && monById[gId] ? (currentLang === 'th' ? T(monById[gId].name, 'monsters') : monById[gId].name) : p;
+          const zName = MAPS[p]?.name ? (currentLang === 'th' ? T(MAPS[p].name, 'maps') : MAPS[p].name) : p;
+          return `<b>${gName}</b> (${zName})`;
+        }).join(currentLang === 'th' ? ' หรือ ' : ' or ');
+        const targetName = MAPS[zoneId]?.name ? (currentLang === 'th' ? T(MAPS[zoneId].name, 'maps') : MAPS[zoneId].name) : zoneId;
+        lockHint = currentLang === 'th'
+          ? `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 ปราบ ${reqNames} เพื่อปลดล็อกเควสต์ของ <b>${targetName}</b></div>`
+          : `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">🔒 Slay ${reqNames} to unlock <b>${targetName}</b> bounties.</div>`;
+        break;
+      }
     }
     const acceptHint = lockHint + `<div style="color:var(--text-muted);font-size:12px;margin-bottom:6px">${
       currentLang === 'th'
@@ -9297,8 +9325,16 @@ function resumeGame() {
   G.guildRankIdx = w.guildRankIdx || 0; G.guildPoints = w.guildPoints || 0;
   G.guardiansSlain = new Set(w.guardiansSlain || []);
   if (!w.guardiansSlain && w.visited)   // legacy saves: reaching a zone implies the previous guardian fell
-    for (let i = 1; i < ZONE_ORDER.length; i++)
-      if (w.visited.includes(ZONE_ORDER[i])) G.guardiansSlain.add(zoneGuardian(ZONE_ORDER[i - 1]));
+    for (let i = 1; i < ZONE_ORDER.length; i++) {
+      const zoneId = ZONE_ORDER[i];
+      if (w.visited.includes(zoneId)) {
+        const prereqs = ZONE_PREREQUISITES[zoneId] || [];
+        for (const p of prereqs) {
+          const g = zoneGuardian(p);
+          if (g) G.guardiansSlain.add(g);
+        }
+      }
+    }
   G.visited = new Set(w.visited || []); G.talked = new Set(w.talked || []);
   G.storage = w.storage || []; G.achievements = new Set(w.achievements || []); G.handbook = normaliseHandbook(w.handbook);
   // ponytail: only the best floor is persisted — resuming mid-rift restarts the
@@ -9702,7 +9738,7 @@ function boot() {
 
 // Debug handle — inspect/drive the game from the console (and used by the headless smoke test).
 if (typeof window !== 'undefined')
-  window.__AWO = { G, pendingClaims, depositAllMaterials, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
+  window.__AWO = { G, pendingClaims, depositAllMaterials, WINDOW_KEYS, panelEl, compactViewport, journalEntries, journalHtml, closeTopmost, showDialogue, spendStatTimes, spendStatsByBuild, buildStatRanks, socketCandidates, guideEvent, startGuide, expandSockets, makePlayer, recompute, loadMap, startQuest, maybeStartPendingQuest, storyPhaseFor, storyPhaseLabel, storyRoadmapHtml, storyShopRankIdx, effectiveShopRankIdx, buildHud, step, render, renderMinimap, updateHud, castSkill, castSkillById, useHotbarSlot, assignItemHotbar, assignSkillHotbar, setHotkeyBinding, resetHotkeys, normaliseHotkeys, hotkeyLabel, hotkeysPanelHtml, skillsPanelHtml, worldChronicleHtml, automationPanelHtml, updateAutomationHud, renderHotbar, openSlotPicker, adminAction, toggleFarm, activateTaskGuide, activateWorldRoute, continueTaskGuide, finishTaskGuide, refreshTaskGuideAction, taskAction, playerBasicAttack, killMonster, damageMonster, gainXp, useItem, equip,interact, learnSkill, learnPassive, canLearnPassive, passiveBonuses, spendStat, resetStatPoints, resetSkillPoints, statPointEntitlement, maybeStartAdvance, startAdvanceQuest, doPromote, checkAdvance, canLearn, skillLevel, skillCapForTier, skillRankGate, previewSlotUsedBy, canPreview, skillPointEntitlement, skillPointsSpent, normalisePlayerProgression, jobBranchesFor, jobBranchFor, tierForPlayer, branchAllowsSkill, normaliseJobBranch, jobChoicePanelHtml, showJobChoice, chooseJobBranch, statCost, xpForNext, jobXpForNext, togglePanel, panelBody, rollItem, addItem, itemQty, effAtk, effDef, itemSlot, itemAffixes, socketStats, socketGem, transmogItem, findGearInstance, SOCKET_BOUNDS, compareEquipment, gearStatSnapshot, gearComparisonHtml, gearBuildAdviceHtml, unequip, acceptGuild, requestGuildRevoke, revokeGuild, guildKill, guildTurnIn, claimGuild, finishGuild, refreshGuildBoard, rerollGuildBoard, bountyLevelRange, bountyLevelHtml, checkQuest, makeMonster, monsterStatsFor, heatLevel, buildHeatField, heatDepthAt, respawn, spawnRareBoss, placeRareBoss, checkAchievements, depositItem, withdrawItem, craftItem, doRebirth, autoHuntEligible, autoHuntLevelCap, normaliseAutoConfig, autoProfile, setAutoState, chooseAutoHealSkill, bestRecoveryItem, chooseAutoSkill, autoRecoveryAction, acquireAutoTarget, zoneGuardian, ZONE_ORDER, WORLD_ORDER, ZONE_PREREQUISITES, genGuildQuest, expGapFactor, combatGapFactor, updateMonsters, stopAutomationOnDeath, playerDeath, dropBias, saveGame, resumeGame, hasSave, readSave, deleteSave, sellItem, sellPrice, buy, refineItem, instName, refineCost, refineFrags, refineOre, addGuildPoints, guildAllowedDiffs, guildPointsNeed, GUILD_RANKS, rerollShop, shopRollBias, shopPrice, shopStockItem, refineTier, tierOwned, RARITY, setLanguage, onCanvasClick: (wx, wy) => handleClick(wx, wy), findPath, pathTo, DESIGN, PROGRESSION, CONTENT, setCtx: (cv) => { canvas = cv; ctx = cv.getContext('2d'); },
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,

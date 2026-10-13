@@ -6,6 +6,19 @@ import { MAPS } from '../maps.js';
 import { AUDIO } from '../audio.js';
 import { T, currentLang } from '../locale.js';
 
+export const ZONE_PREREQUISITES = {
+  whispering_woods: [],
+  sunken_ruins: ['whispering_woods'],
+  ashen_steppes: ['whispering_woods'],
+  frostpeak_tundra: ['sunken_ruins'],
+  twilight_mire: ['sunken_ruins', 'ashen_steppes'],
+  dragon_caldera: ['ashen_steppes', 'frostpeak_tundra'],
+  tempest_spires: ['frostpeak_tundra', 'twilight_mire'],
+  sunless_chasm: ['twilight_mire', 'dragon_caldera'],
+  astral_rift: ['dragon_caldera', 'tempest_spires', 'sunless_chasm'],
+  glitched_monolith: ['astral_rift', 'sunless_chasm'],
+};
+
 export function createGuild({
   G,
   DIFFICULTY,
@@ -28,6 +41,7 @@ export function createGuild({
   rerollShop,
   ZONE_ORDER,
   zoneGuardian,
+  ZONE_PREREQUISITES: prereqMap = ZONE_PREREQUISITES,
   GUILD_RANKS,
   GUILD_HARD_AT = 4,
   GUILD_ELITE_AT = 10,
@@ -72,9 +86,16 @@ export function createGuild({
 
   function unlockedMonsterIds() {
     const ids = new Set();
-    for (let i = 0; i < ZONE_ORDER.length; i++) {
-      if (i > 0 && !G.guardiansSlain.has(zoneGuardian(ZONE_ORDER[i - 1]))) break;
-      for (const sp of MAPS[ZONE_ORDER[i]].spawns) {
+    const unlockedZones = new Set();
+    for (const zoneId of ZONE_ORDER) {
+      const prereqs = prereqMap?.[zoneId] ?? (zoneId === 'whispering_woods' ? [] : [ZONE_ORDER[ZONE_ORDER.indexOf(zoneId) - 1]]);
+      if (!prereqs.length || prereqs.some(p => G.guardiansSlain.has(zoneGuardian(p)))) {
+        unlockedZones.add(zoneId);
+      }
+    }
+    for (const zoneId of ZONE_ORDER) {
+      if (!unlockedZones.has(zoneId)) continue;
+      for (const sp of (MAPS[zoneId]?.spawns || [])) {
         const d = monById[sp.monsterId];
         if (d && d.sizeTiles < 2) ids.add(d.id);
       }

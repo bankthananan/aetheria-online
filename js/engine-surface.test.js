@@ -22,6 +22,7 @@ const AWO_KEYS = [
   "WINDOW_KEYS",
   "WORLD_ORDER",
   "ZONE_ORDER",
+  "ZONE_PREREQUISITES",
   "acceptGuild",
   "acquireAutoTarget",
   "activateTaskGuide",

@@ -519,6 +519,19 @@ export const CONTENT = {
     { id: "cloth_tunic", name: "Traveler's Tunic", type: "armor", desc: "Simple cloth you woke up wearing.", def: 2, value: 20, classReq: null },
     { id: "leather_vest", name: "Leather Vest", type: "armor", desc: "Boiled leather that turns a claw or two.", def: 6, value: 120, classReq: ["drifter", "far_shot", "iron_fist"] },
     { id: "guardian_plate", name: "Guardian Plate", type: "armor", desc: "Forged from a golem's core. Heavy but true.", def: 14, value: 700, classReq: ["reborn_blade", "lightbringer"] },
+    // Regional Armor Sets (Bands 2–5)
+    // Band 2: Ashen Steppes (Lv 14–28)
+    { id: "duneslayer_vest", name: "Duneslayer Vest", type: "armor", desc: "Hardened reptile hide from the arid steppes.", def: 18, value: 550, gearLevel: 22, classReq: ["drifter", "far_shot", "iron_fist"] },
+    { id: "sunwalker_mail", name: "Sunwalker Mail", type: "armor", desc: "Polished brass and steel reflecting intense sun glare.", def: 22, value: 650, gearLevel: 24, classReq: ["reborn_blade", "lightbringer"] },
+    // Band 3: Twilight Mire (Lv 25–40)
+    { id: "sporeweaver_robe", name: "Sporeweaver Robe", type: "armor", desc: "Silken vestments treated with bioluminescent spore resins.", def: 24, value: 1100, gearLevel: 34, classReq: ["codeweaver", "stormcaller"] },
+    { id: "mire_stalker_tunic", name: "Mire Stalker Tunic", type: "armor", desc: "Camouflaged marsh leathers resisting muck and dampness.", def: 28, value: 1250, gearLevel: 36, classReq: ["drifter", "far_shot", "iron_fist"] },
+    // Band 4: Tempest Spires (Lv 48–64)
+    { id: "thunderlord_chainmail", name: "Thunderlord Chainmail", type: "armor", desc: "Conductive rings woven to channel storm strikes into defensive charges.", def: 42, value: 2400, gearLevel: 58, classReq: ["reborn_blade", "lightbringer"] },
+    { id: "gale_dancer_silks", name: "Gale Dancer Silks", type: "armor", desc: "Feather-light tempest garments that ride wind currents.", def: 38, value: 2600, gearLevel: 60, classReq: ["drifter", "far_shot", "iron_fist"] },
+    // Band 5: Sunless Chasm (Lv 58–74)
+    { id: "umbral_assassin_garb", name: "Umbral Assassin Garb", type: "armor", desc: "Deep-shadow cowl and tunic that swallows all reflected light.", def: 52, value: 4200, gearLevel: 68, classReq: ["drifter", "far_shot"] },
+    { id: "darksteel_bulwark", name: "Darksteel Bulwark Plate", type: "armor", desc: "Impenetrable dark forged plate mined from the abyss floor.", def: 60, value: 4800, gearLevel: 70, classReq: ["reborn_blade", "lightbringer"] },
     // Potions
     { id: "minor_potion", name: "Minor Potion", type: "potion", desc: "Restores a little health.", hpRestore: 30, value: 15, classReq: null },
     { id: "mid_potion", name: "Health Potion", type: "potion", desc: "Restores a good amount of health.", hpRestore: 90, value: 45, classReq: null },
