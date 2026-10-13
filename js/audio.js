@@ -123,6 +123,54 @@ export const MUSIC_THEMES = Object.freeze({
     lead: ['E5','G#5','B5','E6','D#6','B5','G#5','R','F#5','A#5','C#6','F#6','E6','C#6','A#5','R'],
     bass: ['E2','E2','G#2','G#2','F#2','F#2','B2','B2'], pad: ['E3','B3','G#3'],
   },
+  ashen_steppes: { // arid steppe winds and nomadic horns in D minor
+    bpm: 116, leadWave: 'triangle', bassWave: 'sine', padWave: 'sine',
+    leadPeak: 0.14, bassPeak: 0.18, padPeak: 0.05, leadGate: 0.65, padEvery: 4, swing: 0.04,
+    lead: ['D4','F4','G4','A4','C5','A4','G4','R','D4','F4','A4','G4','F4','D4','C4','R'],
+    bass: ['D2','D2','G2','G2','Bb2','Bb2','A2','A2'], pad: ['D3','F3','A3','C4'],
+  },
+  as_sandstone_necropolis: { // ancient subterranean tomb echo in F# minor
+    bpm: 105, leadWave: 'sine', bassWave: 'triangle', padWave: 'sine',
+    leadPeak: 0.13, bassPeak: 0.17, padPeak: 0.05, leadGate: 0.70, padEvery: 4, swing: 0.02,
+    lead: ['F#4','G4','A#4','B4','C#5','B4','A#4','R','G4','F#4','E4','F#4','G4','E4','F#4','R'],
+    bass: ['F#2','F#2','G2','G2','D2','D2','C#2','C#2'], pad: ['F#3','A#3','C#4'],
+  },
+  twilight_mire: { // murky swamp mists and bioluminescent resonance in Eb minor
+    bpm: 88, leadWave: 'sine', bassWave: 'triangle', padWave: 'triangle',
+    leadPeak: 0.12, bassPeak: 0.18, padPeak: 0.06, leadGate: 0.75, padEvery: 4, swing: -0.04,
+    lead: ['Eb4','Gb4','Bb4','Db5','C5','Ab4','Gb4','R','F4','Ab4','C5','Bb4','Ab4','Gb4','F4','R'],
+    bass: ['Eb2','Eb2','Ab2','Ab2','B2','B2','Bb2','Bb2'], pad: ['Eb3','Gb3','Bb3','Db4'],
+  },
+  tm_sporeheart_hollow: { // pulsing fungal spores and subterranean decay in G minor
+    bpm: 122, leadWave: 'sawtooth', bassWave: 'sine', padWave: 'triangle',
+    leadPeak: 0.13, bassPeak: 0.17, padPeak: 0.04, leadGate: 0.58, padEvery: 8, swing: 0.06,
+    lead: ['G4','Bb4','Db5','D5','F5','D5','Db5','R','Bb4','G4','F4','G4','Bb4','C5','Db5','R'],
+    bass: ['G2','G2','Db2','Db2','C2','C2','D2','D2'], pad: ['G3','Bb3','Db4'],
+  },
+  tempest_spires: { // electrified storm gales and crackling lightning in B minor
+    bpm: 142, leadWave: 'sawtooth', bassWave: 'square', padWave: 'triangle',
+    leadPeak: 0.14, bassPeak: 0.19, padPeak: 0.04, leadGate: 0.52, padEvery: 8, swing: 0.03,
+    lead: ['B4','D5','F#5','B5','A5','F#5','D5','R','G5','B5','D6','B5','A5','G5','F#5','R'],
+    bass: ['B2','B2','G2','G2','E2','E2','F#2','F#2'], pad: ['B3','D4','F#4','A4'],
+  },
+  ts_thunderforge_peak: { // high voltage titan foundry pulse in E minor
+    bpm: 150, leadWave: 'square', bassWave: 'sawtooth', padWave: 'square',
+    leadPeak: 0.13, bassPeak: 0.18, padPeak: 0.04, leadGate: 0.46, padEvery: 8, swing: 0.05,
+    lead: ['E4','G4','B4','E5','D#5','B4','G4','R','F#4','A4','C5','F#5','E5','C5','B4','R'],
+    bass: ['E2','E2','B2','B2','C3','C3','B2','B2'], pad: ['E3','G3','B3'],
+  },
+  sunless_chasm: { // deep subterranean resonant crystals in C# minor
+    bpm: 84, leadWave: 'triangle', bassWave: 'sine', padWave: 'sine',
+    leadPeak: 0.13, bassPeak: 0.19, padPeak: 0.07, leadGate: 0.80, padEvery: 4, swing: -0.03,
+    lead: ['C#4','E4','G#4','B4','A4','F#4','E4','R','D#4','F#4','A4','G#4','F#4','E4','D#4','R'],
+    bass: ['C#2','C#2','A2','A2','F#2','F#2','G#2','G#2'], pad: ['C#3','E3','G#3','B3'],
+  },
+  sc_abyssal_crypts: { // cold umbral shadows and ancient quietude in Bb minor
+    bpm: 98, leadWave: 'sine', bassWave: 'triangle', padWave: 'sawtooth',
+    leadPeak: 0.14, bassPeak: 0.18, padPeak: 0.05, leadGate: 0.68, padEvery: 4, swing: 0.01,
+    lead: ['Bb4','Db5','F5','Bb5','Ab5','F5','Db5','R','Gb4','Bb4','Db5','Gb5','F5','Db5','C5','R'],
+    bass: ['Bb2','Bb2','Gb2','Gb2','E2','E2','F2','F2'], pad: ['Bb3','Db4','F4'],
+  },
 });
 
 // Compatibility for console callers and older tests; maps use the regional IDs.

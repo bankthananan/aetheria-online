@@ -1,4 +1,86 @@
-// js/zones/regional-dungeons.js - Regional sub-dungeons for Ruins, Tundra, Caldera, and Rift.
+// js/zones/regional-dungeons.js - Standardized 32x22 winged regional subdungeons.
+
+export function createWingedDungeonTiles(wallChar = '#', floorChar = '.') {
+  const W = 32, H = 22;
+  const rows = [];
+  for (let y = 0; y < H; y++) {
+    if (y === 0 || y === H - 1) {
+      rows.push(wallChar.repeat(W));
+    } else if (y === 1) {
+      // Foyer top row with return portal pad at x: 1
+      rows.push(wallChar + 'P' + floorChar.repeat(W - 3) + wallChar);
+    } else if (y >= 2 && y <= 4) {
+      // Foyer open floor (player starts at 2, 2)
+      rows.push(wallChar + floorChar.repeat(W - 2) + wallChar);
+    } else if (y === 5) {
+      // Divider wall between foyer and lower wings with left passage (x: 2..5) and right passage (x: 20..23)
+      let r = wallChar;
+      for (let x = 1; x < W - 1; x++) {
+        if ((x >= 2 && x <= 5) || (x >= 20 && x <= 23)) {
+          r += floorChar;
+        } else {
+          r += wallChar;
+        }
+      }
+      r += wallChar;
+      rows.push(r);
+    } else {
+      // Lower wings (y: 6..20)
+      // Left extraction wing: x: 1..14 (guarantees (10, 8), (12, 8), (12, 10) walkable)
+      // Divider wall: x: 15..16 (passage at y: 13)
+      // Right 12x12 boss sanctum: x: 17..30 (boss marker 'B' at 24, 13 with >=12x12 clearance)
+      let r = wallChar;
+      for (let x = 1; x < W - 1; x++) {
+        if (x <= 14) {
+          r += floorChar;
+        } else if (x === 15 || x === 16) {
+          r += (y === 13) ? floorChar : wallChar;
+        } else {
+          if (x === 24 && y === 13) {
+            r += 'B';
+          } else {
+            r += floorChar;
+          }
+        }
+      }
+      r += wallChar;
+      rows.push(r);
+    }
+  }
+  return rows;
+}
+
+export const ww_goblin_cave = {
+  id: 'ww_goblin_cave',
+  name: 'Goblin Warrens',
+  ambient: 'Chittering echoes through damp tunnels. The chieftain watches.',
+  chronicle: {
+    province: 'The Greenward',
+    epithet: 'The Scrap Warrens',
+    landmark: 'Chieftain’s Hoard',
+    lore: 'Carved beneath the briars, this warren shelters the goblin clan that preys on unwary travelers.',
+  },
+  width: 32,
+  height: 22,
+  band: [1, 14],
+  tiles: createWingedDungeonTiles('#', '.'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'whispering_woods', toX: 38, toY: 30, label: 'Exit to Whispering Woods' },
+  ],
+  spawns: [
+    { monsterId: 'slime', count: 4, depth: [0.0, 0.35], levelRange: [1, 5] },
+    { monsterId: 'goblin', count: 8, depth: [0.35, 0.70], levelRange: [3, 8] },
+    { monsterId: 'goblin_scout', count: 5, depth: [0.70, 0.95], levelRange: [6, 9] },
+    { monsterId: 'goblin_chieftain', count: 1 },
+  ],
+  npcs: [],
+  boss: {
+    monsterId: 'goblin_chieftain',
+    x: 24,
+    y: 13,
+  },
+};
 
 export const sr_drowned_catacombs = {
   id: 'sr_drowned_catacombs',
@@ -10,27 +92,10 @@ export const sr_drowned_catacombs = {
     landmark: 'Malakar\'s Crypt',
     lore: 'Sealed beneath the flooded abbey, these catacombs inter the fallen high priests of the First Gate.',
   },
-  width: 22,
-  height: 16,
+  width: 32,
+  height: 22,
   band: [16, 28],
-  tiles: [
-    '######################',
-    '#PFFFFwwwwFFFFFFFFFFw#',
-    '#FF###www######www##F#',
-    '#FF#wwwwwwww#wwwwww#F#',
-    '#FF#ww####ww#ww##ww#F#',
-    '#wwwww#ww#wwwww#wwwww#',
-    '#####F#ww#######F#####',
-    '#FFFFF#wwwwwwwwww#FFF#',
-    '#F#####ww######ww#FFF#',
-    '#wwwwwwww#wwww#wwwwww#',
-    '#ww####ww#wwww#ww###w#',
-    '#ww#wwwww#wwwwwww#www#',
-    '#FF#w#####w#####w#wBw#',
-    '#FFFF#wwwww#www#wwwww#',
-    '#FFFFFFFFwwwwwwwwwwww#',
-    '######################',
-  ],
+  tiles: createWingedDungeonTiles('#', 'F'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'sunken_ruins', toX: 26, toY: 4, label: 'Exit to Sunken Ruins' },
@@ -44,8 +109,35 @@ export const sr_drowned_catacombs = {
   npcs: [],
   boss: {
     monsterId: 'lich_malakar',
-    x: 19,
-    y: 12,
+    x: 24,
+    y: 13,
+  },
+};
+
+export const as_sandstone_necropolis = {
+  id: 'as_sandstone_necropolis',
+  name: 'Sandstone Necropolis',
+  ambient: 'Sun-baked dust sifts down ancient tombs. The Sandstone Colossus guards the forgotten kings.',
+  chronicle: {
+    province: 'The Sun-Scorched Savannah',
+    epithet: 'The Dune Crypts',
+    landmark: 'Altar of the Colossus',
+    lore: 'Ancient subterranean tombs carved into sandstone bedrock where the Dune Vanguard slumbers.',
+  },
+  width: 32,
+  height: 22,
+  band: [18, 28],
+  tiles: createWingedDungeonTiles('#', 'D'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'ashen_steppes', toX: 38, toY: 29, label: 'Exit to Ashen Steppes' },
+  ],
+  spawns: [],
+  npcs: [],
+  boss: {
+    monsterId: 'sandstone_colossus',
+    x: 24,
+    y: 13,
   },
 };
 
@@ -59,27 +151,10 @@ export const ft_glacial_chasm = {
     landmark: 'The Brood Hollow',
     lore: 'A treacherous chasm carved into glacial bedrock, harboring the matriarch of the frost-beasts.',
   },
-  width: 22,
-  height: 16,
-  band: [31, 44],
-  tiles: [
-    'MMMMMMMMMMMMMMMMMMMMMM',
-    'MPSSSSIIIISSSSSSSSSSIM',
-    'MSSMMMIIIISSSMMMIIIMSM',
-    'MSSMIIIIIIIISSMIIIIISM',
-    'MSSMIIIIISSMSSMIIIIISM',
-    'MIIIIIMSSMSSSSSSMIIIIM',
-    'MMMMMSMSSMMMMMMMSMMMMM',
-    'MSSSSSMSSSSSSSSSSMSSSM',
-    'MSMMMMMISMMMMMISSMSSSM',
-    'MIIIIIIIISMIIIISMIIIIM',
-    'MIIMMMMIISMIIIISMMMIIM',
-    'MIIMIIIIISMIIIIIIMIIIM',
-    'MSSMISMMMMISMMMMISMBSM',
-    'MSSSSMIIIIISMIIISMIIIM',
-    'MSSSSSSSSIIIIIIIIIIIIM',
-    'MMMMMMMMMMMMMMMMMMMMMM',
-  ],
+  width: 32,
+  height: 22,
+  band: [30, 44],
+  tiles: createWingedDungeonTiles('M', 'S'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'frostpeak_tundra', toX: 38, toY: 27, label: 'Exit to Frostpeak Tundra' },
@@ -93,8 +168,35 @@ export const ft_glacial_chasm = {
   npcs: [],
   boss: {
     monsterId: 'frostbite_matron',
-    x: 19,
-    y: 12,
+    x: 24,
+    y: 13,
+  },
+};
+
+export const tm_sporeheart_hollow = {
+  id: 'tm_sporeheart_hollow',
+  name: 'Sporeheart Hollow',
+  ambient: 'Bioluminescent spores pulse in the suffocating damp. The Sporeheart Matron weaves toxic cocoons.',
+  chronicle: {
+    province: 'The Bioluminescent Bayou',
+    epithet: 'The Fungal Core',
+    landmark: 'Matron\'s Sporebed',
+    lore: 'Deep cavern beneath the mire roots pulsating with ancient spores and fungal rot.',
+  },
+  width: 32,
+  height: 22,
+  band: [30, 40],
+  tiles: createWingedDungeonTiles('#', '.'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'twilight_mire', toX: 38, toY: 29, label: 'Exit to Twilight Mire' },
+  ],
+  spawns: [],
+  npcs: [],
+  boss: {
+    monsterId: 'sporeheart_matron',
+    x: 24,
+    y: 13,
   },
 };
 
@@ -108,27 +210,10 @@ export const dc_obsidian_foundry = {
     landmark: 'The Magma Crucible',
     lore: 'Ancient foundry furnaces fueled by caldera magma, where the core of an obsidian colossus still burns.',
   },
-  width: 22,
-  height: 16,
+  width: 32,
+  height: 22,
   band: [46, 60],
-  tiles: [
-    'MMMMMMMMMMMMMMMMMMMMMM',
-    'MPDDDDDDDDDDDDDDDDDDDM',
-    'MDDMMMDDDLLLLLLDDDMMDM',
-    'MDDMDDDDDDDDLDDDDDDMDM',
-    'MDDMDDLLLLDDLDDMMDDMDM',
-    'MDDDDDMDDLDDDDDMDDDDDM',
-    'MMMMMDMDDLLLLLLDMMMMMM',
-    'MDDDDDMDDDDDDDDDDMDDDM',
-    'MDMMMMMDDLLLLLLDDMDDDM',
-    'MDDDDDDDDMLLLLMDDDDDDM',
-    'MDDMMMMDDMDDDDMDDMMMDM',
-    'MDDMLLLLLDDDDDDDDMLLDM',
-    'MDDMDMMMMMDMMMMMDMDBDM',
-    'MDDDDMLLLLMDLLLMLLDDDM',
-    'MDDDDDDDDDDDDDDDDDDDDM',
-    'MMMMMMMMMMMMMMMMMMMMMM',
-  ],
+  tiles: createWingedDungeonTiles('M', 'D'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'dragon_caldera', toX: 38, toY: 29, label: 'Exit to Dragon Caldera' },
@@ -142,8 +227,62 @@ export const dc_obsidian_foundry = {
   npcs: [],
   boss: {
     monsterId: 'magma_golem_core',
-    x: 19,
-    y: 12,
+    x: 24,
+    y: 13,
+  },
+};
+
+export const ts_thunderforge_peak = {
+  id: 'ts_thunderforge_peak',
+  name: 'Thunderforge Peak',
+  ambient: 'High voltage arcs between ancient copper pillars. The Thunderforge Titan channels atmospheric fury.',
+  chronicle: {
+    province: 'The Skyward Crags',
+    epithet: 'The Storm Anvil',
+    landmark: 'Titan\'s Forge',
+    lore: 'An ancient electrified workshop perched atop the spires where storm energy is harnessed.',
+  },
+  width: 32,
+  height: 22,
+  band: [52, 64],
+  tiles: createWingedDungeonTiles('M', 'F'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'tempest_spires', toX: 38, toY: 29, label: 'Exit to Tempest Spires' },
+  ],
+  spawns: [],
+  npcs: [],
+  boss: {
+    monsterId: 'thunderforge_titan',
+    x: 24,
+    y: 13,
+  },
+};
+
+export const sc_abyssal_crypts = {
+  id: 'sc_abyssal_crypts',
+  name: 'Abyssal Crypts',
+  ambient: 'Cold darkness swallows all light. The Abyssal Dreadlord reigns over the quiet forgotten tombs.',
+  chronicle: {
+    province: 'The Deep Abyss',
+    epithet: 'The Umbral Tombs',
+    landmark: 'Chamber of Dread',
+    lore: 'Silent subterranean catacombs shrouded in impenetrable shadow and eternal cold.',
+  },
+  width: 32,
+  height: 22,
+  band: [62, 74],
+  tiles: createWingedDungeonTiles('#', 'F'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'sunless_chasm', toX: 38, toY: 29, label: 'Exit to Sunless Chasm' },
+  ],
+  spawns: [],
+  npcs: [],
+  boss: {
+    monsterId: 'abyssal_dreadlord',
+    x: 24,
+    y: 13,
   },
 };
 
@@ -157,27 +296,10 @@ export const ar_singularity_vault = {
     landmark: 'The Collapsed Core',
     lore: 'A hidden vault at the edge of the astral rift where unstable dimensional energies converge into a singularity.',
   },
-  width: 22,
-  height: 16,
+  width: 32,
+  height: 22,
   band: [61, 80],
-  tiles: [
-    'OOOOOOOOOOOOOOOOOOOOOO',
-    'OPXXXXXXXXXXXXXXXXXXXO',
-    'OXXOOOXXXOOOOOOXXXOOXO',
-    'OXXOXXXXXXXXOXXXXXXOXO',
-    'OXXOXXOOOOXXOXXOOXXOXO',
-    'OXXXXXOXXOXXXXXOXXXXXO',
-    'OOOOOXOXXOOOOOOOXOOOOO',
-    'OXXXXXOXXXXXXXXXXOXXXO',
-    'OXOOOOOXXOOOOOOXXOXXXO',
-    'OXXXXXXXXOXXXXOXXXXXXO',
-    'OXXOOOOXXOXXXXOXXOOOXO',
-    'OXXOXXXXXOXXXXXXXOXXXO',
-    'OXXOXOOOOOXOOOOOXOXBXO',
-    'OXXXXOXXXXXOXXXOXXXXXO',
-    'OXXXXXXXXXXXXXXXXXXXXO',
-    'OOOOOOOOOOOOOOOOOOOOOO',
-  ],
+  tiles: createWingedDungeonTiles('O', 'X'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'astral_rift', toX: 5, toY: 2, label: 'Exit to Astral Rift' },
@@ -191,14 +313,52 @@ export const ar_singularity_vault = {
   npcs: [],
   boss: {
     monsterId: 'singularity_herald',
-    x: 19,
-    y: 12,
+    x: 24,
+    y: 13,
+  },
+};
+
+export const source_core_subdungeon = {
+  id: 'source_core_subdungeon',
+  name: 'Source Core',
+  ambient: 'The air hums with overclocked computational energy. The System Architect awaits.',
+  chronicle: {
+    province: 'The Uncompiled Boundary',
+    epithet: 'Heart of the Machine',
+    landmark: 'The Kernel Altar',
+    lore: 'The pulsating core of the Glitched Monolith where the System Architect commands the primordial logic of Aetheria.',
+  },
+  width: 32,
+  height: 22,
+  band: [81, 100],
+  tiles: createWingedDungeonTiles('O', 'X'),
+  playerStart: { x: 2, y: 2 },
+  portals: [
+    { x: 1, y: 1, toMap: 'glitched_monolith', toX: 40, toY: 29, label: 'Return to Glitched Monolith' },
+  ],
+  spawns: [
+    { monsterId: 'debug_drone', count: 4, depth: [0.00, 0.40], levelRange: [81, 86] },
+    { monsterId: 'compiler_golem', count: 4, depth: [0.35, 0.75], levelRange: [85, 90] },
+    { monsterId: 'overtime_wraith', count: 4, depth: [0.70, 0.95], levelRange: [83, 88] },
+    { monsterId: 'system_architect', count: 1 },
+  ],
+  npcs: [],
+  boss: {
+    monsterId: 'system_architect',
+    x: 24,
+    y: 13,
   },
 };
 
 export const REGIONAL_DUNGEONS = {
+  ww_goblin_cave,
   sr_drowned_catacombs,
+  as_sandstone_necropolis,
   ft_glacial_chasm,
+  tm_sporeheart_hollow,
   dc_obsidian_foundry,
+  ts_thunderforge_peak,
+  sc_abyssal_crypts,
   ar_singularity_vault,
+  source_core_subdungeon,
 };

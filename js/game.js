@@ -91,6 +91,14 @@ const MAP_MUSIC = {
   ar_singularity_vault: 'ar_singularity_vault',
   glitched_monolith: 'glitched_monolith',
   source_core_subdungeon: 'source_core_subdungeon',
+  ashen_steppes: 'ashen_steppes',
+  as_sandstone_necropolis: 'as_sandstone_necropolis',
+  twilight_mire: 'twilight_mire',
+  tm_sporeheart_hollow: 'tm_sporeheart_hollow',
+  tempest_spires: 'tempest_spires',
+  ts_thunderforge_peak: 'ts_thunderforge_peak',
+  sunless_chasm: 'sunless_chasm',
+  sc_abyssal_crypts: 'sc_abyssal_crypts',
 };
 // Celestial Rift: 3 daily mutators, rotating by day-of-year so every player on a
 // given calendar day sees the same one. Magnitudes live in DESIGN.tuning.rift.

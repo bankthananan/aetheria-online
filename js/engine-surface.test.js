@@ -301,8 +301,8 @@ assert.deepEqual(Object.keys(A).sort(), AWO_KEYS, 'window.__AWO key set unchange
 // (whispering_woods and sunken_ruins include Champion/Elite badges & affix text under seed 42)
 const RENDER = {
   town_awakening: { calls: 557, hash: '1556944fc678a798' },
-  whispering_woods: { calls: 844, hash: '91c5078d90758c8a' },
-  sunken_ruins: { calls: 508, hash: '14fe4aaecb13802a' },
+  whispering_woods: { calls: 677, hash: 'bd18cde3ac9a19e3' },
+  sunken_ruins: { calls: 166, hash: '98baa0bba796f83d' },
 };
 for (const [mapId, want] of Object.entries(RENDER)) {
   seed = 42;
@@ -324,6 +324,6 @@ for (let dr = -14; dr <= 14 && !route; dr++) for (let dc = -14; dc <= 14 && !rou
   if (r && r.length > 1) { route = r; goal = [sc + dc, sr + dr]; }
 }
 assert.deepEqual({ from: [sc, sr], to: goal, steps: route?.length, hash: sha(JSON.stringify(route)) },
-  { from: [2, 2], to: [10, 1], steps: 9, hash: '2591ec8fb3540254' }, 'A* route fingerprint');
+  { from: [2, 13], to: [1, 1], steps: 13, hash: 'df37d78491acf511' }, 'A* route fingerprint');
 
 console.log('Engine surface characterization passed.');

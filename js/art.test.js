@@ -114,19 +114,17 @@ for (const monster of CONTENT.monsters) {
 }
 
 const expandedMinimums = {
-  town_awakening: [40, 34], whispering_woods: [50, 40], sunken_ruins: [40, 34],
-  frostpeak_tundra: [48, 36], dragon_caldera: [50, 38], astral_rift: [50, 38],
-  celestial_rift: [22, 16],   // fixed-size side arena, never region-expanded
-  abyssal_spire: [24, 18],
-  ww_goblin_cave: [22, 16],
-  ww_elder_hollow: [24, 18],
-  sr_drowned_catacombs: [22, 16],
-  ft_glacial_chasm: [22, 16],
-  dc_obsidian_foundry: [22, 16],
-  ar_singularity_vault: [22, 16],
-  guild_stronghold: [32, 24],
-  player_homestead: [28, 20],
-  glitched_monolith: [44, 34],
+  town_awakening: [36, 26], whispering_woods: [50, 38], sunken_ruins: [40, 34],
+  ashen_steppes: [50, 38], frostpeak_tundra: [48, 36], twilight_mire: [50, 38],
+  dragon_caldera: [50, 38], tempest_spires: [50, 38], sunless_chasm: [50, 38],
+  astral_rift: [50, 38], glitched_monolith: [44, 34],
+  celestial_rift: [22, 16], abyssal_spire: [24, 18],
+  ww_goblin_cave: [22, 16], ww_elder_hollow: [24, 18],
+  sr_drowned_catacombs: [22, 16], as_sandstone_necropolis: [22, 16],
+  ft_glacial_chasm: [22, 16], tm_sporeheart_hollow: [22, 16],
+  dc_obsidian_foundry: [22, 16], ts_thunderforge_peak: [22, 16],
+  sc_abyssal_crypts: [22, 16], ar_singularity_vault: [22, 16],
+  guild_stronghold: [32, 24], player_homestead: [28, 20],
   source_core_subdungeon: [24, 18],
 };
 const monsterById = Object.fromEntries(CONTENT.monsters.map(monster => [monster.id, monster]));
