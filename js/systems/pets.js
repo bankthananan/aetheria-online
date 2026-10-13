@@ -174,9 +174,10 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
       return { success: false, reason: 'This creature rejects this bait!' };
     }
 
+    const targetId = monster.id || monster.def?.id;
     const isMatch = Array.isArray(petDef.targetMonster)
-      ? petDef.targetMonster.includes(monster.id)
-      : petDef.targetMonster === monster.id;
+      ? petDef.targetMonster.includes(targetId)
+      : petDef.targetMonster === targetId;
 
     if (!isMatch) {
       return { success: false, reason: 'This creature rejects this bait!' };
@@ -303,6 +304,8 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
   }
 
   return {
+    PET_CATALOG,
+    BAIT_TO_PET_MAP,
     getPetDef,
     getPetForMonster,
     attemptTame,

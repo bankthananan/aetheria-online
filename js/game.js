@@ -1993,6 +1993,7 @@ function makeMonster(def, x, y, levelOverride, spawnSpec = null, eliteTierOverri
   const st = monsterStatsFor(def, lvl);
   const { atk, atkBase, dv, exp, hp } = st;
   const mob = {
+    id: def.id,
     def, spawnSpec, x, y, homeX: x, homeY: y,
     difficultyTier: DifficultySystem.getTier(G.zoneDifficulty?.[G.mapId]).id,
     lvl, atk, atkBase, dv,
@@ -2289,9 +2290,19 @@ function autoFarmActions() {
   setAutoState('combat', T('Basic attack', 'ui'), `${T(t.def.name, 'monsters')} · Lv ${t.lvl}`);
 }
 
+function playerHasBaitFor(m) {
+  if (!m?.def) return null;
+  const pet = petsSystem.getPetForMonster(m.def.id);
+  if (!pet || !pet.requiredBait) return null;
+  return itemQty(pet.requiredBait) > 0 ? pet.requiredBait : null;
+}
+
 function playerBasicAttack() {
   const t = G.target, p = G.player;
   if (!t || !t.alive) return;
+  // If player carries taming bait for this creature and it is already weakened below 30% HP,
+  // hold fire so the player does not accidentally defeat it before taming!
+  if (playerHasBaitFor(t) && (t.hp / t.maxHp) <= 0.30) return;
   if (dist(p.x, p.y, t.x, t.y) > p.basicRange * TS + t.size / 2) return;
   if (now() < p.attackCdUntil) return;
   p.attackCdUntil = now() + (p.atkDelay || COMBAT.attackSpeedMs);   // AGI-scaled swing speed
@@ -2434,6 +2445,15 @@ function damageMonster(m, dmg, isCrit, silent) {
     }
     m.hp = G.raidState.hp;
   } else {
+    const baitId = playerHasBaitFor(m);
+    if (baitId && m.hp > 0 && dmg >= m.hp) {
+      const targetSubduedHp = m.hp > Math.round(m.maxHp * 0.20)
+        ? Math.max(1, Math.round(m.maxHp * 0.20))
+        : Math.max(1, m.hp - 1);
+      dmg = m.hp - targetSubduedHp;
+      floatText(m.x, m.y - 16, 'SUBDUED!', 'magic');
+      toast(T('Creature subdued below 30% HP! Use your bait now!', 'ui'), 'good');
+    }
     m.hp -= dmg;
   }
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
@@ -8283,6 +8303,21 @@ function useItem(itemId) {
   if (!it.reset && !it.hpRestore && !it.mpRestore && !it.buff && !it.teleport && itemId !== 'rift_cache' && itemId !== 'old_card_album' && itemId !== 'titan_horn' && it.type !== 'taming_bait') { logMsg('This item cannot be used directly.', 'sys'); return false; }
   const p = G.player;
   if (it.type === 'taming_bait') {
+    if (!G.target || !G.target.alive) {
+      const petId = petsSystem.BAIT_TO_PET_MAP?.[itemId];
+      const petDef = petId ? petsSystem.PET_CATALOG?.[petId] : null;
+      if (petDef) {
+        const nearbyMatch = G.monsters.find(m => {
+          if (!m.alive) return false;
+          const isMatch = Array.isArray(petDef.targetMonster) ? petDef.targetMonster.includes(m.def.id) : petDef.targetMonster === m.def.id;
+          return isMatch && Math.hypot(m.x - p.x, m.y - p.y) <= 3.5 * TS;
+        });
+        if (nearbyMatch) {
+          G.target = nearbyMatch;
+          G.targetSource = 'manual';
+        }
+      }
+    }
     if (!G.target || !G.target.alive) {
       logMsg(T('Target a wounded creature nearby to tame!', 'ui'), 'sys');
       return false;

@@ -1328,6 +1328,7 @@ export const L10N = {
       "Loyal beasts and bonded familiars granting passive auras and auto-loot perks.": "สัตว์อสูรผู้ซื่อสัตย์และผู้ติดตามที่มอบออร่าและการเก็บไอเทมอัตโนมัติ",
       "Target a wounded creature nearby to tame!": "ต้องเล็งเป้าหมายสัตว์ที่บาดเจ็บในบริเวณใกล้เคียงเพื่อจับ!",
       "Target is too far away to tame!": "เป้าหมายอยู่ไกลเกินไปสำหรับการจับ!",
+      "Creature subdued below 30% HP! Use your bait now!": "สัตว์ป่าถูกสยบจน HP ต่ำกว่า 30% แล้ว! ใช้เหยื่อของคุณตอนนี้!",
       "Companion duplicated": "สัตว์เลี้ยงคัดลอกไอเทม",
       // Companion archetypes
       "Gel Slime": "สไลม์เจล",
