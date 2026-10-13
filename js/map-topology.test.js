@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MAPS } from './maps.js';
-import { CONTENT } from './content.js';
 import { MAP_RESOURCE_NODES } from './systems/gathering.js';
 import { connectedWalkableTiles } from './pathing.js';
 
@@ -41,6 +40,21 @@ test('World Topology: portals are bidirectional and walkable', () => {
       assert.ok(portal.toY >= 0 && portal.toY < destMap.height, `${mapId} -> ${portal.toMap} toY ${portal.toY} out of bounds`);
       const destTile = destMap.tiles[portal.toY][portal.toX];
       assert.ok(destMap.legend[destTile]?.walkable, `${mapId} -> ${portal.toMap} lands on non-walkable tile '${destTile}' at (${portal.toX},${portal.toY})`);
+
+      // Bidirectional return portal and bounce-back loop checks
+      // Exclude special municipal hub exits like abyssal_spire
+      if (mapId !== 'abyssal_spire') {
+        const returnPortal = destMap.portals?.find(p => p.toMap === mapId);
+        assert.ok(returnPortal, `${portal.toMap} must have return portal back to ${mapId}`);
+        assert.ok(
+          returnPortal.toX !== portal.x || returnPortal.toY !== portal.y,
+          `${portal.toMap} return portal to ${mapId} lands directly on entrance portal pad (${portal.x},${portal.y}) causing bounce-back loop`
+        );
+        assert.ok(
+          portal.toX !== returnPortal.x || portal.toY !== returnPortal.y,
+          `${mapId} portal to ${portal.toMap} lands directly on return portal pad (${returnPortal.x},${returnPortal.y}) causing bounce-back loop`
+        );
+      }
     }
   }
 });
@@ -53,6 +67,20 @@ test('World Topology: single connected walkable component per map', () => {
     const reachable = new Set(connected.map(t => `${t.col},${t.row}`));
     for (const portal of map.portals || []) {
       assert.ok(reachable.has(`${portal.x},${portal.y}`), `${mapId} portal at (${portal.x},${portal.y}) is isolated`);
+    }
+
+    // Boss marker 'B' reachability
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        if (map.tiles[y][x] === 'B') {
+          assert.ok(reachable.has(`${x},${y}`), `${mapId} boss marker 'B' at (${x},${y}) is not reachable from entrance`);
+        }
+      }
+    }
+
+    // NPC reachability
+    for (const npc of map.npcs || []) {
+      assert.ok(reachable.has(`${npc.x},${npc.y}`), `${mapId} NPC '${npc.id}' at (${npc.x},${npc.y}) is not reachable from entrance`);
     }
   }
 });
