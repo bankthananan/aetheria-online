@@ -13,10 +13,15 @@ export const RARITY_COLORS = Object.fromEntries(Object.entries(RARITY).map(([k, 
 export const ZONE_LABELS = {
   woods: 'Whispering Woods',
   ruins: 'Sunken Ruins',
+  steppes: 'Ashen Steppes',
   tundra: 'Frostpeak Tundra',
+  mire: 'Twilight Mire',
   caldera: 'Dragon Caldera',
+  spires: 'Tempest Spires',
+  chasm: 'Sunless Chasm',
   rift: 'Astral Rift',
   incursion: 'Rift Incursions',
+  monolith: 'Glitched Monolith',
 };
 
 export function createCardsUIRenderer({
@@ -82,7 +87,7 @@ export function createCardsUIRenderer({
     selectedZone = 'woods',
     selectedMonsterId = null,
   } = {}) {
-    const validZones = ['woods', 'ruins', 'tundra', 'caldera', 'rift', 'incursion'];
+    const validZones = ['woods', 'ruins', 'steppes', 'tundra', 'mire', 'caldera', 'spires', 'chasm', 'rift', 'incursion', 'monolith'];
     if (!validZones.includes(selectedZone)) {
       selectedZone = 'woods';
     }

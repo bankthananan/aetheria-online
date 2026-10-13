@@ -290,7 +290,31 @@ test('Cards Subsystem: recordCardAcquired and calculateCollectionBonuses compute
   assert.equal(bonusBoth.physAtk, 12, 'Caldera grants +12 ATK');
   assert.equal(bonusBoth.dmg_fire, 10, 'Caldera grants +10 Fire Dmg');
 
-  // Complete all 43 cards for Grandmaster
+  // Complete Steppes album (5 cards)
+  for (const cid of ZONE_ALBUM_MILESTONES.steppes.cardIds) cards.recordCardAcquired(bestiary, cid);
+  const bonusSteppes = cards.calculateCollectionBonuses(bestiary);
+  assert.equal(bonusSteppes.physAtk, 22, 'Steppes grants +10 ATK (+12 from Caldera)');
+  assert.equal(bonusSteppes.flee, 8, 'Steppes grants +8 Flee');
+
+  // Complete Mire album (5 cards)
+  for (const cid of ZONE_ALBUM_MILESTONES.mire.cardIds) cards.recordCardAcquired(bestiary, cid);
+  const bonusMire = cards.calculateCollectionBonuses(bestiary);
+  assert.equal(bonusMire.maxHp, 120, 'Mire grants +120 Max HP');
+  assert.equal(bonusMire.res_nature, 10, 'Mire grants +10 Nature Res');
+
+  // Complete Spires album (5 cards)
+  for (const cid of ZONE_ALBUM_MILESTONES.spires.cardIds) cards.recordCardAcquired(bestiary, cid);
+  const bonusSpires = cards.calculateCollectionBonuses(bestiary);
+  assert.equal(bonusSpires.critChance, 4, 'Spires grants +4 Crit');
+  assert.equal(bonusSpires.dmg_lightning, 10, 'Spires grants +10 Lightning Dmg');
+
+  // Complete Chasm album (5 cards)
+  for (const cid of ZONE_ALBUM_MILESTONES.chasm.cardIds) cards.recordCardAcquired(bestiary, cid);
+  const bonusChasm = cards.calculateCollectionBonuses(bestiary);
+  assert.equal(bonusChasm.physDef, 35, 'Chasm grants +20 DEF (+15 from Tundra)');
+  assert.equal(bonusChasm.res_void, 10, 'Chasm grants +10 Void Res');
+
+  // Complete all cards for Grandmaster
   for (const cardId of Object.keys(CARD_CATALOG)) {
     cards.recordCardAcquired(bestiary, cardId);
   }

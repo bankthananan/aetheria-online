@@ -461,7 +461,7 @@ export const CONTENT = {
     {
       id: "crystal_arachnid", element: "void", name: "Crystal Arachnid",
       flavor: "A crystalline spider spinning webs of resonating void glass.",
-      level: 64, hp: 980, atk: 172, def: 52, exp: 4300, sizeTiles: 1,
+      level: 64, hp: 980, atk: 172, def: 52, exp: 4300, spriteColor: "#5c6bc0", sizeTiles: 1,
       drops: [{ itemId: "crawler_shell", chance: 0.6 }, { itemId: "greater_potion", chance: 0.25 }],
       behavior: "aggressive"
     },
