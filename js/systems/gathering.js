@@ -436,6 +436,9 @@ export const MAP_RESOURCE_NODES = {
   sc_abyssal_crypts: [
     { id: 'node_sc_crypts_darksteel_1', mapId: 'sc_abyssal_crypts', type: NODE_TYPES.ORE, resourceId: 'darksteel_ore', x: 10, y: 8 },
   ],
+  ar_singularity_vault: [
+    { id: 'node_ar_vault_voidstone_1', mapId: 'ar_singularity_vault', type: NODE_TYPES.ORE, resourceId: 'voidstone_ore', x: 10, y: 8 },
+  ],
   source_core_subdungeon: [
     { id: 'node_sc_core_matrix_1', mapId: 'source_core_subdungeon', type: NODE_TYPES.ORE, resourceId: 'matrix_ore', x: 10, y: 8 },
   ],

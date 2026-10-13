@@ -35,6 +35,8 @@ test('gathering expansion adds nodes to astral rift, homestead, and subdungeons'
     'ts_thunderforge_peak must have mineral vein');
   assert.ok(MAP_RESOURCE_NODES.sc_abyssal_crypts && MAP_RESOURCE_NODES.sc_abyssal_crypts.length >= 1,
     'sc_abyssal_crypts must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.ar_singularity_vault && MAP_RESOURCE_NODES.ar_singularity_vault.length >= 1,
+    'ar_singularity_vault must have mineral vein');
   assert.ok(MAP_RESOURCE_NODES.source_core_subdungeon && MAP_RESOURCE_NODES.source_core_subdungeon.length >= 1,
     'source_core_subdungeon must have mineral vein');
 
