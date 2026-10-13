@@ -45,7 +45,7 @@ import { createRiftRenderer } from './render/rift-fx.js';
 import { createGatheringSystem, MAP_RESOURCE_NODES, FISH_CATALOG, ORE_CATALOG, HERB_CATALOG } from './systems/gathering.js';
 import { createGatheringRenderer } from './render/gathering-fx.js';
 import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './systems/cards.js';
-import { createCardsUIRenderer, RARITY_COLORS } from './render/cards-ui.js';
+import { createCardsUIRenderer, RARITY_COLORS, ZONE_LABELS } from './render/cards-ui.js';
 import { createPetsSystem } from './systems/pets.js';
 import { createPetsRenderer } from './render/pets-fx.js';
 import { createPetsUIRenderer } from './render/pets-ui.js';
@@ -367,19 +367,191 @@ function transmogItem(uid, newItemId) {
 }
 const GEM_DOT_COLOR = { atkPct: '#e2695f', hpFlat: '#4a90d9', defPct: '#5fbf7a' };
 const RUNE_DOT_COLOR = { fire: '#ff6b4a', ice: '#64c8ff', lightning: '#ffd24d', nature: '#66dd66', holy: '#fff080', void: '#ba68c8' };
+
+const STAT_MOD_UI = {
+  maxHp: { name: 'Max HP', suffix: '' },
+  maxMp: { name: 'Max MP', suffix: '' },
+  physAtk: { name: 'ATK', suffix: '' },
+  magicAtk: { name: 'MATK', suffix: '' },
+  physDef: { name: 'DEF', suffix: '' },
+  flee: { name: 'Flee', suffix: '' },
+  hitRatePct: { name: 'Hit', suffix: '%' },
+  critChance: { name: 'Crit', suffix: '%' },
+  critDmgPct: { name: 'Crit DMG', suffix: '%' },
+  zenyPct: { name: 'Zeny', suffix: '%' },
+  moveSpeedPct: { name: 'Move Speed', suffix: '%' },
+  cleaveRadiusPct: { name: 'Cleave', suffix: '%' },
+  manaCostPct: { name: 'Mana Cost', suffix: '%' },
+  hpRegenPct: { name: 'HP Regen', suffix: '%' },
+  reflectPhysPct: { name: 'Reflect', suffix: '%' },
+  lifestealPct: { name: 'Lifesteal', suffix: '%' },
+  stunResPct: { name: 'Stun Res', suffix: '%' },
+  dmgVsAquaticPct: { name: 'Aquatic DMG', suffix: '%' },
+  castSpeedPct: { name: 'Cast Speed', suffix: '%' },
+  physDmgReductionPct: { name: 'Phys DMG Red', suffix: '%' },
+  atkSpeedPct: { name: 'ATK Speed', suffix: '%' },
+  defPenetrationPct: { name: 'DEF Pen', suffix: '%' },
+  incursionDmgReductionPct: { name: 'Incursion Red', suffix: '%' },
+  luk: { name: 'LUK', suffix: '' },
+  dropRarityPct: { name: 'Rare Drop', suffix: '%' },
+  res_fire: { name: 'Fire Res', suffix: '%' },
+  res_water: { name: 'Water Res', suffix: '%' },
+  res_nature: { name: 'Nature Res', suffix: '%' },
+  res_holy: { name: 'Holy Res', suffix: '%' },
+  res_void: { name: 'Void Res', suffix: '%' },
+  res_ice: { name: 'Ice Res', suffix: '%' },
+  res_lightning: { name: 'Lightning Res', suffix: '%' },
+  res_all: { name: 'All Res', suffix: '%' },
+  dmg_fire: { name: 'Fire DMG', suffix: '%' },
+  dmg_ice: { name: 'Ice DMG', suffix: '%' },
+  dmg_lightning: { name: 'Lightning DMG', suffix: '%' },
+  dmg_void: { name: 'Void DMG', suffix: '%' },
+  dmg_all: { name: 'All DMG', suffix: '%' },
+  atkPct: { name: 'ATK', suffix: '%' },
+  defPct: { name: 'DEF', suffix: '%' },
+  hpFlat: { name: 'Max HP', suffix: '' },
+  defFlat: { name: 'DEF', suffix: '' },
+  fleeFlat: { name: 'Flee', suffix: '' },
+  healPct: { name: 'Healing', suffix: '%' },
+  regenPct: { name: 'HP Regen', suffix: '%' },
+};
+
+function formatStatMod(stat, value) {
+  const ui = STAT_MOD_UI[stat] || { name: stat, suffix: (stat.endsWith('Pct') || stat.startsWith('res_') || stat.startsWith('dmg_') || stat === 'critChance') ? '%' : '' };
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value}${ui.suffix} ${T(ui.name, 'ui')}`;
+}
+
+function cardSummaryText(cardDef) {
+  if (!cardDef?.statMods) return '';
+  return Object.entries(cardDef.statMods).map(([k, v]) => formatStatMod(k, v)).join(', ');
+}
+
+const RUNE_WARDING_SECONDARY = {
+  fire: { stat: 'hpFlat', val: 25 },
+  ice: { stat: 'defFlat', val: 8 },
+  lightning: { stat: 'fleeFlat', val: 6 },
+  nature: { stat: 'regenPct', val: 3 },
+  holy: { stat: 'healPct', val: 5 },
+  void: { stat: 'critDmgPct', val: 5 },
+};
+
+function gemSummaryText(it, targetSlot = null) {
+  const gem = it?.gem;
+  if (!gem) return '';
+  if (gem.isRune) {
+    const elemName = T(gem.element.charAt(0).toUpperCase() + gem.element.slice(1), 'ui');
+    const inf = `+15% ${elemName} DMG`;
+    const sec = RUNE_WARDING_SECONDARY[gem.element];
+    const secStr = sec ? `, ${formatStatMod(sec.stat, sec.val)}` : '';
+    const ward = `+${gem.resPct}% ${elemName} Res${secStr}`;
+    if (targetSlot === 'weapon') return inf;
+    if (targetSlot && targetSlot !== 'weapon') return ward;
+    return `⚔ ${inf} · 🛡 ${ward}`;
+  }
+  return formatStatMod(gem.stat, gem.value);
+}
+
 function socketDotsHtml(inst) {
   if (!inst?.sockets?.length) return '';
+  const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
   const dots = inst.sockets.map((gid, i) => {
     const gem = gid && itemById[gid]?.gem;
     const cardDef = gid && cardsSystem.getCardDef(gid);
     const color = gem ? (gem.isRune ? (RUNE_DOT_COLOR[gem.element] || '#ffd24d') : (GEM_DOT_COLOR[gem.stat] || '#888'))
       : cardDef ? (RARITY_COLORS[cardDef.rarity] || '#ffd54f')
       : 'transparent';
-    const title = esc(gem ? T(itemById[gid].name, 'items') : cardDef ? T(cardDef.name, 'items') : T('Empty socket', 'ui'));
+    const summary = gem ? gemSummaryText(itemById[gid], slot) : cardDef ? cardSummaryText(cardDef) : '';
+    const name = gem ? T(itemById[gid].name, 'items') : cardDef ? T(cardDef.name, 'items') : T('Empty socket', 'ui');
+    const title = esc(summary ? `${name} (${summary})` : name);
     const pick = (!gem && !cardDef) ? ` data-socket-slot="${inst.uid}:${i}"` : '';
     return `<i${pick} title="${title}" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;border:1px solid ${gem || cardDef ? color : 'var(--text-muted)'};background:${color};${pick ? 'cursor:pointer' : ''}"></i>`;
   }).join('');
   return `<span class="gear-sockets" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">${dots}</span>`;
+}
+
+function itemSocketsListHtml(inst) {
+  if (!inst || !Array.isArray(inst.sockets) || !inst.sockets.length) return '';
+  const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
+  const rows = inst.sockets.map((gid, i) => {
+    if (!gid) {
+      return `<div class="gear-socket-row empty" style="color:var(--text-muted);display:flex;align-items:center;gap:4px"><span>○ ${T('Socket', 'ui')} ${i + 1}:</span> <i>${T('Empty socket', 'ui')}</i></div>`;
+    }
+    const gem = itemById[gid]?.gem;
+    const cardDef = cardsSystem.getCardDef(gid);
+    if (gem) {
+      const color = gem.isRune ? (RUNE_DOT_COLOR[gem.element] || '#ffd24d') : (GEM_DOT_COLOR[gem.stat] || '#888');
+      const summary = gemSummaryText(itemById[gid], slot);
+      return `<div class="gear-socket-row filled" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span style="color:${color}">◈ ${T('Socket', 'ui')} ${i + 1}:</span> <b style="color:${color}">${esc(T(itemById[gid].name, 'items'))}</b> <span style="color:var(--accent-alt);font-size:10px">(${esc(summary)})</span></div>`;
+    }
+    if (cardDef) {
+      const color = RARITY_COLORS[cardDef.rarity] || '#ffd54f';
+      const summary = cardSummaryText(cardDef);
+      return `<div class="gear-socket-row filled" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span style="color:${color}">◈ ${T('Socket', 'ui')} ${i + 1}:</span> <b style="color:${color}">${esc(T(cardDef.name, 'items'))}</b> <span style="color:var(--accent-alt);font-size:10px">(${esc(summary)})</span></div>`;
+    }
+    return '';
+  }).filter(Boolean);
+
+  let setBonusHtml = '';
+  if (inst.sockets.length >= 3 && inst.sockets.every(gid => gid && gid === inst.sockets[0] && itemById[gid]?.gem)) {
+    const g = itemById[inst.sockets[0]].gem;
+    const bonusVal = Math.round(g.value * TUNING.gemSetBonusMult);
+    const bonusText = formatStatMod(g.stat, bonusVal);
+    setBonusHtml = `<div class="gear-socket-set-bonus" style="color:var(--accent);font-size:10px;margin-top:2px">✨ <b>${T('Set Bonus', 'ui')}:</b> +50% ${T('Gem stats', 'ui')} (${esc(bonusText)})</div>`;
+  }
+
+  return `<div class="gear-sockets-list" style="margin:4px 0;padding:4px 6px;background:rgba(0,0,0,0.22);border-radius:4px;font-size:11px;line-height:1.4">
+    <div style="font-weight:bold;color:var(--text-muted);margin-bottom:2px">◎ ${T('Sockets', 'ui')} (${inst.sockets.filter(Boolean).length}/${inst.sockets.length})</div>
+    ${rows.join('')}
+    ${setBonusHtml}
+  </div>`;
+}
+
+function itemCardGemPropertiesHtml(it) {
+  if (!it) return '';
+  if (it.type === 'card') {
+    const cardDef = cardsSystem.getCardDef(it.id);
+    if (!cardDef) return '';
+    const slotLabel = cardDef.targetSlot === 'weapon' ? T('Fits: Weapon', 'ui')
+      : cardDef.targetSlot === 'armor' ? T('Fits: Armor', 'ui')
+      : cardDef.targetSlot === 'accessory' ? T('Fits: Accessory', 'ui')
+      : T('Fits: Any Gear Slot', 'ui');
+    const slotColor = cardDef.targetSlot === 'weapon' ? 'var(--accent)'
+      : cardDef.targetSlot === 'armor' ? 'var(--accent-alt)'
+      : cardDef.targetSlot === 'accessory' ? '#9c27b0' : 'var(--text)';
+    const summary = cardSummaryText(cardDef);
+    return `<div class="card-properties-box" style="margin:6px 0;padding:6px 8px;background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:4px;font-size:11px;line-height:1.4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span class="card-slot-badge" style="font-weight:bold;color:${slotColor}">◎ ${esc(slotLabel)}</span>
+        <span class="ro-muted">${esc(cardDef.zone ? (ZONE_LABELS?.[cardDef.zone] ? T(ZONE_LABELS[cardDef.zone], 'maps') : T(cardDef.zone, 'ui')) : '')}</span>
+      </div>
+      <div style="margin-bottom:3px"><b>⚔ ${T('Socket Bonus', 'ui')}:</b> <span style="color:#ffd54f">${esc(summary)}</span></div>
+      ${cardDef.collectionBonus ? `<div style="color:var(--text-muted)">📖 <b>${T('Codex Collection Bonus', 'ui')}:</b> <span style="color:var(--text)">${esc(cardDef.collectionBonus)}</span></div>` : ''}
+    </div>`;
+  }
+  if (it.gem) {
+    const gem = it.gem;
+    if (gem.isRune) {
+      const elemName = T(gem.element.charAt(0).toUpperCase() + gem.element.slice(1), 'ui');
+      const sec = RUNE_WARDING_SECONDARY[gem.element];
+      const secStr = sec ? `, ${formatStatMod(sec.stat, sec.val)}` : '';
+      return `<div class="gem-properties-box" style="margin:6px 0;padding:6px 8px;background:rgba(100,200,255,0.08);border:1px solid rgba(100,200,255,0.25);border-radius:4px;font-size:11px;line-height:1.4">
+        <div style="font-weight:bold;color:${RUNE_DOT_COLOR[gem.element] || '#ffd24d'};margin-bottom:4px">◎ ${T('Fits: Any Gear Slot', 'ui')} · ${elemName}</div>
+        <div style="margin-bottom:3px"><b>⚔ ${T('Weapon Infusion', 'ui')}:</b> <span style="color:#ffd54f">+15% ${esc(elemName)} DMG</span></div>
+        <div><b>🛡 ${T('Armor Warding', 'ui')}:</b> <span style="color:var(--accent-alt)">+${gem.resPct}% ${esc(elemName)} Res${esc(secStr)}</span></div>
+      </div>`;
+    }
+    const statStr = formatStatMod(gem.stat, gem.value);
+    const color = GEM_DOT_COLOR[gem.stat] || 'var(--accent)';
+    return `<div class="gem-properties-box" style="margin:6px 0;padding:6px 8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:11px;line-height:1.4">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-weight:bold;color:${color}">◎ ${T('Fits: Any Gear Slot', 'ui')}</span>
+        <span style="color:var(--accent)">✨ ${T('Set Bonus', 'ui')}: +50%</span>
+      </div>
+      <div><b>◈ ${T('Socket Bonus', 'ui')}:</b> <span style="color:${color};font-weight:bold">${esc(statStr)}</span></div>
+    </div>`;
+  }
+  return '';
 }
 function equippedAffixes(p) {
   const acc = { atkPct: 0, critPct: 0, hpFlat: 0, mpFlat: 0, defPct: 0, lifesteal: 0, hitFlat: 0, fleeFlat: 0 };
@@ -6427,9 +6599,16 @@ function socketPickerHtml(p) {
   if (!G._socketFor) return '';
   const [uid, idx] = G._socketFor.split(':'), inst = findGearInstance(uid);
   if (!inst || inst.sockets?.[+idx]) return '';   // gone, or already filled
+  const slot = itemSlot(itemById[inst.itemId]) || itemById[inst.itemId]?.type;
   const list = socketCandidates(inst, +idx);
   return `<div class="ro-box socket-picker-row" style="grid-column:1/-1"><b>◎ ${esc(instName(inst))} · ${T('Socket', 'ui')} ${+idx + 1}</b>
-    ${list.length ? `<div class="socket-picks">${list.map(it => `<button class="btn" data-socket-put="${it.id}">${itemIconImg(it.id, 20)} ${esc(T(it.name, 'items'))} <small>×${itemQty(it.id)}</small></button>`).join('')}</div>
+    ${list.length ? `<div class="socket-picks">${list.map(it => {
+      const sum = it.type === 'card' ? cardSummaryText(cardsSystem.getCardDef(it.id)) : gemSummaryText(it, slot);
+      return `<button class="btn" data-socket-put="${it.id}" style="text-align:left;height:auto;padding:5px 8px;display:flex;flex-direction:column;align-items:flex-start">
+        <span style="display:flex;align-items:center;gap:4px">${itemIconImg(it.id, 20)} <b>${esc(T(it.name, 'items'))}</b> <small class="ro-muted">×${itemQty(it.id)}</small></span>
+        ${sum ? `<small style="color:var(--accent-alt);margin-top:2px;font-size:10px">${esc(sum)}</small>` : ''}
+      </button>`;
+    }).join('')}</div>
       <small class="ro-muted">${T('Cards are permanent once socketed.', 'ui')}</small>`
     : `<p class="ro-muted">${T('No gems or cards in your bag fit this socket.', 'ui')}</p>`}
     <button class="btn btn--ghost" data-socket-cancel="1">${T('Cancel', 'ui')}</button></div>`;
@@ -7307,7 +7486,7 @@ function panelBody(id) {
         return `<div class="bag-detail__head">${itemIconImg(dispItemId(e), 40)}<div><b class="rar" style="color:${rc.color}">${esc(instName(e))}</b>
             <small class="ro-muted"><span class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</span> · ${T(SLOT_LABEL[slot], 'ui')}${socketDotsHtml(e)}</small></div></div>
           <div class="bag-detail__stats">${itemMainStatsHtml(e)}</div>${requirement}
-          <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${gearComparisonHtml(e, p)}
+          <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${itemSocketsListHtml(e)}${gearComparisonHtml(e, p)}
           <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
             <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}<button class="btn btn--ghost" data-refine-route="1" title="${T('Marla refines gear and expands sockets', 'ui')}">🔨 ${T('Refine at Trader', 'ui')} →</button></div>`;
       }
@@ -7322,6 +7501,7 @@ function panelBody(id) {
       const pickHint = G._socketPick === it.id ? `<p class="ro-muted">👉 ${T('Now click an empty ○ socket on your gear.', 'ui')}</p>` : '';
       const sr = slotRarity(e);
       return `<div class="bag-detail__head">${itemIconImg(e.itemId, 40)}<div><b ${sr ? `class="rar" style="color:${sr.color}"` : ''}>${T(it.name, 'items')}</b><small class="ro-muted">${sr ? `<span class="rar" style="color:${sr.color}">◆${T(sr.name, 'ui')}</span> · ` : ''}×${e.qty} · ${T(cat(it), 'ui')}</small></div></div>
+        ${itemCardGemPropertiesHtml(it)}
         <p class="bag-detail__desc">${T(it.desc, 'items')}</p>${howTo ? `<p class="bag-howto">${howTo}</p>` : ''}${pickHint}<div class="bag-detail__actions">${act}${source}</div>`;
     };
     const hiddenN = p.inventory.filter(e => !matchesLoot(e, itemById[e.itemId], p.features.loot, p.classId)).length;
@@ -7457,12 +7637,15 @@ function panelBody(id) {
         const btn = locked
           ? `<span class="btn" style="opacity:.5;pointer-events:none">🔒 ${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}</span>`
           : `<button class="btn" data-buy="${inst?.uid || it.id}" ${p.zeny < price ? 'disabled' : ''}>${T('Buy', 'ui')} ${price}z</button>`;
-        if (!inst) return `<div class="gear-row ${locked ? 'locked' : ''}"><span class="gear-row__copy">${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${price}z${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small></span>${btn}</div>`;
+        if (!inst) {
+          const cardGemProp = (it.gem || it.type === 'card') ? `<br><small style="color:var(--accent-alt)">${esc(it.type === 'card' ? cardSummaryText(cardsSystem.getCardDef(it.id)) : gemSummaryText(it))}</small>` : '';
+          return `<div class="gear-row ${locked ? 'locked' : ''}"><span class="gear-row__copy">${itemIconImg(it.id)} <b>${T(it.name, 'items')}</b> — ${price}z${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${cardGemProp}</span>${btn}</div>`;
+        }
         const rc = itemRarity(inst), slot = itemSlot(it);
         return `<div class="gear-row ${locked ? 'locked' : ''}">
           <div class="gear-row__copy">${itemIconImg(it.id)} <b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${T(rc.name, 'ui')}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
             <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${requirement}
-            <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
+            <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${itemSocketsListHtml(inst)}${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
       };
       const baseIds = (G._shopItems || []).filter(itId => !itemById[itId]?.rankReq);
       const grouped = {};
