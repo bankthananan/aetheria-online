@@ -29,6 +29,9 @@ const glitchedTiles = (() => {
         } else if (x >= 30 && x <= 43 && y >= 12 && y <= 25) {
           // 14x14 Colosseum arena floor around B
           r += 'X';
+        } else if (x === 20 && y === 10) {
+          // Water tile for quantum glitchfish ripple
+          r += 'W';
         } else if ((x % 8 === 0 || x % 8 === 1) && (y % 6 === 0 || y % 6 === 1) && (x < 28 && y < 14)) {
           r += 'O'; // gentle thematic pillars in NW corner only
         } else if (x % 5 === 0 && y % 5 === 0) {

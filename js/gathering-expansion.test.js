@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   MAP_RESOURCE_NODES,
   ORE_CATALOG,
+  HERB_CATALOG,
   FISH_CATALOG,
   createGatheringSystem
 } from './systems/gathering.js';
@@ -26,15 +27,38 @@ test('gathering expansion adds nodes to astral rift, homestead, and subdungeons'
     'ft_glacial_chasm must have mineral vein');
   assert.ok(MAP_RESOURCE_NODES.dc_obsidian_foundry && MAP_RESOURCE_NODES.dc_obsidian_foundry.length >= 1,
     'dc_obsidian_foundry must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.as_sandstone_necropolis && MAP_RESOURCE_NODES.as_sandstone_necropolis.length >= 1,
+    'as_sandstone_necropolis must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.tm_sporeheart_hollow && MAP_RESOURCE_NODES.tm_sporeheart_hollow.length >= 1,
+    'tm_sporeheart_hollow must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.ts_thunderforge_peak && MAP_RESOURCE_NODES.ts_thunderforge_peak.length >= 1,
+    'ts_thunderforge_peak must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.sc_abyssal_crypts && MAP_RESOURCE_NODES.sc_abyssal_crypts.length >= 1,
+    'sc_abyssal_crypts must have mineral vein');
+  assert.ok(MAP_RESOURCE_NODES.source_core_subdungeon && MAP_RESOURCE_NODES.source_core_subdungeon.length >= 1,
+    'source_core_subdungeon must have mineral vein');
 
-  // Check new ores and fish exist in catalog and items
-  const newOres = ['voidstone_ore', 'pyrite_ore', 'silicon_crystal'];
+  // Check new ores, herbs, and fish exist in catalog and items
+  const newOres = ['voidstone_ore', 'pyrite_ore', 'silicon_crystal', 'muck_iron', 'cobalt_ore', 'darksteel_ore', 'matrix_ore'];
   for (const oreId of newOres) {
     assert.ok(ORE_CATALOG[oreId], `ORE_CATALOG must include ${oreId}`);
     assert.ok(CONTENT.items.some(i => i.id === oreId), `CONTENT.items must include ${oreId}`);
   }
 
-  const newFish = ['cosmic_jellyfish', 'void_ray', 'spring_bass'];
+  const newHerbs = [
+    'sunroot_thistle', 'dune_blossom', 'ghost_spore_shroom', 'glowshroom_bloom',
+    'storm_petal', 'charged_iris', 'shadow_orchid', 'void_polyp',
+    'nebula_bloom', 'binary_fungus', 'source_anomaly'
+  ];
+  for (const herbId of newHerbs) {
+    assert.ok(HERB_CATALOG[herbId], `HERB_CATALOG must include ${herbId}`);
+    assert.ok(CONTENT.items.some(i => i.id === herbId), `CONTENT.items must include ${herbId}`);
+  }
+
+  const newFish = [
+    'cosmic_jellyfish', 'void_ray', 'spring_bass',
+    'mirage_pike', 'bog_gar', 'thunder_eel', 'blind_cavefish', 'quantum_glitchfish'
+  ];
   for (const fishId of newFish) {
     assert.ok(FISH_CATALOG[fishId], `FISH_CATALOG must include ${fishId}`);
     assert.ok(CONTENT.items.some(i => i.id === fishId), `CONTENT.items must include ${fishId}`);
@@ -66,9 +90,29 @@ test('gathering expansion: non-precision mining and palettes/icons verification'
   assert.equal(ITEM_ICON.voidstone_ore, 'ore');
   assert.equal(ITEM_ICON.pyrite_ore, 'ore');
   assert.equal(ITEM_ICON.silicon_crystal, 'gem');
+  assert.equal(ITEM_ICON.muck_iron, 'ore');
+  assert.equal(ITEM_ICON.cobalt_ore, 'ore');
+  assert.equal(ITEM_ICON.darksteel_ore, 'ore');
+  assert.equal(ITEM_ICON.matrix_ore, 'gem');
+  assert.equal(ITEM_ICON.sunroot_thistle, 'gem_green');
+  assert.equal(ITEM_ICON.dune_blossom, 'gem_red');
+  assert.equal(ITEM_ICON.ghost_spore_shroom, 'gem');
+  assert.equal(ITEM_ICON.glowshroom_bloom, 'gem_blue');
+  assert.equal(ITEM_ICON.storm_petal, 'gem_blue');
+  assert.equal(ITEM_ICON.charged_iris, 'gem_blue');
+  assert.equal(ITEM_ICON.shadow_orchid, 'gem_blue');
+  assert.equal(ITEM_ICON.void_polyp, 'crawler_shell');
+  assert.equal(ITEM_ICON.nebula_bloom, 'gem_blue');
+  assert.equal(ITEM_ICON.binary_fungus, 'gem_green');
+  assert.equal(ITEM_ICON.source_anomaly, 'core');
   assert.equal(ITEM_ICON.cosmic_jellyfish, 'crawler_shell');
   assert.equal(ITEM_ICON.void_ray, 'crawler_shell');
   assert.equal(ITEM_ICON.spring_bass, 'crawler_shell');
+  assert.equal(ITEM_ICON.mirage_pike, 'crawler_shell');
+  assert.equal(ITEM_ICON.bog_gar, 'crawler_shell');
+  assert.equal(ITEM_ICON.thunder_eel, 'storm_core');
+  assert.equal(ITEM_ICON.blind_cavefish, 'crawler_shell');
+  assert.equal(ITEM_ICON.quantum_glitchfish, 'core');
 
   // Check homestead fishing ripple
   const fishSession = sys.startFishing('node_hs_pond_1', { mapId: 'player_homestead' });

@@ -101,6 +101,26 @@ test('gathering: authored node placements exist for all four major regions', () 
   assert.ok(dcResources.includes('magma_koi'), 'dragon_caldera has magma_koi ripple');
 });
 
+test('gathering: all 10 overworld zones have at least 2 configured resource nodes', () => {
+  const overworldZones = [
+    'whispering_woods',
+    'sunken_ruins',
+    'ashen_steppes',
+    'frostpeak_tundra',
+    'twilight_mire',
+    'dragon_caldera',
+    'tempest_spires',
+    'sunless_chasm',
+    'astral_rift',
+    'glitched_monolith',
+  ];
+  for (const zoneId of overworldZones) {
+    const nodes = MAP_RESOURCE_NODES[zoneId];
+    assert.ok(Array.isArray(nodes), `${zoneId} must have an array of resource nodes in MAP_RESOURCE_NODES`);
+    assert.ok(nodes.length >= 2, `${zoneId} must have at least 2 configured resource nodes (found ${nodes ? nodes.length : 0})`);
+  }
+});
+
 test('gathering: getNodesForMap returns node instances with runtime state', () => {
   const sys = createGatheringSystem();
   const nodes = sys.getNodesForMap('whispering_woods', { dayPhase: 0.6 });

@@ -49,6 +49,94 @@ export const HERB_CATALOG = {
     rarity: 'rare',
     desc: 'An ethereal nocturnal flower that unfurls its luminescent petals only beneath starry night skies.',
   },
+  sunroot_thistle: {
+    id: 'sunroot_thistle',
+    name: 'Sunroot Thistle',
+    type: NODE_TYPES.HERB,
+    icon: '🌾',
+    rarity: 'common',
+    desc: 'Hardy fibrous desert thistle thriving under intense sunlight.',
+  },
+  dune_blossom: {
+    id: 'dune_blossom',
+    name: 'Dune Blossom',
+    type: NODE_TYPES.HERB,
+    icon: '🌺',
+    rarity: 'rare',
+    desc: 'Vibrant crimson blossom opening only amidst shifting arid dunes.',
+  },
+  ghost_spore_shroom: {
+    id: 'ghost_spore_shroom',
+    name: 'Ghost Spore Shroom',
+    type: NODE_TYPES.HERB,
+    icon: '🍄',
+    rarity: 'uncommon',
+    desc: 'Bioluminescent fungus spreading pale spores in humid wetlands.',
+  },
+  glowshroom_bloom: {
+    id: 'glowshroom_bloom',
+    name: 'Glowshroom Bloom',
+    type: NODE_TYPES.HERB,
+    icon: '✨',
+    rarity: 'rare',
+    desc: 'Radiant fungal blossom prized for potent mystical extractions.',
+  },
+  storm_petal: {
+    id: 'storm_petal',
+    name: 'Storm Petal',
+    type: NODE_TYPES.HERB,
+    icon: '⚡',
+    rarity: 'uncommon',
+    desc: 'Static-charged botanical petal that crackles in high-altitude gales.',
+  },
+  charged_iris: {
+    id: 'charged_iris',
+    name: 'Charged Iris',
+    type: NODE_TYPES.HERB,
+    icon: '🌸',
+    rarity: 'rare',
+    desc: 'Electrified mountain bloom that conducts ambient lightning.',
+  },
+  shadow_orchid: {
+    id: 'shadow_orchid',
+    name: 'Shadow Orchid',
+    type: NODE_TYPES.HERB,
+    icon: '🥀',
+    rarity: 'rare',
+    desc: 'Nocturnal orchid blooming exclusively in subterranean chasms without sun.',
+  },
+  void_polyp: {
+    id: 'void_polyp',
+    name: 'Void Polyp',
+    type: NODE_TYPES.HERB,
+    icon: '🪸',
+    rarity: 'uncommon',
+    desc: 'Spongy alien growth flourishing on deep abyssal cavern walls.',
+  },
+  nebula_bloom: {
+    id: 'nebula_bloom',
+    name: 'Nebula Bloom',
+    type: NODE_TYPES.HERB,
+    icon: '🌌',
+    rarity: 'rare',
+    desc: 'Star-kissed flower radiating cosmic dust and starlight.',
+  },
+  binary_fungus: {
+    id: 'binary_fungus',
+    name: 'Binary Fungus',
+    type: NODE_TYPES.HERB,
+    icon: '🍄',
+    rarity: 'uncommon',
+    desc: 'Mathematical fungal cluster growing in alternating algorithmic patterns.',
+  },
+  source_anomaly: {
+    id: 'source_anomaly',
+    name: 'Source Anomaly',
+    type: NODE_TYPES.HERB,
+    icon: '💠',
+    rarity: 'rare',
+    desc: 'Luminescent botanical glitch phase-shifting through runtime space.',
+  },
 };
 
 export const ORE_CATALOG = {
@@ -99,6 +187,38 @@ export const ORE_CATALOG = {
     icon: '💎',
     rarity: 'uncommon',
     desc: 'Semi-conductive crystalline strata formed under intense cold pressure.',
+  },
+  muck_iron: {
+    id: 'muck_iron',
+    name: 'Muck Iron',
+    type: NODE_TYPES.ORE,
+    icon: '🪨',
+    rarity: 'uncommon',
+    desc: 'Peat-stained iron vein drawn from murky swamp bogs.',
+  },
+  cobalt_ore: {
+    id: 'cobalt_ore',
+    name: 'Cobalt Ore',
+    type: NODE_TYPES.ORE,
+    icon: '⛏️',
+    rarity: 'uncommon',
+    desc: 'Lustrous blue-gray ore charged by mountain thunder.',
+  },
+  darksteel_ore: {
+    id: 'darksteel_ore',
+    name: 'Darksteel Ore',
+    type: NODE_TYPES.ORE,
+    icon: '🌑',
+    rarity: 'rare',
+    desc: 'Subterranean dark alloy that drinks in all ambient light.',
+  },
+  matrix_ore: {
+    id: 'matrix_ore',
+    name: 'Transcendent Matrix Ore',
+    type: NODE_TYPES.ORE,
+    icon: '💎',
+    rarity: 'rare',
+    desc: 'Crystalline lattice vibrating with uncompiled source reality.',
   },
 };
 
@@ -175,6 +295,46 @@ export const FISH_CATALOG = {
     rarity: 'common',
     desc: 'Plump freshwater bass raised in homestead garden ponds.',
   },
+  mirage_pike: {
+    id: 'mirage_pike',
+    name: 'Mirage Pike',
+    type: 'fish',
+    icon: '🐟',
+    rarity: 'uncommon',
+    desc: 'Cunning predatory fish navigating shimmering desert oases.',
+  },
+  bog_gar: {
+    id: 'bog_gar',
+    name: 'Bog Gar',
+    type: 'fish',
+    icon: '🐊',
+    rarity: 'uncommon',
+    desc: 'Armored marsh gar lurking beneath stagnant swamp waters.',
+  },
+  thunder_eel: {
+    id: 'thunder_eel',
+    name: 'Thunder Eel',
+    type: 'fish',
+    icon: '⚡',
+    rarity: 'rare',
+    desc: 'Electric eel surging through cloud-veiled summit pools.',
+  },
+  blind_cavefish: {
+    id: 'blind_cavefish',
+    name: 'Blind Cavefish',
+    type: 'fish',
+    icon: '🐡',
+    rarity: 'rare',
+    desc: 'Pale sightless fish thriving in pitch-black chasm depths.',
+  },
+  quantum_glitchfish: {
+    id: 'quantum_glitchfish',
+    name: 'Quantum Glitchfish',
+    type: 'fish',
+    icon: '👾',
+    rarity: 'rare',
+    desc: 'Sub-atomic digital fish flickering between quantum states.',
+  },
 };
 
 export const STORM_WEATHER_IDS = ['verdant_rain', 'stellar_drift', 'cosmic_eclipse'];
@@ -182,9 +342,14 @@ export const STORM_WEATHER_IDS = ['verdant_rain', 'stellar_drift', 'cosmic_eclip
 export const MAP_BASE_FISH = {
   whispering_woods: 'glowing_trout',
   sunken_ruins: 'abyssal_bass',
+  ashen_steppes: 'mirage_pike',
   frostpeak_tundra: 'glacial_salmon',
+  twilight_mire: 'bog_gar',
   dragon_caldera: 'magma_koi',
+  tempest_spires: 'thunder_eel',
+  sunless_chasm: 'blind_cavefish',
   astral_rift: 'void_ray',
+  glitched_monolith: 'quantum_glitchfish',
   player_homestead: 'spring_bass',
 };
 
@@ -203,20 +368,45 @@ export const MAP_RESOURCE_NODES = {
     { id: 'node_sr_iron_1', mapId: 'sunken_ruins', type: NODE_TYPES.ORE, resourceId: 'iron_vein', x: 24, y: 12 },
     { id: 'node_sr_ripple_1', mapId: 'sunken_ruins', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'abyssal_bass', x: 5, y: 19 },
   ],
+  ashen_steppes: [
+    { id: 'node_as_pyrite_1', mapId: 'ashen_steppes', type: NODE_TYPES.ORE, resourceId: 'pyrite_ore', x: 14, y: 12 },
+    { id: 'node_as_thistle_1', mapId: 'ashen_steppes', type: NODE_TYPES.HERB, resourceId: 'sunroot_thistle', x: 28, y: 22 },
+    { id: 'node_as_ripple_1', mapId: 'ashen_steppes', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'mirage_pike', x: 20, y: 10 },
+  ],
   frostpeak_tundra: [
     { id: 'node_ft_lily_1', mapId: 'frostpeak_tundra', type: NODE_TYPES.HERB, resourceId: 'frost_lily', x: 12, y: 14 },
     { id: 'node_ft_iron_1', mapId: 'frostpeak_tundra', type: NODE_TYPES.ORE, resourceId: 'iron_vein', x: 32, y: 16 },
     { id: 'node_ft_ripple_1', mapId: 'frostpeak_tundra', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'glacial_salmon', x: 21, y: 7 },
+  ],
+  twilight_mire: [
+    { id: 'node_tm_iron_1', mapId: 'twilight_mire', type: NODE_TYPES.ORE, resourceId: 'muck_iron', x: 14, y: 12 },
+    { id: 'node_tm_spore_1', mapId: 'twilight_mire', type: NODE_TYPES.HERB, resourceId: 'ghost_spore_shroom', x: 28, y: 22 },
+    { id: 'node_tm_ripple_1', mapId: 'twilight_mire', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'bog_gar', x: 22, y: 12 },
   ],
   dragon_caldera: [
     { id: 'node_dc_ember_1', mapId: 'dragon_caldera', type: NODE_TYPES.HERB, resourceId: 'ember_blossom', x: 16, y: 14 },
     { id: 'node_dc_crystal_1', mapId: 'dragon_caldera', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 28, y: 18 },
     { id: 'node_dc_ripple_1', mapId: 'dragon_caldera', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'magma_koi', x: 22, y: 10 },
   ],
+  tempest_spires: [
+    { id: 'node_ts_cobalt_1', mapId: 'tempest_spires', type: NODE_TYPES.ORE, resourceId: 'cobalt_ore', x: 14, y: 12 },
+    { id: 'node_ts_petal_1', mapId: 'tempest_spires', type: NODE_TYPES.HERB, resourceId: 'storm_petal', x: 28, y: 22 },
+    { id: 'node_ts_ripple_1', mapId: 'tempest_spires', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'thunder_eel', x: 20, y: 10 },
+  ],
+  sunless_chasm: [
+    { id: 'node_sc_darksteel_1', mapId: 'sunless_chasm', type: NODE_TYPES.ORE, resourceId: 'darksteel_ore', x: 14, y: 12 },
+    { id: 'node_sc_orchid_1', mapId: 'sunless_chasm', type: NODE_TYPES.HERB, resourceId: 'shadow_orchid', x: 28, y: 22, nightOnly: true },
+    { id: 'node_sc_ripple_1', mapId: 'sunless_chasm', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'blind_cavefish', x: 24, y: 12 },
+  ],
   astral_rift: [
     { id: 'node_ar_voidstone_1', mapId: 'astral_rift', type: NODE_TYPES.ORE, resourceId: 'voidstone_ore', x: 12, y: 10 },
     { id: 'node_ar_ripple_1', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'cosmic_jellyfish', x: 26, y: 14 },
     { id: 'node_ar_ripple_2', mapId: 'astral_rift', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'void_ray', x: 34, y: 22 },
+  ],
+  glitched_monolith: [
+    { id: 'node_gm_matrix_1', mapId: 'glitched_monolith', type: NODE_TYPES.ORE, resourceId: 'matrix_ore', x: 14, y: 12 },
+    { id: 'node_gm_fungus_1', mapId: 'glitched_monolith', type: NODE_TYPES.HERB, resourceId: 'binary_fungus', x: 28, y: 22 },
+    { id: 'node_gm_ripple_1', mapId: 'glitched_monolith', type: NODE_TYPES.WATER_RIPPLE, resourceId: 'quantum_glitchfish', x: 20, y: 10 },
   ],
   player_homestead: [
     { id: 'node_hs_quarry_1', mapId: 'player_homestead', type: NODE_TYPES.ORE, resourceId: 'copper_ore', x: 18, y: 6 },
@@ -228,11 +418,26 @@ export const MAP_RESOURCE_NODES = {
   sr_drowned_catacombs: [
     { id: 'node_sr_pyrite_1', mapId: 'sr_drowned_catacombs', type: NODE_TYPES.ORE, resourceId: 'pyrite_ore', x: 12, y: 8 },
   ],
+  as_sandstone_necropolis: [
+    { id: 'node_as_necropolis_pyrite_1', mapId: 'as_sandstone_necropolis', type: NODE_TYPES.ORE, resourceId: 'pyrite_ore', x: 10, y: 8 },
+  ],
   ft_glacial_chasm: [
     { id: 'node_ft_silicon_1', mapId: 'ft_glacial_chasm', type: NODE_TYPES.ORE, resourceId: 'silicon_crystal', x: 10, y: 8 },
   ],
+  tm_sporeheart_hollow: [
+    { id: 'node_tm_hollow_iron_1', mapId: 'tm_sporeheart_hollow', type: NODE_TYPES.ORE, resourceId: 'muck_iron', x: 10, y: 8 },
+  ],
   dc_obsidian_foundry: [
     { id: 'node_dc_foundry_crystal_1', mapId: 'dc_obsidian_foundry', type: NODE_TYPES.ORE, resourceId: 'caldera_crystal', x: 12, y: 10 },
+  ],
+  ts_thunderforge_peak: [
+    { id: 'node_ts_peak_cobalt_1', mapId: 'ts_thunderforge_peak', type: NODE_TYPES.ORE, resourceId: 'cobalt_ore', x: 10, y: 8 },
+  ],
+  sc_abyssal_crypts: [
+    { id: 'node_sc_crypts_darksteel_1', mapId: 'sc_abyssal_crypts', type: NODE_TYPES.ORE, resourceId: 'darksteel_ore', x: 10, y: 8 },
+  ],
+  source_core_subdungeon: [
+    { id: 'node_sc_core_matrix_1', mapId: 'source_core_subdungeon', type: NODE_TYPES.ORE, resourceId: 'matrix_ore', x: 10, y: 8 },
   ],
 };
 
