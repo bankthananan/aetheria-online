@@ -126,13 +126,18 @@ export const as_sandstone_necropolis = {
   },
   width: 32,
   height: 22,
-  band: [18, 28],
+  band: [16, 28],
   tiles: createWingedDungeonTiles('#', 'D'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'ashen_steppes', toX: 38, toY: 29, label: 'Exit to Ashen Steppes' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'sand_scorpion', count: 5, depth: [0.0, 0.35], levelRange: [16, 19] },
+    { monsterId: 'hyena_marauder', count: 5, depth: [0.30, 0.70], levelRange: [19, 23] },
+    { monsterId: 'canyon_basilisk', count: 4, depth: [0.65, 0.95], levelRange: [23, 26] },
+    { monsterId: 'sandstone_colossus', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'sandstone_colossus',
@@ -185,13 +190,18 @@ export const tm_sporeheart_hollow = {
   },
   width: 32,
   height: 22,
-  band: [30, 40],
+  band: [28, 40],
   tiles: createWingedDungeonTiles('#', '.'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'twilight_mire', toX: 38, toY: 29, label: 'Exit to Twilight Mire' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'spore_creeper', count: 5, depth: [0.0, 0.35], levelRange: [28, 31] },
+    { monsterId: 'bog_witch', count: 5, depth: [0.30, 0.70], levelRange: [31, 35] },
+    { monsterId: 'marsh_hydra', count: 4, depth: [0.65, 0.95], levelRange: [35, 38] },
+    { monsterId: 'sporeheart_matron', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'sporeheart_matron',
@@ -244,13 +254,18 @@ export const ts_thunderforge_peak = {
   },
   width: 32,
   height: 22,
-  band: [52, 64],
+  band: [50, 64],
   tiles: createWingedDungeonTiles('M', 'F'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'tempest_spires', toX: 38, toY: 29, label: 'Exit to Tempest Spires' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'gale_harpy', count: 5, depth: [0.0, 0.35], levelRange: [50, 53] },
+    { monsterId: 'lightning_wisp', count: 5, depth: [0.30, 0.70], levelRange: [53, 57] },
+    { monsterId: 'skyward_valkyrie', count: 4, depth: [0.65, 0.95], levelRange: [57, 61] },
+    { monsterId: 'thunderforge_titan', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'thunderforge_titan',
@@ -271,13 +286,18 @@ export const sc_abyssal_crypts = {
   },
   width: 32,
   height: 22,
-  band: [62, 74],
+  band: [60, 74],
   tiles: createWingedDungeonTiles('#', 'F'),
   playerStart: { x: 2, y: 2 },
   portals: [
     { x: 1, y: 1, toMap: 'sunless_chasm', toX: 38, toY: 29, label: 'Exit to Sunless Chasm' },
   ],
-  spawns: [],
+  spawns: [
+    { monsterId: 'cave_stalker', count: 5, depth: [0.0, 0.35], levelRange: [60, 63] },
+    { monsterId: 'crystal_arachnid', count: 5, depth: [0.30, 0.70], levelRange: [63, 67] },
+    { monsterId: 'void_cultist', count: 4, depth: [0.65, 0.95], levelRange: [67, 71] },
+    { monsterId: 'abyssal_dreadlord', count: 1 },
+  ],
   npcs: [],
   boss: {
     monsterId: 'abyssal_dreadlord',

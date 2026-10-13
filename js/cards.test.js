@@ -10,16 +10,16 @@ import {
   createCardsSystem,
 } from './systems/cards.js';
 
-test('Cards Subsystem: CARD_CATALOG contains all 43 monsters and valid metadata', () => {
+test('Cards Subsystem: CARD_CATALOG contains all expanded monsters and valid metadata', () => {
   const catalogKeys = Object.keys(CARD_CATALOG);
-  assert.equal(catalogKeys.length, 43, 'Must define exactly 43 monster cards');
+  assert.ok(catalogKeys.length >= 60, `Must define at least 60 monster cards (found ${catalogKeys.length})`);
 
   const contentMonsterIds = new Set(CONTENT.monsters.map(m => m.id));
-  assert.ok(contentMonsterIds.size >= 43, 'CONTENT.monsters must have at least 43 monsters');
+  assert.ok(contentMonsterIds.size >= 60, 'CONTENT.monsters must have at least 60 monsters');
 
   const validRarities = new Set(['common', 'uncommon', 'rare', 'epic', 'legendary']);
   const validSlots = new Set(['weapon', 'armor', 'accessory', 'any']);
-  const validZones = new Set(['woods', 'ruins', 'tundra', 'caldera', 'rift', 'incursion']);
+  const validZones = new Set(['woods', 'ruins', 'steppes', 'tundra', 'mire', 'caldera', 'spires', 'chasm', 'rift', 'incursion', 'monolith']);
 
   for (const [cardId, cardDef] of Object.entries(CARD_CATALOG)) {
     assert.equal(cardId, `card_${cardDef.monsterId}`, `Card ID matches convention for ${cardDef.monsterId}`);

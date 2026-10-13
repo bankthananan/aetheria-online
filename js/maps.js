@@ -417,7 +417,12 @@ export const MAPS = {
     legend: LEGEND,
     tiles: steppesTiles,
     playerStart: { x: 2, y: 4 },
-    spawns: [],
+    spawns: [
+      { monsterId: 'sand_scorpion', count: 12, depth: [0.00, 0.40], levelRange: [14, 18] },
+      { monsterId: 'hyena_marauder', count: 10, depth: [0.30, 0.75], levelRange: [18, 23] },
+      { monsterId: 'canyon_basilisk', count: 6, depth: [0.65, 0.98], levelRange: [22, 26] },
+      { monsterId: 'karrion_goliath', count: 1 },
+    ],
     npcs: [],
     portals: [
       { x: 1, y: 4, toMap: 'whispering_woods', toX: 47, toY: 33, label: 'Back to Woods' },
@@ -473,7 +478,12 @@ export const MAPS = {
     legend: LEGEND,
     tiles: mireTiles,
     playerStart: { x: 2, y: 4 },
-    spawns: [],
+    spawns: [
+      { monsterId: 'spore_creeper', count: 12, depth: [0.00, 0.40], levelRange: [25, 30] },
+      { monsterId: 'bog_witch', count: 10, depth: [0.30, 0.75], levelRange: [30, 35] },
+      { monsterId: 'marsh_hydra', count: 6, depth: [0.65, 0.98], levelRange: [34, 38] },
+      { monsterId: 'bog_behemoth', count: 1 },
+    ],
     npcs: [],
     portals: [
       { x: 1, y: 4, toMap: 'sunken_ruins', toX: 47, toY: 33, label: 'Back to Sunken Ruins' },
@@ -531,7 +541,12 @@ export const MAPS = {
     legend: LEGEND,
     tiles: spiresTiles,
     playerStart: { x: 2, y: 4 },
-    spawns: [],
+    spawns: [
+      { monsterId: 'gale_harpy', count: 12, depth: [0.00, 0.40], levelRange: [48, 52] },
+      { monsterId: 'lightning_wisp', count: 10, depth: [0.30, 0.75], levelRange: [52, 56] },
+      { monsterId: 'skyward_valkyrie', count: 6, depth: [0.65, 0.98], levelRange: [56, 60] },
+      { monsterId: 'storm_roc', count: 1 },
+    ],
     npcs: [],
     portals: [
       { x: 1, y: 33, toMap: 'frostpeak_tundra', toX: 47, toY: 4, label: 'Back to Frostpeak Tundra' },
@@ -555,7 +570,12 @@ export const MAPS = {
     legend: LEGEND,
     tiles: chasmTiles,
     playerStart: { x: 2, y: 4 },
-    spawns: [],
+    spawns: [
+      { monsterId: 'cave_stalker', count: 12, depth: [0.00, 0.40], levelRange: [58, 62] },
+      { monsterId: 'crystal_arachnid', count: 10, depth: [0.30, 0.75], levelRange: [62, 66] },
+      { monsterId: 'void_cultist', count: 6, depth: [0.65, 0.98], levelRange: [66, 70] },
+      { monsterId: 'shadowfiend_lord', count: 1 },
+    ],
     npcs: [],
     portals: [
       { x: 1, y: 4, toMap: 'twilight_mire', toX: 47, toY: 33, label: 'Back to Twilight Mire' },

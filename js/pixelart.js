@@ -2483,6 +2483,28 @@ monster.siege_sapper = monster.goblin;
 monster.siege_archer = monster.bandit_archer || monster.goblin;
 monster.siege_warlord_boss = monster.orc_warlord || monster.ruin_golem;
 
+// Regional Expansion Monsters (Zones 3, 5, 7, 8)
+monster.sand_scorpion = monster.ruin_crawler;
+monster.hyena_marauder = monster.wolf;
+monster.canyon_basilisk = monster.ruin_crawler;
+monster.karrion_goliath = monster.ruin_golem;
+monster.sandstone_colossus = monster.ruin_golem;
+monster.spore_creeper = monster.mire_leech;
+monster.bog_witch = monster.shade;
+monster.marsh_hydra = monster.tundra_lurker;
+monster.bog_behemoth = monster.elderwood_treant;
+monster.sporeheart_matron = monster.elderwood_treant;
+monster.gale_harpy = monster.rime_harpy;
+monster.lightning_wisp = monster.blight_sprite;
+monster.skyward_valkyrie = monster.drowned_acolyte;
+monster.storm_roc = monster.ashwing;
+monster.thunderforge_titan = monster.ruin_golem;
+monster.cave_stalker = monster.shade;
+monster.crystal_arachnid = monster.ruin_crawler;
+monster.void_cultist = monster.drowned_acolyte;
+monster.shadowfiend_lord = monster.nullking;
+monster.abyssal_dreadlord = monster.nullking;
+
 
 // item id -> pixel icon key (see PX.item)
 export const ITEM_ICON = {
@@ -2541,6 +2563,14 @@ export const ITEM_ICON = {
   card_zenith_warden: 'card', card_void_wisp: 'card', card_star_reaver: 'card', card_astral_knight: 'card',
   card_rift_manta: 'card', card_constellation_mite: 'card', card_nullking: 'card', card_void_stalker: 'card',
   card_void_herald: 'card', card_voidmaw_sovereign: 'card', card_gilded_ravager: 'card',
+  card_sand_scorpion: 'card', card_hyena_marauder: 'card', card_canyon_basilisk: 'card',
+  card_karrion_goliath: 'card', card_sandstone_colossus: 'card',
+  card_spore_creeper: 'card', card_bog_witch: 'card', card_marsh_hydra: 'card',
+  card_bog_behemoth: 'card', card_sporeheart_matron: 'card',
+  card_gale_harpy: 'card', card_lightning_wisp: 'card', card_skyward_valkyrie: 'card',
+  card_storm_roc: 'card', card_thunderforge_titan: 'card',
+  card_cave_stalker: 'card', card_crystal_arachnid: 'card', card_void_cultist: 'card',
+  card_shadowfiend_lord: 'card', card_abyssal_dreadlord: 'card',
   // Companions & Taming Baits
   bait_sweet_gelatin: 'bait', bait_tender_jerky: 'bait', bait_luminous_nectar: 'bait',
   bait_glacial_salmon: 'bait', bait_magma_fruit: 'bait',

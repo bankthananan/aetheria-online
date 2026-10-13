@@ -41,7 +41,7 @@ console.log('Testing a) Content Invariants...');
 // ============================================================================
 // a) Content Invariants
 // ============================================================================
-assert.equal(Object.keys(CARD_CATALOG).length, 43, 'CARD_CATALOG contains all 43 monster cards');
+assert.ok(Object.keys(CARD_CATALOG).length >= 60, 'CARD_CATALOG contains all expanded monster cards');
 
 for (const [cardId, cardDef] of Object.entries(CARD_CATALOG)) {
   const item = CONTENT.items[cardId];

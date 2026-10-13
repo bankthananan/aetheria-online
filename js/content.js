@@ -334,6 +334,158 @@ export const CONTENT = {
       level: 95, hp: 4200, atk: 300, def: 100, exp: 35000, spriteColor: "#69f0ae", sizeTiles: 2, boss: true,
       drops: [{ itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
       behavior: "aggressive"
+    },
+
+    // ===== Ashen Steppes (Zone 3, band [14, 28]) =====
+    {
+      id: "sand_scorpion", element: "nature", name: "Sand Scorpion",
+      flavor: "A venomous arachnid skittering beneath the sun-baked sands.",
+      level: 16, hp: 260, atk: 36, def: 14, exp: 320, spriteColor: "#d4a373", sizeTiles: 1,
+      drops: [{ itemId: "beast_fang", chance: 0.6 }, { itemId: "minor_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "hyena_marauder", element: "nature", name: "Hyena Marauder",
+      flavor: "A vicious cackling scavenger roaming the canyon scrublands.",
+      level: 20, hp: 320, atk: 44, def: 15, exp: 480, spriteColor: "#b5835a", sizeTiles: 1,
+      drops: [{ itemId: "wolf_pelt", chance: 0.6 }, { itemId: "mid_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "canyon_basilisk", element: "nature", name: "Canyon Basilisk",
+      flavor: "A petrifying reptile that basks on sunstone outcroppings.",
+      level: 24, hp: 380, atk: 54, def: 22, exp: 670, spriteColor: "#8a9a5b", sizeTiles: 1,
+      drops: [{ itemId: "golem_core", chance: 0.1 }, { itemId: "mid_potion", chance: 0.25 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "karrion_goliath", element: "physical", name: "Karrion Goliath",
+      flavor: "A colossal beast of bone and petrified clay guarding the steppes.",
+      level: 28, hp: 1200, atk: 76, def: 30, exp: 3600, spriteColor: "#795548", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "mid_potion", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "sandstone_colossus", element: "physical", name: "Sandstone Colossus",
+      flavor: "An ancient tomb sentinel awakened from the desert necropolis.",
+      level: 27, hp: 1150, atk: 74, def: 29, exp: 3500, spriteColor: "#c2a649", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.5 }],
+      behavior: "aggressive"
+    },
+
+    // ===== Twilight Mire (Zone 5, band [25, 40]) =====
+    {
+      id: "spore_creeper", element: "nature", name: "Spore Creeper",
+      flavor: "A fungus-covered crawler that exhales choking toxic clouds.",
+      level: 28, hp: 440, atk: 65, def: 25, exp: 880, spriteColor: "#7cb342", sizeTiles: 1,
+      drops: [{ itemId: "shade_dust", chance: 0.5 }, { itemId: "mid_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "bog_witch", element: "void", name: "Bog Witch",
+      flavor: "A corrupted sorceress channeling dark curses through the twilight fog.",
+      level: 32, hp: 500, atk: 78, def: 28, exp: 1200, spriteColor: "#8e44ad", sizeTiles: 1,
+      attackRange: 4, projectileColor: "#8e44ad",
+      drops: [{ itemId: "shade_dust", chance: 0.6 }, { itemId: "mana_potion", chance: 0.3 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "marsh_hydra", element: "nature", name: "Marsh Hydra",
+      flavor: "A many-headed serpent lurking beneath murky bayou waters.",
+      level: 36, hp: 580, atk: 88, def: 32, exp: 1550, spriteColor: "#2e7d32", sizeTiles: 1,
+      drops: [{ itemId: "crawler_shell", chance: 0.6 }, { itemId: "greater_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "bog_behemoth", element: "nature", name: "Bog Behemoth",
+      flavor: "An ancient mire titan draped in moss and submerged dread.",
+      level: 40, hp: 1600, atk: 105, def: 42, exp: 7500, spriteColor: "#33691e", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "golem_core", chance: 1.0 }, { itemId: "greater_potion", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "sporeheart_matron", element: "nature", name: "Sporeheart Matron",
+      flavor: "The fungal mother brooding at the rotten center of the hollow.",
+      level: 39, hp: 1550, atk: 102, def: 40, exp: 7200, spriteColor: "#558b2f", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "blessed_ore", chance: 0.6 }, { itemId: "greater_potion", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+
+    // ===== Tempest Spires (Zone 7, band [48, 64]) =====
+    {
+      id: "gale_harpy", element: "lightning", name: "Gale Harpy",
+      flavor: "A razor-winged huntress diving on thermal vortexes.",
+      level: 50, hp: 720, atk: 130, def: 38, exp: 2600, spriteColor: "#81d4fa", sizeTiles: 1,
+      attackRange: 3.5, projectileColor: "#81d4fa",
+      drops: [{ itemId: "cloud_feather", chance: 0.6 }, { itemId: "greater_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "lightning_wisp", element: "lightning", name: "Lightning Wisp",
+      flavor: "An unstable sphere of ionized plasma crackling with high voltage.",
+      level: 54, hp: 780, atk: 142, def: 45, exp: 2950, spriteColor: "#fff59d", sizeTiles: 1,
+      attackRange: 4, projectileColor: "#fff59d",
+      drops: [{ itemId: "essence_lightning", chance: 0.6 }, { itemId: "mana_potion", chance: 0.3 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "skyward_valkyrie", element: "lightning", name: "Skyward Valkyrie",
+      flavor: "A fallen storm maiden armed with crackling lightning lances.",
+      level: 58, hp: 860, atk: 155, def: 50, exp: 3450, spriteColor: "#4fc3f7", sizeTiles: 1,
+      drops: [{ itemId: "blessed_ore", chance: 0.5 }, { itemId: "greater_potion", chance: 0.25 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "storm_roc", element: "lightning", name: "Storm Roc",
+      flavor: "A mythical thunderbird nesting atop the highest storm crags.",
+      level: 64, hp: 2450, atk: 162, def: 60, exp: 16000, spriteColor: "#29b6f6", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "storm_core", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "thunderforge_titan", element: "lightning", name: "Thunderforge Titan",
+      flavor: "A massive electrified construct guarding the celestial anvil.",
+      level: 63, hp: 2400, atk: 160, def: 58, exp: 15500, spriteColor: "#ffd54f", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "zenith_core", chance: 1.0 }, { itemId: "blessed_ore", chance: 0.8 }],
+      behavior: "aggressive"
+    },
+
+    // ===== Sunless Chasm (Zone 8, band [58, 74]) =====
+    {
+      id: "cave_stalker", element: "void", name: "Cave Stalker",
+      flavor: "An eyeless predator that navigates the abyssal depths by echolocation.",
+      level: 60, hp: 900, atk: 162, def: 48, exp: 3800, spriteColor: "#5c6bc0", sizeTiles: 1,
+      drops: [{ itemId: "shade_dust", chance: 0.6 }, { itemId: "greater_potion", chance: 0.2 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "crystal_arachnid", element: "void", name: "Crystal Arachnid",
+      flavor: "A crystalline spider spinning webs of resonating void glass.",
+      level: 64, hp: 980, atk: 172, def: 52, exp: 4300, sizeTiles: 1,
+      drops: [{ itemId: "crawler_shell", chance: 0.6 }, { itemId: "greater_potion", chance: 0.25 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "void_cultist", element: "void", name: "Void Cultist",
+      flavor: "A devout fanatic chanting forbidden hymns into the abyss.",
+      level: 68, hp: 960, atk: 182, def: 54, exp: 4800, spriteColor: "#7e57c2", sizeTiles: 1,
+      attackRange: 4, projectileColor: "#9c27b0",
+      drops: [{ itemId: "shade_dust", chance: 0.7 }, { itemId: "mana_potion", chance: 0.3 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "shadowfiend_lord", element: "void", name: "Shadowfiend Lord",
+      flavor: "A towering abyssal tyrant crowned in shadow and voidfire.",
+      level: 74, hp: 3200, atk: 190, def: 74, exp: 22000, spriteColor: "#311b92", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "void_shard", chance: 1.0 }, { itemId: "elixir", chance: 1.0 }],
+      behavior: "aggressive"
+    },
+    {
+      id: "abyssal_dreadlord", element: "void", name: "Abyssal Dreadlord",
+      flavor: "An ancient entity that sleeps in the deepest crypts of the chasm.",
+      level: 73, hp: 3100, atk: 188, def: 72, exp: 21000, spriteColor: "#4a148c", sizeTiles: 2, boss: true,
+      drops: [{ itemId: "star_iron", chance: 0.8 }, { itemId: "blessed_ore", chance: 0.8 }],
+      behavior: "aggressive"
     }
   ],
 

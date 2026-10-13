@@ -2283,6 +2283,70 @@ export const L10N = {
       "Gilded Ravager Card": "การ์ดจอมพิฆาตเกราะทอง",
       "A nomad tyrant crowned in stolen gold. In accessory, grants +15% Zeny gain, +5 LUK, and +10% Item Drop Rarity.": "ทรราชเร่ร่อนสวมมงกุฎทองคำ ติดตั้งในเครื่องประดับมอบเซนี +15%, LUK +5 และโอกาสได้ไอเทมหายาก +10%",
 
+      // Ashen Steppes Cards
+      "Sand Scorpion Card": "การ์ดแมงป่องทราย",
+      "A venomous hunter of the dunes. In weapon, grants +10 ATK and +3% Critical Chance.": "นักล่ามีพิษแห่งเนินทราย ติดตั้งในอาวุธมอบ ATK +10 และโอกาสคริติคอล +3%",
+
+      "Hyena Marauder Card": "การ์ดไฮยีน่าโจรปล้น",
+      "A cackling nomad scavenger. In accessory, grants +8 Flee and +3% Move Speed.": "สัตว์กินซากเร่ร่อนเสียงหัวเราะเยาะ ติดตั้งในเครื่องประดับมอบ Flee +8 และความเร็วเคลื่อนที่ +3%",
+
+      "Canyon Basilisk Card": "การ์ดบาซิลิสก์หุบผา",
+      "A petrifying reptilian sentinel. In armor, grants +14 DEF and +80 Max HP.": "ผู้พิทักษ์เลื้อยคลานที่ทำให้กลายเป็นหิน ติดตั้งในชุดเกราะมอบ DEF +14 และ Max HP +80",
+
+      "Karrion Goliath Card": "การ์ดแครเรียนโกไลแอธ",
+      "Colossal titan of petrified clay. In armor, grants +26 DEF, +180 Max HP, and -6% incoming Physical Damage.": "ไททันยักษ์แห่งดินเหนียวกลายเป็นหิน ติดตั้งในชุดเกราะมอบ DEF +26, Max HP +180 และลดความเสียหายกายภาพลง 6%",
+
+      "Sandstone Colossus Card": "การ์ดโคโลสซัสหินทราย",
+      "Ancient tomb guardian of the desert kings. In weapon, grants +22 ATK and +8% DEF Penetration.": "ผู้พิทักษ์สุสานโบราณของกษัตริย์ทะเลทราย ติดตั้งในอาวุธมอบ ATK +22 และเจาะเกราะ 8%",
+
+      // Twilight Mire Cards
+      "Spore Creeper Card": "การ์ดสปอร์ครีปเปอร์",
+      "A spore-ridden swamp crawler. In armor, grants +100 Max HP and +8% Nature Resistance.": "สัตว์เลื้อยคลานหนองน้ำเต็มไปด้วยสปอร์ ติดตั้งในชุดเกราะมอบ Max HP +100 และต้านทานธรรมชาติ +8%",
+
+      "Bog Witch Card": "การ์ดแม่มดบึงน้ำ",
+      "A corrupt sorceress chanting in the mists. In weapon, grants +16 MATK and +4% Cast Speed.": "แม่มดแปดเปื้อนสวดมนต์ในสายหมอก ติดตั้งในอาวุธมอบ MATK +16 และความเร็วร่ายเวท +4%",
+
+      "Marsh Hydra Card": "การ์ดไฮดราลุ่มน้ำ",
+      "A multi-headed terror of the bayou. In accessory, grants +4% HP Regen and +120 Max HP.": "อสูรหลายหัวแห่งบึงน้ำ ติดตั้งในเครื่องประดับมอบฟื้นฟู HP +4% และ Max HP +120",
+
+      "Bog Behemoth Card": "การ์ดเบฮีมอธบึงน้ำ",
+      "Primordial titan of the sunken bayou. In armor, grants +30 DEF, +220 Max HP, and +15% Nature Resistance.": "ไททันดึกดำบรรพ์แห่งลำธารจม ติดตั้งในชุดเกราะมอบ DEF +30, Max HP +220 และต้านทานธรรมชาติ +15%",
+
+      "Sporeheart Matron Card": "การ์ดแม่เฒ่าหัวใจสปอร์",
+      "Fungal broodmother brooding in the hollow. In accessory, grants +24 MATK and -8% Mana Cost.": "แม่พันธุ์เชื้อรากกไข่ในโพรง ติดตั้งในเครื่องประดับมอบ MATK +24 และลดการใช้มานา -8%",
+
+      // Tempest Spires Cards
+      "Gale Harpy Card": "การ์ดฮาร์ปี้พายุเกล",
+      "A razor-winged storm hunter. In weapon, grants +18 ATK and +5% Critical Chance.": "นักล่าพายุปีกคมกริบ ติดตั้งในอาวุธมอบ ATK +18 และโอกาสคริติคอล +5%",
+
+      "Lightning Wisp Card": "การ์ดดวงไฟสายฟ้า",
+      "A ball of pure ionized plasma. In accessory, grants +20 MATK and +6% Cast Speed.": "ลูกบอลพลาสมาไอออนบริสุทธิ์ ติดตั้งในเครื่องประดับมอบ MATK +20 และความเร็วร่ายเวท +6%",
+
+      "Skyward Valkyrie Card": "การ์ดวัลคิรีเวหา",
+      "A fallen maiden of the thunder peaks. In armor, grants +22 DEF and +10% Lightning Resistance.": "หญิงสาวผู้ร่วงหล่นแห่งยอดเขาสายฟ้า ติดตั้งในชุดเกราะมอบ DEF +22 และต้านทานสายฟ้า +10%",
+
+      "Storm Roc Card": "การ์ดวิหคสายฟ้าสตรอมร็อก",
+      "Apex predator of the storm-swept spires. In weapon, grants +28 ATK and +12% Lightning Damage.": "นักล่าสูงสุดแห่งยอดเขาสายฟ้าโหม ติดตั้งในอาวุธมอบ ATK +28 และความเสียหายสายฟ้า +12%",
+
+      "Thunderforge Titan Card": "การ์ดไททันทันเดอร์ฟอร์จ",
+      "Electrified guardian of the storm anvil. In armor, grants +34 DEF, +240 Max HP, and +15% Lightning Resistance.": "ผู้พิทักษ์สายฟ้าแห่งทั่งพายุ ติดตั้งในชุดเกราะมอบ DEF +34, Max HP +240 และต้านทานสายฟ้า +15%",
+
+      // Sunless Chasm Cards
+      "Cave Stalker Card": "การ์ดผู้ล่าในถ้ำ",
+      "An eyeless shadow of the underground depths. In accessory, grants +12 Flee and +4% Critical Chance.": "เงาไร้ตาแห่งความลึกใต้พิภพ ติดตั้งในเครื่องประดับมอบ Flee +12 และโอกาสคริติคอล +4%",
+
+      "Crystal Arachnid Card": "การ์ดแมงมุมคริสตัล",
+      "A crystal-carapace weaver of the abyss. In armor, grants +25 DEF and +140 Max HP.": "ผู้ถักทอเกราะคริสตัลแห่งห้วงลึก ติดตั้งในชุดเกราะมอบ DEF +25 และ Max HP +140",
+
+      "Void Cultist Card": "การ์ดสาวกความว่างเปล่า",
+      "A fanatic chanting dark hymns into the fissure. In weapon, grants +24 MATK and +8% Void Damage.": "ผู้คลั่งลัทธิสวดสรรเสริญรอยแยกมืด ติดตั้งในอาวุธมอบ MATK +24 และความเสียหายความว่างเปล่า +8%",
+
+      "Shadowfiend Lord Card": "การ์ดจอมปีศาจเงา",
+      "Abyssal overlord crowned in eternal darkness. In weapon, grants +32 ATK and +12% DEF Penetration.": "เจ้าแห่งห้วงลึกสวมมงกุฎความมืดนิรันดร์ ติดตั้งในอาวุธมอบ ATK +32 และเจาะเกราะ 12%",
+
+      "Abyssal Dreadlord Card": "การ์ดเดรดลอร์ดห้วงลึก",
+      "Ancient terror slumbering in the sunken crypts. In armor, grants +36 DEF, +260 Max HP, and +15% Void Resistance.": "ความสะพรึงโบราณหลับใหลในสุสานจม ติดตั้งในชุดเกราะมอบ DEF +36, Max HP +260 และต้านทานความว่างเปล่า +15%",
+
       // Taming Baits & Companions
       "Sweet Gelatin": "เยลลี่หวาน",
       "A sugary, bouncy gelatin favored by forest slimes.": "เยลลี่หวานหยุ่นรสหวานที่สไลม์แห่งป่าโปรดปราน",
@@ -2566,7 +2630,52 @@ export const L10N = {
       "Debug Drone": "โดรนดีบัก",
       "A hovering sentinel purging unexpected anomalies with crackling electric surges.": "ยามลาดตระเวนลอยตัวที่กำจัดความผิดปกติที่คาดไม่ถึงด้วยคลื่นกระแสไฟฟ้าที่ปะทุ",
       "System Architect": "สถาปนิกแห่งระบบ",
-      "The crowned root authority compiling the glitched foundation of this realm.": "ผู้กุมอำนาจระดับรูทผู้สวมมงกุฎ คอมไพล์รากฐานที่บกพร่องของอาณาจักรนี้"
+      "The crowned root authority compiling the glitched foundation of this realm.": "ผู้กุมอำนาจระดับรูทผู้สวมมงกุฎ คอมไพล์รากฐานที่บกพร่องของอาณาจักรนี้",
+
+      // Regional Monsters & Guardians (Zones 3, 5, 7, 8)
+      "Sand Scorpion": "แมงป่องทราย",
+      "A venomous arachnid skittering beneath the sun-baked sands.": "แมงป่องมีพิษร้ายที่คืบคลานอยู่ใต้ผืนทรายอันแผดเผา",
+      "Hyena Marauder": "ไฮยีนาจอมปล้น",
+      "A vicious cackling scavenger roaming the canyon scrublands.": "สัตว์กินซากจอมดุร้ายที่ส่งเสียงหัวเราะก้องไปทั่วหุบเขาและดงละเมาะ",
+      "Canyon Basilisk": "บาซิลิสก์หุบผาชัน",
+      "A petrifying reptile that basks on sunstone outcroppings.": "สัตว์เลื้อยคลานที่สาปให้กลายเป็นหิน ผึ่งแดดอยู่บนชะง่อนหินซันสโตน",
+      "Karrion Goliath": "โกไลแอธกระดูกซากสัตว์",
+      "A colossal beast of bone and petrified clay guarding the steppes.": "อสูรยักษ์แห่งกระดูกและดินเหนียวกลายเป็นหินผู้พิทักษ์ทุ่งหญ้าสเตปป์",
+      "Sandstone Colossus": "โคโลสซัสหินทราย",
+      "An ancient tomb sentinel awakened from the desert necropolis.": "ผู้พิทักษ์สุสานโบราณที่ตื่นขึ้นมาจากมหานครแห่งความตายกลางทะเลทราย",
+
+      "Spore Creeper": "ตัวเลื้อยสปอร์",
+      "A fungus-covered crawler that exhales choking toxic clouds.": "สัตว์เลื้อยคลานปกคลุมด้วยเชื้อราที่พ่นควันพิษทำให้สำลัก",
+      "Bog Witch": "แม่มดแห่งบึง",
+      "A corrupted sorceress channeling dark curses through the twilight fog.": "แม่มดผู้แปดเปื้อนที่ร่ายคำสาปมืดผ่านหมอกยามสนธยา",
+      "Marsh Hydra": "ไฮดราบึงน้ำขัง",
+      "A many-headed serpent lurking beneath murky bayou waters.": "อสรพิษหลายหัวที่ซุ่มอยู่ใต้น้ำขุ่นมัวของป่าชายเลน",
+      "Bog Behemoth": "เบฮีมอธแห่งบึง",
+      "An ancient mire titan draped in moss and submerged dread.": "ไททันแห่งบึงโบราณที่ปกคลุมด้วยมอสและความหวาดกลัวใต้น้ำ",
+      "Sporeheart Matron": "มารดาแกนสปอร์",
+      "The fungal mother brooding at the rotten center of the hollow.": "มารดาเห็ดราผู้ฟูมฟักอยู่ ณ ใจกลางอันเน่าเปื่อยของโพรงลึก",
+
+      "Gale Harpy": "ฮาร์ปีลมกรด",
+      "A razor-winged huntress diving on thermal vortexes.": "นักล่าปีกคมกริบที่ดิ่งลงมาจากวังวนลมร้อน",
+      "Lightning Wisp": "วิสป์สายฟ้า",
+      "An unstable sphere of ionized plasma crackling with high voltage.": "ทรงกลมพลาสมาไอออนิกที่ไม่เสถียร ส่งประกายไฟแรงสูงเปรี๊ยะๆ",
+      "Skyward Valkyrie": "วาลคิรีเหินเวหา",
+      "A fallen storm maiden armed with crackling lightning lances.": "หญิงสาวแห่งพายุผู้ร่วงหล่น ติดอาวุธด้วยหอกสายฟ้าที่เปล่งประกาย",
+      "Storm Roc": "วิหคร็อคพายุ",
+      "A mythical thunderbird nesting atop the highest storm crags.": "นกสายฟ้าในตำนานที่ทำรังอยู่บนยอดผาพายุอันสูงชัน",
+      "Thunderforge Titan": "ไททันเตาหลอมอสนี",
+      "A massive electrified construct guarding the celestial anvil.": "หุ่นจักรกลไฟฟ้าขนาดยักษ์ที่ปกป้องทั่งตีเหล็กแห่งสรวงสวรรค์",
+
+      "Cave Stalker": "นักล่าถ้ำลึก",
+      "An eyeless predator that navigates the abyssal depths by echolocation.": "นักล่าไร้ตาที่เคลื่อนที่ในก้นบึ้งด้วยคลื่นเสียงสะท้อน",
+      "Crystal Arachnid": "แมงมุมคริสตัล",
+      "A crystalline spider spinning webs of resonating void glass.": "แมงมุมคริสตัลที่ชักใยจากแก้ววอยด์ที่สั่นพ้องสะท้อนกังวาน",
+      "Void Cultist": "ลัทธิคลั่งวอยด์",
+      "A devout fanatic chanting forbidden hymns into the abyss.": "สาวกคลั่งผู้สวดมนต์บทสวดต้องห้ามสู่ห้วงเหวลึก",
+      "Shadowfiend Lord": "เจ้าแห่งเงาอสูร",
+      "A towering abyssal tyrant crowned in shadow and voidfire.": "ทรราชแห่งห้วงลึกร่างยักษ์ผู้สวมมงกุฎแห่งเงาและเปลวเพลิงวอยด์",
+      "Abyssal Dreadlord": "เดรดลอร์ดห้วงลึก",
+      "An ancient entity that sleeps in the deepest crypts of the chasm.": "ตัวตนบรรพกาลที่หลับใหลอยู่ในสุสานใต้ดินที่ลึกที่สุดของรอยแยก"
     },
     npcs: {
       "Marla the Trader": "มาร์ลา พ่อค้าหาบเร่",
