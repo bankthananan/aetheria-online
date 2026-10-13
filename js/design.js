@@ -165,6 +165,8 @@ export const DESIGN = {
                                // over-extending into high-level turf punishes evasion builds too
     autoHuntMaxLevelGap: 5,    // Hunt ignores monsters more than this many levels above the player;
                                // deliberate manual monster clicks can still challenge stronger prey
+    touringAggroLevelGap: 10,  // Aggressive monsters ignore players this many levels above them unless provoked
+    roadSafeFromAggro: true,   // Monsters ignore players standing on paved road tiles ('R') unless provoked
     hitBaseChance: 0.82,       // equal HIT/FLEE baseline; stats then bend the result within the caps
     hitStatScale: 0.012,       // hit chance gained/lost per point of HIT minus FLEE
     hitChanceMin: 0.15,        // evasion is powerful but never grants complete immunity

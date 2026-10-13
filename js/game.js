@@ -2437,9 +2437,9 @@ function damageMonster(m, dmg, isCrit, silent) {
     m.hp -= dmg;
   }
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
+  m.provoked = true;
   if (m._siegeMob) {
     m._siegeTarget = 'player';
-    m.provoked = true;
   }
   if (isCrit) {
     combatFx.addScreenShake(0.25);
@@ -3129,8 +3129,19 @@ function updateMonsters(dt) {
       if (p.hp <= 0) return;
     }
 
-    const aggro = m._siegeMob ? (m._siegeTarget === 'player' || m.provoked) : (m.def.behavior === 'aggressive' || m.provoked);
+    const isBoss = m.def.sizeTiles >= 2 || Boolean(m.def.boss);
+    const pr = Math.floor(p.y / TS), pc = Math.floor(p.x / TS);
+    const playerOnRoad = G.tiles?.[pr]?.[pc] === 'R';
+    const overlevelPeace = !isBoss && (p.level >= m.lvl + (TUNING.touringAggroLevelGap ?? 10));
+    const roadPeace = !isBoss && Boolean(TUNING.roadSafeFromAggro) && playerOnRoad;
+    const peacefulTouring = (overlevelPeace || roadPeace) && !m.provoked;
+
+    const baseAggro = m._siegeMob ? (m._siegeTarget === 'player' || m.provoked) : (m.def.behavior === 'aggressive' || m.provoked);
+    const aggro = baseAggro && !peacefulTouring;
     const aggroTiles = Math.max(R.aggroRangeTiles * weatherSystem.getAggroRangeMult(G?.mapId), (m.def.attackRange || 0) + 1);
+    if (m.provoked && d > aggroTiles * TS && now() - (m.lastCombatAt || 0) > 5000) {
+      m.provoked = false;
+    }
     if (aggro && d < aggroTiles * TS * (m.def.id === 'ruin_golem' ? 4 : 1)) {
       const range = (m.size / 2) + TS * (m.def.attackRange || 0.6);
       if (d > range) followMonsterPath(m, p.x, p.y, speed, dt);       // route around trees/walls
