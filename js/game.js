@@ -5738,6 +5738,13 @@ function renderMinimap() {
     mctx.fillRect((m.x / TS) * sx - size / 2, (m.y / TS) * sy - size / 2, size, size);
   }
   for (const n of G.npcs) { mctx.fillStyle = '#ffd76a'; mctx.fillRect(n.x * sx - 1, n.y * sy - 1, 3, 3); }
+  const curDayPhase = G.dayPhaseOverride ?? ((now() % TUNING.dayCycleMs) / TUNING.dayCycleMs);
+  const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
+  for (const nd of gatherNodes) {
+    if (nd.harvested || (nd.cooldownRemainingMs || 0) > 0) continue;
+    mctx.fillStyle = nd.type === 'herb' ? '#81c784' : nd.type === 'ore' ? '#ffb74d' : '#4fc3f7';
+    mctx.fillRect(nd.x * sx - 1, nd.y * sy - 1, 3, 3);
+  }
   if (G.taskGuide && !G.huntTargetId) {
     let goal = null;
     if (G.taskGuide.mapId === G.mapId && G.taskGuide.mode === 'npc') goal = G.npcs.find(n => n.id === G.taskGuide.npcId);
@@ -9381,9 +9388,18 @@ function handleClick(wx, wy) {
   const gatherNodes = gatheringSystem.getNodesForMap(G.mapId, { dayPhase: curDayPhase, weatherId: G.weather?.id });
   let clickedNode = null, bestDist = TS * 1.5;
   for (const nd of gatherNodes) {
-    const d = dist(wx, wy, nd.x, nd.y);
+    const nWorldX = nd.worldX ?? (nd.x < 100 ? nd.x * TS + TS / 2 : nd.x);
+    const nWorldY = nd.worldY ?? (nd.y < 100 ? nd.y * TS + TS / 2 : nd.y);
+    const dWorld = dist(wx, wy, nWorldX, nWorldY);
+    const dRaw = dist(wx, wy, nd.x, nd.y);
+    const d = Math.min(dWorld, dRaw);
     if (d < bestDist) {
-      clickedNode = nd;
+      const useWorld = dWorld <= dRaw;
+      clickedNode = {
+        ...nd,
+        targetX: useWorld ? nWorldX : nd.x,
+        targetY: useWorld ? nWorldY : nd.y,
+      };
       bestDist = d;
     }
   }
@@ -9393,18 +9409,22 @@ function handleClick(wx, wy) {
       toast(T('Resource node is depleted.', 'ui'), 'bad');
       return;
     }
+    const dPlayer = Math.min(
+      dist(G.player.x, G.player.y, clickedNode.targetX, clickedNode.targetY),
+      dist(G.player.x, G.player.y, clickedNode.x, clickedNode.y)
+    );
     if (clickedNode.type === 'water_ripple') {
-      if (dist(G.player.x, G.player.y, clickedNode.x, clickedNode.y) <= TS * 2.5) {
+      if (dPlayer <= TS * 2.5) {
         G.manualIntent = null;
         gatheringSystem.startFishing(clickedNode.id, { mapId: G.mapId, weatherId: G.weather?.id });
         toast(`🎣 ${T('Cast line! Press SPACE or tap to reel in!', 'ui')}`, 'good');
         AUDIO.playSfx('pickup');
-      } else if (pathTo(clickedNode.x, clickedNode.y)) {
-        G.manualIntent = { type: 'fishing_ripple', id: clickedNode.id, x: clickedNode.x, y: clickedNode.y };
+      } else if (pathTo(clickedNode.targetX, clickedNode.targetY)) {
+        G.manualIntent = { type: 'fishing_ripple', id: clickedNode.id, x: clickedNode.targetX, y: clickedNode.targetY };
       }
       return;
     } else {
-      if (dist(G.player.x, G.player.y, clickedNode.x, clickedNode.y) <= TS * 2.0) {
+      if (dPlayer <= TS * 2.0) {
         G.manualIntent = null;
         const res = gatheringSystem.harvestNode(clickedNode.id, { dayPhase: curDayPhase });
         if (res?.items) {
@@ -9414,8 +9434,8 @@ function handleClick(wx, wy) {
           toast(`🌿 ${T('Harvested', 'ui')} ${firstDef ? T(firstDef.name, 'items') : 'resource'}!`, 'good');
           AUDIO.playSfx('pickup');
         }
-      } else if (pathTo(clickedNode.x, clickedNode.y)) {
-        G.manualIntent = { type: 'gather_node', id: clickedNode.id, x: clickedNode.x, y: clickedNode.y };
+      } else if (pathTo(clickedNode.targetX, clickedNode.targetY)) {
+        G.manualIntent = { type: 'gather_node', id: clickedNode.id, x: clickedNode.targetX, y: clickedNode.targetY };
       }
       return;
     }

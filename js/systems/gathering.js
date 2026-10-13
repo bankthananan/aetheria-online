@@ -271,6 +271,8 @@ export function createGatheringSystem({ now = Date.now, rnd = Math.random } = {}
       }
 
       const state = getNodeState(node.id);
+      const worldX = node.x < 100 ? (node.x * 32 + 16) : node.x;
+      const worldY = node.y < 100 ? (node.y * 32 + 16) : node.y;
       results.push({
         id: node.id,
         mapId,
@@ -278,6 +280,10 @@ export function createGatheringSystem({ now = Date.now, rnd = Math.random } = {}
         resourceId: node.resourceId,
         x: node.x,
         y: node.y,
+        tileX: node.x,
+        tileY: node.y,
+        worldX,
+        worldY,
         nightOnly: !!node.nightOnly,
         harvested: !!state.harvested,
         cooldownRemainingMs: state.cooldownRemainingMs,

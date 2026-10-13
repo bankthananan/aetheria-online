@@ -33,8 +33,10 @@ export function createGatheringRenderer({ T = (s) => s } = {}) {
     for (const node of nodes) {
       if (!node) continue;
 
-      const sx = Math.round(node.x - cam.x);
-      const sy = Math.round(node.y - cam.y);
+      const wx = node.worldX ?? (node.x < 100 ? (node.x * 32 + 16) : node.x);
+      const wy = node.worldY ?? (node.y < 100 ? (node.y * 32 + 16) : node.y);
+      const sx = Math.round(wx - cam.x);
+      const sy = Math.round(wy - cam.y);
 
       // Offscreen culling: skip if outside viewport with 40px margin
       if (sx < -40 || sx > viewW + 40 || sy < -40 || sy > viewH + 40) {
