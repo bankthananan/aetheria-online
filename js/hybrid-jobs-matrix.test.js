@@ -3,14 +3,17 @@ import test from 'node:test';
 import { PROGRESSION } from './progression.js';
 import { COMBAT } from './combat.js';
 
-test('hybrid job matrix contains all 6 archetypes with valid skills', () => {
+test('hybrid job matrix contains all 9 archetypes with valid skills', () => {
   const expectedHybrids = [
     'spellblade',
     'vanguard',
     'arcane_archer',
     'dreadnought',
     'storm_templar',
-    'chi_tempest'
+    'chi_tempest',
+    'nightblade_phantom',
+    'eldritch_lord',
+    'quantum_technomancer'
   ];
 
   const allTiers = Object.values(PROGRESSION.tiers).flat();

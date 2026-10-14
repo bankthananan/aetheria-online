@@ -160,6 +160,36 @@ export const COMBAT = {
     { id: "colossal_onslaught", classId: "dreadnought", name: "Colossal Onslaught", flavor: "Unstoppable momentum shatters enemy defenses.", mpCost: 35, cooldownMs: 8000, type: "melee", power: 4.2, range: 2, radius: 0, hotkey: "7", effect: "sunder", finisher: true },
     { id: "tempest_sanctuary", classId: "storm_templar", name: "Tempest Sanctuary", flavor: "A holy storm ring heals allies while shocking transgressors.", mpCost: 40, cooldownMs: 14000, type: "aoe", power: 3.5, range: 0, radius: 3, hotkey: "7", effect: "stun", finisher: true },
     { id: "cyclone_lotus_kick", classId: "chi_tempest", name: "Cyclone Lotus Kick", flavor: "Whirling martial arts generate a vortex drawing enemies inward.", mpCost: 36, cooldownMs: 10000, type: "aoe", power: 3.9, range: 1, radius: 3, hotkey: "7", effect: "slow", finisher: true },
+
+    // --- shadow_blade (assassin) ---
+    { id: "shadow_strike", classId: "assassin", name: "Shadow Strike", flavor: "Rapid twin stab from the shadows.", mpCost: 7, cooldownMs: 2200, type: "melee", power: 1.4, range: 1, radius: 0, hotkey: "1", effect: null },
+    { id: "smoke_screen", classId: "assassin", name: "Smoke Screen", flavor: "Drop an evasive smoke bomb blinding foes.", mpCost: 12, cooldownMs: 12000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "2", effect: null },
+    { id: "poison_coat", classId: "assassin", name: "Poison Coat", flavor: "Coat your blades in virulent venom.", mpCost: 10, cooldownMs: 15000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "3", effect: "poison" },
+    { id: "assassinate", reqBranch: "nightstalker", classId: "assassin", name: "Assassinate", flavor: "Teleport behind the target for an execution strike.", mpCost: 18, cooldownMs: 6000, type: "melee", power: 2.8, range: 4, radius: 0, hotkey: "6", effect: null },
+    { id: "mirage_flurry", reqBranch: "phantom_blade", classId: "assassin", name: "Mirage Flurry", flavor: "Summon shadow mirages that mirror your flurry.", mpCost: 16, cooldownMs: 5000, type: "melee", power: 2.55, range: 1, radius: 0, hotkey: "6", effect: null },
+    { id: "death_mark", classId: "assassin", name: "Death Mark", flavor: "Inscribe an execution seal on the marked victim.", mpCost: 24, cooldownMs: 7000, type: "melee", power: 3.2, range: 1, radius: 0, hotkey: "4", effect: "sunder", finisher: true },
+    { id: "dance_of_shadows", classId: "assassin", name: "Dance of Shadows", flavor: "Omni-slash through all targets within shadow range.", mpCost: 32, cooldownMs: 11000, type: "aoe", power: 2.7, range: 1, radius: 3, hotkey: "5", effect: null, finisher: true },
+    { id: "eclipse_strike", classId: "nightblade_phantom", name: "Eclipse Strike", flavor: "Cloak the battlefield in darkness and unleash piercing void waves.", mpCost: 40, cooldownMs: 12000, type: "aoe", power: 4.0, range: 4, radius: 2, hotkey: "7", effect: "poison", finisher: true },
+
+    // --- soul_binder (necromancer) ---
+    { id: "soul_rend", classId: "necromancer", name: "Soul Rend", flavor: "Tear life-force from the foe into a soul fragment.", mpCost: 8, cooldownMs: 2000, type: "ranged", power: 1.8, range: 6, radius: 0, hotkey: "1", effect: null },
+    { id: "bone_armor", classId: "necromancer", name: "Bone Armor", flavor: "Encase yourself in whirling bone shards.", mpCost: 14, cooldownMs: 14000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "2", effect: null },
+    { id: "corpse_explosion", classId: "necromancer", name: "Corpse Explosion", flavor: "Detonate residual soul energy into a violent blast.", mpCost: 18, cooldownMs: 4000, type: "aoe", power: 2.2, range: 5, radius: 2, hotkey: "3", effect: null },
+    { id: "raise_skeletal_vanguard", reqBranch: "dread_summoner", classId: "necromancer", name: "Raise Skeletal Vanguard", flavor: "Summon an armored skeletal warrior to guard the master.", mpCost: 22, cooldownMs: 20000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "6", effect: null },
+    { id: "plague_curse", reqBranch: "plague_harbinger", classId: "necromancer", name: "Plague Curse", flavor: "Afflict the target with spreading necrosis and decay.", mpCost: 18, cooldownMs: 5000, type: "ranged", power: 2.2, range: 6, radius: 0, hotkey: "6", effect: "poison" },
+    { id: "death_nova", classId: "necromancer", name: "Death Nova", flavor: "Release a catastrophic radial wave of soul energy.", mpCost: 32, cooldownMs: 12000, type: "aoe", power: 2.9, range: 4, radius: 3, hotkey: "4", effect: "poison", finisher: true },
+    { id: "grim_harvest", classId: "necromancer", name: "Grim Harvest", flavor: "Wide sweeping scythe strike harvesting vital essence.", mpCost: 26, cooldownMs: 7000, type: "melee", power: 3.1, range: 2, radius: 0, hotkey: "5", effect: "sunder", finisher: true },
+    { id: "apocalypse_harvest", classId: "eldritch_lord", name: "Apocalypse Harvest", flavor: "Open the Nether Gate to summon a storm of screaming wraiths.", mpCost: 42, cooldownMs: 14000, type: "aoe", power: 4.2, range: 5, radius: 3, hotkey: "7", effect: "slow", finisher: true },
+
+    // --- artificer (artificer) ---
+    { id: "wrench_strike", classId: "artificer", name: "Wrench Strike", flavor: "Crushing strike with a heavy magitek wrench.", mpCost: 6, cooldownMs: 2000, type: "melee", power: 1.6, range: 1, radius: 0, hotkey: "1", effect: "stun" },
+    { id: "acid_flask", classId: "artificer", name: "Acid Flask", flavor: "Hurl a corrosive shatter-flask melting enemy armor.", mpCost: 12, cooldownMs: 4500, type: "ranged", power: 1.7, range: 6, radius: 0, hotkey: "2", effect: "sunder" },
+    { id: "deploy_sentry", classId: "artificer", name: "Deploy Sentry", flavor: "Erect an automated clockwork sentry turret.", mpCost: 16, cooldownMs: 12000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "3", effect: null },
+    { id: "tesla_coil", reqBranch: "clockwork_engineer", classId: "artificer", name: "Tesla Coil", flavor: "Deploy a high-voltage tesla pylon discharging into nearby foes.", mpCost: 20, cooldownMs: 14000, type: "aoe", power: 2.1, range: 4, radius: 2, hotkey: "6", effect: "stun" },
+    { id: "pyro_bomb", reqBranch: "mad_alchemist", classId: "artificer", name: "Pyro Bomb", flavor: "Launch a phosphorus grenade creating a persistent blaze pool.", mpCost: 18, cooldownMs: 6000, type: "aoe", power: 2.2, range: 5, radius: 2, hotkey: "6", effect: "burn" },
+    { id: "siege_cannon", classId: "artificer", name: "Siege Cannon", flavor: "Charge and fire a devastating rail beam.", mpCost: 32, cooldownMs: 10000, type: "ranged", power: 3.3, range: 8, radius: 0, hotkey: "4", effect: "sunder", finisher: true },
+    { id: "philosopher_infusion", classId: "artificer", name: "Philosopher's Infusion", flavor: "Consume supreme alchemical elixir, surging with power.", mpCost: 26, cooldownMs: 16000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "5", effect: null, finisher: true },
+    { id: "orbital_strike_beacon", classId: "quantum_technomancer", name: "Orbital Strike Beacon", flavor: "Designate ground zero with a quantum beacon for kinetic bombardment.", mpCost: 44, cooldownMs: 14000, type: "aoe", power: 4.3, range: 6, radius: 3, hotkey: "7", effect: "burn", finisher: true },
   ],
 
   statusEffects: {

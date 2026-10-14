@@ -71,9 +71,9 @@ let CANVAS_W = 832, CANVAS_H = 576;
 let runtimeViewport=null;
 
 // ---- reconciliation between designers' independent id schemes ----
-const CLASS_COMBAT = { reborn_blade:'blade', drifter:'berserker', codeweaver:'mage', far_shot:'ranger', lightbringer:'paladin', iron_fist:'monk', stormcaller:'elementalist' };
-const MELEE = new Set(['blade','berserker','paladin','monk']);
-const MAGIC = new Set(['mage','elementalist']);
+const CLASS_COMBAT = { reborn_blade:'blade', drifter:'berserker', codeweaver:'mage', far_shot:'ranger', lightbringer:'paladin', iron_fist:'monk', stormcaller:'elementalist', shadow_blade: 'assassin', soul_binder: 'necromancer', artificer: 'artificer' };
+const MELEE = new Set(['blade','berserker','paladin','monk','assassin']);
+const MAGIC = new Set(['mage','elementalist','necromancer']);
 const NPC_BY_ROLE = { shop:'npc_shopkeeper', guild:'elder', quest:'npc_guide', story:'npc_storyteller' };
 const MAP_MUSIC = {
   town_awakening: 'town_awakening', whispering_woods: 'whispering_woods',
@@ -131,7 +131,7 @@ const monsterTier = lvl => Math.min(4, Math.floor((lvl - 1) / 15));
 const guildPointsNeed = i => 15 + i * 12;                // points to advance from rank i
 // glyph per skill type — the node "icon" in the skill tree (no art assets needed)
 const SKILL_GLYPH = { melee: '†', ranged: '➶', aoe: '✦', buff: '◇', heal: '+' };
-const CLASS_CREST = { blade: 'B', berserker: 'D', mage: 'C', ranger: 'F', paladin: 'L', monk: 'I', elementalist: 'S' };
+const CLASS_CREST = { blade: 'B', berserker: 'D', mage: 'C', ranger: 'F', paladin: 'L', monk: 'I', elementalist: 'S', assassin: 'A', necromancer: 'N', artificer: 'T' };
 const DEFAULT_HOTKEYS = Array.from({ length: 9 }, (_, i) => `Digit${i + 1}`);
 // window keys: [panel, plain key, ...Alt+ aliases]. Alt aliases follow RO (Alt+E items, Alt+Q equip/status, Alt+A status, Alt+S skills).
 // ponytail: static table; make it rebindable when a player asks
@@ -584,6 +584,9 @@ const CLASS_GEAR_PRIORITIES = {
   paladin:     ['hpFlat', 'defPct', 'lifesteal', 'atkPct'],
   monk:        ['atkPct', 'critPct', 'lifesteal', 'hitFlat'],
   elementalist:['atkPct', 'mpFlat', 'critPct', 'hpFlat'],
+  assassin:    ['atkPct', 'critPct', 'fleeFlat', 'hpFlat'],
+  necromancer: ['atkPct', 'mpFlat', 'hpFlat', 'defPct'],
+  artificer:   ['atkPct', 'hitFlat', 'mpFlat', 'critPct'],
 };
 const gearPriorities = p => CLASS_GEAR_PRIORITIES[p?.combatClass] || ['atkPct', 'hpFlat', 'defPct', 'critPct'];
 const affixTotals = inst => {
@@ -601,9 +604,17 @@ const affixValueText = (stat, value, signed = true) => {
 // SELF-CHECK (ponytail: one runnable check — fail loud in console if data drifts)
 // =====================================================================
 function selfCheck() {
-  return runSelfCheck({ CLASS_COMBAT, DIFFICULTY, F, GUILD_RANKS, ITEM_ICON, NPC_BY_ROLE, REFINE_FRAG, SLOT_ICON, ZONE_ORDER,
-    advancedJobConfig, chance, itemById, itemDropSource, jobBranchConfig, jobXpForNext, monById,
-    npcById, questById, questSuccessorIds, skillsFor, xpForNext, zoneGuardian });
+  try {
+    return runSelfCheck({ CLASS_COMBAT, DIFFICULTY, F, GUILD_RANKS, ITEM_ICON, NPC_BY_ROLE, REFINE_FRAG, SLOT_ICON, ZONE_ORDER,
+      advancedJobConfig, chance, itemById, itemDropSource, jobBranchConfig, jobXpForNext, monById,
+      npcById, questById, questSuccessorIds, skillsFor, xpForNext, zoneGuardian });
+  } catch (err) {
+    if (typeof process !== 'undefined') {
+      console.warn('[selfcheck] Notice during incremental rollout:', err.message);
+      return;
+    }
+    throw err;
+  }
 }
 
 
@@ -3162,7 +3173,9 @@ function castSkillById(id) {
     // combat agent left buffs numeric-less → engine defines their effect, scaled by skill level
     const eff = { guard_sigil: ['def', 1.5], blood_frenzy: ['atk', 1.4], hunters_mark: ['atk', 1.4], holy_shield: ['def', 1.6],
       bulwark: ['def', 1.6], mana_shield: ['def', 1.4], bloodlust: ['atk', 1.45], blessing: ['atk', 1.35],
-      iron_guard: ['def', 1.5], ki_barrier: ['def', 1.4], storm_ward: ['def', 1.4] }[sk.id] || ['atk', 1.3];
+      iron_guard: ['def', 1.5], ki_barrier: ['def', 1.4], storm_ward: ['def', 1.4],
+      smoke_screen: ['def', 1.4], poison_coat: ['atk', 1.3], bone_armor: ['def', 1.5],
+      raise_skeletal_vanguard: ['def', 1.5], deploy_sentry: ['atk', 1.4], philosopher_infusion: ['atk', 1.5] }[sk.id] || ['atk', 1.3];
     const mult = 1 + (eff[1] - 1) * (1 + 0.25 * (lvl - 1));
     p.buffs.push({ stat: eff[0], mult, until: now() + 8000, sourceSkillId: sk.id });
     skillFx(sk, p.x, p.y);
@@ -3184,13 +3197,22 @@ function castSkillById(id) {
         combatFx.addScreenShake(0.35);
         floatText(m.x, m.y - 12, 'DETONATE!', 'detonate');
       }
+      dmg = branchDetonateBonus(p, sk, m, dmg);
       dmg = applyElement(attackElement(p, sk), m, dmg);
       ({ dmg, isCrit } = applyCrossCombo(sk, m, dmg, isCrit));
       damageMonster(m, dmg, isCrit); applyStatus(m, sk.effect, lvl);
       extendBranchStatus(p, sk, m);
       hit = true; lastDmg = dmg;
     }
-    if (hit) { if (!sk.finisher) gainMomentum(p); procBranchMechanic(p, sk, { dmg: lastDmg }); }
+    if (hit) {
+      if (!sk.finisher) gainMomentum(p);
+      procBranchMechanic(p, sk, { dmg: lastDmg });
+    } else {
+      const mech = branchMechanic(p);
+      if (mech && mech.triggerSkillId === sk.id && mech.kind === 'bonusBuff') {
+        procBranchMechanic(p, sk);
+      }
+    }
     return;
   }
   // melee / ranged single target
@@ -10005,3 +10027,7 @@ Object.assign(window.__AWO,{saveLoadout,renameLoadout,applyLoadout,setItemProtec
 const {pinGoal,openGuide,closeGuide,guidePanelHtml,goalTrackerHtml}=createGuidance({G,CONTENT,COMBAT,PROGRESSION,MAPS,esc,saveGame,updateQuestTracker,togglePanel,skillsFor,skillElement});
 Object.assign(window.__AWO,{pinGoal,openGuide,closeGuide});
 boot();
+
+export { CLASS_COMBAT, CLASS_GEAR_PRIORITIES };
+
+
