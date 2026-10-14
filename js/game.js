@@ -2655,6 +2655,10 @@ function damageMonster(m, dmg, isCrit, silent) {
     floatText: (x, y, t, col) => floatText(x, y, t, col || 'crit'),
     spawnZap: (src, dst) => spawnBolt(src.x, src.y, dst.x, dst.y, '#fef08a', '#ffffff', true),
   });
+  // Poison Coat active buff on-hit poison application
+  if (p?.buffs?.some(b => b.sourceSkillId === 'poison_coat' && b.until > now())) {
+    applyStatus(m, 'poison', skillLevel(p, 'poison_coat') || 1);
+  }
   // Card on-hit procs (strict ZERO screen shake)
   if (p?.equip) {
     for (const slot of Object.keys(p.equip)) {
@@ -3181,7 +3185,8 @@ function castSkillById(id) {
     skillFx(sk, p.x, p.y);
     // Blessing also imbues the weapon with holy — the ONLY way a Paladin deals holy (1.5× vs void).
     if (sk.id === 'blessing') { p.imbue = { element: 'holy', until: now() + TUNING.holyImbueMs }; spawnRing(p.x, p.y, TS, '#ffe9a6'); }
-    toast(sk.id === 'blessing' ? `${sk.name} — ✨ ${T('weapon imbued with Holy', 'ui')}!` : `${sk.name} Lv${lvl} active!`, 'good');
+    else if (sk.id === 'poison_coat') { p.imbue = { element: 'nature', until: now() + 12000 }; spawnRing(p.x, p.y, TS, '#2ecc71'); }
+    toast(sk.id === 'blessing' ? `${sk.name} — ✨ ${T('weapon imbued with Holy', 'ui')}!` : sk.id === 'poison_coat' ? `${sk.name} — ☠️ ${T('blades coated in Poison', 'ui')}!` : `${sk.name} Lv${lvl} active!`, 'good');
     procBranchMechanic(p, sk);
     return;
   }

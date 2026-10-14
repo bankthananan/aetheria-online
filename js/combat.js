@@ -188,7 +188,7 @@ export const COMBAT = {
     { id: "tesla_coil", reqBranch: "clockwork_engineer", classId: "artificer", name: "Tesla Coil", flavor: "Deploy a high-voltage tesla pylon discharging into nearby foes.", mpCost: 20, cooldownMs: 14000, type: "aoe", power: 2.1, range: 4, radius: 2, hotkey: "6", effect: "stun" },
     { id: "pyro_bomb", reqBranch: "mad_alchemist", classId: "artificer", name: "Pyro Bomb", flavor: "Launch a phosphorus grenade creating a persistent blaze pool.", mpCost: 18, cooldownMs: 6000, type: "aoe", power: 2.2, range: 5, radius: 2, hotkey: "6", effect: "burn" },
     { id: "siege_cannon", classId: "artificer", name: "Siege Cannon", flavor: "Charge and fire a devastating rail beam.", mpCost: 32, cooldownMs: 10000, type: "ranged", power: 3.3, range: 8, radius: 0, hotkey: "4", effect: "sunder", finisher: true },
-    { id: "philosopher_infusion", classId: "artificer", name: "Philosopher's Infusion", flavor: "Consume supreme alchemical elixir, surging with power.", mpCost: 26, cooldownMs: 16000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "5", effect: null, finisher: true },
+    { id: "philosopher_infusion", classId: "artificer", name: "Philosopher's Infusion", flavor: "Consume supreme alchemical elixir, surging with power.", mpCost: 26, cooldownMs: 16000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "5", effect: null, finisher: false },
     { id: "orbital_strike_beacon", classId: "quantum_technomancer", name: "Orbital Strike Beacon", flavor: "Designate ground zero with a quantum beacon for kinetic bombardment.", mpCost: 44, cooldownMs: 14000, type: "aoe", power: 4.3, range: 6, radius: 3, hotkey: "7", effect: "burn", finisher: true },
   ],
 

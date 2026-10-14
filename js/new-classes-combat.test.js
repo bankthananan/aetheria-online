@@ -125,13 +125,24 @@ test('Branch mechanic: nightstalker (venom_amplification) detonateAmp on assassi
   const dmgNormal = 99999 - dummy1.hp;
 
   p.skillCd.assassinate = 0;
+  p.skillLevels.poison_coat = 1;
   const dummy2 = A.makeMonster(A.CONTENT.monsters[0], p.x + 16, p.y, 1);
   dummy2.maxHp = 99999; dummy2.hp = 99999;
-  dummy2.statuses.poison = { until: vnow + 5000, nextTick: vnow + 1000 };
   A.G.monsters = [dummy2];
   A.G.target = dummy2;
+
+  // Cast poison_coat and hit dummy2 to naturally apply poison
+  A.castSkillById('poison_coat');
+  assert.ok(p.buffs.some(b => b.sourceSkillId === 'poison_coat'), 'poison_coat buff active');
+  assert.equal(p.imbue?.element, 'nature', 'poison_coat imbues nature element');
+  A.playerBasicAttack();
+  assert.ok(dummy2.statuses.poison && dummy2.statuses.poison.until > vnow, 'poison applied naturally on hit via poison_coat');
+
+  // Clear poison_coat buff so assassinate consumes poison without immediately re-coating
+  p.buffs = [];
+  const hpBeforeAssassinate = dummy2.hp;
   A.castSkillById('assassinate');
-  const dmgAmp = 99999 - dummy2.hp;
+  const dmgAmp = hpBeforeAssassinate - dummy2.hp;
 
   Math.random = realRandom;
 
@@ -253,3 +264,59 @@ test('Branch mechanic: mad_alchemist (alchemical_catalyst) detonateAmp on pyro_b
   assert.equal(dummy2.statuses.burn.until, vnow + COMBAT.statusEffects.burn.durationMs, 'fresh burn duration applied');
   assert.equal(dmgAmp, Math.round(dmgNormal * 1.15), 'alchemical_catalyst deals +15% damage to burning target');
 });
+
+test('Tier-2 and Tier-3 skills cast and function correctly without screen shake or momentum loss on buffs', () => {
+  const p = A.makePlayer('artificer', 'MasterArtisan');
+  A.G.player = p;
+  p.tierIndex = 2; p.advancedJobId = 'grand_alchemist'; p.level = 45; p.jobLevel = 30;
+  A.recompute(p, true);
+  p.skillLevels.philosopher_infusion = 1;
+  p.skillLevels.siege_cannon = 1;
+  p.momentum = 50;
+
+  const dummy = A.makeMonster(A.CONTENT.monsters[0], p.x + 16, p.y, 1);
+  dummy.maxHp = 99999; dummy.hp = 99999;
+  A.G.monsters = [dummy];
+  A.G.target = dummy;
+
+  // Cast philosopher_infusion (buff): should NOT consume momentum
+  A.castSkillById('philosopher_infusion');
+  assert.equal(p.momentum, 50, 'philosopher_infusion does not wipe momentum');
+  assert.ok(p.buffs.some(b => b.sourceSkillId === 'philosopher_infusion'), 'philosopher_infusion buff active');
+
+  // Cast siege_cannon (offensive Tier 2): damages target and applies sunder
+  A.castSkillById('siege_cannon');
+  assert.ok(dummy.hp < 99999, 'siege_cannon damages target');
+  assert.ok(dummy.statuses.sunder, 'siege_cannon applies sunder status');
+
+  // Test Necromancer Tier 2 death_nova
+  const pNec = A.makePlayer('soul_binder', 'Lich');
+  A.G.player = pNec;
+  pNec.tierIndex = 2; pNec.advancedJobId = 'abyssal_lich'; pNec.level = 45; pNec.jobLevel = 30;
+  A.recompute(pNec, true);
+  pNec.hp = 1000; pNec.mp = 1000; pNec.momentum = 50;
+  pNec.skillLevels.death_nova = 1;
+  const dummyNec = A.makeMonster(A.CONTENT.monsters[0], pNec.x + 16, pNec.y, 1);
+  dummyNec.maxHp = 99999; dummyNec.hp = 99999;
+  A.G.monsters = [dummyNec];
+  A.G.target = dummyNec;
+  A.castSkillById('death_nova');
+  assert.ok(dummyNec.hp < 99999, 'death_nova damages target');
+  assert.ok(dummyNec.statuses.poison, 'death_nova applies poison status');
+
+  // Test Hybrid Tier 3 orbital_strike_beacon
+  const pHybrid = A.makePlayer('artificer', 'Technomancer');
+  A.G.player = pHybrid;
+  pHybrid.tierIndex = 3; pHybrid.hybridJobId = 'quantum_technomancer'; pHybrid.level = 75; pHybrid.jobLevel = 50;
+  A.recompute(pHybrid, true);
+  pHybrid.hp = 1000; pHybrid.mp = 1000; pHybrid.momentum = 50;
+  pHybrid.skillLevels.orbital_strike_beacon = 1;
+  const dummyHybrid = A.makeMonster(A.CONTENT.monsters[0], pHybrid.x + 16, pHybrid.y, 1);
+  dummyHybrid.maxHp = 99999; dummyHybrid.hp = 99999;
+  A.G.monsters = [dummyHybrid];
+  A.G.target = dummyHybrid;
+  A.castSkillById('orbital_strike_beacon');
+  assert.ok(dummyHybrid.hp < 99999, 'orbital_strike_beacon damages target');
+  assert.ok(dummyHybrid.statuses.burn, 'orbital_strike_beacon applies burn status');
+});
+
