@@ -162,7 +162,7 @@ export const COMBAT = {
     { id: "cyclone_lotus_kick", classId: "chi_tempest", name: "Cyclone Lotus Kick", flavor: "Whirling martial arts generate a vortex drawing enemies inward.", mpCost: 36, cooldownMs: 10000, type: "aoe", power: 3.9, range: 1, radius: 3, hotkey: "7", effect: "slow", finisher: true },
 
     // --- shadow_blade (assassin) ---
-    { id: "shadow_strike", classId: "assassin", name: "Shadow Strike", flavor: "Rapid twin stab from the shadows.", mpCost: 7, cooldownMs: 2200, type: "melee", power: 1.4, range: 1, radius: 0, hotkey: "1", effect: null },
+    { id: "shadow_strike", classId: "assassin", name: "Shadow Strike", flavor: "Rapid twin stab from the shadows.", mpCost: 7, cooldownMs: 2200, type: "melee", power: 1.6, range: 1, radius: 0, hotkey: "1", effect: null },
     { id: "smoke_screen", classId: "assassin", name: "Smoke Screen", flavor: "Drop an evasive smoke bomb blinding foes.", mpCost: 12, cooldownMs: 12000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "2", effect: null },
     { id: "poison_coat", classId: "assassin", name: "Poison Coat", flavor: "Coat your blades in virulent venom.", mpCost: 10, cooldownMs: 15000, type: "buff", power: 1.0, range: 0, radius: 0, hotkey: "3", effect: "poison" },
     { id: "assassinate", reqBranch: "nightstalker", classId: "assassin", name: "Assassinate", flavor: "Teleport behind the target for an execution strike.", mpCost: 18, cooldownMs: 6000, type: "melee", power: 2.8, range: 4, radius: 0, hotkey: "6", effect: null },

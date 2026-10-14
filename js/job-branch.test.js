@@ -22,7 +22,7 @@ const A = globalThis.__AWO;
 assert.ok(A, 'game debug API loaded');
 
 const classIds = A.DESIGN.classes.map(entry => entry.id);
-assert.equal(classIds.length, 7, 'all seven base callings remain available');
+assert.equal(classIds.length, 10, 'all ten base callings remain available');
 for (const classId of classIds) {
   const cfg = A.PROGRESSION.jobBranches[classId];
   const budget = A.DESIGN.jobBranchBalance.tierStatPointBudgets[classId];
@@ -149,8 +149,8 @@ assert.equal(A.G.player.tierIndex, 0, 'rebirth resets the job tier');
 // ---- Branch Identity & Mastery: every branch owns one unique passive mechanic,
 // an illustrative core combo, and a distinct Tier-2 mastery trial. ----
 const allBranches = A.DESIGN.classes.flatMap(cls => A.PROGRESSION.jobBranches[cls.id].choices);
-assert.equal(allBranches.length, 14, 'all 14 branches are present');
-assert.equal(new Set(allBranches.map(b => b.mechanic.id)).size, 14, 'every branch mechanic has a unique id');
+assert.equal(allBranches.length, 20, 'all 20 branches are present');
+assert.equal(new Set(allBranches.map(b => b.mechanic.id)).size, 20, 'every branch mechanic has a unique id');
 for (const branch of allBranches) {
   assert.ok(branch.mechanic?.kind && A.DESIGN.jobBranchBalance.mechanic[branch.mechanic.kind], `${branch.id} mechanic kind is wired to a balance entry`);
   assert.ok(Array.isArray(branch.combo) && branch.combo.length >= 2 && branch.combo.length <= 4, `${branch.id} shows a 2-4 step core combo`);

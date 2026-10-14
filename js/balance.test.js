@@ -11,8 +11,9 @@ const CLASS_COMBAT = {
   reborn_blade: 'blade', drifter: 'berserker', codeweaver: 'mage',
   far_shot: 'ranger', lightbringer: 'paladin', iron_fist: 'monk',
   stormcaller: 'elementalist',
+  shadow_blade: 'assassin', soul_binder: 'necromancer', artificer: 'artificer',
 };
-const MAGIC = new Set(['mage', 'elementalist']);
+const MAGIC = new Set(['mage', 'elementalist', 'necromancer']);
 
 const compile = expr => new Function('a', `const {baseHp,vit,level,int,str,dex,weaponAtk,armorDef,agi,luk,attackerAtk,defenderDef,isCrit}=a; return (${expr});`);
 const F = Object.fromEntries(Object.entries(DESIGN.formulas).map(([key, expr]) => [key, compile(expr)]));
