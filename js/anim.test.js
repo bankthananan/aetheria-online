@@ -50,6 +50,7 @@ assert.equal(A.animFrame('nope', 0), 0, 'an unknown state degrades to frame 0 in
 const CLASS_COMBAT = {
   reborn_blade: 'blade', drifter: 'berserker', codeweaver: 'mage', far_shot: 'ranger',
   lightbringer: 'paladin', iron_fist: 'monk', stormcaller: 'elementalist',
+  shadow_blade: 'assassin', soul_binder: 'necromancer', artificer: 'artificer',
 };
 for (const [classId, cc] of Object.entries(CLASS_COMBAT)) {
   const hero = A.makePlayer(classId, 'AnimTester');

@@ -56,6 +56,9 @@ export const LPC = {
     paladin:      { attack: 'attack',    finisher: 'backslash' },
     monk:         { attack: 'halfslash', finisher: 'backslash' },
     elementalist: { attack: 'cast',      finisher: 'cast' },
+    assassin:     { attack: 'thrust',    finisher: 'backslash' },
+    necromancer:  { attack: 'cast',      finisher: 'cast' },
+    artificer:    { attack: 'shoot',     finisher: 'backslash' },
   },
   player: {    // combatClass -> sheet path (see assets/lpc/CREDITS.md for seeds)
     blade: 'assets/lpc/blade.png',
@@ -65,6 +68,9 @@ export const LPC = {
     paladin: 'assets/lpc/paladin.png',
     monk: 'assets/lpc/monk.png',
     elementalist: 'assets/lpc/elementalist.png',
+    assassin: 'assets/lpc/blade.png',
+    necromancer: 'assets/lpc/mage.png',
+    artificer: 'assets/lpc/ranger.png',
   },
   npc: {        // npc role -> sheet path (see assets/lpc/CREDITS.md for seeds)
     shop: 'assets/lpc/npc_shop.png',

@@ -104,7 +104,7 @@ assert.equal(LPC.anim.ranger.attack, 'shoot', 'the archer must draw a bow, not s
 assert.equal(LPC.anim.mage.attack, 'cast', 'the mage must cast, not swing a sword');
 assert.equal(LPC.anim.elementalist.attack, 'cast', 'the elementalist must cast, not swing a sword');
 
-for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist']) {
+for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist', 'assassin', 'necromancer', 'artificer']) {
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
 }
 for (const role of ['shop', 'guild', 'quest', 'story']) assert.ok(PX.npc[role], `NPC role ${role} needs art`);
