@@ -123,6 +123,51 @@ blade.skillCd = {}; blade.momentum = 5;
 A.castSkillById('aegis_rend');
 assert.equal(blade.animCastState, 'backslash', 'a Momentum finisher uses the heavy wind-up');
 
+// Shadow Blade: thrust on damage skill, backslash on finisher, cast on buff
+const assassin = A.makePlayer('shadow_blade', 'SkillAnimAssassin');
+A.G.player = assassin; A.recompute(assassin, true);
+assassin.skillLevels = { shadow_strike: 1, smoke_screen: 1, death_mark: 1 };
+assassin.momentum = 25; assassin.mp = assassin.maxMp;
+dummy.x = assassin.x; dummy.y = assassin.y;
+A.castSkillById('smoke_screen');
+assert.equal(assassin.animCastState, 'cast', 'smoke screen buff channels cast');
+assassin.skillCd = {};
+A.castSkillById('shadow_strike');
+assert.equal(assassin.animCastState, 'thrust', 'shadow strike uses dagger thrust');
+assassin.skillCd = {}; assassin.momentum = 25;
+A.castSkillById('death_mark');
+assert.equal(assassin.animCastState, 'backslash', 'death mark finisher uses backslash');
+
+// Soul Binder: cast on all skill categories
+const necro = A.makePlayer('soul_binder', 'SkillAnimNecro');
+A.G.player = necro; A.recompute(necro, true);
+necro.skillLevels = { soul_rend: 1, bone_armor: 1, death_nova: 1 };
+necro.momentum = 25; necro.mp = necro.maxMp;
+dummy.x = necro.x; dummy.y = necro.y;
+A.castSkillById('bone_armor');
+assert.equal(necro.animCastState, 'cast', 'bone armor channels cast');
+necro.skillCd = {};
+A.castSkillById('soul_rend');
+assert.equal(necro.animCastState, 'cast', 'soul rend channels cast');
+necro.skillCd = {}; necro.momentum = 25;
+A.castSkillById('death_nova');
+assert.equal(necro.animCastState, 'cast', 'death nova channels cast');
+
+// Artificer: shoot on basic skill, backslash on finisher, cast on deploy buff
+const arti = A.makePlayer('artificer', 'SkillAnimArti');
+A.G.player = arti; A.recompute(arti, true);
+arti.skillLevels = { wrench_strike: 1, deploy_sentry: 1, siege_cannon: 1 };
+arti.momentum = 25; arti.mp = arti.maxMp;
+dummy.x = arti.x; dummy.y = arti.y;
+A.castSkillById('deploy_sentry');
+assert.equal(arti.animCastState, 'cast', 'deploy sentry channels cast');
+arti.skillCd = {};
+A.castSkillById('wrench_strike');
+assert.equal(arti.animCastState, 'shoot', 'wrench strike uses artificer attack motion');
+arti.skillCd = {}; arti.momentum = 25;
+A.castSkillById('siege_cannon');
+assert.equal(arti.animCastState, 'backslash', 'siege cannon finisher uses backslash');
+
 // ---- 6. the row table itself: what rectangle does drawLpc actually sample? ----
 // This is the check that catches a wrong LPC.states row — without it a bad table
 // renders a real, plausible-looking sprite from the neighbouring animation.

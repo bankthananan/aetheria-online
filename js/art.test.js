@@ -103,6 +103,9 @@ for (const cc of Object.keys(LPC.player)) {
 assert.equal(LPC.anim.ranger.attack, 'shoot', 'the archer must draw a bow, not swing a sword');
 assert.equal(LPC.anim.mage.attack, 'cast', 'the mage must cast, not swing a sword');
 assert.equal(LPC.anim.elementalist.attack, 'cast', 'the elementalist must cast, not swing a sword');
+assert.equal(LPC.anim.assassin.attack, 'thrust', 'the assassin must thrust daggers, not swing a broadsword');
+assert.equal(LPC.anim.necromancer.attack, 'cast', 'the necromancer must cast necrotic spells');
+assert.equal(LPC.anim.artificer.attack, 'shoot', 'the artificer must fire ranged ordnance');
 
 for (const id of ['blade', 'berserker', 'mage', 'ranger', 'paladin', 'monk', 'elementalist', 'assassin', 'necromancer', 'artificer']) {
   assert.ok(PX.player[id] && PX.playerWalk[id], `class ${id} needs idle and walk art`);
