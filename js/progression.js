@@ -202,8 +202,8 @@ export const PROGRESSION = {
     poison_coat:           { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'smoke_screen', lvl: 1 } },
     assassinate:           { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'nightstalker', reqSkill: { id: 'poison_coat', lvl: 2 } },
     mirage_flurry:         { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'phantom_blade', reqSkill: { id: 'shadow_strike', lvl: 3 } },
-    death_mark:            { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'shadow_sovereign', reqSkill: { id: 'assassinate', lvl: 2 } },
-    dance_of_shadows:      { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'void_stalker', reqSkill: { id: 'mirage_flurry', lvl: 2 } },
+    death_mark:            { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'shadow_sovereign', reqSkill: { id: 'poison_coat', lvl: 2 } },
+    dance_of_shadows:      { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'void_stalker', reqSkill: { id: 'smoke_screen', lvl: 2 } },
     eclipse_strike:        { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'nightblade_phantom', reqSkill: null },
     // ---- Soul Binder (necromancer) ----
     soul_rend:             { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
@@ -220,8 +220,8 @@ export const PROGRESSION = {
     deploy_sentry:         { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'acid_flask', lvl: 1 } },
     tesla_coil:            { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'clockwork_engineer', reqSkill: { id: 'deploy_sentry', lvl: 2 } },
     pyro_bomb:             { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'mad_alchemist', reqSkill: { id: 'acid_flask', lvl: 2 } },
-    siege_cannon:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'magitek_mechlord', reqSkill: { id: 'tesla_coil', lvl: 2 } },
-    philosopher_infusion:  { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'grand_alchemist', reqSkill: { id: 'pyro_bomb', lvl: 2 } },
+    siege_cannon:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'magitek_mechlord', reqSkill: { id: 'deploy_sentry', lvl: 2 } },
+    philosopher_infusion:  { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'grand_alchemist', reqSkill: { id: 'acid_flask', lvl: 2 } },
     orbital_strike_beacon: { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'quantum_technomancer', reqSkill: null },
   },
 
@@ -537,9 +537,9 @@ export const PROGRESSION = {
     dreadnought: { id: 'dreadnought', name: 'Dreadnought', role: 'Heavy Juggernaut', requires: ['reborn_blade', 'drifter'], bonus: { str: 12, vit: 10, dex: 3 }, signatureSkillId: 'colossal_onslaught' },
     storm_templar: { id: 'storm_templar', name: 'Storm Templar', role: 'Holy Shock', requires: ['lightbringer', 'stormcaller'], bonus: { str: 8, int: 10, vit: 7 }, signatureSkillId: 'tempest_sanctuary' },
     chi_tempest: { id: 'chi_tempest', name: 'Chi Tempest', role: 'Elemental Martial Arts', requires: ['iron_fist', 'stormcaller'], bonus: { agi: 10, int: 8, str: 7 }, signatureSkillId: 'cyclone_lotus_kick' },
-    nightblade_phantom: { id: 'nightblade_phantom', name: 'Nightblade Sovereign', role: 'Void Assassin', requires: ['shadow_blade'], bonus: { agi: 12, dex: 8, luk: 5 }, signatureSkillId: 'eclipse_strike' },
-    eldritch_lord: { id: 'eldritch_lord', name: 'Eldritch Netherlord', role: 'Nether Occultist', requires: ['soul_binder'], bonus: { int: 12, vit: 8, luk: 5 }, signatureSkillId: 'apocalypse_harvest' },
-    quantum_technomancer: { id: 'quantum_technomancer', name: 'Quantum Technomancer', role: 'Quantum Engineer', requires: ['artificer'], bonus: { dex: 12, int: 8, str: 5 }, signatureSkillId: 'orbital_strike_beacon' },
+    nightblade_phantom: { id: 'nightblade_phantom', name: 'Nightblade Sovereign', role: 'Void Assassin', requires: ['shadow_blade', 'drifter'], bonus: { agi: 12, dex: 8, luk: 5 }, signatureSkillId: 'eclipse_strike' },
+    eldritch_lord: { id: 'eldritch_lord', name: 'Eldritch Netherlord', role: 'Nether Occultist', requires: ['soul_binder', 'codeweaver'], bonus: { int: 12, vit: 8, luk: 5 }, signatureSkillId: 'apocalypse_harvest' },
+    quantum_technomancer: { id: 'quantum_technomancer', name: 'Quantum Technomancer', role: 'Quantum Engineer', requires: ['artificer', 'stormcaller'], bonus: { dex: 12, int: 8, str: 5 }, signatureSkillId: 'orbital_strike_beacon' },
   },
 
   // Class advancement tiers per design classId. Index 0 = starting job.

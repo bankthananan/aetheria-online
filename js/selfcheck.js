@@ -204,7 +204,7 @@ export function runSelfCheck(engine) {
       if (!mech || !trigger || trigger.classId !== CLASS_COMBAT[c.id]) errs.push(`${c.id}/${branch.id} mechanic trigger skill is invalid`);
       else if (!DESIGN.jobBranchBalance.mechanic[mech.kind]) errs.push(`${c.id}/${branch.id} mechanic kind '${mech.kind}' is unknown`);
       else if (mech.kind === 'bonusBuff' && !['atk', 'def'].includes(mech.stat)) errs.push(`${c.id}/${branch.id} bonusBuff needs stat atk|def`);
-      else if (mech.kind === 'detonateAmp' && !(mech.statuses?.length && mech.statuses.every(st => ['stun', 'burn', 'slow', 'sunder'].includes(st)))) errs.push(`${c.id}/${branch.id} detonateAmp needs statuses from stun|burn|slow|sunder (never mark — it must persist)`);
+      else if (mech.kind === 'detonateAmp' && !(mech.statuses?.length && mech.statuses.every(st => ['stun', 'burn', 'slow', 'sunder', 'poison'].includes(st)))) errs.push(`${c.id}/${branch.id} detonateAmp needs statuses from stun|burn|slow|sunder|poison (never mark — it must persist)`);
       else if (mech.kind === 'detonateAmp' && signature?.detonate && mech.statuses.includes(signature.detonate)) errs.push(`${c.id}/${branch.id} mechanic competes with its own signature's detonate (${signature.detonate})`);
       else if (mech.kind === 'procCdr' && !COMBAT.skills.some(sk2 => sk2.id === mech.targetSkillId)) errs.push(`${c.id}/${branch.id} procCdr targets unknown skill ${mech.targetSkillId}`);
       else if (mech.kind === 'extendStatus' && !COMBAT.statusEffects[trigger.effect]) errs.push(`${c.id}/${branch.id} extendStatus trigger applies no status`);

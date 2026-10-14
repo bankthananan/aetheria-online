@@ -151,8 +151,14 @@ test('All 18 class passives exist in PROGRESSION.passives', () => {
   }
 });
 
-test('New hybrid jobs are registered in PROGRESSION.hybridJobs', () => {
+test('New hybrid jobs are registered in PROGRESSION.hybridJobs with 2 required classes', () => {
   const hybrids = ['nightblade_phantom', 'eldritch_lord', 'quantum_technomancer'];
+  const expectedPairings = {
+    nightblade_phantom: ['shadow_blade', 'drifter'],
+    eldritch_lord: ['soul_binder', 'codeweaver'],
+    quantum_technomancer: ['artificer', 'stormcaller'],
+  };
+
   for (const id of hybrids) {
     const h = PROGRESSION.hybridJobs[id];
     assert.ok(h, `Hybrid job ${id} exists in PROGRESSION.hybridJobs`);
@@ -160,5 +166,37 @@ test('New hybrid jobs are registered in PROGRESSION.hybridJobs', () => {
     assert.ok(h.bonus, `Hybrid job ${id} has bonus stats`);
     assert.ok(h.signatureSkillId, `Hybrid job ${id} has signatureSkillId`);
     assert.ok(PROGRESSION.skillTree[h.signatureSkillId], `Signature skill ${h.signatureSkillId} exists in skillTree`);
+    assert.equal(h.requires?.length, 2, `Hybrid job ${id} must require 2 classes`);
+    assert.deepEqual(h.requires, expectedPairings[id], `Hybrid job ${id} requirements match expected complementary classes`);
   }
 });
+
+test('Tier 2 advanced job skills do not require Tier 1 branch-exclusive skills (no deadlock)', () => {
+  const branchExclusiveSkillIds = new Set();
+  for (const classBranches of Object.values(PROGRESSION.jobBranches)) {
+    for (const choice of classBranches.choices) {
+      if (choice.signatureSkillId) {
+        branchExclusiveSkillIds.add(choice.signatureSkillId);
+      }
+    }
+  }
+
+  const newAdvancedSkills = [
+    'death_mark', 'dance_of_shadows',
+    'death_nova', 'grim_harvest',
+    'siege_cannon', 'philosopher_infusion'
+  ];
+
+  for (const skillId of newAdvancedSkills) {
+    const node = PROGRESSION.skillTree[skillId];
+    assert.ok(node, `Skill ${skillId} exists in skillTree`);
+    assert.ok(node.reqAdvancedJob, `Skill ${skillId} is an advanced job skill`);
+    if (node.reqSkill) {
+      assert.ok(
+        !branchExclusiveSkillIds.has(node.reqSkill.id),
+        `Advanced job skill ${skillId} requires ${node.reqSkill.id}, which is branch-exclusive! Must require a base skill instead.`
+      );
+    }
+  }
+});
+

@@ -150,7 +150,7 @@ export const DESIGN = {
     // branch is tuned from a single auditable table instead of 14 bespoke numbers.
     mechanic: {
       bonusBuff:    { mult: 0.08, durationMs: 5000 },  // +8% atk/def, 5s — shorter than every trigger skill's cooldown so it can never stack
-      detonateAmp:  { extraPct: 0.15 },                // +15% dmg consuming a short-lived status (stun/burn/slow/sunder — never Mark, which must persist)
+      detonateAmp:  { extraPct: 0.15 },                // +15% dmg consuming a short-lived status (stun/burn/slow/sunder/poison — never Mark, which must persist)
       procHeal:     { pct: 0.08 },                     // heal 8% of the triggering hit's damage
       procCdr:      { ms: 800 },                       // shave 0.8s off the paired skill's cooldown, floored at "ready now"
       extendStatus: { extraMs: 1200 },                 // +1.2s on the status the trigger skill just applied
