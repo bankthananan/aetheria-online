@@ -181,5 +181,30 @@ for (const cid of targetClasses) {
   }
 }
 
+// Negative tests: non-matching classes cannot equip class-locked gear
+const incompatibleHero = A.makePlayer('reborn_blade', 'Swordsman');
+const lockedItems = [
+  'shadow_kris', 'abyssal_fang', 'eclipse_edge', 'shadow_leathers', 'void_assassin_vestments',
+  'soul_binder_staff', 'bone_scythe', 'nether_grimoire', 'acolyte_robes', 'netherlord_regalia',
+  'steam_pistol', 'mortar_cannon', 'clockwork_obliteration_engine', 'tinkerer_smock', 'mechlord_power_chassis',
+];
+for (const id of lockedItems) {
+  const item = A.CONTENT.items.find(i => i.id === id);
+  assert.equal(A.canUseItem(incompatibleHero, item), false, `reborn_blade cannot equip class-locked ${id}`);
+}
+
+// Equip round-trip verification: compatible class equips, incompatible class rejected
+const assassinHero = A.makePlayer('shadow_blade', 'Shadow');
+A.G.player = assassinHero;
+const krisInst = A.rollItem('shadow_kris', 0, 'rare');
+assassinHero.inventory.push(krisInst);
+A.equip(krisInst.uid);
+assert.equal(assassinHero.equip.weapon?.uid, krisInst.uid, 'shadow_blade equips shadow_kris successfully');
+
+const illegalInst = A.rollItem('mechlord_power_chassis', 0, 'epic');
+assassinHero.inventory.push(illegalInst);
+A.equip(illegalInst.uid);
+assert.notEqual(assassinHero.equip.body?.uid, illegalInst.uid, 'shadow_blade cannot equip mechlord_power_chassis');
+
 console.log('Equipment audit passed: comparisons, class advice, rolled stock, exact purchases, and story/guild Trader Rank are valid.');
 
