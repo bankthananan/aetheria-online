@@ -515,6 +515,25 @@ export const CONTENT = {
     { id: "astral_staff", name: "Astral Staff", type: "weapon", desc: "A staff capped with a fallen star.", atk: 56, value: 7000, classReq: ["codeweaver", "stormcaller"], gearLevel: 65 },
     { id: "star_knuckles", name: "Star Knuckles", type: "weapon", desc: "Fists that strike like falling meteorites.", atk: 56, value: 7000, classReq: ["iron_fist"], gearLevel: 65 },
     { id: "seraph_mace", name: "Seraph Mace", type: "weapon", desc: "Mace containing divine protection.", atk: 56, value: 7000, classReq: ["lightbringer"], gearLevel: 65 },
+    // Specialized weapons (Bands 1-5) for Shadow Blade, Soul Binder, Artificer
+    // Shadow Blade
+    { id: "iron_dagger", name: "Iron Dagger", type: "weapon", desc: "A swift, well-balanced blade for silent strikes.", atk: 14, value: 30, classReq: ["shadow_blade", "drifter"], gearLevel: 1 },
+    { id: "shadow_kris", name: "Shadow Kris", type: "weapon", desc: "A wavy ceremonial blade infused with dusk venom.", atk: 38, crit: 0.04, value: 450, classReq: ["shadow_blade"], gearLevel: 18 },
+    { id: "nightstalker_stiletto", name: "Stiletto of the Night", type: "weapon", desc: "A needle-thin stiletto designed to pierce armor gaps.", atk: 68, flee: 6, value: 1200, classReq: ["shadow_blade"], gearLevel: 34 },
+    { id: "abyssal_fang", name: "Abyssal Fang", type: "weapon", desc: "A curved predator tooth dripping with void venom.", atk: 112, crit: 0.08, value: 2800, classReq: ["shadow_blade"], gearLevel: 56 },
+    { id: "eclipse_edge", name: "Eclipse Edge", type: "weapon", desc: "A masterwork shadowy blade that swallows all reflected light.", atk: 165, crit: 0.12, value: 5500, classReq: ["shadow_blade"], gearLevel: 72 },
+    // Soul Binder
+    { id: "bone_wand", name: "Bone Wand", type: "weapon", desc: "Carved from hardened beast bone, resonating with soul fragments.", atk: 16, matk: 16, value: 30, classReq: ["soul_binder", "codeweaver"], gearLevel: 1 },
+    { id: "soul_binder_staff", name: "Soulbinder Caduceus", type: "weapon", desc: "Twin spectral serpents spiral around a polished bone rod.", atk: 42, matk: 42, mp: 30, value: 450, classReq: ["soul_binder"], gearLevel: 18 },
+    { id: "bone_scythe", name: "Grim Bone Scythe", type: "weapon", desc: "A sweeping harvester blade carved from an ancient behemoth.", atk: 40, matk: 74, value: 1200, classReq: ["soul_binder"], gearLevel: 34 },
+    { id: "nether_grimoire", name: "Nether Grimoire", type: "weapon", desc: "Bound in decayed leathers, leaking endless necromantic energy.", atk: 50, matk: 120, lifesteal: 4, value: 2800, classReq: ["soul_binder"], gearLevel: 56 },
+    { id: "abyssal_harvester", name: "Abyssal Harvester", type: "weapon", desc: "A titanic void scythe that reaps reality itself.", atk: 60, matk: 175, value: 5500, classReq: ["soul_binder"], gearLevel: 72 },
+    // Artificer
+    { id: "heavy_wrench", name: "Heavy Magitek Wrench", type: "weapon", desc: "A reinforced engineer's wrench that doubles as a crushing club.", atk: 15, value: 30, classReq: ["artificer", "iron_fist"], gearLevel: 1 },
+    { id: "steam_pistol", name: "Steamcarbine Pistol", type: "weapon", desc: "Fires pressurized brass slugs charged with volatile steam.", atk: 40, matk: 20, value: 450, classReq: ["artificer"], gearLevel: 18 },
+    { id: "magitek_driver", name: "Magitek Rotary Driver", type: "weapon", desc: "High-torque motorized weapon firing rapid alchemical bursts.", atk: 72, matk: 35, value: 1200, classReq: ["artificer"], gearLevel: 34 },
+    { id: "mortar_cannon", name: "Field Mortar Cannon", type: "weapon", desc: "Shoulder-supported magitek mortar designed for siege strikes.", atk: 118, matk: 50, value: 2800, classReq: ["artificer"], gearLevel: 56 },
+    { id: "clockwork_obliteration_engine", name: "Clockwork Annihilator", type: "weapon", desc: "The pinnacle of clockwork destruction, humming with kinetic overdrive.", atk: 170, matk: 75, value: 5500, classReq: ["artificer"], gearLevel: 72 },
     // Armor
     { id: "cloth_tunic", name: "Traveler's Tunic", type: "armor", desc: "Simple cloth you woke up wearing.", def: 2, value: 20, classReq: null },
     { id: "leather_vest", name: "Leather Vest", type: "armor", desc: "Boiled leather that turns a claw or two.", def: 6, value: 120, classReq: ["drifter", "far_shot", "iron_fist"] },
@@ -523,15 +542,27 @@ export const CONTENT = {
     // Band 2: Ashen Steppes (Lv 14–28)
     { id: "duneslayer_vest", name: "Duneslayer Vest", type: "armor", desc: "Hardened reptile hide from the arid steppes.", def: 18, value: 550, gearLevel: 22, classReq: ["drifter", "far_shot", "iron_fist"] },
     { id: "sunwalker_mail", name: "Sunwalker Mail", type: "armor", desc: "Polished brass and steel reflecting intense sun glare.", def: 22, value: 650, gearLevel: 24, classReq: ["reborn_blade", "lightbringer"] },
+    { id: "shadow_leathers", name: "Shadow Leathers", type: "armor", desc: "Supple dusky reptile hide granting stealth and evasion.", def: 18, flee: 6, gearLevel: 22, classReq: ["shadow_blade"], value: 550 },
+    { id: "acolyte_robes", name: "Nether Acolyte Robes", type: "armor", desc: "Dark linen robes channeling necrotic life-force.", def: 16, mp: 40, gearLevel: 22, classReq: ["soul_binder"], value: 550 },
+    { id: "tinkerer_smock", name: "Tinkerer Smock", type: "armor", desc: "Oil-stained apron packed with specialized pockets and brass plating.", def: 20, mp: 20, gearLevel: 22, classReq: ["artificer"], value: 550 },
     // Band 3: Twilight Mire (Lv 25–40)
     { id: "sporeweaver_robe", name: "Sporeweaver Robe", type: "armor", desc: "Silken vestments treated with bioluminescent spore resins.", def: 24, value: 1100, gearLevel: 34, classReq: ["codeweaver", "stormcaller"] },
     { id: "mire_stalker_tunic", name: "Mire Stalker Tunic", type: "armor", desc: "Camouflaged marsh leathers resisting muck and dampness.", def: 28, value: 1250, gearLevel: 36, classReq: ["drifter", "far_shot", "iron_fist"] },
+    { id: "nightstalker_tunic", name: "Nightstalker Tunic", type: "armor", desc: "Darkened marsh leather reinforced at vital execution points.", def: 26, crit: 0.04, gearLevel: 34, classReq: ["shadow_blade"], value: 1150 },
+    { id: "bone_woven_vestments", name: "Bone-Woven Vestments", type: "armor", desc: "Interlocking skeletal splints infused with vitality shielding.", def: 24, hp: 80, gearLevel: 34, classReq: ["soul_binder"], value: 1150 },
+    { id: "engineer_overalls", name: "Engineer Overalls", type: "armor", desc: "Heavy canvas overalls supporting battery packs and tool rigs.", def: 30, atk: 6, gearLevel: 34, classReq: ["artificer"], value: 1150 },
     // Band 4: Tempest Spires (Lv 48–64)
     { id: "thunderlord_chainmail", name: "Thunderlord Chainmail", type: "armor", desc: "Conductive rings woven to channel storm strikes into defensive charges.", def: 42, value: 2400, gearLevel: 58, classReq: ["reborn_blade", "lightbringer"] },
     { id: "gale_dancer_silks", name: "Gale Dancer Silks", type: "armor", desc: "Feather-light tempest garments that ride wind currents.", def: 38, value: 2600, gearLevel: 60, classReq: ["drifter", "far_shot", "iron_fist"] },
+    { id: "phantom_garb", name: "Phantom Garb", type: "armor", desc: "Weightless silk that blurs the wearer's outline in the storm.", def: 40, flee: 12, crit: 0.05, gearLevel: 58, classReq: ["shadow_blade"], value: 2500 },
+    { id: "lich_mantle", name: "Abyssal Lich Mantle", type: "armor", desc: "Flowing velvet steeped in cold starlight and necrotic leylines.", def: 38, matk: 12, mp: 100, gearLevel: 58, classReq: ["soul_binder"], value: 2500 },
+    { id: "magitek_harness", name: "Magitek Exoskeleton Harness", type: "armor", desc: "Pneumatic frame augmenting physical and magitek power output.", def: 44, atk: 10, matk: 10, gearLevel: 58, classReq: ["artificer"], value: 2500 },
     // Band 5: Sunless Chasm (Lv 58–74)
     { id: "umbral_assassin_garb", name: "Umbral Assassin Garb", type: "armor", desc: "Deep-shadow cowl and tunic that swallows all reflected light.", def: 52, value: 4200, gearLevel: 68, classReq: ["drifter", "far_shot"] },
     { id: "darksteel_bulwark", name: "Darksteel Bulwark Plate", type: "armor", desc: "Impenetrable dark forged plate mined from the abyss floor.", def: 60, value: 4800, gearLevel: 70, classReq: ["reborn_blade", "lightbringer"] },
+    { id: "void_assassin_vestments", name: "Void Assassin Vestments", type: "armor", desc: "Woven void-threads that absorb all vibration and kinetic impact.", def: 54, crit: 0.08, flee: 16, gearLevel: 68, classReq: ["shadow_blade"], value: 4500 },
+    { id: "netherlord_regalia", name: "Netherlord Regalia", type: "armor", desc: "Crown-stitched occult shroud drinking life from surrounding space.", def: 52, matk: 18, lifesteal: 3, gearLevel: 68, classReq: ["soul_binder"], value: 4500 },
+    { id: "mechlord_power_chassis", name: "Mechlord Power Chassis", type: "armor", desc: "Autonomous servo-armor forged in abyssal darksteel.", def: 62, atk: 15, defPct: 10, gearLevel: 68, classReq: ["artificer"], value: 4500 },
     // Potions
     { id: "minor_potion", name: "Minor Potion", type: "potion", desc: "Restores a little health.", hpRestore: 30, value: 15, classReq: null },
     { id: "mid_potion", name: "Health Potion", type: "potion", desc: "Restores a good amount of health.", hpRestore: 90, value: 45, classReq: null },

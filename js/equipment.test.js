@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 
 import { installBrowserEnv } from './test-support/browser-env.js';
+import { ITEM_ICON } from './pixelart.js';
 
 let vnow = 1000;
 
@@ -135,4 +136,50 @@ for (const id of regionalSets) {
   assert.ok(item.gearLevel > 0, `${id} must have gearLevel > 0`);
 }
 
+// Task 3: Specialized weapons and class armor sets for Shadow Blade, Soul Binder, and Artificer
+const expectedWeapons = [
+  'iron_dagger', 'shadow_kris', 'nightstalker_stiletto', 'abyssal_fang', 'eclipse_edge',
+  'bone_wand', 'soul_binder_staff', 'bone_scythe', 'nether_grimoire', 'abyssal_harvester',
+  'heavy_wrench', 'steam_pistol', 'magitek_driver', 'mortar_cannon', 'clockwork_obliteration_engine',
+];
+for (const id of expectedWeapons) {
+  const item = A.CONTENT.items.find(i => i.id === id);
+  assert.ok(item, `Weapon ${id} must exist in CONTENT.items`);
+  assert.equal(item.type, 'weapon', `${id} must have type 'weapon'`);
+  assert.ok(Number.isFinite(item.gearLevel) && item.gearLevel > 0, `${id} must have gearLevel > 0`);
+  assert.ok(Number.isFinite(item.atk) && item.atk > 0, `${id} must have positive ATK`);
+  assert.ok(Array.isArray(item.classReq) && item.classReq.length > 0, `${id} must specify classReq`);
+}
+
+const expectedArmors = [
+  'shadow_leathers', 'acolyte_robes', 'tinkerer_smock',
+  'nightstalker_tunic', 'bone_woven_vestments', 'engineer_overalls',
+  'phantom_garb', 'lich_mantle', 'magitek_harness',
+  'void_assassin_vestments', 'netherlord_regalia', 'mechlord_power_chassis',
+];
+for (const id of expectedArmors) {
+  const item = A.CONTENT.items.find(i => i.id === id);
+  assert.ok(item, `Armor ${id} must exist in CONTENT.items`);
+  assert.equal(item.type, 'armor', `${id} must have type 'armor'`);
+  assert.ok(Number.isFinite(item.gearLevel) && item.gearLevel > 0, `${id} must have gearLevel > 0`);
+  assert.ok(Number.isFinite(item.def) && item.def > 0, `${id} must have positive DEF`);
+  assert.ok(Array.isArray(item.classReq) && item.classReq.length > 0, `${id} must specify classReq`);
+}
+
+for (const id of [...expectedWeapons, ...expectedArmors]) {
+  assert.ok(ITEM_ICON[id], `Item ${id} must have a registered icon in ITEM_ICON`);
+}
+
+const targetClasses = ['shadow_blade', 'soul_binder', 'artificer'];
+const dropWeapons = ['hero_blade', 'mythril_sword', 'frost_brand', 'dawn_edge', 'void_edge', 'astral_glaive'];
+for (const cid of targetClasses) {
+  const hero = A.makePlayer(cid, 'Tester');
+  for (const wid of dropWeapons) {
+    const sub = A.classWeaponFor(hero, wid);
+    assert.ok(sub, `${cid} must receive a weapon substitute for ${wid}`);
+    assert.ok(A.canUseItem(hero, sub), `${cid} must be able to use substitute ${sub} for ${wid}`);
+  }
+}
+
 console.log('Equipment audit passed: comparisons, class advice, rolled stock, exact purchases, and story/guild Trader Rank are valid.');
+
