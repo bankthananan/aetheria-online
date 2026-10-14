@@ -42,6 +42,18 @@ export const PROGRESSION = {
       title: 'Tempest Codex', crest: 'ϟ', color: '#70cddd', deep: '#173943',
       focus: 'Weave · Shock · Cataclysm', motto: 'Layer the storm until thunder has nowhere else to go.',
     },
+    assassin: {
+      title: 'Manual of the Silent Umbra', crest: '🗡', color: '#8e44ad', deep: '#2c163b',
+      focus: 'Stealth · Ambush · Execute', motto: 'Whispers in the dark strike before their shadow catches up.',
+    },
+    necromancer: {
+      title: 'Necrotic Grimoire', crest: '☠', color: '#16a085', deep: '#122e28',
+      focus: 'Souls · Decay · Thralls', motto: 'Death is simply energy waiting to be redirected.',
+    },
+    artificer: {
+      title: 'Magitek Blueprint Index', crest: '⚙', color: '#d35400', deep: '#3e200c',
+      focus: 'Turrets · Explosives · Fortification', motto: 'Precision machinery overcomes chaotic violence.',
+    },
   },
 
   // Skill tree nodes keyed by skillId (ids are unique across classes).
@@ -184,6 +196,33 @@ export const PROGRESSION = {
     colossal_onslaught:    { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'dreadnought', reqSkill: null },
     tempest_sanctuary:     { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'storm_templar', reqSkill: null },
     cyclone_lotus_kick:    { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'chi_tempest', reqSkill: null },
+    // ---- Shadow Blade (assassin) ----
+    shadow_strike:         { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
+    smoke_screen:          { maxLevel: 3, reqLevel: 4, reqSkill: { id: 'shadow_strike', lvl: 2 } },
+    poison_coat:           { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'smoke_screen', lvl: 1 } },
+    assassinate:           { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'nightstalker', reqSkill: { id: 'poison_coat', lvl: 2 } },
+    mirage_flurry:         { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'phantom_blade', reqSkill: { id: 'shadow_strike', lvl: 3 } },
+    death_mark:            { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'shadow_sovereign', reqSkill: { id: 'assassinate', lvl: 2 } },
+    dance_of_shadows:      { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'void_stalker', reqSkill: { id: 'mirage_flurry', lvl: 2 } },
+    eclipse_strike:        { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'nightblade_phantom', reqSkill: null },
+    // ---- Soul Binder (necromancer) ----
+    soul_rend:             { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
+    bone_armor:            { maxLevel: 3, reqLevel: 4, reqSkill: { id: 'soul_rend', lvl: 2 } },
+    corpse_explosion:      { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'bone_armor', lvl: 1 } },
+    raise_skeletal_vanguard:{ maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'dread_summoner', reqSkill: { id: 'bone_armor', lvl: 2 } },
+    plague_curse:          { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'plague_harbinger', reqSkill: { id: 'corpse_explosion', lvl: 2 } },
+    death_nova:            { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'abyssal_lich', reqSkill: { id: 'corpse_explosion', lvl: 2 } },
+    grim_harvest:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'nether_knight', reqSkill: { id: 'soul_rend', lvl: 3 } },
+    apocalypse_harvest:    { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'eldritch_lord', reqSkill: null },
+    // ---- Artificer (artificer) ----
+    wrench_strike:         { maxLevel: 10, tierCaps: [5, 10, 10], rankReqLevels: { 6: 18, 7: 22, 8: 26, 9: 30, 10: 34 }, reqLevel: 1, reqSkill: null },
+    acid_flask:            { maxLevel: 3, reqLevel: 4, reqSkill: { id: 'wrench_strike', lvl: 2 } },
+    deploy_sentry:         { maxLevel: 3, reqLevel: 10, reqSkill: { id: 'acid_flask', lvl: 1 } },
+    tesla_coil:            { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'clockwork_engineer', reqSkill: { id: 'deploy_sentry', lvl: 2 } },
+    pyro_bomb:             { maxLevel: 3, reqLevel: 18, reqTier: 1, reqBranch: 'mad_alchemist', reqSkill: { id: 'acid_flask', lvl: 2 } },
+    siege_cannon:          { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'magitek_mechlord', reqSkill: { id: 'tesla_coil', lvl: 2 } },
+    philosopher_infusion:  { maxLevel: 3, reqLevel: 40, reqTier: 2, reqAdvancedJob: 'grand_alchemist', reqSkill: { id: 'pyro_bomb', lvl: 2 } },
+    orbital_strike_beacon: { maxLevel: 3, reqLevel: 55, reqTier: 3, reqHybridJob: 'quantum_technomancer', reqSkill: null },
   },
 
   // Passive skills — invest skill points for permanent stat bonuses (RO-style).
@@ -223,6 +262,27 @@ export const PROGRESSION = {
     holy_fervor:      { classId: 'paladin',      name: 'Holy Fervor',     stat: 'critPct',  per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'solar_justicar', desc: '+{v}% Crit' },
     flowing_step:     { classId: 'monk',         name: 'Flowing Step',    stat: 'fleeFlat', per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'adamant_sage', desc: '+{v} Flee' },
     tempest_vigor:    { classId: 'elementalist', name: 'Tempest Vigor',   stat: 'hpPct',    per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'cinder_archon', desc: '+{v}% Max HP' },
+    // ---- assassin ----
+    dagger_mastery:        { classId: 'assassin', name: 'Dagger Mastery',        stat: 'atkPct',  per: 3, maxLevel: 10, reqLevel: 2,  desc: '+{v}% ATK' },
+    shadow_step:           { classId: 'assassin', name: 'Shadow Step',           stat: 'fleeFlat',per: 3, maxLevel: 10, reqLevel: 5,  desc: '+{v} Flee' },
+    lethal_precision:      { classId: 'assassin', name: 'Lethal Precision',      stat: 'critPct', per: 2, maxLevel: 10, reqLevel: 14, reqTier: 1, desc: '+{v}% Crit' },
+    venom_tolerance:       { classId: 'assassin', name: 'Venom Tolerance',       stat: 'hpPct',   per: 4, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Max HP' },
+    executioners_instinct: { classId: 'assassin', name: "Executioner's Instinct", stat: 'critPct', per: 2, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'shadow_sovereign', desc: '+{v}% Crit' },
+    abyssal_reflexes:      { classId: 'assassin', name: 'Abyssal Reflexes',      stat: 'fleeFlat',per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'void_stalker', desc: '+{v} Flee' },
+    // ---- necromancer ----
+    necrotic_affinity:     { classId: 'necromancer', name: 'Necrotic Affinity',  stat: 'atkPct',  per: 4, maxLevel: 10, reqLevel: 2,  desc: '+{v}% Magic ATK' },
+    soul_reservoir:        { classId: 'necromancer', name: 'Soul Reservoir',     stat: 'mpPct',   per: 5, maxLevel: 10, reqLevel: 5,  desc: '+{v}% Max MP' },
+    death_ward:            { classId: 'necromancer', name: 'Death Ward',         stat: 'hpPct',   per: 4, maxLevel: 10, reqLevel: 14, reqTier: 1, desc: '+{v}% Max HP' },
+    scythe_mastery:        { classId: 'necromancer', name: 'Scythe Mastery',     stat: 'atkPct',  per: 3, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Magic ATK' },
+    eternal_phylactery:    { classId: 'necromancer', name: 'Eternal Phylactery', stat: 'mpPct',   per: 5, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'abyssal_lich', desc: '+{v}% Max MP' },
+    unholy_fortitude:      { classId: 'necromancer', name: 'Unholy Fortitude',   stat: 'hpPct',   per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'nether_knight', desc: '+{v}% Max HP' },
+    // ---- artificer ----
+    engineering_savvy:     { classId: 'artificer', name: 'Engineering Savvy',    stat: 'atkPct',  per: 3, maxLevel: 10, reqLevel: 2,  desc: '+{v}% ATK' },
+    magitek_efficiency:    { classId: 'artificer', name: 'Magitek Efficiency',   stat: 'mpPct',   per: 5, maxLevel: 10, reqLevel: 5,  desc: '+{v}% Max MP' },
+    reinforced_alloys:     { classId: 'artificer', name: 'Reinforced Alloys',    stat: 'defPct',  per: 4, maxLevel: 10, reqLevel: 14, reqTier: 1, desc: '+{v}% DEF' },
+    precision_calipers:    { classId: 'artificer', name: 'Precision Calipers',   stat: 'critPct', per: 2, maxLevel: 10, reqLevel: 24, reqTier: 1, desc: '+{v}% Crit' },
+    reactive_chassis:      { classId: 'artificer', name: 'Reactive Chassis',     stat: 'defPct',  per: 4, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'magitek_mechlord', desc: '+{v}% DEF' },
+    transmutation_mastery: { classId: 'artificer', name: 'Transmutation Mastery',stat: 'atkPct',  per: 3, maxLevel: 10, reqLevel: 38, reqTier: 2, reqAdvancedJob: 'grand_alchemist', desc: '+{v}% ATK' },
   },
 
   // At Base Lv15 the first advancement becomes a permanent branch choice for
@@ -367,6 +427,63 @@ export const PROGRESSION = {
           combo: ['ember', 'pyroclast_surge'] },
       ],
     },
+    shadow_blade: {
+      defaultId: 'nightstalker',
+      choices: [
+        { id: 'nightstalker', label: 'Nightstalker', role: 'Assassin', focus: 'Ambush · Poison · Execute', color: '#8e44ad',
+          tiers: { 1: { name: 'Nightstalker', bonus: { agi: 5, luk: 3 } }, 2: { name: 'Shadow Sovereign', bonus: { agi: 8, luk: 6, dex: 4 },
+            advance: { name: 'Trial of the Nightstalker', desc: 'Embrace the darkness — fell 6 Frost Wolves from stealth.', objective: { type: 'kill', target: 'frost_wolf', count: 6 } } } },
+          signatureSkillId: 'assassinate',
+          mechanic: { id: 'venom_amplification', name: 'Venom Amplification', kind: 'detonateAmp', triggerSkillId: 'assassinate', statuses: ['poison'],
+            desc: 'Assassinate detonates poisoned foes for massive bonus damage.' },
+          combo: ['poison_coat', 'smoke_screen', 'assassinate'] },
+        { id: 'phantom_blade', label: 'Phantom Blade', role: 'Skirmisher', focus: 'Mirage · Evasion · Flurry', color: '#a569bd',
+          tiers: { 1: { name: 'Phantom Blade', bonus: { agi: 4, dex: 4 } }, 2: { name: 'Void Stalker', bonus: { agi: 9, dex: 5, luk: 4 },
+            advance: { name: 'Trial of the Phantom', desc: 'Outmaneuver 5 Rime Harpies with phantom agility.', objective: { type: 'kill', target: 'rime_harpy', count: 5 } } } },
+          signatureSkillId: 'mirage_flurry',
+          mechanic: { id: 'phantom_step', name: 'Phantom Step', kind: 'procCdr', triggerSkillId: 'mirage_flurry', targetSkillId: 'smoke_screen',
+            desc: 'Mirage Flurry weaves shadows to reset smoke screen defenses sooner.' },
+          combo: ['shadow_strike', 'mirage_flurry'] },
+      ],
+    },
+    soul_binder: {
+      defaultId: 'dread_summoner',
+      choices: [
+        { id: 'dread_summoner', label: 'Dread Summoner', role: 'Summoner', focus: 'Undead · Protection · Swarm', color: '#16a085',
+          tiers: { 1: { name: 'Dread Summoner', bonus: { int: 5, vit: 3 } }, 2: { name: 'Abyssal Lich', bonus: { int: 8, vit: 6, luk: 4 },
+            advance: { name: 'Trial of the Dread Summoner', desc: 'Raise the vanguard and purge 6 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 6 } } } },
+          signatureSkillId: 'raise_skeletal_vanguard',
+          mechanic: { id: 'legion_empowerment', name: 'Legion Empowerment', kind: 'bonusBuff', triggerSkillId: 'raise_skeletal_vanguard', stat: 'def',
+            desc: 'Raising your skeletal vanguard hardens defenses with spectral armor.' },
+          combo: ['raise_skeletal_vanguard', 'bone_armor', 'corpse_explosion'] },
+        { id: 'plague_harbinger', label: 'Plague Harbinger', role: 'Afflictionist', focus: 'Decay · Siphon · Curse', color: '#1abc9c',
+          tiers: { 1: { name: 'Plague Harbinger', bonus: { int: 4, luk: 4 } }, 2: { name: 'Nether Knight', bonus: { int: 9, luk: 5, vit: 4 },
+            advance: { name: 'Trial of the Plague', desc: 'Afflict and consume 6 Ice Wraiths in the cold.', objective: { type: 'kill', target: 'ice_wraith', count: 6 } } } },
+          signatureSkillId: 'plague_curse',
+          mechanic: { id: 'soul_siphon', name: 'Soul Siphon', kind: 'procHeal', triggerSkillId: 'plague_curse',
+            desc: 'Plague Curse drains life force, siphoning damage dealt back to your HP.' },
+          combo: ['plague_curse', 'soul_rend'] },
+      ],
+    },
+    artificer: {
+      defaultId: 'clockwork_engineer',
+      choices: [
+        { id: 'clockwork_engineer', label: 'Clockwork Engineer', role: 'Fortifier', focus: 'Turrets · Tesla · Pylons', color: '#d35400',
+          tiers: { 1: { name: 'Clockwork Engineer', bonus: { dex: 5, int: 3 } }, 2: { name: 'Magitek Mechlord', bonus: { dex: 8, int: 6, str: 4 },
+            advance: { name: 'Trial of the Engineer', desc: 'Deploy sentry fortifications and defeat 6 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 6 } } } },
+          signatureSkillId: 'tesla_coil',
+          mechanic: { id: 'overclock_grid', name: 'Overclock Grid', kind: 'bonusBuff', triggerSkillId: 'tesla_coil', stat: 'atk',
+            desc: 'Tesla Coil deployment overclocks machinery with amplified output.' },
+          combo: ['deploy_sentry', 'tesla_coil'] },
+        { id: 'mad_alchemist', label: 'Mad Alchemist', role: 'Saboteur', focus: 'Explosives · Acid · Blaze', color: '#e67e22',
+          tiers: { 1: { name: 'Mad Alchemist', bonus: { dex: 4, str: 4 } }, 2: { name: 'Grand Alchemist', bonus: { dex: 8, str: 6, int: 4 },
+            advance: { name: 'Trial of the Alchemist', desc: 'Incinerate 5 Rime Harpies with Pyro Bomb.', objective: { type: 'kill', target: 'rime_harpy', count: 5 } } } },
+          signatureSkillId: 'pyro_bomb',
+          mechanic: { id: 'alchemical_catalyst', name: 'Alchemical Catalyst', kind: 'detonateAmp', triggerSkillId: 'pyro_bomb', statuses: ['burn'],
+            desc: 'Pyro Bomb detonates burning enemies for explosive secondary reactions.' },
+          combo: ['acid_flask', 'pyro_bomb'] },
+      ],
+    },
   },
 
   // Two third-job choices per base class. Independent of second-job branch.
@@ -400,6 +517,18 @@ export const PROGRESSION = {
       { id: 'archon_of_storms', name: 'Archon of Storms', role: 'Storm Weaver', focus: 'Slow · Shock · Area', color: '#70cddd', bonus: { int: 8, dex: 4, luk: 3 } },
       { id: 'cinder_archon', name: 'Cinder Archon', role: 'Firebrand', focus: 'Burn · Sustain · Finish', color: '#ef7654', bonus: { int: 9, luk: 4, vit: 2 } },
     ] },
+    shadow_blade: { defaultId: 'shadow_sovereign', choices: [
+      { id: 'shadow_sovereign', name: 'Shadow Sovereign', role: 'Executioner', focus: 'Marks · Execution · Shadows', color: '#8e44ad', bonus: { agi: 8, luk: 6, dex: 4 } },
+      { id: 'void_stalker', name: 'Void Stalker', role: 'Omni-Skirmisher', focus: 'Evasion · Invulnerability · Flurry', color: '#a569bd', bonus: { agi: 9, dex: 5, luk: 4 } },
+    ] },
+    soul_binder: { defaultId: 'abyssal_lich', choices: [
+      { id: 'abyssal_lich', name: 'Abyssal Lich', role: 'Arch-Lich', focus: 'Soul Wave · Phylactery · Burst', color: '#16a085', bonus: { int: 8, vit: 6, luk: 4 } },
+      { id: 'nether_knight', name: 'Nether Knight', role: 'Death Knight', focus: 'Scythe · Harvest · Shielding', color: '#1abc9c', bonus: { int: 9, luk: 5, vit: 4 } },
+    ] },
+    artificer: { defaultId: 'magitek_mechlord', choices: [
+      { id: 'magitek_mechlord', name: 'Magitek Mechlord', role: 'Siege Master', focus: 'Beam · Armor · Railgun', color: '#d35400', bonus: { dex: 8, int: 6, str: 4 } },
+      { id: 'grand_alchemist', name: 'Grand Alchemist', role: 'Transmuter', focus: 'Elixirs · Catalyst · Infusion', color: '#e67e22', bonus: { dex: 8, str: 6, int: 4 } },
+    ] },
   },
   hybridJobs: {
     spellblade: { id: 'spellblade', name: 'Spellblade', role: 'Magical Melee', requires: ['drifter', 'codeweaver'], bonus: { str: 10, int: 10, agi: 5 }, signatureSkillId: 'elemental_strike' },
@@ -407,7 +536,10 @@ export const PROGRESSION = {
     arcane_archer: { id: 'arcane_archer', name: 'Arcane Archer', role: 'Ranged Magic', requires: ['far_shot', 'codeweaver'], bonus: { dex: 10, int: 10, agi: 5 }, signatureSkillId: 'arcane_arrow_barrage' },
     dreadnought: { id: 'dreadnought', name: 'Dreadnought', role: 'Heavy Juggernaut', requires: ['reborn_blade', 'drifter'], bonus: { str: 12, vit: 10, dex: 3 }, signatureSkillId: 'colossal_onslaught' },
     storm_templar: { id: 'storm_templar', name: 'Storm Templar', role: 'Holy Shock', requires: ['lightbringer', 'stormcaller'], bonus: { str: 8, int: 10, vit: 7 }, signatureSkillId: 'tempest_sanctuary' },
-    chi_tempest: { id: 'chi_tempest', name: 'Chi Tempest', role: 'Elemental Martial Arts', requires: ['iron_fist', 'stormcaller'], bonus: { agi: 10, int: 8, str: 7 }, signatureSkillId: 'cyclone_lotus_kick' }
+    chi_tempest: { id: 'chi_tempest', name: 'Chi Tempest', role: 'Elemental Martial Arts', requires: ['iron_fist', 'stormcaller'], bonus: { agi: 10, int: 8, str: 7 }, signatureSkillId: 'cyclone_lotus_kick' },
+    nightblade_phantom: { id: 'nightblade_phantom', name: 'Nightblade Sovereign', role: 'Void Assassin', requires: ['shadow_blade'], bonus: { agi: 12, dex: 8, luk: 5 }, signatureSkillId: 'eclipse_strike' },
+    eldritch_lord: { id: 'eldritch_lord', name: 'Eldritch Netherlord', role: 'Nether Occultist', requires: ['soul_binder'], bonus: { int: 12, vit: 8, luk: 5 }, signatureSkillId: 'apocalypse_harvest' },
+    quantum_technomancer: { id: 'quantum_technomancer', name: 'Quantum Technomancer', role: 'Quantum Engineer', requires: ['artificer'], bonus: { dex: 12, int: 8, str: 5 }, signatureSkillId: 'orbital_strike_beacon' },
   },
 
   // Class advancement tiers per design classId. Index 0 = starting job.
@@ -456,6 +588,24 @@ export const PROGRESSION = {
       { name: 'Tempest Mage',     reqLevel: 15, bonus: { int: 4, dex: 3 }, advance: { name: 'Trial of the Tempest', desc: 'Call the storm down on 5 Dire Wolves.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
       { name: 'Archon of Storms', reqLevel: 40, bonus: { int: 8, dex: 4, luk: 3 }, advance: { name: 'Rite of the Archon', desc: 'Unleash the tempest on 5 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
       { name: 'Hybrid: Storm Templar', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Storm Templar', desc: 'Call down divine thunder. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
+    ],
+    shadow_blade: [
+      { name: 'Shadow Blade', reqLevel: 1 },
+      { name: 'Nightstalker', reqLevel: 15, bonus: { agi: 5, luk: 3 }, advance: { name: 'Trial of the Nightstalker', desc: 'Embrace the darkness — fell 5 Dire Wolves from the shadows.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
+      { name: 'Shadow Sovereign', reqLevel: 40, bonus: { agi: 8, luk: 6, dex: 4 }, advance: { name: "Shadow Sovereign's Mark", desc: 'Claim mastery over death — slay 5 Frost Wolves.', objective: { type: 'kill', target: 'frost_wolf', count: 5 } } },
+      { name: 'Hybrid: Nightblade Sovereign', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Nightblade', desc: 'Cloak reality in darkness. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
+    ],
+    soul_binder: [
+      { name: 'Soul Binder', reqLevel: 1 },
+      { name: 'Dread Summoner', reqLevel: 15, bonus: { int: 5, vit: 3 }, advance: { name: 'Rite of the Bone Crypt', desc: 'Bind restless spirits — cull 5 Dire Wolves to harness their souls.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
+      { name: 'Abyssal Lich', reqLevel: 40, bonus: { int: 8, vit: 6, luk: 4 }, advance: { name: 'Phylactery of the Abyssal Lich', desc: 'Gather spectral fragments — defeat 5 Ice Wraiths.', objective: { type: 'kill', target: 'ice_wraith', count: 5 } } },
+      { name: 'Hybrid: Eldritch Netherlord', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Netherlord', desc: 'Open the nether gate. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
+    ],
+    artificer: [
+      { name: 'Artificer', reqLevel: 1 },
+      { name: 'Clockwork Engineer', reqLevel: 15, bonus: { dex: 5, int: 3 }, advance: { name: 'Blueprint Calibration', desc: 'Field-test sentry contraptions — destroy 5 Dire Wolves.', objective: { type: 'kill', target: 'wolf', count: 5 } } },
+      { name: 'Magitek Mechlord', reqLevel: 40, bonus: { dex: 8, int: 6, str: 4 }, advance: { name: 'Siege Calibration Protocol', desc: 'Calibrate high-yield ordinance — eliminate 5 Rime Harpies.', objective: { type: 'kill', target: 'rime_harpy', count: 5 } } },
+      { name: 'Hybrid: Quantum Technomancer', reqLevel: 70, isHybrid: true, advance: { name: 'Path of the Technomancer', desc: 'Command orbital weaponry. Slay the Void Construct.', objective: { type: 'kill', target: 'void_construct', count: 1 } } },
     ],
   },
 };
