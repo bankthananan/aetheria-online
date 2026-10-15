@@ -331,8 +331,8 @@ export const CONTENT = {
     {
       id: "system_architect", element: "void", name: "System Architect",
       flavor: "The crowned root authority compiling the glitched foundation of this realm.",
-      level: 95, hp: 4200, atk: 300, def: 100, exp: 35000, spriteColor: "#69f0ae", sizeTiles: 2, boss: true,
-      drops: [{ itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
+      level: 95, hp: 4200, atk: 300, def: 100, exp: 35000, spriteColor: "#69f0ae", sizeTiles: 2, boss: true, raid: true,
+      drops: [{ itemId: "kernel_core", chance: 1.0 }, { itemId: "star_iron", chance: 1.0 }, { itemId: "blessed_ore", chance: 1.0 }],
       behavior: "aggressive"
     },
 
@@ -742,6 +742,8 @@ export const CONTENT = {
     { id: "voidmaw_eye", name: "Eye of the Voidmaw", type: "material", desc: "A crystallized cosmic iris radiating with dimensional gravity.", price: 5000, value: 5000, rarity: "legendary" },
     { id: "titan_pendant", name: "Titanheart Pendant", type: "armor", slot: "accessory", desc: "A colossal talisman granting immense vigor and resilience.", price: 7500, value: 7500, rarity: "epic", def: 15, stats: { maxHp: 250, physDef: 15, magicDef: 15 }, classReq: null, gearLevel: 45 },
     { id: "voidmaw_edge", name: "Voidmaw Edge", type: "weapon", slot: "weapon", desc: "A reality-cleaving blade pulsating with otherworldly entropy.", price: 12000, value: 12000, rarity: "legendary", atk: 45, stats: { physAtk: 45, critChance: 8, dmg_void: 15 }, classReq: null, gearLevel: 50 },
+    { id: "kernel_core", name: "System Kernel Core", type: "material", desc: "A pulsing core of raw binary authority harvested from the System Architect.", price: 6000, value: 6000, rarity: "legendary" },
+    { id: "architect_omnikey", name: "Architect's Omnikey", type: "accessory", slot: "accessory", desc: "A transcendental cipher key unlocking higher mathematical reality.", price: 24000, value: 24000, rarity: "legendary", atk: 35, def: 25, classReq: null, rankReq: "S", gearLevel: 85 },
 
     // ===== Abyssal Spire Economy, Relics & Transmogs =====
     { id: "spire_emblem", name: "Spire Emblem", type: "material", desc: "An ancient ascendant sigil earned by conquering floors of the Abyssal Spire.", price: 100, value: 100, rarity: "rare" },
@@ -1188,6 +1190,7 @@ export const CONTENT = {
     { id: "r_titan_horn", out: "titan_horn", cost: 500, mats: [{ itemId: "dimensional_shard", qty: 5 }, { itemId: "blessed_ore", qty: 2 }, { itemId: "caldera_crystal", qty: 1 }, { itemId: "star_iron", qty: 4 }] },
     { id: "r_titan_pendant", out: "titan_pendant", cost: 2500, mats: [{ itemId: "titan_heart", qty: 2 }, { itemId: "star_iron", qty: 8 }, { itemId: "essence_night", qty: 1 }] },
     { id: "r_voidmaw_edge", out: "voidmaw_edge", cost: 3000, mats: [{ itemId: "voidmaw_eye", qty: 2 }, { itemId: "dimensional_shard", qty: 8 }, { itemId: "blessed_ore", qty: 4 }] },
+    { id: "r_architect_omnikey", out: "architect_omnikey", cost: 6000, mats: [{ itemId: "kernel_core", qty: 2 }, { itemId: "star_iron", qty: 8 }, { itemId: "dimensional_shard", qty: 8 }] },
     // Botanical Sanctum Seed Extraction & Feast Recipes
     { id: "r_seed_silverleaf", out: "seed_silverleaf", cost: 50, mats: [{ itemId: "silverleaf", qty: 2 }] },
     { id: "r_seed_moonflower", out: "seed_moonflower", cost: 100, mats: [{ itemId: "moonlight_lotus", qty: 2 }] },

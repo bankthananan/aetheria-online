@@ -32,6 +32,7 @@ const ITEM_NAMES = {
   voidmaw_eye: 'Voidmaw Eye',
   spire_emblem: 'Spire Emblem',
   dimensional_shard: 'Dimensional Shard',
+  kernel_core: 'System Kernel Core',
   guild_commendation: 'Guild Commendation',
   stronghold_banner: 'Stronghold Vanguard Banner',
 };

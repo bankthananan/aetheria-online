@@ -2675,6 +2675,8 @@ export const ITEM_ICON = {
   voidmaw_eye: 'gem',
   titan_pendant: 'ring',
   voidmaw_edge: 'sword',
+  kernel_core: 'core',
+  architect_omnikey: 'ring',
   // Abyssal Spire Items, Relics, Transmogs & Titles
   spire_emblem: 'gem',
   crown_of_the_ascendant: 'helm',

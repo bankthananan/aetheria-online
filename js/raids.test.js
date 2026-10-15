@@ -72,6 +72,26 @@ assert.equal(behemoth.staggerVulnerabilityMult, 1.40);
 assert.deepEqual(behemoth.addsPool, ['thornback_boar', 'blight_sprite']);
 assert.equal(behemoth.apexTrophy, 'titan_heart');
 
+// Check System Architect
+assert.ok(WORLD_BOSS_CATALOG.system_architect, 'System Architect exists in catalog');
+const architect = raidsSystem.getBossDef('system_architect');
+assert.equal(architect.id, 'system_architect');
+assert.equal(architect.name, 'System Architect');
+assert.equal(architect.zone, 'glitched_monolith');
+assert.equal(architect.element, 'void');
+assert.equal(architect.maxHp, 48000);
+assert.equal(architect.atk, 125);
+assert.equal(architect.def, 55);
+assert.equal(architect.breakThresholdHp, 0.60);
+assert.equal(architect.enrageThresholdHp, 0.30);
+assert.equal(architect.breakShieldHp, 12000);
+assert.equal(architect.breakTimerMs, 35000);
+assert.equal(architect.staggerDurationMs, 8000);
+assert.equal(architect.staggerVulnerabilityMult, 1.50);
+assert.deepEqual(architect.signatureMechanics, ['kernel_panic', 'null_pointer_beam', 'runtime_collapse']);
+assert.deepEqual(architect.addsPool, ['debug_drone', 'memory_phantom']);
+assert.equal(architect.apexTrophy, 'kernel_core');
+
 assert.equal(raidsSystem.getBossDef('non_existent_boss'), null, 'Invalid boss returns null');
 
 // ============================================================================

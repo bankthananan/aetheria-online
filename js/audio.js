@@ -189,20 +189,29 @@ let playbackPaused=false;
 
 function init() {
   if (ctx || !AC) return ctx;
-  ctx = new AC();
-  masterGain = ctx.createGain();
-  masterGain.gain.value = muted ? 0 : volumes.master;
-  masterGain.connect(ctx.destination);
+  try {
+    ctx = new AC();
+    if (typeof ctx.createGain !== 'function') {
+      ctx = null;
+      return null;
+    }
+    masterGain = ctx.createGain();
+    masterGain.gain.value = muted ? 0 : volumes.master;
+    masterGain.connect(ctx.destination);
 
-  musicGain = ctx.createGain();
-  musicGain.gain.value = volumes.music;
-  musicGain.connect(masterGain);
+    musicGain = ctx.createGain();
+    musicGain.gain.value = volumes.music;
+    musicGain.connect(masterGain);
 
-  sfxGain = ctx.createGain();
-  sfxGain.gain.value = volumes.sfx;
-  sfxGain.connect(masterGain);
+    sfxGain = ctx.createGain();
+    sfxGain.gain.value = volumes.sfx;
+    sfxGain.connect(masterGain);
 
-  return ctx;
+    return ctx;
+  } catch (e) {
+    ctx = null;
+    return null;
+  }
 }
 
 function resume() {
@@ -361,13 +370,25 @@ export const SFX = {
   menu:       (t) => beep(t, 660, 660, 0.05, 'square', 0.18),
   playerHurt: (t) => { beep(t, 300, 90, 0.28, 'sawtooth', 0.3); noise(t, 0.18, 0.2, 500); },
   monsterDie: (t) => { beep(t, 500, 40, 0.35, 'square', 0.28); noise(t, 0.3, 0.25, 700); },
+
+  // Tier IV Hybrid Ultimates (Procedural Web Audio synthesis)
+  eclipse_strike:        (t) => { beep(t, 220, 80, 0.45, 'sawtooth', 0.28); fmTone(130, 2.5, 5, t + 0.05, 0.35, 0.25); noise(t + 0.1, 0.3, 0.2, 400); },
+  apocalypse_harvest:    (t) => { beep(t, 600, 110, 0.4, 'sawtooth', 0.3); fmTone(95, 4.0, 7, t + 0.04, 0.45, 0.32); noise(t + 0.08, 0.35, 0.25, 350); },
+  orbital_strike_beacon: (t) => { beep(t, 1200, 1800, 0.15, 'sine', 0.25); beep(t + 0.15, 1800, 2400, 0.15, 'sine', 0.25); beep(t + 0.3, 160, 45, 0.5, 'square', 0.35); noise(t + 0.3, 0.45, 0.35, 600); },
+  orbital_strike:        (t) => SFX.orbital_strike_beacon(t),
+  colossal_onslaught:    (t) => { beep(t, 180, 50, 0.4, 'square', 0.35); noise(t, 0.35, 0.35, 300); },
+  elemental_strike:      (t) => { beep(t, 350, 900, 0.25, 'triangle', 0.25); fmTone(520, 1.5, 4, t + 0.05, 0.25, 0.25); noise(t + 0.1, 0.2, 0.2, 1200); },
+  arcane_arrow_barrage:  (t) => { [0, 0.06, 0.12, 0.18].forEach((dt, i) => beep(t + dt, 800 + i * 150, 1400 + i * 100, 0.12, 'triangle', 0.2)); },
+  phalanx:               (t) => { fmTone(440, 2, 4, t, 0.5, 0.3); beep(t + 0.05, 550, 880, 0.4, 'sine', 0.25); },
+  cyclone_lotus_kick:    (t) => { beep(t, 250, 750, 0.2, 'sawtooth', 0.25); beep(t + 0.1, 750, 250, 0.25, 'triangle', 0.25); noise(t + 0.05, 0.25, 0.2, 800); },
+  tempest_sanctuary:     (t) => { beep(t, 500, 1200, 0.3, 'sawtooth', 0.25); fmTone(660, 3, 5, t + 0.05, 0.35, 0.28); noise(t, 0.3, 0.2, 1500); },
 };
 
-function playSfx(sfxId) {
+function playSfx(sfxId, fallbackId) {
   init();
   if (!ctx) return;
   resume();
-  const fn = SFX[sfxId];
+  const fn = SFX[sfxId] || (fallbackId ? SFX[fallbackId] : null);
   if (fn) fn(ctx.currentTime + 0.01);
 }
 
@@ -403,4 +424,4 @@ function setVolumes(v = {}) {
   }
 }
 
-export const AUDIO = { init, playMusic, stopMusic, playSfx, setMuted, setVolumes, pausePlayback, resumePlayback, currentMusicTheme: () => loop?.theme || null };
+export const AUDIO = { init, playMusic, stopMusic, playSfx, hasSfx: (id) => Boolean(SFX[id]), setMuted, setVolumes, pausePlayback, resumePlayback, currentMusicTheme: () => loop?.theme || null };

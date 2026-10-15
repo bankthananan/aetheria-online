@@ -23,11 +23,12 @@ for (const [key, fac] of Object.entries(FACILITY_DEFINITIONS)) {
   assert.equal(fac.tiers[3].tier, 3);
 }
 
-assert.equal(Object.keys(TROPHY_PEDESTAL_DEFINITIONS).length, 4, '4 trophy pedestals defined');
+assert.equal(Object.keys(TROPHY_PEDESTAL_DEFINITIONS).length, 5, '5 trophy pedestals defined');
 assert.ok(TROPHY_PEDESTAL_DEFINITIONS.pedestal_colossus);
 assert.ok(TROPHY_PEDESTAL_DEFINITIONS.pedestal_voidmaw);
 assert.ok(TROPHY_PEDESTAL_DEFINITIONS.pedestal_zenith);
 assert.ok(TROPHY_PEDESTAL_DEFINITIONS.pedestal_incursion);
+assert.ok(TROPHY_PEDESTAL_DEFINITIONS.pedestal_architect);
 
 assert.equal(SIEGE_WAVE_TEMPLATES.length, 3, '3 siege wave templates defined');
 assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege rewards defined');
@@ -221,6 +222,7 @@ assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege 
     pedestal_voidmaw: false,
     pedestal_zenith: false,
     pedestal_incursion: false,
+    pedestal_architect: false,
   });
 
   const p = {
@@ -228,6 +230,7 @@ assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege 
       { itemId: 'titan_heart', qty: 2 },
       { itemId: 'spire_emblem', qty: 25 },
       { itemId: 'dimensional_shard', qty: 5 }, // Incursion needs 10
+      { itemId: 'kernel_core', qty: 1 },
     ],
   };
 
@@ -249,10 +252,17 @@ assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege 
   assert.equal(sys.isPedestalSocketed('pedestal_zenith'), true);
   assert.equal(p.inventory.find(i => i.itemId === 'spire_emblem'), undefined, 'spire_emblem fully consumed');
 
+  // Mount architect (needs 1 kernel_core)
+  const mountArchitect = sys.mountTrophy('pedestal_architect', p);
+  assert.equal(mountArchitect.success, true);
+  assert.equal(sys.isPedestalSocketed('pedestal_architect'), true);
+  assert.equal(p.inventory.find(i => i.itemId === 'kernel_core'), undefined, 'kernel_core fully consumed');
+
   // Cumulative auras calculation
   let auras = sys.getTrophyAuras();
   // Colossus perks: { maxHp: 200, physDef: 15, res_fire: 10, res_nature: 10 }
   // Zenith perks: { dmgPct: 8, moveSpdPct: 10, cooldownRecoveryPct: 10 }
+  // Architect perks: { allStats: 10, matk: 15, res_void: 15 }
   assert.equal(auras.maxHp, 200);
   assert.equal(auras.physDef, 15);
   assert.equal(auras.res_fire, 10);
@@ -260,6 +270,9 @@ assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege 
   assert.equal(auras.dmgPct, 8);
   assert.equal(auras.moveSpdPct, 10);
   assert.equal(auras.cooldownRecoveryPct, 10);
+  assert.equal(auras.allStats, 10);
+  assert.equal(auras.matk, 15);
+  assert.equal(auras.res_void, 15);
   assert.equal(auras.magicDef, 0);
 
   // Unmount colossus: should return titan_heart to player inventory
@@ -273,6 +286,7 @@ assert.ok(SIEGE_REWARDS.S && SIEGE_REWARDS.A && SIEGE_REWARDS.B, 'S, A, B siege 
   assert.equal(auras.maxHp, 0, 'colossus maxHp bonus removed after unmount');
   assert.equal(auras.physDef, 0);
   assert.equal(auras.dmgPct, 8, 'zenith bonus persists');
+  assert.equal(auras.allStats, 10, 'architect bonus persists');
 
   // Unmount again must fail
   assert.equal(sys.unmountTrophy('pedestal_colossus', p).success, false, 'cannot unmount unsocketed pedestal');

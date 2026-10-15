@@ -191,7 +191,7 @@ console.log('--- d) Hall of Trophies & Account-Wide Auras ---');
 // Clear trophies and reset
 A.G.strongholdSystem.deserialize({
   facilities: { treasury: 1, forge: 1, conservatory: 1, training: 1 },
-  trophies: { pedestal_colossus: false, pedestal_voidmaw: false, pedestal_zenith: false, pedestal_incursion: false },
+  trophies: { pedestal_colossus: false, pedestal_voidmaw: false, pedestal_zenith: false, pedestal_incursion: false, pedestal_architect: false },
   lastStipendClaimAt: vnow,
 });
 A.recompute(A.G.player);
@@ -207,13 +207,16 @@ const baselineDmgMult = A.G.player.dmgMult || 1.0;
 const baselineMoveMult = A.G.player.moveMult || 1.0;
 const baselineMagicDef = A.G.player.magicDef || 0;
 const baselineResHoly = A.G.player.res_holy || 0;
+const baselineStr = A.G.player.stats?.str || 0;
+const baselineMatk = A.G.player.magicAtk || 0;
 
 // Stock player inventory with trophy items
 A.G.player.inventory.push(
   { itemId: 'titan_heart', qty: 2 },
   { itemId: 'voidmaw_eye', qty: 2 },
   { itemId: 'spire_emblem', qty: 30 },
-  { itemId: 'dimensional_shard', qty: 15 }
+  { itemId: 'dimensional_shard', qty: 15 },
+  { itemId: 'kernel_core', qty: 2 }
 );
 
 // 1. Socket titan_heart into pedestal_colossus -> recompute -> verify +200 Max HP, +15 Phys DEF, +10 Fire/Nature RES
@@ -248,17 +251,32 @@ assert.equal(A.G.player.magicDef, baselineMagicDef + 15, '+15 Magic DEF from Inc
 assert.equal(A.G.player.res_holy, baselineResHoly + 10, '+10 Holy RES from Incursion pedestal');
 assert.equal(A.G.strongholdSystem.getTrophyAuras().lootBias, 0.20, '+0.20 lootBias from Incursion pedestal');
 
-// 5. Unmount pedestal_colossus -> verify Max HP returns to baseline and titan_heart returns to inventory
+// 4b. Socket kernel_core (1x) into pedestal_architect -> verify +10 All Stats, +15 MATK, +15 Void RES
+const mArchitect = A.G.strongholdSystem.mountTrophy('pedestal_architect', A.G.player);
+assert.equal(mArchitect.success, true, 'Mounted kernel_core into pedestal_architect');
+A.recompute(A.G.player);
+assert.ok(A.G.player.stats.str >= baselineStr + 10, '+10 All Stats from Architect pedestal');
+assert.ok(A.G.player.magicAtk >= baselineMatk + 15, '+15 MATK from Architect pedestal');
+assert.equal(A.G.strongholdSystem.getTrophyAuras().allStats, 10, '+10 allStats from Architect pedestal aura');
+assert.equal(A.G.strongholdSystem.getTrophyAuras().matk, 15, '+15 matk from Architect pedestal aura');
+
+// 5. Unmount pedestal_colossus & pedestal_architect -> verify Max HP returns to baseline
 const titanCountBeforeUnmount = A.G.player.inventory.find(i => i.itemId === 'titan_heart')?.qty || 0;
+const kernelCountBeforeUnmount = A.G.player.inventory.find(i => i.itemId === 'kernel_core')?.qty || 0;
 const uColossus = A.G.strongholdSystem.unmountTrophy('pedestal_colossus', A.G.player);
+const uArchitect = A.G.strongholdSystem.unmountTrophy('pedestal_architect', A.G.player);
 assert.equal(uColossus.success, true, 'Unmounted pedestal_colossus');
+assert.equal(uArchitect.success, true, 'Unmounted pedestal_architect');
 A.recompute(A.G.player);
 assert.equal(A.G.player.maxHp, baselineHp, 'Max HP cleanly returns to baseline');
 assert.equal(A.G.player.physDef, baselinePhysDef, 'Phys DEF cleanly returns to baseline');
 assert.equal(A.G.player.res_fire, baselineResFire, 'Fire RES returns to baseline');
 assert.equal(A.G.player.res_nature, baselineResNature, 'Nature RES returns to baseline');
+assert.equal(A.G.player.stats.str, baselineStr, 'STR cleanly returns to baseline');
 const titanCountAfterUnmount = A.G.player.inventory.find(i => i.itemId === 'titan_heart')?.qty || 0;
+const kernelCountAfterUnmount = A.G.player.inventory.find(i => i.itemId === 'kernel_core')?.qty || 0;
 assert.equal(titanCountAfterUnmount, titanCountBeforeUnmount + 1, 'titan_heart safely returned to player inventory');
+assert.equal(kernelCountAfterUnmount, kernelCountBeforeUnmount + 1, 'kernel_core safely returned to player inventory');
 
 console.log('--- e) Central Crystal Siege Defense Encounter ---');
 // Ensure on guild_stronghold map
@@ -400,7 +418,7 @@ console.log('--- g) Save/Resume Persistence & Clean Session Disconnect ---');
 // Prepare known stronghold state
 A.G.strongholdSystem.deserialize({
   facilities: { treasury: 2, forge: 2, conservatory: 1, training: 3 },
-  trophies: { pedestal_colossus: true, pedestal_voidmaw: false, pedestal_zenith: true, pedestal_incursion: false },
+  trophies: { pedestal_colossus: true, pedestal_voidmaw: false, pedestal_zenith: true, pedestal_incursion: false, pedestal_architect: false },
   lastStipendClaimAt: 999999,
 });
 A.G.stronghold = A.G.strongholdSystem.serialize();
@@ -418,7 +436,7 @@ assert.equal(saved, true, 'A.saveGame() succeeded');
 const rawSave = A.readSave();
 assert.ok(rawSave?.world?.stronghold, 'world.stronghold serialized in save file');
 assert.deepEqual(rawSave.world.stronghold.facilities, { treasury: 2, forge: 2, conservatory: 1, training: 3 }, 'Facilities persisted');
-assert.deepEqual(rawSave.world.stronghold.trophies, { pedestal_colossus: true, pedestal_voidmaw: false, pedestal_zenith: true, pedestal_incursion: false }, 'Trophies persisted');
+assert.deepEqual(rawSave.world.stronghold.trophies, { pedestal_colossus: true, pedestal_voidmaw: false, pedestal_zenith: true, pedestal_incursion: false, pedestal_architect: false }, 'Trophies persisted');
 assert.equal(rawSave.world.stronghold.lastStipendClaimAt, 999999, 'lastStipendClaimAt persisted');
 
 // Resume game
@@ -431,6 +449,7 @@ assert.equal(A.G.strongholdSystem.isPedestalSocketed('pedestal_colossus'), true,
 assert.equal(A.G.strongholdSystem.isPedestalSocketed('pedestal_voidmaw'), false, 'Voidmaw pedestal restored');
 assert.equal(A.G.strongholdSystem.isPedestalSocketed('pedestal_zenith'), true, 'Zenith pedestal restored');
 assert.equal(A.G.strongholdSystem.isPedestalSocketed('pedestal_incursion'), false, 'Incursion pedestal restored');
+assert.equal(A.G.strongholdSystem.isPedestalSocketed('pedestal_architect'), false, 'Architect pedestal restored');
 
 // Active temporary siege encounter resets to idle on session reload
 assert.equal(A.G.strongholdState, null, 'Active siege encounter reset to idle on session reload');

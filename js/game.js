@@ -981,9 +981,10 @@ function tierBonusFor(p) {
 function statBlock(p) {
   const c = p._cls, g = c.statGrowthPerLevel, lv = p.level - 1, tb = tierBonusFor(p);
   const rb = (p.rebirths || 0) * TUNING.rebirthStatBonus;   // NG+: permanent all-stat bonus
+  const sa = (strongholdSystem?.getTrophyAuras()?.allStats || 0);
   const st = {};
   for (const k of ['str','agi','vit','int','dex','luk'])
-    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0) + rb;
+    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0) + rb + sa;
   return st;
 }
 
@@ -1515,6 +1516,10 @@ function recompute(p, fill) {
   if (trophyAuras.res_nature) p.res_nature = (p.res_nature || 0) + trophyAuras.res_nature;
   if (trophyAuras.res_void) p.res_void = (p.res_void || 0) + trophyAuras.res_void;
   if (trophyAuras.res_holy) p.res_holy = (p.res_holy || 0) + trophyAuras.res_holy;
+  if (trophyAuras.matk || trophyAuras.magicAtk) {
+    p.magicAtk += (trophyAuras.matk || trophyAuras.magicAtk);
+    if (MAGIC.has(p.combatClass)) p.atkStat = p.magicAtk;
+  }
   p.strongholdMods = strongholdMods;
   p.trophyAuras = trophyAuras;
   if (homesteadSystem && homesteadSystem.isHearthBuffActive()) {
@@ -3154,7 +3159,7 @@ function castSkillById(id) {
   p.animCastState = (sk.type === 'buff' || sk.type === 'heal') ? 'cast'
     : sk.finisher ? finisherStateFor(p) : attackStateFor(p);
   p.animCastUntil = now() + animMs(p.animCastState);
-  AUDIO.playSfx('skill');
+  AUDIO.playSfx(sk.id, 'skill');
   const lvl = skillLevel(p, sk.id);
   const atk = p.atkStat * buffMult(p, 'atk') * skillPower(p, sk) * momentumMult;
 
@@ -4493,6 +4498,7 @@ function render() {
     const pedestals = [
       { id: 'pedestal_colossus', x: 12 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_colossus'), color: '#ff5722' },
       { id: 'pedestal_voidmaw', x: 14 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_voidmaw'), color: '#9c27b0' },
+      { id: 'pedestal_architect', x: 16 * TS, y: 2 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_architect'), color: '#00ffcc' },
       { id: 'pedestal_zenith', x: 18 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_zenith'), color: '#ffd700' },
       { id: 'pedestal_incursion', x: 20 * TS, y: 4 * TS, socketed: strongholdSystem.isPedestalSocketed('pedestal_incursion'), color: '#00e5ff' },
     ];
@@ -4709,7 +4715,11 @@ const FX_COLOR = { arcane_bolt: '#8fe6ff', flame_burst: '#ff8b3d', frost_chains:
   savage_leap: '#ff9a6a', cleaving_storm: '#ffb27a', decapitate: '#ff6a4a',
   ice_lance: '#bfe6ff', chain_lightning: '#c7a0ff', blizzard: '#dff2ff',
   twin_shot: '#fff2b0', snare_trap: '#c9e6a0', explosive_arrow: '#ff8b3d', falcon_strike: '#ffe14d',
-  righteous_strike: '#ffe9a8', divine_wrath: '#ffd24d' };
+  righteous_strike: '#ffe9a8', divine_wrath: '#ffd24d',
+  // Tier IV hybrid ultimates
+  eclipse_strike: '#8e44ad', apocalypse_harvest: '#16a085', orbital_strike_beacon: '#e67e22',
+  colossal_onslaught: '#e0b64c', elemental_strike: '#ff8b3d', arcane_arrow_barrage: '#6ec6ff',
+  phalanx: '#ffe9a6', cyclone_lotus_kick: '#2ecc71', tempest_sanctuary: '#f2d24d' };
 const fx = o => { o.born = now(); G.effects.push(o); };
 const spawnSlash = (x, y, color, r = 20) => fx({ kind: 'slash', x, y, color, r, life: 200 });
 const spawnBolt = (x0, y0, x1, y1, color, core, big) => fx({ kind: 'bolt', x0, y0, x1, y1, color, core, big, life: Math.max(140, dist(x0, y0, x1, y1) / 0.7) });
@@ -4731,6 +4741,83 @@ const FX_HOLY  = new Set(['smite', 'righteous_strike', 'blessing', 'holy_shield'
 // spawn the right visual for a skill toward (tx,ty)
 function skillFx(sk, tx, ty) {
   const p = G.player, col = FX_COLOR[sk.id] || '#ffffff';
+  // Dedicated Tier IV Hybrid Ultimate VFX
+  if (sk.id === 'orbital_strike_beacon') {
+    const R = (sk.radius || 3) * TS;
+    spawnRing(tx, ty, R * 0.4, '#e67e22');
+    spawnRing(tx, ty, R, '#3498db', 80);
+    spawnBolt(tx, ty - 260, tx, ty, '#f39c12', '#ffffff', true);
+    spawnBurst(tx, ty, '#ff3838', 28);
+    spawnCrack(tx, ty, R * 0.8, '#e67e22');
+    combatFx.triggerHybridVfx('orbital_strike_beacon', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'eclipse_strike') {
+    const R = (sk.radius || 2) * TS;
+    spawnBurst(tx, ty, '#8e44ad', 30);
+    spawnRing(tx, ty, R, '#b98cff');
+    spawnSlash(tx, ty, '#8e44ad', 32);
+    spawnSlash(tx, ty, '#ffffff', 24);
+    combatFx.triggerHybridVfx('eclipse_strike', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'apocalypse_harvest') {
+    const R = (sk.radius || 3) * TS;
+    spawnSlash(tx, ty, '#16a085', 36);
+    spawnCrack(tx, ty, R, '#1abc9c');
+    spawnRing(tx, ty, R, '#16a085');
+    spawnBurst(tx, ty, '#2ecc71', 20);
+    combatFx.triggerHybridVfx('apocalypse_harvest', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'colossal_onslaught') {
+    spawnCrack(tx, ty, 32, '#e0b64c');
+    spawnRing(tx, ty, 40, '#ffffff');
+    spawnSlash(tx, ty, '#e0b64c', 36);
+    combatFx.triggerHybridVfx('colossal_onslaught', tx, ty, 40);
+    return;
+  }
+  if (sk.id === 'elemental_strike') {
+    const R = (sk.radius || 2) * TS;
+    spawnBolt(p.x, p.y, tx, ty, '#ff8b3d', '#ffe14d', true);
+    spawnRing(tx, ty, R, '#8fe6ff');
+    spawnBurst(tx, ty, '#c7a0ff', 24);
+    combatFx.triggerHybridVfx('elemental_strike', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'arcane_arrow_barrage') {
+    const R = (sk.radius || 2) * TS;
+    spawnRain(tx, ty, R, '#6ec6ff');
+    spawnRing(tx, ty, R, '#6ec6ff', 120);
+    spawnBurst(tx, ty, '#ffffff', 18);
+    combatFx.triggerHybridVfx('arcane_arrow_barrage', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'phalanx') {
+    spawnRing(p.x, p.y, TS * 1.5, '#ffe9a6');
+    spawnCross(p.x, p.y - 4, '#ffd24d');
+    spawnAura(p.x, p.y, TS * 1.6, '#ffe9a6', 2000);
+    combatFx.triggerHybridVfx('phalanx', p.x, p.y, TS * 1.5);
+    return;
+  }
+  if (sk.id === 'cyclone_lotus_kick') {
+    const R = (sk.radius || 3) * TS;
+    spawnRing(tx, ty, R * 0.5, '#2ecc71');
+    spawnRing(tx, ty, R, '#a8e6cf', 100);
+    spawnBurst(tx, ty, '#ffb8b8', 22);
+    spawnSlash(tx, ty, '#2ecc71', 28);
+    combatFx.triggerHybridVfx('cyclone_lotus_kick', tx, ty, R);
+    return;
+  }
+  if (sk.id === 'tempest_sanctuary') {
+    const R = (sk.radius || 3) * TS;
+    spawnZap(p.x, p.y, tx, ty, '#f2d24d');
+    spawnRing(tx, ty, R, '#f2d24d');
+    spawnAura(tx, ty, R, '#f2d24d', 3000);
+    spawnCross(tx, ty - 4, '#ffffff');
+    combatFx.triggerHybridVfx('tempest_sanctuary', tx, ty, R);
+    return;
+  }
   if (sk.id === 'hunters_mark') {
     spawnBolt(p.x, p.y, tx, ty, '#7bd88f', '#ffffff'); spawnRing(tx, ty, TS * 0.8, '#7bd88f');
     return;
@@ -6541,14 +6628,15 @@ function adminAction(a, extra) {
         pedestal_voidmaw: true,
         pedestal_zenith: true,
         pedestal_incursion: true,
+        pedestal_architect: true,
       },
     });
     G.stronghold = strongholdSystem.serialize();
     recompute(p);
-    toast('Admin: Socketed all 4 Trophy Pedestals', 'good');
+    toast('Admin: Socketed all 5 Trophy Pedestals', 'good');
   }
   else if (a === 'strongholdmats') {
-    for (const mid of ['iron_ore', 'star_iron', 'blessed_ore', 'wood', 'hardwood', 'silverleaf', 'essence_nature', 'titan_heart', 'caldera_crystal', 'voidmaw_eye', 'spire_emblem', 'dimensional_shard', 'guild_commendation']) {
+    for (const mid of ['iron_ore', 'star_iron', 'blessed_ore', 'wood', 'hardwood', 'silverleaf', 'essence_nature', 'titan_heart', 'caldera_crystal', 'voidmaw_eye', 'spire_emblem', 'dimensional_shard', 'kernel_core', 'guild_commendation']) {
       addStack(mid, 50);
     }
     toast('Admin: Granted +50 of all Stronghold materials', 'good');
@@ -8727,7 +8815,7 @@ function useItem(itemId) {
     return true;
   }
   if (itemId === 'titan_horn') {
-    if (!['whispering_woods', 'dragon_caldera', 'astral_rift'].includes(G.mapId)) {
+    if (!['whispering_woods', 'dragon_caldera', 'astral_rift', 'glitched_monolith'].includes(G.mapId)) {
       toast(`🎺 ${T('The Titan Horn only echoes across ancient wild zones!', 'ui')}`, 'bad');
       return false;
     }
@@ -8741,6 +8829,7 @@ function useItem(itemId) {
     if (G.mapId === 'whispering_woods') targetTitan = 'ancient_behemoth';
     else if (G.mapId === 'astral_rift') targetTitan = 'voidmaw_sovereign';
     else if (G.mapId === 'dragon_caldera') targetTitan = 'caldera_colossus';
+    else if (G.mapId === 'glitched_monolith') targetTitan = 'system_architect';
     spawnWorldBossRaid(targetTitan);
     return true;
   }

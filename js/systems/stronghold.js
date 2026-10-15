@@ -88,6 +88,16 @@ export const TROPHY_PEDESTAL_DEFINITIONS = {
     auraName: 'Aetheric Resonance',
     perks: { magicDef: 15, lootBias: 0.20, res_holy: 10 },
     color: '#00e5ff'
+  },
+  pedestal_architect: {
+    id: 'pedestal_architect',
+    name: 'Architect Kernel Pedestal',
+    element: 'void',
+    targetTrophy: 'kernel_core',
+    trophyQty: 1,
+    auraName: 'Kernel Overdrive',
+    perks: { allStats: 10, matk: 15, res_void: 15 },
+    color: '#00ffcc'
   }
 };
 
@@ -153,6 +163,7 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
     pedestal_voidmaw: false,
     pedestal_zenith: false,
     pedestal_incursion: false,
+    pedestal_architect: false,
   };
 
   let lastStipendClaimAt = 0;
@@ -307,6 +318,8 @@ export function createStrongholdSystem({ now = Date.now, rnd = Math.random } = {
       res_nature: 0,
       res_void: 0,
       res_holy: 0,
+      allStats: 0,
+      matk: 0,
     };
 
     for (const [id, def] of Object.entries(TROPHY_PEDESTAL_DEFINITIONS)) {

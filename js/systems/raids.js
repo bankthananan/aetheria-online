@@ -75,6 +75,24 @@ export const WORLD_BOSS_CATALOG = {
     addsPool: ['thornback_boar', 'blight_sprite'],
     apexTrophy: 'titan_heart',
   },
+  system_architect: {
+    id: 'system_architect',
+    name: 'System Architect',
+    zone: 'glitched_monolith',
+    element: 'void',
+    maxHp: 48000,
+    atk: 125,
+    def: 55,
+    breakThresholdHp: 0.60,
+    enrageThresholdHp: 0.30,
+    breakShieldHp: 12000,
+    breakTimerMs: 35000,
+    staggerDurationMs: 8000,
+    staggerVulnerabilityMult: 1.50,
+    signatureMechanics: ['kernel_panic', 'null_pointer_beam', 'runtime_collapse'],
+    addsPool: ['debug_drone', 'memory_phantom'],
+    apexTrophy: 'kernel_core',
+  },
 };
 
 export function createRaidsSystem({

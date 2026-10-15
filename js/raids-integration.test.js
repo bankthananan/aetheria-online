@@ -45,8 +45,8 @@ A.loadMap('town_awakening', 10, 10);
 A.updateHud();
 
 console.log('--- a) Content Invariants ---');
-// All 3 world bosses exist in CONTENT.monsters and WORLD_BOSS_CATALOG
-const requiredBosses = ['voidmaw_sovereign', 'caldera_colossus', 'ancient_behemoth'];
+// All 4 world bosses exist in CONTENT.monsters and WORLD_BOSS_CATALOG
+const requiredBosses = ['voidmaw_sovereign', 'caldera_colossus', 'ancient_behemoth', 'system_architect'];
 for (const bId of requiredBosses) {
   const contentMon = CONTENT.monsters.find(m => m.id === bId);
   assert.ok(contentMon, `Boss '${bId}' exists in CONTENT.monsters`);
@@ -55,18 +55,19 @@ for (const bId of requiredBosses) {
   assert.equal(WORLD_BOSS_CATALOG[bId].id, bId, `Boss catalog ID matches '${bId}'`);
 }
 
-// All 5 raid items exist in CONTENT.items
-const requiredItems = ['titan_horn', 'titan_heart', 'voidmaw_eye', 'titan_pendant', 'voidmaw_edge'];
+// All 7 raid items exist in CONTENT.items
+const requiredItems = ['titan_horn', 'titan_heart', 'voidmaw_eye', 'titan_pendant', 'voidmaw_edge', 'kernel_core', 'architect_omnikey'];
 for (const itId of requiredItems) {
   const itemDef = CONTENT.items.find(it => it.id === itId);
   assert.ok(itemDef, `Raid item '${itId}' exists in CONTENT.items`);
 }
 
-// All 3 crafting recipes exist in CONTENT.recipes
+// All 4 crafting recipes exist in CONTENT.recipes
 const requiredRecipes = [
   { id: 'r_titan_horn', out: 'titan_horn' },
   { id: 'r_titan_pendant', out: 'titan_pendant' },
   { id: 'r_voidmaw_edge', out: 'voidmaw_edge' },
+  { id: 'r_architect_omnikey', out: 'architect_omnikey' },
 ];
 for (const rec of requiredRecipes) {
   const recipeDef = CONTENT.recipes.find(r => r.id === rec.id);
@@ -123,6 +124,19 @@ assert.equal(A.itemQty('titan_horn'), 0, 'titan_horn quantity decreased by 1 (no
 assert.ok(A.G.raidState?.active, 'Raid is active in astral_rift');
 assert.equal(A.G.raidState.bossId, 'voidmaw_sovereign', 'voidmaw_sovereign spawned in astral_rift');
 assert.equal(A.G.raidBossMob?.def?.id, 'voidmaw_sovereign', 'raidBossMob is voidmaw_sovereign');
+A.adminAction('endraid');
+assert.equal(A.G.raidState, null, 'Raid ended cleanly via adminAction(endraid)');
+assert.equal(A.G.raidBossMob, null, 'raidBossMob cleared');
+
+// 4. Load map 'glitched_monolith' -> useItem('titan_horn') spawns system_architect
+A.addItem('titan_horn', 1);
+A.loadMap('glitched_monolith', 10, 10);
+const used4 = A.useItem('titan_horn');
+assert.equal(used4, true, 'titan_horn successfully used in glitched_monolith');
+assert.equal(A.itemQty('titan_horn'), 0, 'titan_horn quantity decreased by 1 (now 0)');
+assert.ok(A.G.raidState?.active, 'Raid is active in glitched_monolith');
+assert.equal(A.G.raidState.bossId, 'system_architect', 'system_architect spawned in glitched_monolith');
+assert.equal(A.G.raidBossMob?.def?.id, 'system_architect', 'raidBossMob is system_architect');
 A.adminAction('endraid');
 assert.equal(A.G.raidState, null, 'Raid ended cleanly via adminAction(endraid)');
 assert.equal(A.G.raidBossMob, null, 'raidBossMob cleared');

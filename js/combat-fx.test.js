@@ -86,3 +86,42 @@ test('combat-fx: floatie tags formatting', () => {
   assert.equal(list[0].tag, 'CRIT!');
   assert.equal(list[0].text, '150');
 });
+
+test('combat-fx: Tier IV Hybrid Ultimate VFX presets and triggers', () => {
+  const fx = createCombatFx({
+    getCtx: () => null,
+    prefersReducedMotion: () => false,
+    now: () => 1000,
+  });
+
+  const hybridSkills = [
+    'eclipse_strike',
+    'apocalypse_harvest',
+    'orbital_strike_beacon',
+    'colossal_onslaught',
+    'elemental_strike',
+    'arcane_arrow_barrage',
+    'phalanx',
+    'cyclone_lotus_kick',
+    'tempest_sanctuary',
+  ];
+
+  for (const skillId of hybridSkills) {
+    const preset = fx.HYBRID_FX_PRESETS[skillId];
+    assert.ok(preset, `Preset missing for hybrid skill: ${skillId}`);
+    assert.ok(preset.color.startsWith('#'), `Valid color expected for ${skillId}`);
+    assert.ok(preset.secondaryColor.startsWith('#'), `Valid secondaryColor expected for ${skillId}`);
+    assert.ok(preset.style, `Style expected for ${skillId}`);
+    assert.ok(preset.label, `Label expected for ${skillId}`);
+
+    const res = fx.triggerHybridVfx(skillId, 100, 100, 64);
+    assert.equal(res, preset);
+  }
+
+  // Verify telegraphs were registered for styles with targeting indicators
+  assert.ok(fx.getTelegraphs().length >= 3, 'Telegraphs should be spawned for orbital beam, nether sweep, and radial burst');
+
+  // Verify strict ZERO camera shake on hybrid ultimate triggers
+  const shake = fx.getScreenShakeOffset();
+  assert.deepEqual(shake, { x: 0, y: 0, angle: 0 }, 'Screen shake must remain strictly zero on player hybrid skills');
+});

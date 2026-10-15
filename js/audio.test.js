@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { MAPS } from './maps.js';
 
 globalThis.window = { AudioContext: class {} };
-const { MUSIC_THEMES } = await import('./audio.js');
+const { MUSIC_THEMES, SFX, AUDIO } = await import('./audio.js');
 
 const mapIds = Object.keys(MAPS);
 assert.deepEqual(Object.keys(MUSIC_THEMES).sort(), mapIds.sort(), 'every map must own exactly one regional music theme');
@@ -29,4 +29,25 @@ for (const mapId of mapIds) {
   fingerprints.add(fingerprint);
 }
 
-console.log('Audio audit passed: all six maps have valid, distinct synthesized scores.');
+// Tier IV Hybrid Ultimate SFX verification
+const expectedHybridSfx = [
+  'eclipse_strike',
+  'apocalypse_harvest',
+  'orbital_strike_beacon',
+  'orbital_strike',
+  'colossal_onslaught',
+  'elemental_strike',
+  'arcane_arrow_barrage',
+  'phalanx',
+  'cyclone_lotus_kick',
+  'tempest_sanctuary',
+];
+
+for (const sfxId of expectedHybridSfx) {
+  assert.equal(typeof SFX[sfxId], 'function', `SFX.${sfxId} must be a synthesis function`);
+  assert.ok(AUDIO.hasSfx(sfxId), `AUDIO.hasSfx(${sfxId}) must return true`);
+  // Must execute safely with fallback in headless test environment
+  AUDIO.playSfx(sfxId, 'skill');
+}
+
+console.log('Audio audit passed: all maps and Tier IV hybrid ultimates have valid, distinct synthesized scores and SFX.');

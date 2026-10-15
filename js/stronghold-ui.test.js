@@ -97,6 +97,7 @@ assert.ok(consoleHtmlEmpty.includes('pedestal-card--pedestal_colossus'), 'Render
 assert.ok(consoleHtmlEmpty.includes('pedestal-card--pedestal_voidmaw'), 'Renders Voidmaw pedestal');
 assert.ok(consoleHtmlEmpty.includes('pedestal-card--pedestal_zenith'), 'Renders Zenith pedestal');
 assert.ok(consoleHtmlEmpty.includes('pedestal-card--pedestal_incursion'), 'Renders Incursion pedestal');
+assert.ok(consoleHtmlEmpty.includes('pedestal-card--pedestal_architect'), 'Renders Architect pedestal');
 assert.ok(consoleHtmlEmpty.includes('[EMPTY]'), 'Shows [EMPTY] badge for unsocketed pedestals');
 assert.ok(consoleHtmlEmpty.includes('data-mount-pedestal="pedestal_colossus"'), 'Renders Mount Trophy button for Colossus');
 assert.ok(consoleHtmlEmpty.includes('Colossal Fortitude'), 'Displays Colossus aura name');

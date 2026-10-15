@@ -5,6 +5,63 @@ const FLOAT_LIFE_MS = 850;
 const FLOAT_RISE_PX = 24;
 const FLOAT_FONT_STACK = 'ui-monospace,"SFMono-Regular",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace';
 
+export const HYBRID_FX_PRESETS = Object.freeze({
+  eclipse_strike: {
+    color: '#8e44ad',
+    secondaryColor: '#b98cff',
+    style: 'radial_burst',
+    label: 'Eclipse Wave',
+  },
+  apocalypse_harvest: {
+    color: '#16a085',
+    secondaryColor: '#1abc9c',
+    style: 'nether_sweep',
+    label: 'Nether Harvester',
+  },
+  orbital_strike_beacon: {
+    color: '#e67e22',
+    secondaryColor: '#3498db',
+    style: 'orbital_beam',
+    label: 'Orbital Reticle',
+  },
+  colossal_onslaught: {
+    color: '#e0b64c',
+    secondaryColor: '#ffffff',
+    style: 'golden_shockwave',
+    label: 'Colossal Wave',
+  },
+  elemental_strike: {
+    color: '#ff8b3d',
+    secondaryColor: '#8fe6ff',
+    style: 'prismatic_pulse',
+    label: 'Elemental Trinity',
+  },
+  arcane_arrow_barrage: {
+    color: '#6ec6ff',
+    secondaryColor: '#ffffff',
+    style: 'celestial_rain',
+    label: 'Arcane Rain',
+  },
+  phalanx: {
+    color: '#ffe9a6',
+    secondaryColor: '#ffd24d',
+    style: 'aegis_barrier',
+    label: 'Aegis Wall',
+  },
+  cyclone_lotus_kick: {
+    color: '#2ecc71',
+    secondaryColor: '#ffb8b8',
+    style: 'jade_vortex',
+    label: 'Lotus Cyclone',
+  },
+  tempest_sanctuary: {
+    color: '#f2d24d',
+    secondaryColor: '#ffffff',
+    style: 'lightning_field',
+    label: 'Storm Sanctuary',
+  },
+});
+
 export function createCombatFx({
   getCtx,
   prefersReducedMotion = () => false,
@@ -246,6 +303,18 @@ export function createCombatFx({
     setFloatList(keep);
   }
 
+  function triggerHybridVfx(skillId, x, y, radius = 48) {
+    const preset = HYBRID_FX_PRESETS[skillId];
+    if (!preset) return null;
+    if (preset.style === 'orbital_beam') {
+      addTelegraph({ kind: 'circle', x, y, radius, durationMs: 600, color: preset.color });
+    } else if (preset.style === 'nether_sweep') {
+      addTelegraph({ kind: 'vortex', x, y, radius, durationMs: 500 });
+    } else if (preset.style === 'radial_burst') {
+      addTelegraph({ kind: 'circle', x, y, radius, durationMs: 400, color: preset.color });
+    }
+    return preset;
+  }
 
   return {
     addScreenShake,
@@ -258,5 +327,7 @@ export function createCombatFx({
     addFloatText,
     getFloaties,
     drawFloaties,
+    triggerHybridVfx,
+    HYBRID_FX_PRESETS,
   };
 }
