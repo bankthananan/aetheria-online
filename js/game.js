@@ -2577,7 +2577,7 @@ function attackElement(p, sk) {
   }
   return base;
 }
-const elementChip = el => { const m = elementMeta(el); return `<span class="elem-chip" style="color:${m.color};border-color:${m.color}">${m.icon} ${m.label}</span>`; };
+const elementChip = el => { const m = elementMeta(el); return `<span class="elem-chip" style="color:${m.color};border-color:${m.color}">${m.icon} ${T(m.label, 'ui')}</span>`; };
 const weakToElement = monEl => TUNING.elements.weakness[monEl] || null;   // null = neutral, no weakness
 function elementMult(attackEl, m) {
   const E = TUNING.elements;
@@ -6613,11 +6613,14 @@ function paperDoll(p) {
     const stat = inst ? itemMainStatsHtml(inst) : T('empty', 'ui');
     const bonus = inst ? itemAffixesHtml(inst, p) : '';
     const sockets = inst ? socketDotsHtml(inst) : '';
+    const imbueBadge = (slot === 'weapon' && p.imbue && now() < p.imbue.until)
+      ? `<div class="weapon-imbue-badge"><small>✨ ${T('Imbued', 'ui')}:</small> ${elementChip(p.imbue.element)} <b>${Math.max(1, Math.ceil((p.imbue.until - now()) / 1000))}s</b></div>`
+      : '';
     const transmog = inst ? `<select class="transmog-select" data-transmog="${inst.uid}" title="${T('Transmog appearance', 'ui')}" style="font-size:10px;max-width:90px">${transmogOptionsHtml(p, slot, inst)}</select>` : '';
     return `<div class="doll-slot" ${inst ? `data-unequip="${slot}" title="${T('Unequip', 'ui')} ${esc(instName(inst))}"` : ''}>
       ${icon}<div style="font-size:10px;line-height:1.25;overflow:hidden">
         <span style="color:var(--text-muted)">${T(SLOT_LABEL[slot], 'ui')}</span><br>
-        ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>`}
+        ${inst ? `<b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</small>${sockets}<br><span style="color:var(--text)">${stat}</span><div class="gear-bonuses gear-bonuses--slot">${bonus}</div>${imbueBadge}${transmog}` : `<span style="color:var(--text-muted)">${stat}</span>${imbueBadge}`}
       </div></div>`;
   });
   // the socket picker opens on the row right under the clicked item (2-column grid → after its row)
@@ -7483,19 +7486,72 @@ function panelBody(id) {
       
     const xpNeed = p.level >= DESIGN.levelCap ? 0 : xpForNext(p.level), jobCap = activeJobLevelCap(p), jobNeed = p.jobLevel >= jobCap ? 0 : jobXpForNext(p.jobLevel);
     const meter = (cur, need) => `<div class="ro-meter"><i style="width:${need ? Math.min(100, 100 * cur / need) : 100}%"></i></div>`;
-    const derived = [[T('ATK', 'ui'), p.atkStat], [T('DEF', 'ui'), p.physDef], [T('HIT', 'ui'), p.hit], [T('FLEE', 'ui'), p.flee],
-      [T('CRIT', 'ui'), p.critChance + '%'], [T('ASPD', 'ui'), '+' + aspd + '%'], [T('Max HP', 'ui'), p.maxHp], [T('Max MP', 'ui'), p.maxMp],
-      [T('Move', 'ui'), '+' + move + '%'], ...(p.rangeBonus ? [[T('Reach', 'ui'), '+' + p.rangeBonus.toFixed(1) + ' ' + T('tiles', 'ui')]] : [])];
+    const curElement = attackElement(p);
+    const derived = [
+      [T('ATK', 'ui'), p.atkStat],
+      ...(p.magicAtk ? [[T('MATK', 'ui'), p.magicAtk]] : []),
+      [T('DEF', 'ui'), p.physDef],
+      [T('HIT', 'ui'), p.hit],
+      [T('FLEE', 'ui'), p.flee],
+      [T('CRIT', 'ui'), p.critChance + '%'],
+      [T('ASPD', 'ui'), '+' + aspd + '%'],
+      [T('Max HP', 'ui'), p.maxHp],
+      [T('Max MP', 'ui'), p.maxMp],
+      [T('Move', 'ui'), '+' + move + '%'],
+      [T('Element', 'ui'), elementChip(curElement)],
+      ...(p.lifesteal ? [[T('Lifesteal', 'ui'), p.lifesteal + '%']] : []),
+      ...(p.rangeBonus ? [[T('Reach', 'ui'), '+' + p.rangeBonus.toFixed(1) + ' ' + T('tiles', 'ui')]] : [])
+    ];
+
+    const canonicalHybridKey = p.hybridJobId || (p.tierIndex >= 3 ? Object.keys(PROGRESSION.hybridJobs).find(k => PROGRESSION.tiers[p.classId]?.[3]?.name?.includes(PROGRESSION.hybridJobs[k].name)) : null);
+    const hybridJob = canonicalHybridKey ? PROGRESSION.hybridJobs[canonicalHybridKey] : null;
+    let hybridBadge = '';
+    if (hybridJob && (p.tierIndex >= 3 || p.hybridJobId)) {
+      const lineageNames = (hybridJob.requires || []).map(cid => esc(T(DESIGN.classes.find(c => c.id === cid)?.name || cid, 'classes'))).join(' + ');
+      const bonusStr = Object.entries(hybridJob.bonus || {}).map(([k, v]) => `+${v} ${k.toUpperCase()}`).join(' · ');
+      hybridBadge = `<div class="st-hybrid-badge">
+        <div class="st-hybrid-crest">✦</div>
+        <div class="st-hybrid-info">
+          <div class="st-hybrid-title"><b style="color:var(--gold,#f1c40f)">${esc(T(hybridJob.name, 'classes'))}</b> <span class="st-hybrid-role">[${esc(T(hybridJob.role, 'ui'))}]</span></div>
+          <div class="st-hybrid-lineage"><small class="ro-muted">${T('Lineage', 'ui')}:</small> <span>${lineageNames}</span></div>
+          ${bonusStr ? `<div class="st-hybrid-bonus"><small class="ro-muted">${T('EVOLUTION BONUS', 'ui')}:</small> <b style="color:var(--success-text,#2ecc71)">${bonusStr}</b></div>` : ''}
+        </div>
+      </div>`;
+    }
+
+    const activeBuffs = (p.buffs || []).filter(b => now() < b.until);
+    const hasImbue = p.imbue && now() < p.imbue.until;
+    let activeEffectsHtml = '';
+    if (hasImbue || activeBuffs.length > 0) {
+      const effectChips = [];
+      if (hasImbue) {
+        const rem = Math.max(1, Math.ceil((p.imbue.until - now()) / 1000));
+        effectChips.push(`<span class="st-effect-chip st-effect-chip--imbue">✨ ${T('Imbue', 'ui')}: ${elementChip(p.imbue.element)} <b>${rem}s</b></span>`);
+      }
+      for (const b of activeBuffs) {
+        const rem = Math.max(1, Math.ceil((b.until - now()) / 1000));
+        const skillName = COMBAT.skills.find(s => s.id === b.sourceSkillId)?.name || b.stat;
+        const mag = b.mult ? `${b.mult > 1 ? '+' : ''}${Math.round((b.mult - 1) * 100)}%` : `+${b.flat}`;
+        effectChips.push(`<span class="st-effect-chip">⚡ <b>${esc(T(skillName, 'skills'))}</b>: ${b.stat.toUpperCase()} ${mag} <small>${rem}s</small></span>`);
+      }
+      activeEffectsHtml = `<div class="st-active-strip ro-box">
+        <div class="st-active-label"><small class="ro-muted">⚡ ${T('Active Effects', 'ui')}</small></div>
+        <div class="st-effect-chips">${effectChips.join('')}</div>
+      </div>`;
+    }
+
     return `<div class="st-window">
       <header class="ro-box st-head">
         <div><b class="st-name">${p.name}</b> — ${T(p.className, 'classes')}
           <div class="ro-muted">${tierText}</div>
-          ${branch ? `<div class="ro-muted"><span class="ro-id" style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))}</span> · ${esc(T(branch.focus, 'ui'))}</div>` : ''}</div>
+          ${branch ? `<div class="ro-muted"><span class="ro-id" style="color:${branch.color || 'var(--accent-alt)'}">◆ ${esc(T(branch.role, 'ui'))}</span> · ${esc(T(branch.focus, 'ui'))}</div>` : ''}
+          ${hybridBadge}</div>
         <div class="st-levels">
           <span>${T('Level', 'ui')} <b>${p.level}</b>/${DESIGN.levelCap}</span><span class="ro-muted">XP ${Math.floor(p.xp)}/${xpNeed || 'MAX'}</span>${meter(p.xp, xpNeed)}
           <span>${T('Job Lv', 'ui')} <b>${p.jobLevel}</b>/${jobCap}</span><span class="ro-muted">${T('Job XP', 'ui')} ${jobNeed ? `${Math.floor(p.jobXp)}/${jobNeed}` : 'MAX'}</span>${meter(p.jobXp, jobNeed)}
         </div>
       </header>
+      ${activeEffectsHtml}
       <div class="st-grid">
         <section>
           <h3>${T('Stats', 'ui')}</h3>
@@ -9371,6 +9427,21 @@ const extraCss = `
 .ro-reset-note{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 9px;border:1px solid var(--gold);background:var(--card-bg)}.ro-reset-note>span{color:var(--accent-alt);font-size:22px}.ro-reset-note div{display:flex;flex-direction:column}.ro-reset-note b{color:var(--accent-alt);font-size:8px;letter-spacing:1px}.ro-reset-note small{color:var(--text);font-size:8px;line-height:1.35}
 .ro-branch-identity{margin:0 8px 8px;padding:8px 9px;border:1px solid var(--book-accent);background:var(--card-bg)}.ro-branch-identity>header{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}.ro-branch-identity>header small{color:var(--text-muted);font-size:7px;letter-spacing:1px}.ro-branch-identity>header b{color:color-mix(in srgb,var(--book-accent) 45%,#1d140a);font-size:10px}.ro-branch-identity>p{margin:0 0 6px;color:var(--info);font-size:9px;line-height:1.4}.ro-branch-combo{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ro-branch-combo>small{color:var(--text-muted);font-size:7px;letter-spacing:.6px}
 .ro-hybrid-branch{padding:4px 6px}.ro-hybrid-banner{display:flex;align-items:center;gap:10px;margin:6px 0 10px;padding:8px 10px;border:1px solid var(--gold);background:var(--card-bg);box-shadow:inset 0 0 0 1px rgba(224,182,76,.2)}.ro-hybrid-crest{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--gold);background:var(--card-bg);color:var(--gold);font-size:18px}.ro-hybrid-meta{display:flex;flex-direction:column;gap:2px}.ro-hybrid-name{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:10px;font-weight:700}.ro-role-tag{padding:1px 4px;border:1px solid var(--gold);background:rgba(224,182,76,.15);color:var(--accent-alt);font-size:7px;letter-spacing:.5px}.ro-hybrid-lineage{color:var(--text-muted);font-size:8px}.ro-hybrid-lineage b{color:var(--info)}.ro-hybrid-bonus{color:var(--text-muted);font-size:8px}.ro-hybrid-bonus span{color:var(--success-text);font-weight:700}
+.weapon-imbue-badge{margin-top:3px;padding:2px 4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;display:inline-flex;align-items:center;gap:4px;font-size:9px;line-height:1.2}.weapon-imbue-badge small{color:var(--text-muted)}.weapon-imbue-badge b{color:var(--accent-alt,#f1c40f)}
+.st-active-strip{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--card-bg)}
+.st-active-label{font-size:9px;font-weight:700;letter-spacing:.5px}
+.st-effect-chips{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.st-effect-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid var(--card-border);background:rgba(255,255,255,.05);font-size:9px;line-height:1.3;border-radius:3px}
+.st-effect-chip small{color:var(--text-muted)}
+.st-effect-chip--imbue{border-color:var(--gold,#e0b64c)}
+.st-hybrid-badge{display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 8px;border:1px solid var(--gold,#e0b64c);background:rgba(224,182,76,.08);box-shadow:inset 0 0 0 1px rgba(224,182,76,.2);border-radius:4px}
+.st-hybrid-crest{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--gold,#e0b64c);background:var(--card-bg);color:var(--gold,#e0b64c);font-size:16px;border-radius:3px}
+.st-hybrid-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.st-hybrid-title{font-size:11px;display:flex;align-items:center;gap:5px}
+.st-hybrid-role{font-size:8px;color:var(--accent-alt);font-style:italic}
+.st-hybrid-lineage{font-size:8px;color:var(--text-muted)}
+.st-hybrid-lineage span{color:var(--text)}
+.st-hybrid-bonus{font-size:8px}
 .skill-guide{margin:0 8px 8px;border:1px solid var(--card-border);background:var(--card-bg)}.skill-guide>summary{padding:7px 9px;color:var(--accent-alt);font-size:9px;font-weight:900;letter-spacing:.7px;cursor:pointer}.skill-guide>summary small{margin-left:8px;color:var(--text-muted);font-size:8px;font-weight:400;letter-spacing:0}.skill-guide .skill-flow{width:auto;margin:0;border-width:1px 0 0;box-shadow:none}
 /* skill hover tooltip */
 .sk-tip{position:fixed;z-index:60;max-width:264px;background:linear-gradient(180deg,#2f2716,#1a140c);

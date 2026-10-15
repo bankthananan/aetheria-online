@@ -189,7 +189,8 @@ export const L10N = {
       "Nature": "Nature",
       "Holy": "Holy",
       "Void": "Void",
-      "Water": "Water"
+      "Water": "Water",
+      "Neutral": "Neutral"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -512,6 +513,7 @@ export const L10N = {
       "Holy": "แสงศักดิ์สิทธิ์",
       "Void": "ความมืด",
       "Water": "น้ำ",
+      "Neutral": "ไร้ธาตุ",
       "Common": "ธรรมดา",
       "Uncommon": "ไม่ธรรมดา",
       "Rare": "หายาก",
@@ -1081,10 +1083,15 @@ export const L10N = {
       "HYBRID CALLING": "สายอาชีพไฮบริด",
       "SIGNATURE HYBRID ULTIMATE": "อัลติเมตประจำสายไฮบริด",
       "LINEAGE": "สายเลือดอาชีพ",
+      "Lineage": "สายเลือดอาชีพ",
       "EVOLUTION BONUS": "โบนัสวิวัฒนาการ",
       "Hybrid Calling": "สายอาชีพไฮบริด",
       "Lv 70 Advancement": "เลื่อนขั้นเลเวล 70",
       "Unlock at Lv 70": "ปลดล็อกที่เลเวล 70",
+      "Imbued": "เคลือบธาตุ",
+      "Imbue": "เคลือบธาตุ",
+      "Active Effects": "สถานะและบัฟที่ทำงานอยู่",
+      "Element": "ธาตุโจมตี",
       "Heavy Juggernaut": "จัดเกอร์นอทเกราะหนัก",
       "Magical Melee": "ประชิดเวทมนตร์",
       "Heavy Defense": "ป้องกันหนัก",
