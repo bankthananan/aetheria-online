@@ -1193,6 +1193,39 @@ export const CONTENT = {
     { id: "r_seed_moonflower", out: "seed_moonflower", cost: 100, mats: [{ itemId: "moonlight_lotus", qty: 2 }] },
     { id: "r_seed_ember_blossom", out: "seed_ember_blossom", cost: 120, mats: [{ itemId: "ember_blossom", qty: 2 }] },
     { id: "r_artisan_bread", out: "artisan_bread", cost: 150, mats: [{ itemId: "golden_grain", qty: 3 }, { itemId: "iron_ore", qty: 1 }] },
+    // ---- Specialized Weapons & Armors: Shadow Blade, Soul Binder, Artificer ----
+    // Band 1 (Awakening / Woods)
+    { id: "r_iron_dagger", out: "iron_dagger", cost: 20, mats: [{ itemId: "copper_ore", qty: 2 }, { itemId: "wolf_fang", qty: 1 }] },
+    { id: "r_bone_wand", out: "bone_wand", cost: 20, mats: [{ itemId: "wolf_fang", qty: 2 }, { itemId: "silverleaf", qty: 1 }] },
+    { id: "r_heavy_wrench", out: "heavy_wrench", cost: 20, mats: [{ itemId: "copper_ore", qty: 2 }, { itemId: "goblin_ear", qty: 2 }] },
+    // Band 2 (Steppes / Ruins)
+    { id: "r_shadow_kris", out: "shadow_kris", cost: 120, mats: [{ itemId: "iron_ore", qty: 3 }, { itemId: "sand_fang", qty: 2 }] },
+    { id: "r_soul_binder_staff", out: "soul_binder_staff", cost: 120, mats: [{ itemId: "shade_dust", qty: 3 }, { itemId: "sunken_kelp", qty: 2 }] },
+    { id: "r_steam_pistol", out: "steam_pistol", cost: 120, mats: [{ itemId: "iron_ore", qty: 3 }, { itemId: "crawler_shell", qty: 2 }] },
+    { id: "r_shadow_leathers", out: "shadow_leathers", cost: 150, mats: [{ itemId: "crawler_shell", qty: 3 }, { itemId: "dune_blossom", qty: 2 }] },
+    { id: "r_acolyte_robes", out: "acolyte_robes", cost: 150, mats: [{ itemId: "shade_dust", qty: 4 }, { itemId: "silverleaf", qty: 2 }] },
+    { id: "r_tinkerer_smock", out: "tinkerer_smock", cost: 150, mats: [{ itemId: "iron_ore", qty: 3 }, { itemId: "crawler_shell", qty: 2 }] },
+    // Band 3 (Mire / Tundra)
+    { id: "r_nightstalker_stiletto", out: "nightstalker_stiletto", cost: 380, mats: [{ itemId: "muck_iron", qty: 3 }, { itemId: "siren_scale", qty: 3 }] },
+    { id: "r_bone_scythe", out: "bone_scythe", cost: 380, mats: [{ itemId: "muck_iron", qty: 3 }, { itemId: "ghost_spore_shroom", qty: 3 }] },
+    { id: "r_magitek_driver", out: "magitek_driver", cost: 380, mats: [{ itemId: "muck_iron", qty: 3 }, { itemId: "pyrite_ore", qty: 2 }] },
+    { id: "r_nightstalker_tunic", out: "nightstalker_tunic", cost: 360, mats: [{ itemId: "muck_iron", qty: 3 }, { itemId: "glowshroom_bloom", qty: 2 }] },
+    { id: "r_bone_woven_vestments", out: "bone_woven_vestments", cost: 380, mats: [{ itemId: "ghost_spore_shroom", qty: 3 }, { itemId: "ice_core", qty: 1 }] },
+    { id: "r_engineer_overalls", out: "engineer_overalls", cost: 380, mats: [{ itemId: "pyrite_ore", qty: 3 }, { itemId: "muck_iron", qty: 2 }] },
+    // Band 4 (Spires / Caldera)
+    { id: "r_abyssal_fang", out: "abyssal_fang", cost: 950, mats: [{ itemId: "cobalt_ore", qty: 4 }, { itemId: "storm_petal", qty: 3 }] },
+    { id: "r_nether_grimoire", out: "nether_grimoire", cost: 900, mats: [{ itemId: "cobalt_ore", qty: 4 }, { itemId: "charged_iris", qty: 3 }] },
+    { id: "r_mortar_cannon", out: "mortar_cannon", cost: 900, mats: [{ itemId: "cobalt_ore", qty: 4 }, { itemId: "storm_core", qty: 2 }] },
+    { id: "r_phantom_garb", out: "phantom_garb", cost: 800, mats: [{ itemId: "charged_iris", qty: 3 }, { itemId: "cloud_feather", qty: 2 }] },
+    { id: "r_lich_mantle", out: "lich_mantle", cost: 800, mats: [{ itemId: "ember_ash", qty: 4 }, { itemId: "caldera_crystal", qty: 2 }] },
+    { id: "r_magitek_harness", out: "magitek_harness", cost: 800, mats: [{ itemId: "cobalt_ore", qty: 4 }, { itemId: "storm_core", qty: 2 }] },
+    // Band 5 (Chasm / Rift)
+    { id: "r_eclipse_edge", out: "eclipse_edge", cost: 1800, mats: [{ itemId: "voidstone_ore", qty: 4 }, { itemId: "void_shard", qty: 3 }] },
+    { id: "r_abyssal_harvester", out: "abyssal_harvester", cost: 1800, mats: [{ itemId: "voidstone_ore", qty: 4 }, { itemId: "void_polyp", qty: 3 }] },
+    { id: "r_clockwork_obliteration_engine", out: "clockwork_obliteration_engine", cost: 1800, mats: [{ itemId: "voidstone_ore", qty: 4 }, { itemId: "star_iron", qty: 3 }] },
+    { id: "r_void_assassin_vestments", out: "void_assassin_vestments", cost: 1450, mats: [{ itemId: "darksteel_ore", qty: 4 }, { itemId: "shadow_orchid", qty: 3 }] },
+    { id: "r_netherlord_regalia", out: "netherlord_regalia", cost: 1450, mats: [{ itemId: "voidstone_ore", qty: 4 }, { itemId: "void_polyp", qty: 3 }] },
+    { id: "r_mechlord_power_chassis", out: "mechlord_power_chassis", cost: 1450, mats: [{ itemId: "darksteel_ore", qty: 4 }, { itemId: "star_iron", qty: 3 }] },
   ],
 
   // lifetime badges — evaluated against live run state by checkAchievements()
