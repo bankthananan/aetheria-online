@@ -178,8 +178,14 @@ const npcLocation = npcId => { for (const map of Object.values(MAPS)) { const np
 const ITEM_CAT = it => it.type === 'weapon' ? 'Weapons' : (it.type === 'armor' || it.type === 'accessory' || it.type === 'relic') ? 'Armor & Accessories' : it.type === 'potion' ? 'Potions' : (it.type === 'consumable' || it.type === 'usable') ? 'Food & Supplies' : it.type === 'taming_bait' ? 'Taming Bait' : it.type === 'card' ? 'Monster Cards' : it.type === 'reset' ? 'Reset Manuals' : it.type === 'material' ? 'Materials' : 'Quest Items';
 const ITEM_CAT_ORDER = { 'Weapons': 0, 'Armor & Accessories': 1, 'Potions': 2, 'Food & Supplies': 3, 'Taming Bait': 4, 'Reset Manuals': 5, 'Monster Cards': 6, 'Materials': 7, 'Quest Items': 8 };
 const USE_TYPES = ['potion', 'consumable', 'usable', 'taming_bait', 'reset'];   // types the bag can Use / double-click
-const skillsFor = cc => COMBAT.skills.filter(s => s.classId === cc);
-// equipment slots (paper-doll). Item's slot comes from `itemSlot()`.
+const skillsFor = cc => COMBAT.skills.filter(s => {
+  if (s.classId === cc) return true;
+  const hj = PROGRESSION.hybridJobs?.[s.classId];
+  if (hj && hj.requires) {
+    return hj.requires.some(cid => (DESIGN.classes.find(c => c.id === cid)?.combatClass || cid) === cc);
+  }
+  return false;
+});
 const EQUIP_SLOTS = ['weapon', 'head', 'body', 'hands', 'cloak', 'feet', 'accessory', 'relic'];
 const SLOT_LABEL = { weapon: 'Weapon', head: 'Head', body: 'Body', hands: 'Hands', cloak: 'Cloak', feet: 'Feet', accessory: 'Accessory', relic: 'Relic' };
 const SLOT_ICON = { weapon: 'sword', head: 'helm', body: 'plate', hands: 'gloves', cloak: 'cloak', feet: 'boots', accessory: 'ring', relic: 'core' };
@@ -6722,7 +6728,13 @@ function skillsPanelHtml(p) {
   const cc = p.combatClass, tree = PROGRESSION.skillTree;
   // Keep every class skill visible; rejected branch/final-job nodes are sealed
   // in place so players can understand what the unchosen path contains.
-  const actives = skillsFor(cc);
+  const canonicalHybridKey = p.hybridJobId || Object.keys(PROGRESSION.hybridJobs).find(k => PROGRESSION.tiers[p.classId]?.[3]?.name?.includes(PROGRESSION.hybridJobs[k].name));
+  const hybridJob = PROGRESSION.hybridJobs[canonicalHybridKey];
+  const hybridSkill = hybridJob ? COMBAT.skills.find(s => s.id === hybridJob.signatureSkillId) : null;
+  const actives = [...skillsFor(cc)];
+  if (hybridSkill && !actives.some(s => s.id === hybridSkill.id)) {
+    actives.push(hybridSkill);
+  }
   const passives = passivesFor(cc), book = PROGRESSION.skillBooks[cc];
   const roleFor = s => s.finisher ? ['FINISH', 'finisher']
     : s.detonate ? ['DETONATE', 'detonator']
@@ -6735,7 +6747,9 @@ function skillsPanelHtml(p) {
     const learnable = isPassive ? canLearnPassive(p, id) : canLearn(p, id), maxed = lv >= max, clickable = learnable && !maxed;
     const incompatible = isPassive
       ? !!pa.reqAdvancedJob && pa.reqAdvancedJob !== p.advancedJobId
-      : (!!node.reqBranch && !!p.jobBranchId && !branchAllowsSkill(p, id)) || (!!node.reqAdvancedJob && !!p.advancedJobId && !advancedJobAllowsSkill(p, id));
+      : (!!node.reqBranch && !!p.jobBranchId && !branchAllowsSkill(p, id)) ||
+        (!!node.reqAdvancedJob && !!p.advancedJobId && !advancedJobAllowsSkill(p, id)) ||
+        (!!node.reqHybridJob && !!p.hybridJobId && !hybridJobAllowsSkill(p, id));
     const reqTier = isPassive ? (pa.reqTier || 0) : (node?.reqTier || 0);
     let currentCap = isPassive ? max : skillCapForTier(node, p.tierIndex);
     if (p.tierIndex < reqTier) currentCap = Math.min(currentCap, 1);   // Ascension preview: rank 1 only pre-promotion
@@ -6747,11 +6761,17 @@ function skillsPanelHtml(p) {
     const [role, roleClass] = isPassive ? [T('PASSIVE', 'ui'), 'passive'] : roleFor(s);
     const drag = !isPassive && lv > 0 ? `draggable="true" data-drag-skill="${id}"` : '';
     const req = incompatible
-      ? (pa?.reqAdvancedJob || node?.reqAdvancedJob ? `${T('Exclusive to', 'ui')} ${esc(T((advancedJobsFor(p.classId).find(job => job.id === (pa?.reqAdvancedJob || node?.reqAdvancedJob))?.name || (pa?.reqAdvancedJob || node?.reqAdvancedJob)), 'classes'))}` : T('Incompatible job path', 'ui'))
+      ? (pa?.reqAdvancedJob || node?.reqAdvancedJob
+          ? `${T('Exclusive to', 'ui')} ${esc(T((advancedJobsFor(p.classId).find(job => job.id === (pa?.reqAdvancedJob || node?.reqAdvancedJob))?.name || (pa?.reqAdvancedJob || node?.reqAdvancedJob)), 'classes'))}`
+          : node?.reqHybridJob
+          ? `${T('Exclusive to', 'ui')} ${esc(T(PROGRESSION.hybridJobs[node.reqHybridJob]?.name || node.reqHybridJob, 'classes'))}`
+          : T('Incompatible job path', 'ui'))
       : isPassive
       ? `${T('Job Lv', 'ui')} ${pa.reqLevel}${pa.reqTier && p.tierIndex < pa.reqTier ? ` · ${clickable || tierCapped ? T('Ascension preview', 'ui') : T('Job advancement required', 'ui')}` : ''}`
       : node.reqSkill
         ? `${T('Requires', 'ui')} ${esc(T((COMBAT.skills.find(x => x.id === node.reqSkill.id) || {}).name || node.reqSkill.id, 'skills'))} Lv ${node.reqSkill.lvl}${node.reqBranch ? ` · ${esc(T(jobBranchesFor(p.classId).find(branch => branch.id === node.reqBranch)?.tiers?.[1]?.name || node.reqBranch, 'classes'))}` : ''}`
+        : node.reqHybridJob
+        ? `${T('Hybrid Calling', 'ui')} · ${T('Lv 70 Advancement', 'ui')}`
         : T('Starter skill · granted free', 'ui');
     const status = incompatible ? T('INCOMPATIBLE', 'ui') : maxed ? T('MAXED', 'ui') : tierCapped ? T('MASTERY CAP', 'ui') : lv > 0 ? T('LEARNED', 'ui') : clickable ? T('LEARN +', 'ui') : T('LOCKED', 'ui');
     return `<button type="button" class="ro-skill ${state}${clickable ? ' can' : ''} is-${roleClass}" ${attr} ${drag} data-skill="${id}" data-kind="${isPassive ? 'passive' : 'active'}" data-tier="${reqTier}">
@@ -6762,10 +6782,10 @@ function skillsPanelHtml(p) {
 
   const selectedBranch = jobBranchFor(p, false);
   const selectedAdvancedJob = advancedJobFor(p, false);
-  const stageLabels = [T('FIRST JOB', 'ui'), T('SECOND JOB', 'ui'), T('ADVANCED JOB', 'ui')];
+  const stageLabels = [T('FIRST JOB', 'ui'), T('SECOND JOB', 'ui'), T('ADVANCED JOB', 'ui'), T('HYBRID CALLING', 'ui')];
 
-  const shownTier = [0, 1, 2].includes(G._skillTab) ? G._skillTab : Math.min(p.tierIndex, 2);
-  const lanes = [0, 1, 2].map(tier => {
+  const shownTier = [0, 1, 2, 3].includes(G._skillTab) ? G._skillTab : Math.min(p.tierIndex, 3);
+  const lanes = [0, 1, 2, 3].map(tier => {
     const activeSet = actives.filter(s => (tree[s.id]?.reqTier || 0) === tier)
       .sort((a, b) => (tree[a.id].reqLevel - tree[b.id].reqLevel) || a.name.localeCompare(b.name));
     const passiveSet = passives.filter(pa => (pa.reqTier || 0) === tier)
@@ -6773,7 +6793,8 @@ function skillsPanelHtml(p) {
     const unlocked = p.tierIndex >= tier;
     const tierName = tier === 0 ? PROGRESSION.tiers[p.classId]?.[0]?.name
       : tier === 1 ? selectedBranch?.tiers?.[1]?.name || T('Choose at Lv 15', 'ui')
-      : selectedAdvancedJob?.name || T('Choose at Lv 40', 'ui');
+      : tier === 2 ? selectedAdvancedJob?.name || T('Choose at Lv 40', 'ui')
+      : p.hybridJobId ? PROGRESSION.hybridJobs[p.hybridJobId]?.name : (PROGRESSION.tiers[p.classId]?.[3]?.name || T('Unlock at Lv 70', 'ui'));
 
     let contentHtml = '';
     // tree grid: column = prerequisite depth inside this chapter, row = DFS order so a child sits beside its parent
@@ -6786,7 +6807,27 @@ function skillsPanelHtml(p) {
       const cols = Math.max(1, ...[...pos.values()].map(([c]) => c + 1));
       return `<div class="ro-skill-tree" style="--tree-cols:${cols}">${list.map(sk => { const [c, r] = pos.get(sk.id); return `<div class="ro-tree-cell" style="grid-column:${c + 1};grid-row:${r + 1}">${cardHtml(sk)}</div>`; }).join('')}</div>`;
     };
-    if (tier === 2) {
+    if (tier === 3) {
+      const bonusText = hybridJob?.bonus
+        ? Object.entries(hybridJob.bonus).map(([k, v]) => `+${v} ${k.toUpperCase()}`).join(' · ')
+        : '';
+      const lineageText = hybridJob?.requires
+        ? hybridJob.requires.map(c => esc(T(DESIGN.classes.find(cls => cls.id === c)?.name || c, 'classes'))).join(' + ')
+        : '';
+
+      contentHtml = `<div class="ro-hybrid-branch">
+        <div class="ro-hybrid-banner">
+          <div class="ro-hybrid-crest">✦</div>
+          <div class="ro-hybrid-meta">
+            <div class="ro-hybrid-name">${esc(T(hybridJob?.name || tierName, 'classes'))} <span class="ro-role-tag">${esc(T(hybridJob?.role || 'Master', 'ui'))}</span></div>
+            <div class="ro-hybrid-lineage"><small>${T('LINEAGE', 'ui')}:</small> <b>${lineageText}</b></div>
+            ${bonusText ? `<div class="ro-hybrid-bonus"><small>${T('EVOLUTION BONUS', 'ui')}:</small> <span>${bonusText}</span></div>` : ''}
+          </div>
+        </div>
+        <div class="ro-lane-label">◆ ${T('SIGNATURE HYBRID ULTIMATE', 'ui')}</div>
+        <div class="ro-skill-list">${hybridSkill ? cardHtml(hybridSkill) : `<small class="ro-empty">${T('No signature skill.', 'ui')}</small>`}</div>
+      </div>`;
+    } else if (tier === 2) {
       // Branch layout for Tier 3
       const defaultJob = advancedJobsFor(p.classId)[0];
       const altJob = advancedJobsFor(p.classId)[1];
@@ -6842,8 +6883,16 @@ function skillsPanelHtml(p) {
     <div class="ro-branch-combo"><small>${T('CORE COMBO', 'ui')}</small><div class="flow-skills">${selectedBranch.combo.map(id => COMBAT.skills.find(s => s.id === id)).filter(Boolean).map(s => skillFlowChip(s, p)).join('')}</div></div>
   </section>` : '';
 
+  const romanNumerals = ['I', 'II', 'III', 'IV'];
+  const tabTitles = [
+    PROGRESSION.tiers[p.classId]?.[0]?.name || stageLabels[0],
+    selectedBranch?.tiers?.[1]?.name || stageLabels[1],
+    selectedAdvancedJob?.name || stageLabels[2],
+    p.hybridJobId ? PROGRESSION.hybridJobs[p.hybridJobId]?.name : (PROGRESSION.tiers[p.classId]?.[3]?.name || stageLabels[3]),
+  ];
+
   return `<div class="ro-skill-book" style="--book-accent:${book.color};--book-deep:${book.deep}">${header}${branchIdentity}
-    <div class="book-tabs ro-job-tabs">${[0, 1, 2].map(t => `<button class="book-tab${t === shownTier ? ' active' : ''}" data-skill-tab="${t}">${['I', 'II', 'III'][t]} · ${esc(T(t === 0 ? PROGRESSION.tiers[p.classId]?.[0]?.name || stageLabels[0] : t === 1 ? selectedBranch?.tiers?.[1]?.name || stageLabels[1] : selectedAdvancedJob?.name || stageLabels[2], 'classes'))}${p.tierIndex < t ? ' 🔒' : ''}</button>`).join('')}</div>
+    <div class="book-tabs ro-job-tabs">${[0, 1, 2, 3].map(t => `<button class="book-tab${t === shownTier ? ' active' : ''}" data-skill-tab="${t}">${romanNumerals[t]} · ${esc(T(tabTitles[t], 'classes'))}${p.tierIndex < t ? ' 🔒' : ''}</button>`).join('')}</div>
     <div class="ro-skill-graph-wrap">
       <div class="ro-skill-graph" id="skill-graph">
         <svg class="ro-skill-lines" id="skill-lines" aria-hidden="true"></svg>
@@ -9321,6 +9370,7 @@ const extraCss = `
 .ro-skill.is-builder{border-left-color:var(--card-border)}.ro-skill.is-setup{border-left-color:var(--info)}.ro-skill.is-detonator{border-left-color:var(--violet)}.ro-skill.is-finisher{border-left-color:var(--danger)}.ro-skill.is-passive{border-left-color:var(--violet)}.ro-skill[draggable="true"]{cursor:grab}.ro-skill[draggable="true"]:active{cursor:grabbing}
 .ro-reset-note{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 9px;border:1px solid var(--gold);background:var(--card-bg)}.ro-reset-note>span{color:var(--accent-alt);font-size:22px}.ro-reset-note div{display:flex;flex-direction:column}.ro-reset-note b{color:var(--accent-alt);font-size:8px;letter-spacing:1px}.ro-reset-note small{color:var(--text);font-size:8px;line-height:1.35}
 .ro-branch-identity{margin:0 8px 8px;padding:8px 9px;border:1px solid var(--book-accent);background:var(--card-bg)}.ro-branch-identity>header{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}.ro-branch-identity>header small{color:var(--text-muted);font-size:7px;letter-spacing:1px}.ro-branch-identity>header b{color:color-mix(in srgb,var(--book-accent) 45%,#1d140a);font-size:10px}.ro-branch-identity>p{margin:0 0 6px;color:var(--info);font-size:9px;line-height:1.4}.ro-branch-combo{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ro-branch-combo>small{color:var(--text-muted);font-size:7px;letter-spacing:.6px}
+.ro-hybrid-branch{padding:4px 6px}.ro-hybrid-banner{display:flex;align-items:center;gap:10px;margin:6px 0 10px;padding:8px 10px;border:1px solid var(--gold);background:var(--card-bg);box-shadow:inset 0 0 0 1px rgba(224,182,76,.2)}.ro-hybrid-crest{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--gold);background:var(--card-bg);color:var(--gold);font-size:18px}.ro-hybrid-meta{display:flex;flex-direction:column;gap:2px}.ro-hybrid-name{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:10px;font-weight:700}.ro-role-tag{padding:1px 4px;border:1px solid var(--gold);background:rgba(224,182,76,.15);color:var(--accent-alt);font-size:7px;letter-spacing:.5px}.ro-hybrid-lineage{color:var(--text-muted);font-size:8px}.ro-hybrid-lineage b{color:var(--info)}.ro-hybrid-bonus{color:var(--text-muted);font-size:8px}.ro-hybrid-bonus span{color:var(--success-text);font-weight:700}
 .skill-guide{margin:0 8px 8px;border:1px solid var(--card-border);background:var(--card-bg)}.skill-guide>summary{padding:7px 9px;color:var(--accent-alt);font-size:9px;font-weight:900;letter-spacing:.7px;cursor:pointer}.skill-guide>summary small{margin-left:8px;color:var(--text-muted);font-size:8px;font-weight:400;letter-spacing:0}.skill-guide .skill-flow{width:auto;margin:0;border-width:1px 0 0;box-shadow:none}
 /* skill hover tooltip */
 .sk-tip{position:fixed;z-index:60;max-width:264px;background:linear-gradient(180deg,#2f2716,#1a140c);

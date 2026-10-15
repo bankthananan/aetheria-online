@@ -10,7 +10,7 @@ p.jobLevel = 15; p.skillPoints = 20;
 G._skillTab = 0; G._skillSel = null;
 let html = A.skillsPanelHtml(p);
 assert.equal((html.match(/class="ro-job-lane[^"]*" data-tier="\d"(?! hidden)>/g) || []).length, 1, 'exactly one chapter visible');
-assert.equal((html.match(/data-tier="\d" hidden>/g) || []).length, 2, 'the other two chapters are hidden, not removed');
+assert.equal((html.match(/data-tier="\d" hidden>/g) || []).length, 3, 'the other three chapters are hidden, not removed');
 
 // column of every first-job child = its parent's column + 1
 const col = id => +(html.match(new RegExp(`grid-column:(\\d+);grid-row:\\d+"><button[^>]*data-skill-sel="${id}"`)) || [])[1];
@@ -31,4 +31,6 @@ assert.ok(A.skillsPanelHtml(p).includes(`data-assign-skill="${learnable}"`), 'a 
 
 G._skillTab = 2;
 assert.ok(/data-tier="2">/.test(A.skillsPanelHtml(p)), 'tab switch shows the advanced chapter');
+G._skillTab = 3;
+assert.ok(/data-tier="3">/.test(A.skillsPanelHtml(p)), 'tab switch shows the hybrid chapter');
 console.log('Skill tree UI passed.');

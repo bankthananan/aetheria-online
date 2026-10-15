@@ -26,12 +26,12 @@ for (const classId of classIds) {
 
   const html = A.skillsPanelHtml(player);
   assert.ok(html.includes(book.title) && html.includes(`--book-accent:${book.color}`), `${classId} renders its own visual manual`);
-  assert.equal((html.match(/class="ro-job-lane/g) || []).length, 3, `${classId} manual has three job chapters`);
+  assert.equal((html.match(/class="ro-job-lane/g) || []).length, 4, `${classId} manual has four job chapters`);
   for (const skill of ownSkills) assert.ok(html.includes(`data-skill="${skill.id}"`), `${classId} includes ${skill.id}`);
   assert.ok(html.includes('class="ro-skill-graph"'), `${classId} manual renders the dependency graph`);
   assert.ok(html.includes('class="ro-skill-lines"') && html.includes('aria-hidden="true"'), `${classId} graph includes a decorative native SVG layer`);
 }
-assert.equal(bookTitles.size, classIds.length, 'all seven classes have distinct manuals');
+assert.equal(bookTitles.size, classIds.length, 'all classes have distinct manuals');
 
 const finalBlade = A.makePlayer('reborn_blade', 'FinalGraph');
 finalBlade.tierIndex = 2;
