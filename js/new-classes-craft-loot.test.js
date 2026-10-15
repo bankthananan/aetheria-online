@@ -69,3 +69,28 @@ test('craftItem successfully consumes materials and produces equipment instance 
   assert.ok(daggerInst.uid, 'Has unique instance uid');
   assert.equal(CONTENT.items.find(i => i.id === daggerInst.itemId)?.type, 'weapon');
 });
+
+test('Starter kits, calling quest rewards, and trader inventory include starter weapons', () => {
+  // makePlayer provides starter weapon for new classes
+  const sb = A.makePlayer('shadow_blade', 'S');
+  const nec = A.makePlayer('soul_binder', 'N');
+  const art = A.makePlayer('artificer', 'A');
+
+  assert.ok(sb.inventory.some(i => i.itemId === 'iron_dagger'), 'Shadow blade starts with iron_dagger');
+  assert.ok(nec.inventory.some(i => i.itemId === 'bone_wand'), 'Soul binder starts with bone_wand');
+  assert.ok(art.inventory.some(i => i.itemId === 'heavy_wrench'), 'Artificer starts with heavy_wrench');
+
+  // Calling quest rewards contain starter weapons
+  const qSb = CONTENT.quests.find(q => q.id === 'q_calling_shadow_blade');
+  const qNec = CONTENT.quests.find(q => q.id === 'q_calling_soul_binder');
+  const qArt = CONTENT.quests.find(q => q.id === 'q_calling_artificer');
+  assert.ok(qSb.rewards.items.includes('iron_dagger'), 'Calling quest rewards iron_dagger');
+  assert.ok(qNec.rewards.items.includes('bone_wand'), 'Calling quest rewards bone_wand');
+  assert.ok(qArt.rewards.items.includes('heavy_wrench'), 'Calling quest rewards heavy_wrench');
+
+  // Marla the Trader stocks starter weapons
+  const merchant = CONTENT.npcs.find(n => n.id === 'merchant');
+  assert.ok(merchant.shopItems.includes('iron_dagger'), 'Trader sells iron_dagger');
+  assert.ok(merchant.shopItems.includes('bone_wand'), 'Trader sells bone_wand');
+  assert.ok(merchant.shopItems.includes('heavy_wrench'), 'Trader sells heavy_wrench');
+});

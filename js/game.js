@@ -72,6 +72,7 @@ let runtimeViewport=null;
 
 // ---- reconciliation between designers' independent id schemes ----
 const CLASS_COMBAT = { reborn_blade:'blade', drifter:'berserker', codeweaver:'mage', far_shot:'ranger', lightbringer:'paladin', iron_fist:'monk', stormcaller:'elementalist', shadow_blade: 'assassin', soul_binder: 'necromancer', artificer: 'artificer' };
+const CLASS_STARTER_WEAPON = { shadow_blade: 'iron_dagger', soul_binder: 'bone_wand', artificer: 'heavy_wrench' };
 const MELEE = new Set(['blade','berserker','paladin','monk','assassin']);
 const MAGIC = new Set(['mage','elementalist','necromancer']);
 const NPC_BY_ROLE = { shop:'npc_shopkeeper', guild:'elder', quest:'npc_guide', story:'npc_storyteller' };
@@ -762,7 +763,10 @@ function makePlayer(classId, name) {
     rebirths: 0,               // NG+ count — permanent stat/HP/MP bonuses scale with it
     zeny: 50,
     features: normalizeFeatures(),
-    inventory: [{ itemId: 'minor_potion', qty: 3 }],
+    inventory: [
+      { itemId: 'minor_potion', qty: 3 },
+      ...(CLASS_STARTER_WEAPON[classId] ? [rollItem(CLASS_STARTER_WEAPON[classId], 0, 'common')] : [])
+    ],
     equip: { weapon: null, head: null, body: null, hands: null, cloak: null, feet: null, accessory: null, relic: null },
     bloodShield: 0,
     lifesteal: 0,
