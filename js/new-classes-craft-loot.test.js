@@ -94,3 +94,36 @@ test('Starter kits, calling quest rewards, and trader inventory include starter 
   assert.ok(merchant.shopItems.includes('bone_wand'), 'Trader sells bone_wand');
   assert.ok(merchant.shopItems.includes('heavy_wrench'), 'Trader sells heavy_wrench');
 });
+
+test('Regional dungeon bosses drop Band 2-5 specialized gear with class adaptation', () => {
+  const bosses = [
+    { id: 'lich_malakar', expectedItems: ['shadow_kris', 'acolyte_robes'] },
+    { id: 'frostbite_matron', expectedItems: ['nightstalker_stiletto', 'bone_woven_vestments'] },
+    { id: 'magma_golem_core', expectedItems: ['abyssal_fang', 'mortar_cannon', 'magitek_harness'] },
+    { id: 'singularity_herald', expectedItems: ['eclipse_edge', 'mechlord_power_chassis'] }
+  ];
+
+  for (const b of bosses) {
+    const mon = CONTENT.monsters.find(m => m.id === b.id);
+    assert.ok(mon, `Boss ${b.id} exists in CONTENT.monsters`);
+    for (const item of b.expectedItems) {
+      assert.ok(mon.drops.some(d => d.itemId === item), `Boss ${b.id} drops ${item}`);
+    }
+  }
+
+  // Verify classWeaponFor dynamically adapts boss drops to hero class
+  const sb = A.makePlayer('shadow_blade', 'S');
+  assert.equal(A.classWeaponFor(sb, 'training_greatsword'), 'iron_dagger');
+  assert.equal(A.classWeaponFor(sb, 'mythril_sword'), 'nightstalker_stiletto');
+  assert.equal(A.classWeaponFor(sb, 'void_edge'), 'eclipse_edge');
+
+  const nec = A.makePlayer('soul_binder', 'N');
+  assert.equal(A.classWeaponFor(nec, 'training_greatsword'), 'bone_wand');
+  assert.equal(A.classWeaponFor(nec, 'mythril_sword'), 'bone_scythe');
+  assert.equal(A.classWeaponFor(nec, 'void_edge'), 'abyssal_harvester');
+
+  const art = A.makePlayer('artificer', 'A');
+  assert.equal(A.classWeaponFor(art, 'training_greatsword'), 'heavy_wrench');
+  assert.equal(A.classWeaponFor(art, 'mythril_sword'), 'magitek_driver');
+  assert.equal(A.classWeaponFor(art, 'void_edge'), 'clockwork_obliteration_engine');
+});
