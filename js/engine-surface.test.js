@@ -63,6 +63,7 @@ const AWO_KEYS = [
   "canLearn",
   "canLearnPassive",
   "canPreview",
+  "canSocketIntoSlot",
   "canUseItem",
   "castSkill",
   "castSkillById",
