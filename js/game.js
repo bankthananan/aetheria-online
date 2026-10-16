@@ -61,6 +61,16 @@ import { createStrongholdUIRenderer } from './render/stronghold-ui.js';
 import { createHomesteadSystem, CROP_DEFINITIONS, MANNEQUIN_SLOTS, PASTURE_FORAGE_TABLE, HEARTH_BUFF_DURATION_MS, CULINARY_FEASTS } from './systems/homestead.js';
 import { createHomesteadRenderer } from './render/homestead-fx.js';
 import { createHomesteadUIRenderer } from './render/homestead-ui.js';
+import {
+  ZONE_ATLAS_NODES,
+  isZoneUnlocked,
+  canFastTravel,
+  executeFastTravel,
+  toggleMinimapRadar,
+  getMinimapRadarState,
+  getRadarBlips,
+  renderWorldAtlas,
+} from './render/world-atlas.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -6065,6 +6075,16 @@ function updateQuestTracker() {
 let miniBase = null;
 function updateMinimap() {
   const c = $('#minimap-canvas'); if (!c) return;
+  const radar = getMinimapRadarState();
+  if (c.width !== radar.width || c.height !== radar.height) {
+    c.width = radar.width;
+    c.height = radar.height;
+    const container = typeof c.closest === 'function' ? c.closest('.minimap') : null;
+    if (container) {
+      container.style.width = `${radar.width}px`;
+      container.style.height = `${radar.height}px`;
+    }
+  }
   miniBase = document.createElement('canvas'); miniBase.width = c.width; miniBase.height = c.height;
   const bctx = miniBase.getContext('2d');
   const sx = c.width / G.map.width, sy = c.height / G.map.height;
@@ -6081,6 +6101,12 @@ function setupMinimapInteractions() {
   const miniCanvas = $('#minimap-canvas');
   const miniTip = $('#minimap-tooltip');
   if (!miniCanvas) return;
+  $('#minimap-name')?.addEventListener('click', () => {
+    const st = toggleMinimapRadar();
+    updateMinimap();
+    renderMinimap();
+    toast(st.expanded ? T('Radar Mode', 'ui') : T('Minimap Radar', 'ui'));
+  });
   miniCanvas.onmousemove = (e) => {
     if (!G.map) return;
     const rect = miniCanvas.getBoundingClientRect();
@@ -6250,7 +6276,39 @@ function renderMinimap() {
       mctx.strokeRect(goal.x * sx - 3, goal.y * sy - 3, 7, 7);
     }
   }
-  mctx.fillStyle = '#fff'; mctx.fillRect((G.player.x / TS) * sx - 2, (G.player.y / TS) * sy - 2, 4, 4);
+  const radar = getMinimapRadarState();
+  if (radar.expanded) {
+    mctx.save();
+    mctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+    mctx.lineWidth = 1;
+    const px = (G.player.x / TS) * sx;
+    const py = (G.player.y / TS) * sy;
+    mctx.beginPath(); mctx.arc(px, py, 32, 0, Math.PI * 2); mctx.stroke();
+    mctx.beginPath(); mctx.arc(px, py, 64, 0, Math.PI * 2); mctx.stroke();
+
+    let fAngle = Math.PI / 2;
+    if (G.player.facing === 'up') fAngle = -Math.PI / 2;
+    else if (G.player.facing === 'left') fAngle = Math.PI;
+    else if (G.player.facing === 'right') fAngle = 0;
+
+    mctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+    mctx.beginPath();
+    mctx.moveTo(px, py);
+    mctx.arc(px, py, 48, fAngle - Math.PI / 6, fAngle + Math.PI / 6);
+    mctx.closePath();
+    mctx.fill();
+
+    mctx.fillStyle = '#22c55e';
+    mctx.beginPath();
+    mctx.arc(px, py, 4, 0, Math.PI * 2);
+    mctx.fill();
+    mctx.strokeStyle = '#ffffff';
+    mctx.lineWidth = 1.5;
+    mctx.stroke();
+    mctx.restore();
+  } else {
+    mctx.fillStyle = '#fff'; mctx.fillRect((G.player.x / TS) * sx - 2, (G.player.y / TS) * sy - 2, 4, 4);
+  }
 }
 
 // =====================================================================
@@ -7192,11 +7250,52 @@ const WORLD_SIGIL = {
   tempest_spires: '⚡', sunless_chasm: '▼', astral_rift: '✦', glitched_monolith: '👾',
 };
 function worldChronicleHtml() {
-  const currentTab = G._chronicleTab || 'road';
-  const tabs = [['road', '🗺', 'Roads of the Outworlder'],
-    ['spire', '🌀', 'Abyssal Spire'], ['stronghold', '🏰', 'Guild Stronghold'], ['homestead', '🏡', "Adventurer's Homestead"]];
+  const currentTab = G._chronicleTab || 'atlas';
+  const tabs = [
+    ['atlas', '🗺', 'World Atlas'],
+    ['road', '📜', 'Roads of the Outworlder'],
+    ['spire', '🌀', 'Abyssal Spire'],
+    ['stronghold', '🏰', 'Guild Stronghold'],
+    ['homestead', '🏡', "Adventurer's Homestead"]
+  ];
   const tabNav = `<div class="book-tabs chronicle-tabs" role="tablist">${tabs.map(([id, icon, label]) =>
     `<button class="book-tab ${currentTab === id ? 'active' : ''}" data-chronicle-tab="${id}" role="tab" aria-selected="${currentTab === id}">${icon} ${T(label, 'ui')}</button>`).join('')}</div>`;
+
+  if (currentTab === 'atlas') {
+    const selectedId = G._selectedAtlasZone || G.mapId;
+    const node = ZONE_ATLAS_NODES[selectedId] || ZONE_ATLAS_NODES[G.mapId] || ZONE_ATLAS_NODES.town_awakening;
+    const travelCheck = canFastTravel(node.id, G.player, G.guardiansSlain, G.mapId);
+    const costText = travelCheck.cost > 0 ? `${travelCheck.cost} Zeny` : T('Free', 'ui');
+    return `<section class="world-chronicle" style="max-width:860px">
+      <header class="world-head" style="margin-bottom:10px">
+        <div>
+          <small>${T('AETHERIA · REALM NAVIGATION', 'ui')}</small>
+          <h2>${T('10-Zone World Atlas', 'ui')}</h2>
+          <p>${T('Interactive realm map, connecting highways, and waystone fast travel.', 'ui')}</p>
+        </div>
+      </header>
+      ${tabNav}
+      <div class="atlas-chronicle-body" style="display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;">
+        <div style="position:relative;border:2px solid var(--gold);border-radius:6px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.6);width:100%;max-width:760px;background:#16100b">
+          <canvas id="world-atlas-canvas" width="760" height="480" style="display:block;cursor:crosshair;width:100%;height:auto;"></canvas>
+        </div>
+        <div id="atlas-travel-bar" style="width:100%;max-width:760px;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(30,20,12,0.9);border:1px solid rgba(217,119,6,0.35);border-radius:6px;">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">${node.sigil}</span>
+            <div>
+              <div style="font-weight:bold;color:#fef3c7;font-size:13px">${T(node.name, 'maps')} <span style="font-size:11px;color:rgba(254,243,199,0.7)">(Lv. ${node.levelRange[0]}-${node.levelRange[1]})</span></div>
+              <div style="font-size:11px;color:var(--text-muted)">${node.desc}</div>
+            </div>
+          </div>
+          <div>
+            ${node.id === G.mapId ? `<span class="badge" style="background:#15803d;color:#fff;padding:4px 10px;border-radius:4px;font-size:11px">● ${T('YOU ARE HERE', 'ui')}</span>`
+              : travelCheck.ok ? `<button id="atlas-fast-travel-btn" class="btn btn--primary" data-zone-id="${node.id}" style="padding:6px 14px;font-size:12px;font-weight:bold">⚡ ${T('Fast Travel', 'ui')} (${costText})</button>`
+              : `<span style="font-size:11px;color:#f87171">🔒 ${travelCheck.reason}</span>`}
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }
 
   if (currentTab === 'homestead') {
     return `<section class="world-chronicle" style="max-width:860px">
@@ -8029,6 +8128,53 @@ function wirePanel(id, el) {
       G._chronicleTab = b.dataset.chronicleTab;
       refreshPanel('world');
     });
+    const atlasCanvas = el.querySelector('#world-atlas-canvas');
+    if (atlasCanvas) {
+      renderWorldAtlas(atlasCanvas, {
+        currentZone: G.mapId,
+        guardiansSlain: G.guardiansSlain,
+        selectedZone: G._selectedAtlasZone || G.mapId,
+        zeny: G.player?.zeny,
+        T,
+      });
+
+      atlasCanvas.onclick = (e) => {
+        const rect = atlasCanvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const scaleX = atlasCanvas.width / rect.width;
+        const scaleY = atlasCanvas.height / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
+
+        let closest = null, minD = 36;
+        for (const [zId, node] of Object.entries(ZONE_ATLAS_NODES)) {
+          const d = Math.hypot(node.x - clickX, node.y - clickY);
+          if (d < minD) {
+            minD = d;
+            closest = zId;
+          }
+        }
+        if (closest) {
+          G._selectedAtlasZone = closest;
+          refreshPanel('world');
+        }
+      };
+    }
+    const travelBtn = el.querySelector('#atlas-fast-travel-btn');
+    if (travelBtn) {
+      travelBtn.onclick = () => {
+        const zoneId = travelBtn.dataset.zoneId;
+        const node = ZONE_ATLAS_NODES[zoneId];
+        const res = executeFastTravel(zoneId, G);
+        if (res.success) {
+          toast(T('Fast traveled to {name}!','ui').replace('{name}', T(node?.name || zoneId, 'maps')), 'good');
+          closePanel(el);
+          updateMinimap();
+        } else {
+          toast(res.reason || 'Cannot fast travel', 'bad');
+        }
+      };
+    }
     el.querySelectorAll('[data-spire-ascend]').forEach(b => b.onclick = () => {
       const targetFloor = parseInt(b.dataset.spireAscend, 10);
       startSpireRun(targetFloor);
@@ -10205,6 +10351,15 @@ window.addEventListener('keydown', e => {
   }
   else if (win) { e.preventDefault(); togglePanel(win[0]); }
   else if (e.altKey) return;                     // unbound Alt combos never fall through to E/F/V
+  else if (key === 'tab') {
+    if (!openPanels().length) {
+      e.preventDefault();
+      const st = toggleMinimapRadar();
+      updateMinimap();
+      renderMinimap();
+      toast(st.expanded ? T('Radar Mode', 'ui') : T('Minimap Radar', 'ui'));
+    }
+  }
   else if (key === 'f') toggleFarm();
   else if (key === 'e') interact();
   else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
