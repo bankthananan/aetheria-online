@@ -129,4 +129,53 @@ assert.equal(A.resumeGame(), true, 'stale task save still loads safely');
 assert.equal(A.G.taskGuide, null, 'missing persisted task is discarded during reconciliation');
 assert.equal(A.G.autoFarm, false, 'stale task does not silently become unrelated free hunting');
 
-console.log('Automation controller audit passed: tracking, encounters, smart skills, recovery, HUD state, and persistence are valid.');
+// Boss auto-farming acceptance audit:
+// Undefeated bosses are protected from auto-farm to prevent accidental wipe;
+// Once defeated at least once, bosses become acceptable to auto-farm in both Free Hunt and Pinned mode.
+A.loadMap('whispering_woods');
+const boss = A.G.monsters.find(m => m.def.id === 'elderwood_treant');
+assert.ok(boss, 'whispering_woods must contain elderwood_treant boss');
+assert.ok(A.isBossMonster(boss), 'elderwood_treant must be recognized as boss monster');
+
+// Case A: Undefeated boss
+A.G.guardiansSlain.delete('elderwood_treant');
+delete A.G.killCounts['elderwood_treant'];
+assert.equal(A.isBossDefeated('elderwood_treant'), false, 'elderwood_treant is not yet defeated');
+assert.equal(A.autoHuntEligible(boss, mage), false, 'undefeated boss is not eligible for auto-hunt');
+
+// All non-bosses dead, only undefeated boss alive
+for (const m of A.G.monsters) { m.alive = m === boss; }
+A.G.autoFarm = true;
+A.G.huntTargetId = null;
+A.G.autoConfig = { ...A.G.autoConfig, targetId: null };
+A.G.target = null;
+A.acquireAutoTarget(mage);
+assert.notEqual(A.G.target, boss, 'Free Hunt must never target an undefeated boss');
+
+// Automation panel shows locked status
+const lockedPanel = A.automationPanelHtml(mage);
+assert.ok(lockedPanel.includes('data-auto-target="locked"'), 'Automation panel shows locked target for undefeated boss');
+assert.ok(lockedPanel.includes('Defeat once to unlock'), 'Automation panel shows "Defeat once to unlock" copy');
+
+// Case B: Defeated boss
+A.G.guardiansSlain.add('elderwood_treant');
+assert.equal(A.isBossDefeated('elderwood_treant'), true, 'elderwood_treant is marked as defeated');
+assert.equal(A.autoHuntEligible(boss, mage), true, 'defeated boss is now eligible for auto-hunt');
+
+boss.x = mage.x + 32;
+boss.y = mage.y;
+A.acquireAutoTarget(mage);
+assert.equal(A.G.target, boss, 'Free Hunt targets defeated boss when nearby');
+
+// Pinned boss target
+A.G.autoConfig = { ...A.G.autoConfig, targetId: 'elderwood_treant' };
+A.G.target = null;
+A.acquireAutoTarget(mage);
+assert.equal(A.G.target, boss, 'Pinned hunt targets defeated boss');
+
+const unlockedPanel = A.automationPanelHtml(mage);
+assert.ok(unlockedPanel.includes('data-auto-target="elderwood_treant"'), 'Automation panel allows pinning defeated boss');
+assert.ok(unlockedPanel.includes('💀'), 'Automation panel shows skull icon for boss species');
+
+console.log('Automation controller audit passed: tracking, encounters, smart skills, recovery, HUD state, boss auto-farming, and persistence are valid.');
+

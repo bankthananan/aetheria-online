@@ -2424,9 +2424,24 @@ const R = COMBAT.combatRules;
 
 function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
 
+function isBossMonster(m) {
+  if (!m) return false;
+  const def = m.def || m;
+  return Boolean((def.sizeTiles && def.sizeTiles >= 2) || def.boss || def.isBoss || def.raid || def.isRaidBoss || def.isZoneGuardian);
+}
+
+function isBossDefeated(monsterId) {
+  if (!monsterId) return false;
+  return Boolean(G.guardiansSlain?.has(monsterId) || (G.killCounts?.[monsterId] || 0) > 0);
+}
+
 const autoHuntLevelCap = p => (p?.level || 1) + TUNING.autoHuntMaxLevelGap;
 function autoHuntEligible(m, p = G.player) {
-  return Boolean(m?.alive && m.lvl <= autoHuntLevelCap(p));
+  if (!m?.alive) return false;
+  if (isBossMonster(m)) {
+    return Boolean(G.huntTargetId === m.def?.id || isBossDefeated(m.def?.id));
+  }
+  return m.lvl <= autoHuntLevelCap(p);
 }
 
 const AUTO_DEFAULTS = Object.freeze({ skills: true, heal: true, potions: true, profile: 'balanced' });
@@ -2630,7 +2645,7 @@ function autoRecoveryAction() {
 function acquireAutoTarget(p = G.player) {
   if (!G.autoFarm || G.manualIntent || dlg) return null;
   const focusId = G.huntTargetId || G.autoConfig?.targetId || null;   // quest guide always outranks a player pin
-  const species = G.monsters.filter(monster => focusId ? monster.def.id === focusId : monster.def.sizeTiles < 2);
+  const species = G.monsters.filter(monster => focusId ? monster.def.id === focusId : (!isBossMonster(monster) || isBossDefeated(monster.def.id)));
   const alive = species.filter(monster => monster.alive);
   const safeAlive = alive.filter(monster => autoHuntEligible(monster, p));
   const eligible = safeAlive.filter(monster => now() >= (monster._autoSkipUntil || 0));
@@ -7892,7 +7907,14 @@ function automationPanelHtml(p = G.player) {
   const mapSpecies = [...new Map(G.monsters.map(m => [m.def.id, m])).values()];
   const targetHtml = mapSpecies.length ? `<div class="auto-target-grid">
       <button class="auto-target${!cfg.targetId ? ' active' : ''}" data-auto-target="free" aria-pressed="${!cfg.targetId}"><b>${T('Free Hunt', 'ui')}</b><small>${T('Any nearby monster', 'ui')}</small></button>
-      ${mapSpecies.map(m => `<button class="auto-target${cfg.targetId === m.def.id ? ' active' : ''}" data-auto-target="${esc(m.def.id)}" aria-pressed="${cfg.targetId === m.def.id}"><b>${esc(T(m.def.name, 'monsters'))}</b><small>Lv ${m.lvl}</small></button>`).join('')}
+      ${mapSpecies.map(m => {
+        const isBoss = isBossMonster(m);
+        const defeated = isBossDefeated(m.def.id);
+        const locked = isBoss && !defeated;
+        const badge = isBoss ? (defeated ? '💀 ' : '🔒 ') : '';
+        const sub = locked ? T('Defeat once to unlock', 'ui') : `${isBoss ? T('Boss', 'ui') + ' · ' : ''}Lv ${m.lvl}`;
+        return `<button class="auto-target${cfg.targetId === m.def.id ? ' active' : ''}${locked ? ' locked' : ''}" data-auto-target="${locked ? 'locked' : esc(m.def.id)}" aria-pressed="${cfg.targetId === m.def.id}" ${locked ? `title="${esc(T('Defeat once to unlock', 'ui'))}"` : ''}><b>${badge}${esc(T(m.def.name, 'monsters'))}</b><small>${sub}</small></button>`;
+      }).join('')}
     </div>` : `<small class="auto-empty">${T('No monsters present on this map to pin.', 'ui')}</small>`;
 
   // Skill priority: a fixed rotation of drop slots (hotbar-style drag target) fed
@@ -8308,6 +8330,7 @@ function panelBody(id) {
     const toolbarHtml = `<div class="bag-bar">
       <span class="bag-zeny">💰 <b>${p.zeny.toLocaleString()}</b> ${T('zeny', 'ui')}</span>
       <input type="search" id="inv-search" class="inv-search-input" placeholder="${T('Search items / affixes...', 'ui')}" value="${esc(G._invSearch || '')}">
+      <button class="btn btn--ghost" id="inv-quick-sell" title="${esc(T('Quick sell unprotected Common & Magic gear', 'ui'))}">💰 ${T('Quick Sell', 'ui')}</button>
       <button class="btn btn--ghost" id="inv-sort-rarity" title="${T('Sort by Rarity', 'ui')}">✨ ${T('Sort', 'ui')}</button></div>
       <details class="bag-filter"${p.features.loot.mode !== 'all' || p.features.loot.quiet ? ' open' : ''}><summary>${T('Loot filter', 'ui')}${hiddenN ? ` · ${hiddenN} ${T('hidden','ui')}` : ''}</summary>
       <div class="inv-toolbar"><label>${T('Loot relevance','ui')} <select data-loot-mode>${['all','usable','affixes'].map(mode=>`<option value="${mode}" ${p.features.loot.mode===mode?'selected':''}>${T({all:'All',usable:'Usable',affixes:'Selected affixes'}[mode],'ui')}</option>`).join('')}</select></label>
@@ -8474,7 +8497,10 @@ function panelBody(id) {
           <p class="bag-detail__desc">${T(it.desc || '', 'items')}</p>${sel.protected ? `<p class="ro-muted">🔒 ${T('Protected', 'ui')}</p>` : ''}
           <div class="bag-detail__actions"><button class="btn" data-sell="${sel.uid || sel.itemId}">${T('Sell', 'ui')} ${sellPrice(sel)}z${!sel.uid && sel.qty > 1 ? ' ×1' : ''}</button></div>`
         : `<p class="ro-muted">${T('Select an item to see its sell price.', 'ui')}</p>`;
-      return head + (sellables.length ? `<div class="sell-layout"><div>${slotGridHtml(cells, { selKey: G._sellSel })}</div><aside class="ro-box bag-detail">${detail}</aside></div>` : `<p class="ro-muted">${T('Nothing to sell.', 'ui')}</p>`);
+      const quickSellBar = `<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button class="btn btn--ghost" id="shop-quick-sell" title="${esc(T('Quick sell unprotected Common & Magic gear', 'ui'))}">💰 ${T('Quick Sell Common & Magic', 'ui')}</button>
+      </div>`;
+      return head + (sellables.length ? `${quickSellBar}<div class="sell-layout"><div>${slotGridHtml(cells, { selKey: G._sellSel })}</div><aside class="ro-box bag-detail">${detail}</aside></div>` : `<p class="ro-muted">${T('Nothing to sell.', 'ui')}</p>`);
     }
     
     // enhance tab — equipped gear (with slot badges) first, then bag gear, each in its own section
@@ -8822,6 +8848,10 @@ function wirePanel(id, el) {
   });
   el.querySelectorAll('[data-auto-target]').forEach(b => b.onclick = () => {
     const target = b.dataset.autoTarget;
+    if (target === 'locked') {
+      toast(T('Defeat this boss once to unlock auto-farming!', 'ui'), 'sys');
+      return;
+    }
     G.autoConfig = normaliseAutoConfig({ ...G.autoConfig, targetId: target === 'free' ? null : target });
     saveGame();
     refreshPanel('automation');
@@ -8934,6 +8964,20 @@ function wirePanel(id, el) {
     invSearch.oninput = e => {
       const caret = e.target.selectionStart; G._invSearch = e.target.value; refreshPanel('inv');
       const fresh = panelEl('inv')?.querySelector('#inv-search'); if (fresh) { fresh.focus(); fresh.setSelectionRange(caret, caret); }   // re-render replaced the input
+    };
+  }
+  const invQuickSell = el.querySelector('#inv-quick-sell');
+  if (invQuickSell) {
+    invQuickSell.onclick = () => {
+      quickSellItems();
+      refreshPanel('inv');
+    };
+  }
+  const shopQuickSell = el.querySelector('#shop-quick-sell');
+  if (shopQuickSell) {
+    shopQuickSell.onclick = () => {
+      quickSellItems();
+      refreshPanel('shop');
     };
   }
   const invSort = el.querySelector('#inv-sort-rarity');
@@ -9729,6 +9773,42 @@ function sellItem(ref) {
     logMsg(`Sold ${itemById[ref].name} (+${price}z).`, 'good');
   }
   AUDIO.playSfx('pickup');
+}
+
+function quickSellItems({ p = G.player, notify = true } = {}) {
+  const candidates = [];
+  for (let i = p.inventory.length - 1; i >= 0; i--) {
+    const e = p.inventory[i];
+    if (e.uid && !e.protected && ['common', 'magic'].includes(e.rarity)) {
+      const it = itemById[e.itemId];
+      if (it && it.type !== 'quest') {
+        candidates.push({ idx: i, entry: e, price: sellPrice(e) });
+      }
+    }
+  }
+
+  if (!candidates.length) {
+    if (notify) toast(T('No Common or Magic gear to quick sell.', 'ui'), 'sys');
+    return { count: 0, zeny: 0 };
+  }
+
+  let totalZeny = 0;
+  for (const c of candidates) {
+    totalZeny += c.price;
+    p.inventory.splice(c.idx, 1);
+  }
+  p.zeny += totalZeny;
+
+  if (notify) {
+    AUDIO.playSfx('pickup');
+    const msg = T('Quick sold {count} items (+{zeny}z)!', 'ui')
+      .replace('{count}', candidates.length)
+      .replace('{zeny}', totalZeny.toLocaleString());
+    toast(`💰 ${msg}`, 'good');
+    logMsg(msg, 'good');
+  }
+  saveGame();
+  return { count: candidates.length, zeny: totalZeny };
 }
 
 // =====================================================================
@@ -10941,6 +11021,7 @@ if (typeof window !== 'undefined')
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, evolveActivePet, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor, toggleMount,
+    isBossMonster, isBossDefeated, quickSellItems,
     collectActiveHudBuffs, computeHotbarSlotState, executeCommandAction, searchGameIndex, shouldTriggerFanfare, toggleCommandPalette, triggerLootFanfare };
 
 const {pendingAdventureClaims,refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});

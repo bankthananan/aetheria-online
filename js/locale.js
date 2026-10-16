@@ -282,7 +282,15 @@ export const L10N = {
       "Pause when unfocused": "Pause when unfocused",
       "Resume Game": "Resume Game",
       "The creature broke free from the bait!": "The creature broke free from the bait!",
-      "Gotcha! Successfully tamed": "Gotcha! Successfully tamed"
+      "Gotcha! Successfully tamed": "Gotcha! Successfully tamed",
+      "Defeat once to unlock": "Defeat once to unlock",
+      "Defeat this boss once to unlock auto-farming!": "Defeat this boss once to unlock auto-farming!",
+      "Boss": "Boss",
+      "Quick Sell": "Quick Sell",
+      "Quick Sell Common & Magic": "Quick Sell Common & Magic",
+      "Quick sell unprotected Common & Magic gear": "Quick sell unprotected Common & Magic gear",
+      "Quick sold {count} items (+{zeny}z)!": "Quick sold {count} items (+{zeny}z)!",
+      "No Common or Magic gear to quick sell.": "No Common or Magic gear to quick sell."
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -1380,6 +1388,14 @@ export const L10N = {
       "Resume Game": "เล่นต่อ",
       "The creature broke free from the bait!": "สิ่งมีชีวิตดิ้นหลุดออกจากเหยื่อ!",
       "Gotcha! Successfully tamed": "จับสำเร็จแล้ว!",
+      "Defeat once to unlock": "ปราบบอสก่อนเพื่อปลดล็อก",
+      "Defeat this boss once to unlock auto-farming!": "ปราบบอสนี้ให้สำเร็จก่อนเพื่อปลดล็อกการฟาร์มอัตโนมัติ!",
+      "Boss": "บอส",
+      "Quick Sell": "ขายด่วน",
+      "Quick Sell Common & Magic": "ขายด่วนระดับทั่วไปและเมจิก",
+      "Quick sell unprotected Common & Magic gear": "ขายด่วนอุปกรณ์ทั่วไปและเมจิกที่ไม่ได้ล็อก",
+      "Quick sold {count} items (+{zeny}z)!": "ขายด่วน {count} ชิ้น (+{zeny}z)!",
+      "No Common or Magic gear to quick sell.": "ไม่มีอุปกรณ์ทั่วไปหรือเมจิกที่ขายได้",
 
       // Admin Tools / God Mode
       "God mode:": "โหมดพระเจ้า:",
