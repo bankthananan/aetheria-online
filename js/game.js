@@ -103,6 +103,13 @@ import {
   shouldTriggerFanfare,
   renderLootFanfareHtml,
 } from './render/combat-log-ui.js';
+import {
+  CLASS_JOB_MODELS,
+  resolvePlayerVisualModel,
+  drawPlayerJobRegalia,
+  renderJobPortraitHtml,
+  renderHeroModelShowcaseHtml,
+} from './render/player-models.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -1368,8 +1375,15 @@ function jobChoicePanelHtml(p = G.player) {
   const cards = branches.map((branch, index) => {
     const second = branch.tiers?.[1], advanced = branch.tiers?.[2];
     const skill = COMBAT.skills.find(entry => entry.id === branch.signatureSkillId);
+    const portraitHtml = renderJobPortraitHtml(branch.id, { size: 48, pxDataURL });
+    const model = CLASS_JOB_MODELS[branch.id];
+    const regaliaHtml = model?.regalia ? `<div class="job-choice-regalia">
+      <span>👑 <b>${esc(T(model.regalia.headgear, 'ui'))}</b></span>
+      <span>⚔ <b>${esc(T(model.regalia.mainhand, 'ui'))}</b></span>
+    </div>` : '';
     return `<button class="job-choice-card" data-job-branch="${esc(branch.id)}" style="--path-color:${branch.color || '#e6bd54'}">
       <span class="job-choice-no">0${index + 1}</span><small>${T(branch.role || 'SECOND JOB', 'ui')}</small>
+      <div class="job-choice-visual-row">${portraitHtml}${regaliaHtml}</div>
       <b>${esc(T(second?.name || branch.label, 'classes'))}</b>
       <em>${esc(T(branch.focus || '', 'ui'))}</em>
       <span class="job-choice-stats">${esc(statBonusText(second?.bonus))}</span>
@@ -1437,8 +1451,15 @@ function advancedJobChoicePanelHtml(p) {
   const cfg = advancedJobConfig(p?.classId);
   if (!cfg) return '';
   const cards = cfg.choices.map((job, index) => {
+    const portraitHtml = renderJobPortraitHtml(job.id, { size: 48, pxDataURL });
+    const model = CLASS_JOB_MODELS[job.id];
+    const regaliaHtml = model?.regalia ? `<div class="job-choice-regalia">
+      <span>👑 <b>${esc(T(model.regalia.headgear, 'ui'))}</b></span>
+      <span>⚔ <b>${esc(T(model.regalia.mainhand, 'ui'))}</b></span>
+    </div>` : '';
     return `<button class="job-choice-card" data-advanced-job="${esc(job.id)}" style="--path-color:${job.color || '#e6bd54'}">
       <span class="job-choice-no">0${index + 1}</span><small>${T(job.role || 'THIRD JOB', 'ui')}</small>
+      <div class="job-choice-visual-row">${portraitHtml}${regaliaHtml}</div>
       <b>${esc(T(job.name, 'classes'))}</b>
       <em>${esc(T(job.focus || '', 'ui'))}</em>
       <span class="job-choice-stats">${esc(statBonusText(job.bonus))}</span>
@@ -4907,12 +4928,25 @@ function drawPlayer(p, cx, cy) {
   groundShadow(px, py + 15, 11);
   if (p.buffs.some(b => b.until > now())) { ctx.strokeStyle = THEME.palette.accentAlt; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py + 4, 18, 0, 7); ctx.stroke(); }
   const a = playerAnim(p);
-  if (drawLpc(LPC.player[p.combatClass], px, py + 8, a.state, a.dir, a.frame, 64)) { /* skip matrix path */ } else {
-    const moving = p.moving, group = (moving && Math.floor(now() / 140) % 2 === 1) ? 'playerWalk' : 'player';
+  const model = resolvePlayerVisualModel(p);
+  if (drawLpc(LPC.player[p.combatClass], px, py + 8, a.state, a.dir, a.frame, 64)) {
+    drawPlayerJobRegalia(ctx, p, px, py + 8, a, now(), model);
+  } else {
+    const moving = p.moving;
+    const isPromoted = (p.tierIndex || 0) > 0 || p.jobBranchId || p.advancedJobId || p.hybridJobId;
+    const isExpansionBase = ['assassin', 'necromancer', 'artificer'].includes(p.combatClass);
+    const movingFrame = moving && Math.floor(now() / 140) % 2 === 1;
+    const group = isPromoted
+      ? (movingFrame ? 'jobModelWalk' : 'jobModel')
+      : (movingFrame ? 'playerWalk' : 'player');
+    const spriteKey = isPromoted ? model.id : p.combatClass;
     const bob = moving ? -Math.abs(Math.sin(now() / 90)) * 2 : 0;
-    if (!drawPx(group, p.combatClass, px, py + bob, 36, p.facing.x < 0)) {
-      const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0', monk: '#d4a359', elementalist: '#9d7be0' }[p.combatClass];
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px, py, 13, 0, 7); ctx.fill();
+    if (!drawPx(group, spriteKey, px, py + bob, 36, p.facing.x < 0)) {
+      const col = { blade: '#c9d1e0', berserker: '#e0714b', mage: '#6f7bef', ranger: '#5fbf7a', paladin: '#f0e6c0', monk: '#d4a359', elementalist: '#9d7be0', assassin: '#8e44ad', necromancer: '#16a085', artificer: '#d35400' }[p.combatClass];
+      ctx.fillStyle = col || '#c9d1e0'; ctx.beginPath(); ctx.arc(px, py, 13, 0, 7); ctx.fill();
+    }
+    if (isPromoted || isExpansionBase) {
+      drawPlayerJobRegalia(ctx, p, px, py + bob, a, now(), model);
     }
   }
 }
@@ -7453,7 +7487,9 @@ function skillsPanelHtml(p) {
   }).join('');
 
   const g = p._cls.statGrowthPerLevel;
-  const header = `<header class="ro-book-head"><div class="ro-crest">${book.crest}</div><div class="ro-book-title">
+  const chapterModel = resolvePlayerVisualModel(p, { previewTier: shownTier });
+  const chapterPortrait = renderJobPortraitHtml(chapterModel, { size: 44, pxDataURL });
+  const header = `<header class="ro-book-head">${chapterPortrait}<div class="ro-book-title">
       <small>${T('CLASS SKILL MANUAL', 'ui')} · ${esc(T(p.className, 'classes'))}</small><h3>${esc(T(book.title, 'ui'))}</h3>
       <b>${esc(T(book.focus, 'ui'))}</b><p>${esc(T(book.motto, 'ui'))}</p></div>
     <div class="ro-book-stats"><strong>${p.skillPoints}<small>${T('SKILL POINTS', 'ui')}</small></strong><span>${T('Job Lv', 'ui')} ${p.jobLevel}/${activeJobLevelCap(p)}</span><span>${T('Recommended build:', 'ui')} <b>${recommendedBuild(g)}</b></span></div>
@@ -8161,6 +8197,8 @@ function panelBody(id) {
       </div>`;
     }
 
+    const modelShowcaseHtml = renderHeroModelShowcaseHtml(p, { previewTier: G._previewModelTier, pxDataURL, T });
+
     return `<div class="st-window">
       <header class="ro-box st-head">
         <div><b class="st-name">${p.name}</b> — ${T(p.className, 'classes')}
@@ -8172,6 +8210,7 @@ function panelBody(id) {
           <span>${T('Job Lv', 'ui')} <b>${p.jobLevel}</b>/${jobCap}</span><span class="ro-muted">${T('Job XP', 'ui')} ${jobNeed ? `${Math.floor(p.jobXp)}/${jobNeed}` : 'MAX'}</span>${meter(p.jobXp, jobNeed)}
         </div>
       </header>
+      ${modelShowcaseHtml}
       ${activeEffectsHtml}
       <div class="st-grid">
         <section>
@@ -8836,6 +8875,11 @@ function wirePanel(id, el) {
   el.querySelectorAll('[data-stat]').forEach(b => b.onclick = e => { spendStatTimes(b.dataset.stat, e.shiftKey ? 10 : (G._statStep || 1)); refreshPanel('char'); });
   el.querySelectorAll('[data-stat-step]').forEach(b => b.onclick = () => { G._statStep = +b.dataset.statStep; refreshPanel('char'); });
   el.querySelectorAll('[data-stat-auto]').forEach(b => b.onclick = () => { spendStatsByBuild(+b.dataset.statAuto); refreshPanel('char'); });
+  el.querySelectorAll('[data-preview-model-tier]').forEach(b => b.onclick = () => {
+    const t = +b.dataset.previewModelTier;
+    G._previewModelTier = (G._previewModelTier === t) ? null : t;
+    refreshPanel('char');
+  });
   el.querySelectorAll('[data-rebirth]').forEach(b => b.onclick = () => {
     if (G._rebirthArmedAt && now() - G._rebirthArmedAt < 5000) { G._rebirthArmedAt = 0; doRebirth(); return; }
     G._rebirthArmedAt = now(); b.textContent = '⚠ ' + T('Click again to rebirth', 'ui'); b.classList.add('is-armed');
@@ -9857,7 +9901,7 @@ function showTitle() {
   }
   const profile = currentProfile();
   const cards = DESIGN.classes.map(c => {
-    const cc = CLASS_COMBAT[c.id], url = pxDataURL('player', cc);
+    const cc = CLASS_COMBAT[c.id], url = pxDataURL('jobModel', c.id) || pxDataURL('player', cc);
     const portrait = url
       ? `<span class="cc-portrait"><img src="${url}" width="64" height="64" alt="" class="cc-portrait-img"></span>`
       : `<span class="cc-portrait cc-portrait-fallback">${SPRITES.player[cc]}</span>`;
@@ -10881,6 +10925,7 @@ if (typeof window !== 'undefined')
     LPC, playerAnim, drawLpc, monsterAnim, animFrame, animMs, attackStateFor, finisherStateFor, drawPx, drawMonster, PX, selfCheck,
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
+    CLASS_JOB_MODELS, resolvePlayerVisualModel, drawPlayerJobRegalia,
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
     monsterElement, skillElement, attackElement, imbueElement, infuseMythicItem, elementMult, applyCrossCombo, applyStatus,
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,

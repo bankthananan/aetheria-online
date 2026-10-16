@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { createRuntime } from './test-support/runtime.js';
 
 const AWO_KEYS = [
+  "CLASS_JOB_MODELS",
   "CONTENT",
   "DESIGN",
   "FLOAT_CAP",
@@ -101,6 +102,7 @@ const AWO_KEYS = [
   "drawLpc",
   "drawMonster",
   "drawParallax",
+  "drawPlayerJobRegalia",
   "drawPx",
   "drawTile",
   "drawTileEdges",
@@ -218,6 +220,7 @@ const AWO_KEYS = [
   "resetHotkeys",
   "resetSkillPoints",
   "resetStatPoints",
+  "resolvePlayerVisualModel",
   "respawn",
   "resumeGame",
   "resumeGameFromPause",

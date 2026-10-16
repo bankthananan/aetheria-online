@@ -267,7 +267,18 @@ export const L10N = {
       "Holy": "Holy",
       "Void": "Void",
       "Water": "Water",
-      "Neutral": "Neutral"
+      "Neutral": "Neutral",
+      "Visual Model": "Visual Model",
+      "Model Evolution": "Model Evolution",
+      "Headgear": "Headgear",
+      "Mantle": "Mantle",
+      "Armament": "Armament",
+      "Aura": "Aura",
+      "Live Form": "Live Form",
+      "Previewing": "Previewing",
+      "Preview Tier": "Preview Tier",
+      "Regalia": "Regalia",
+      "Equipped Regalia": "Equipped Regalia"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -1350,6 +1361,17 @@ export const L10N = {
       "Consumes active": "เผาผลาญสถานะ",
       "for +50% damage": "เพื่อทำดาเมจแรงขึ้น +50%",
       "Consumes all Momentum for +25% damage per point.": "ใช้โมเมนตัมทั้งหมดเพื่อเพิ่มพลังโจมตีแรงขึ้น +25% ต่อแต้มสะสม",
+      "Visual Model": "รูปลักษณ์ตัวละคร",
+      "Model Evolution": "การวิวัฒนาการรูปลักษณ์",
+      "Headgear": "หมวก/มงกุฎ",
+      "Mantle": "ผ้าคลุม/ปีก",
+      "Armament": "อาวุธและยุทโธปกรณ์",
+      "Aura": "ออร่า",
+      "Live Form": "ร่างปัจจุบัน",
+      "Previewing": "กำลังพรีวิว",
+      "Preview Tier": "พรีวิวระดับขั้น",
+      "Regalia": "เครื่องทรงเกียรติยศ",
+      "Equipped Regalia": "เครื่องทรงที่สวมใส่",
 
       // Admin Tools / God Mode
       "God mode:": "โหมดพระเจ้า:",

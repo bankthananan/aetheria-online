@@ -740,5 +740,46 @@ body[data-viewport="portrait"] .msg-log-tabs,body[data-viewport="landscape"] .ms
 .loot-fanfare__title{font:700 14px var(--font-head);color:var(--on-fill);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .loot-fanfare__close{background:transparent;border:1px solid var(--gold-deep);color:var(--text-muted);width:20px;height:20px;padding:0;cursor:pointer;font-size:11px;line-height:18px}
 .loot-fanfare__close:hover{background:var(--oxblood);color:#fff;border-color:var(--gold)}
+
+/* ===== Player Class & Job Visual Model Evolution System ===== */
+.job-model-portrait{position:relative;width:calc(var(--model-size,52px) + 16px);height:calc(var(--model-size,52px) * 1.38 + 12px);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:radial-gradient(circle at 50% 62%,color-mix(in srgb,var(--model-aura,#78a7d8) 32%,transparent),rgba(18,11,6,.92) 76%);
+  border:2px solid var(--model-primary,#c89b3c);border-radius:3px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 2px 6px rgba(0,0,0,.55);overflow:hidden}
+.job-model-portrait.tier-2,.job-model-portrait.tier-3{box-shadow:0 0 10px color-mix(in srgb,var(--model-aura,#f2ca59) 45%,transparent),inset 0 0 0 1px rgba(255,255,255,.22)}
+.job-model-aura-ring{position:absolute;bottom:6px;width:72%;height:14px;border:1.5px solid var(--model-aura,#78a7d8);border-radius:50%;opacity:.75;pointer-events:none}
+.job-model-sprite{position:relative;z-index:1;image-rendering:pixelated;filter:drop-shadow(0 2px 2px rgba(0,0,0,.75))}
+.job-model-crest-fallback{position:relative;z-index:1;font-size:24px;color:var(--model-accent,#f2ca59)}
+.job-model-tier-pill{position:absolute;top:2px;right:2px;z-index:2;padding:0 4px;background:rgba(12,7,4,.88);border:1px solid var(--model-primary,#c89b3c);
+  border-radius:2px;font:700 8px/1.3 var(--font-ui);color:var(--on-fill)}
+
+.st-model-showcase{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;padding:8px 10px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--model-primary,#c89b3c) 12%,var(--card-bg)),var(--card-bg));
+  border-color:color-mix(in srgb,var(--model-primary,#c89b3c) 55%,var(--card-border))}
+.st-model-stage{display:flex;align-items:center;gap:12px}
+.st-model-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.st-model-head{display:flex;flex-direction:column;gap:1px}
+.st-model-title{font:700 13px var(--font-head);color:var(--text)}
+.st-model-role{font:600 11px var(--font-ui);color:var(--accent-alt)}
+.st-model-live-badge{color:var(--success-text,#2f7a3e)}
+.st-model-preview-badge{color:var(--accent,#8a5a14)}
+.st-regalia-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.st-regalia-chip{display:flex;flex-direction:column;gap:1px;padding:3px 6px;background:rgba(0,0,0,.06);border:1px solid var(--card-border);border-radius:2px}
+.st-regalia-chip small{font-size:9px;color:var(--text-muted)}
+.st-regalia-chip b{font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-model-preview-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.st-model-tab{display:flex;align-items:center;justify-content:center;gap:4px;padding:4px 6px;background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:2px;font:600 10px var(--font-ui);color:var(--text-muted);cursor:pointer;min-width:0}
+.st-model-tab:hover,.st-model-tab.is-active{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 22%,var(--card-bg));color:var(--text)}
+.st-model-tab__roman{font-weight:700;color:var(--accent)}
+.st-model-tab__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-model-tab__lock{font-style:normal;font-size:9px;opacity:.7}
+
+.job-choice-visual-row{display:flex;align-items:center;gap:10px;margin:4px 0}
+.job-choice-regalia{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--text-muted);text-align:left}
+.job-choice-regalia span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job-choice-regalia b{color:var(--on-fill)}
 `,
 };
+
