@@ -141,6 +141,7 @@ const AWO_KEYS = [
   "hotkeyLabel",
   "hotkeysPanelHtml",
   "imbueElement",
+  "infuseMythicItem",
   "initTouchControls",
   "instName",
   "interact",

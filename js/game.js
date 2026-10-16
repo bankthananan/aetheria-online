@@ -71,6 +71,19 @@ import {
   getRadarBlips,
   renderWorldAtlas,
 } from './render/world-atlas.js';
+import {
+  EQUIPMENT_SETS,
+  getEquipmentSetFor,
+  getActiveSetBonuses,
+  formatSetBonusText,
+  renderSetBonusTooltipHtml,
+} from './systems/equipment-sets.js';
+import {
+  MYTHIC_ENCHANTS,
+  canEnchantItem,
+  applyMythicEnchant,
+  getEnchantBonus,
+} from './systems/enchanting.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -992,9 +1005,15 @@ function statBlock(p) {
   const c = p._cls, g = c.statGrowthPerLevel, lv = p.level - 1, tb = tierBonusFor(p);
   const rb = (p.rebirths || 0) * TUNING.rebirthStatBonus;   // NG+: permanent all-stat bonus
   const sa = (strongholdSystem?.getTrophyAuras()?.allStats || 0);
+  let ea = 0;
+  if (p.equip) {
+    for (const inst of Object.values(p.equip)) {
+      if (inst?.mythicEnchant?.statMods?.allStats) ea += inst.mythicEnchant.statMods.allStats;
+    }
+  }
   const st = {};
   for (const k of ['str','agi','vit','int','dex','luk'])
-    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0) + rb + sa;
+    st[k] = Math.floor(c.baseStats[k] + g[k] * lv) + (p.alloc?.[k] || 0) + (tb[k] || 0) + rb + sa + ea;
   return st;
 }
 
@@ -1464,6 +1483,30 @@ function recompute(p, fill) {
     p.maxHp = Math.round(p.maxHp * (1 + cardMods.allStatPct));
     p.maxMp = Math.round(p.maxMp * (1 + cardMods.allStatPct));
   }
+  const setBonuses = getActiveSetBonuses(p.equip || {});
+  const setMods = setBonuses.statMods || {};
+  let mythicAtk = 0, mythicVoidRes = 0, mythicLifesteal = 0, mythicCdr = 0;
+  if (p.equip) {
+    for (const inst of Object.values(p.equip)) {
+      const ench = getEnchantBonus(inst);
+      if (ench.physAtk) mythicAtk += ench.physAtk;
+      if (ench.res_void) mythicVoidRes += ench.res_void;
+      if (ench.lifestealPct) mythicLifesteal += ench.lifestealPct;
+      if (ench.cdrPct) mythicCdr += ench.cdrPct;
+    }
+  }
+  p.maxHp += (setMods.maxHp || 0);
+  p.maxMp += (setMods.maxMp || 0);
+  p.physAtk += (setMods.physAtk || 0) + mythicAtk;
+  p.magicAtk += (setMods.magicAtk || 0);
+  p.physDef += (setMods.physDef || 0);
+  p.flee += (setMods.flee || 0);
+  p.critChance = Math.min(100, p.critChance + (setMods.critChance || 0));
+  p.res_fire = (p.res_fire || 0) + (setMods.res_fire || 0);
+  p.res_void = (p.res_void || 0) + (setMods.res_void || 0) + mythicVoidRes;
+  p.lifesteal = (p.lifesteal || 0) + mythicLifesteal;
+  p.cdrPct = (p.cdrPct || 0) + mythicCdr;
+  p.setBonuses = setBonuses;
   const activePetObj = (G?.pets?.activePetId && G?.pets?.owned?.[G.pets.activePetId])
     ? G.pets.owned[G.pets.activePetId]
     : null;
@@ -7823,7 +7866,7 @@ function panelBody(id) {
         return `<div class="bag-detail__head">${itemIconImg(dispItemId(e), 40)}<div><b class="rar" style="color:${rc.color}">${esc(instName(e))}</b>
             <small class="ro-muted"><span class="rar" style="color:${rc.color}">◆${T(rc.name, 'ui')}</span> · ${T(SLOT_LABEL[slot], 'ui')}${socketDotsHtml(e)}</small></div></div>
           <div class="bag-detail__stats">${itemMainStatsHtml(e)}</div>${requirement}
-          <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${itemSocketsListHtml(e)}${gearComparisonHtml(e, p)}
+          <span class="gear-bonuses">${itemAffixesHtml(e, p)}</span>${itemSocketsListHtml(e)}${gearComparisonHtml(e, p)}${renderSetBonusTooltipHtml(e.itemId, p.equip || {}, T)}
           <div class="bag-detail__actions"><button class="btn" ${usable ? `data-equip="${e.uid}"` : 'disabled'}>${usable ? T('Equip', 'ui') : '🔒 ' + T('Class locked', 'ui')}</button>
             <button class="btn btn--ghost" data-protect="${e.uid}" data-protected="${!!e.protected}">${T(e.protected ? 'Unprotect' : 'Protect', 'ui')}</button>${source}<button class="btn btn--ghost" data-refine-route="1" title="${T('Marla refines gear and expands sockets', 'ui')}">🔨 ${T('Refine at Trader', 'ui')} →</button></div>`;
       }
@@ -7982,7 +8025,7 @@ function panelBody(id) {
         return `<div class="gear-row ${locked ? 'locked' : ''}">
           <div class="gear-row__copy">${itemIconImg(it.id)} <b class="rar" style="color:${rc.color}">${esc(instName(inst))}</b> <small class="rarity-badge" style="--rarity:${rc.color}">◆${T(rc.name, 'ui')}</small> <small style="color:var(--text-muted)">[${T(SLOT_LABEL[slot], 'ui')}]</small>${it.rankReq ? ` <small style="color:#8a641d">[${currentLang === 'th' ? `ยศร้านค้า ${T(it.rankReq, 'ui')}` : `Trader ${it.rankReq}`}]</small>` : ''}<br>
             <span>${itemMainStatsHtml(inst)} · <b>${price}z</b></span><br><small style="color:var(--text-muted)">${T(it.desc, 'items')}</small>${requirement}
-            <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${itemSocketsListHtml(inst)}${gearComparisonHtml(inst, p)}</div>${btn}</div>`;
+            <span class="gear-bonuses">${itemAffixesHtml(inst, p)}</span>${itemSocketsListHtml(inst)}${gearComparisonHtml(inst, p)}${renderSetBonusTooltipHtml(inst.itemId, p.equip || {}, T)}</div>${btn}</div>`;
       };
       const baseIds = (G._shopItems || []).filter(itId => !itemById[itId]?.rankReq);
       const grouped = {};
@@ -8039,12 +8082,21 @@ function panelBody(id) {
       const fuelOk = frags >= nFrags || itemQty('blessed_ore') >= nOre, zenyOk = p.zeny >= cost, maxed = plus >= REFINE_MAX;
       const viaOre = frags < nFrags && itemQty('blessed_ore') >= nOre;
       const need = maxed ? 'MAX' : `<span class="${fuelOk ? 'enh-ok' : 'enh-miss'}">${viaOre ? `${nOre}× ${esc(T('Blessed Ore', 'items'))}` : `${nFrags}× ${esc(T(fragName, 'items'))} (${frags})`}</span>${zenyOk ? '' : ` <span class="enh-miss">· ${cost}z</span>`}`;
+      const mythicEnch = inst.mythicEnchant;
+      const mythicBadge = mythicEnch ? `<br><small style="color:#f59e0b;font-weight:bold">✨ [Mythic] ${T(mythicEnch.name, 'ui')}: ${T(mythicEnch.desc, 'ui')}</small>` : '';
+      const availableCatalyst = ['kernel_core', 'colossus_plating', 'voidstone_ore'].find(catId => itemQty(catId) > 0);
+      let mythicBtn = '';
+      if (availableCatalyst && !mythicEnch) {
+        const catDef = MYTHIC_ENCHANTS[availableCatalyst];
+        const canAfford = p.zeny >= (catDef?.costZeny || 0);
+        mythicBtn = `<button class="btn btn--secondary" data-mythic-infuse="${ref}" data-catalyst="${availableCatalyst}" ${canAfford ? '' : 'disabled'} title="${T(catDef.name, 'ui')} (${catDef.costZeny}z)" style="font-size:10px;padding:3px 6px;margin-right:4px">✨ ${T('Mythic Infuse', 'ui')}</button>`;
+      }
       return `<div class="enh-row${disabled && !maxed ? ' is-short' : ''}">
-        <span class="enh-item">${itemIconImg(inst.itemId)} ${badge}<b class="rar" style="color:${rc.color}">${instName(inst)}</b> ${socketDotsHtml(inst)}</span>
+        <span class="enh-item">${itemIconImg(inst.itemId)} ${badge}<b class="rar" style="color:${rc.color}">${instName(inst)}</b> ${socketDotsHtml(inst)}${mythicBadge}</span>
         <span class="enh-plus">+${plus}<small>/${REFINE_MAX}</small></span>
         <span class="enh-chance">${maxed ? '—' : REFINE_CHANCE[plus] + '%'}</span>
         <span class="enh-need">${need}</span>
-        <span class="enh-act">${expBtn}<button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} <small>${cost}z</small></button></span></div>`;
+        <span class="enh-act">${mythicBtn}${expBtn}<button class="btn" data-refine="${ref}" ${disabled ? 'disabled' : ''}>${T('Refine', 'ui')} <small>${cost}z</small></button></span></div>`;
     };
     const wornRows = EQUIP_SLOTS.filter(slot => p.equip[slot]).map(slot => enhRow(p.equip[slot], slot, slot)).join('');
     const bagRows = p.inventory.filter(e => e.uid).map(e => enhRow(e, e.uid, null)).join('');
@@ -8386,6 +8438,7 @@ function wirePanel(id, el) {
   });
   el.querySelectorAll('[data-refine]').forEach(b => b.onclick = () => { refineItem(b.dataset.refine); refreshPanel('shop'); });
   el.querySelectorAll('[data-expand-socket]').forEach(b => b.onclick = () => { expandSockets(b.dataset.expandSocket); refreshPanel('shop'); });
+  el.querySelectorAll('[data-mythic-infuse]').forEach(b => b.onclick = () => { infuseMythicItem(b.dataset.mythicInfuse, b.dataset.catalyst); refreshPanel('shop'); });
   el.querySelectorAll('[data-deposit]').forEach(b => b.onclick = () => depositItem(+b.dataset.deposit));
   el.querySelectorAll('[data-withdraw]').forEach(b => b.onclick = () => withdrawItem(+b.dataset.withdraw));
   el.querySelectorAll('[data-return-title]').forEach(b => b.onclick = () => { saveGame(); if (typeof location !== 'undefined') location.reload(); });   // boot shows the title for a saved profile
@@ -9186,6 +9239,38 @@ function expandSockets(ref) {
   recompute(p); guideEvent('socket_expand');
   toast(`✨ ${T('Socket expanded!', 'ui')} (${res.newSockets}/4)`, 'good');
   logMsg(`${instName(inst)} sockets expanded to ${res.newSockets}.`, 'good');
+  return true;
+}
+function infuseMythicItem(ref, catalystId) {
+  const p = G.player;
+  const inst = /^\d+$/.test(ref) ? p.inventory.find(e => e.uid === +ref) : p.equip[ref];
+  if (!inst) return false;
+  if (!catalystId) {
+    catalystId = ['kernel_core', 'colossus_plating', 'voidstone_ore'].find(c => itemQty(c) > 0);
+  }
+  const check = canEnchantItem(inst, catalystId);
+  if (!check.ok) {
+    toast(check.reason || 'Cannot enchant item.', 'bad');
+    return false;
+  }
+  const enchantDef = MYTHIC_ENCHANTS[catalystId];
+  if (!enchantDef) return false;
+  if (p.zeny < enchantDef.costZeny) {
+    toast('Not enough zeny.', 'bad');
+    return false;
+  }
+  if (itemQty(catalystId) < 1) {
+    toast(`Need 1× ${itemById[catalystId]?.name || catalystId}.`, 'bad');
+    return false;
+  }
+  p.zeny -= enchantDef.costZeny;
+  removeItem(catalystId, 1);
+  applyMythicEnchant(inst, catalystId);
+  AUDIO.playSfx('levelup');
+  recompute(p);
+  saveGame();
+  toast(`✨ ${T('Mythic Infusion successful!', 'ui')}`, 'good');
+  logMsg(`${instName(inst)} infused with ${enchantDef.name}.`, 'good');
   return true;
 }
 function sellItem(ref) {
@@ -10402,7 +10487,7 @@ if (typeof window !== 'undefined')
     TILE_PHASES, TILE_PHASE_MS, prefersReducedMotion, buildTile, drawTile, drawTileEdges, drawParallax, buildParallaxStrip,
     advancedJobsFor, advancedJobFor, activeJobLevelCap, chooseAdvancedJob, showAdvancedJobChoice, normaliseAdvancedJob, advancedJobAllowsSkill, advancedJobAllowsPassive,
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
-    monsterElement, skillElement, attackElement, imbueElement, elementMult, applyCrossCombo, applyStatus,
+    monsterElement, skillElement, attackElement, imbueElement, infuseMythicItem, elementMult, applyCrossCombo, applyStatus,
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
     floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
