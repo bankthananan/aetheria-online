@@ -60,4 +60,23 @@ const tameSuccess = A.useItem('bait_sweet_gelatin');
 assert.equal(tameSuccess, true, 'useItem succeeds in taming the subdued creature');
 assert.ok(A.G.pets.owned.pet_slime, 'Gel Slime is now owned in G.pets.owned');
 
+// Case 5: Once companion is owned, player can attack and defeat slimes normally even with leftover bait
+const postTameSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
+postTameSlime.hp = postTameSlime.maxHp = 60;
+postTameSlime.alive = true;
+A.G.monsters = [postTameSlime];
+A.G.target = postTameSlime;
+A.G.targetSource = 'manual';
+p.attackCdUntil = 0;
+assert.equal(A.itemQty('bait_sweet_gelatin') > 0, true, 'Player still has leftover bait in inventory');
+
+postTameSlime.hp = 15; // exactly 25% HP (under 30% threshold)
+const hpBeforePost = postTameSlime.hp;
+A.playerBasicAttack();
+assert.ok(postTameSlime.hp < hpBeforePost, `playerBasicAttack must strike slime below 30% HP once pet is owned (was ${hpBeforePost}, now ${postTameSlime.hp})`);
+
+// And damageMonster must NOT subdue
+A.damageMonster(postTameSlime, 200, false, false);
+assert.equal(postTameSlime.alive, false, 'Slime must be defeated normally once companion is owned, even if player has leftover bait');
+
 console.log('Taming subdue and hold fire audit passed!');

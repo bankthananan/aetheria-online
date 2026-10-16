@@ -22,4 +22,18 @@ A.G.player.stamina=0;
 A.setCtx(document.getElementById('game-canvas'));
 advance(50);A.frame(performance.now());
 assert.ok(A.G.player.stamina>0,'ordinary animation frames advance simulation');
+
+// Test pauseOnUnfocus option for background idle farming
+A.resumeGameFromPause('hidden');
+A.G.player.features.pauseOnUnfocus = false;
+A.G.autoFarm = true;
+window.dispatchEvent(new Event('blur'));
+assert.equal(A.gameClock.isPaused(), false, 'Game should NOT pause on blur when pauseOnUnfocus is false');
+assert.equal(A.G.autoFarm, true, 'Auto-farm should remain active on blur when pauseOnUnfocus is false');
+
+A.G.player.features.pauseOnUnfocus = true;
+window.dispatchEvent(new Event('blur'));
+assert.equal(A.gameClock.isPaused(), true, 'Game should pause on blur when pauseOnUnfocus is true');
+assert.equal(A.G.autoFarm, false, 'Auto-farm stops when interrupted if pauseOnUnfocus is true');
+
 console.log('Pause lifecycle passed.');

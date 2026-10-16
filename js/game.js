@@ -46,7 +46,7 @@ import { createGatheringSystem, MAP_RESOURCE_NODES, FISH_CATALOG, ORE_CATALOG, H
 import { createGatheringRenderer } from './render/gathering-fx.js';
 import { createCardsSystem, CARD_CATALOG, ZONE_ALBUM_MILESTONES } from './systems/cards.js';
 import { createCardsUIRenderer, RARITY_COLORS, ZONE_LABELS } from './render/cards-ui.js';
-import { createPetsSystem } from './systems/pets.js';
+import { createPetsSystem, PET_EVOLUTIONS } from './systems/pets.js';
 import { createPetsRenderer } from './render/pets-fx.js';
 import { createPetsUIRenderer } from './render/pets-ui.js';
 import { createRaidsSystem, RAID_STATES, CONTRIBUTION_TIERS, WORLD_BOSS_CATALOG } from './systems/raids.js';
@@ -2693,10 +2693,19 @@ function autoFarmActions() {
   setAutoState('combat', T('Basic attack', 'ui'), `${T(t.def.name, 'monsters')} · Lv ${t.lvl}`);
 }
 
+function playerOwnsPet(petId) {
+  if (!petId || !G.pets?.owned) return false;
+  if (G.pets.owned[petId]) return true;
+  const evo = PET_EVOLUTIONS?.[petId];
+  if (evo && G.pets.owned[evo.targetId]) return true;
+  return false;
+}
+
 function playerHasBaitFor(m) {
   if (!m?.def) return null;
   const pet = petsSystem.getPetForMonster(m.def.id);
   if (!pet || !pet.requiredBait) return null;
+  if (playerOwnsPet(pet.id)) return null;
   return itemQty(pet.requiredBait) > 0 ? pet.requiredBait : null;
 }
 
@@ -4929,7 +4938,8 @@ function drawPlayer(p, cx, cy) {
   if (p.buffs.some(b => b.until > now())) { ctx.strokeStyle = THEME.palette.accentAlt; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py + 4, 18, 0, 7); ctx.stroke(); }
   const a = playerAnim(p);
   const model = resolvePlayerVisualModel(p);
-  if (drawLpc(LPC.player[p.combatClass], px, py + 8, a.state, a.dir, a.frame, 64)) {
+  const useLpc = p.features?.modelMode === 'lpc';
+  if (useLpc && drawLpc(LPC.player[p.combatClass], px, py + 8, a.state, a.dir, a.frame, 64)) {
     drawPlayerJobRegalia(ctx, p, px, py + 8, a, now(), model);
   } else {
     const moving = p.moving;
@@ -5980,6 +5990,7 @@ function syncModalPause() {
 }
 function pauseForInterruption() {
   if(!G.running)return;
+  if(G.player?.features?.pauseOnUnfocus === false) return;
   G.taskGuide=null;
   pauseGame('interruption');saveGame();
   let el=document.getElementById('resume-game');
@@ -8085,6 +8096,10 @@ function panelBody(id) {
         <span>${T('High Contrast Mode','ui')}</span>
         <input type="checkbox" id="hc-toggle" ${G.highContrast ? 'checked' : ''}>
       </div>
+      <div class="setting-row">
+        <span>${T('Pause when unfocused','ui')}</span>
+        <input type="checkbox" id="pause-unfocus-toggle" ${G.player?.features?.pauseOnUnfocus !== false ? 'checked' : ''}>
+      </div>
       <div style="font-weight:bold;font-size:14px;color:var(--accent-alt);font-family:var(--font-head);margin-top:6px">👤 ${T('Account','ui')}</div>
       <div class="setting-row"><span>${T('Keybindings','ui')}</span><button class="btn" data-open-panel="hotkeys">⌨ ${T('Open','ui')}</button></div>
       <div class="setting-row"><span>${T('Progress is saved automatically.','ui')}</span><button class="btn" data-return-title="1">${T('Save & return to title','ui')}</button></div>
@@ -8756,6 +8771,11 @@ function wirePanel(id, el) {
     if (sfxEl) sfxEl.oninput = update;
     const hcEl = el.querySelector('#hc-toggle');
     if (hcEl) hcEl.onchange = () => { applyHighContrast(hcEl.checked); saveGame(); };
+    const pauseUnfocusEl = el.querySelector('#pause-unfocus-toggle');
+    if (pauseUnfocusEl) pauseUnfocusEl.onchange = () => {
+      G.player.features.pauseOnUnfocus = pauseUnfocusEl.checked;
+      saveGame();
+    };
     const scaleEl = el.querySelector('#vol-scale');
     if (scaleEl) {
       scaleEl.oninput = () => {
@@ -10907,7 +10927,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
 window.addEventListener('beforeunload', saveGame);   // don't lose the last few seconds on close/refresh
-window.addEventListener('blur',pauseForInterruption);
+window.addEventListener('blur', () => { G.keys = {}; pauseForInterruption(); });
 document.addEventListener?.('visibilitychange',()=>{if(document.hidden)pauseForInterruption();});
 
 // inject theme + extra css, run checks, show title

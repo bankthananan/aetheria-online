@@ -18,6 +18,7 @@ export function normalizeFeatures(raw, catalog = {}) {
   const pending=record(expedition.pendingReward);
   return {
     version:1, touch:['on','off','auto'].includes(r.touch)?r.touch:'auto',
+    pauseOnUnfocus: r.pauseOnUnfocus !== false,
     loot:{mode:['all','usable','affixes'].includes(loot.mode)?loot.mode:'all',affixes:strings(loot.affixes).filter(x=>has('affixes',x)),quiet:loot.quiet===true},
     winPos:Object.fromEntries(Object.entries(record(r.winPos)).filter(([k,v])=>/^[a-z]{2,16}$/.test(k)&&Number.isFinite(v?.x)&&Number.isFinite(v?.y)).map(([k,v])=>[k,{x:Math.round(v.x),y:Math.round(v.y)}])),   // saved desktop window positions
     goal:['item','recipe'].includes(goal.kind) && has(goal.kind==='item'?'items':'recipes',goal.id)?{kind:goal.kind,id:goal.id}:null,

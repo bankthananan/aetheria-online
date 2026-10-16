@@ -278,7 +278,9 @@ export const L10N = {
       "Previewing": "Previewing",
       "Preview Tier": "Preview Tier",
       "Regalia": "Regalia",
-      "Equipped Regalia": "Equipped Regalia"
+      "Equipped Regalia": "Equipped Regalia",
+      "Pause when unfocused": "Pause when unfocused",
+      "Resume Game": "Resume Game"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -1372,6 +1374,8 @@ export const L10N = {
       "Preview Tier": "พรีวิวระดับขั้น",
       "Regalia": "เครื่องทรงเกียรติยศ",
       "Equipped Regalia": "เครื่องทรงที่สวมใส่",
+      "Pause when unfocused": "หยุดเกมเมื่อสลับหน้าต่าง",
+      "Resume Game": "เล่นต่อ",
 
       // Admin Tools / God Mode
       "God mode:": "โหมดพระเจ้า:",
