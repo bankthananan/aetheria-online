@@ -150,25 +150,30 @@ const usedFar = A.useItem('bait_sweet_gelatin');
 assert.equal(usedFar, false, 'useItem fails when target is too far away');
 assert.equal(A.itemQty('bait_sweet_gelatin'), qtyBeforeMissing, 'Bait not consumed when target too far');
 
-// 4. Target HP > 30% -> fails with "Creature must be weakened below 30% HP!"
+// 4. Capture attempt roll failure (Pokémon-style breakout) -> fails with "The creature broke free from the bait!"
 const healthyMon = A.makeMonster(slimeDef, p.x + 8, p.y + 8, 1);
 healthyMon.id = 'slime';
 healthyMon.alive = true;
 healthyMon.maxHp = 100;
-healthyMon.hp = 80; // 80% > 30%
+healthyMon.hp = 80;
 A.G.target = healthyMon;
 
+const origMathRandom = Math.random;
+Math.random = () => 0.99; // Roll exceeds catch rate
+
 const tameResHealthy = A.G.petsSystem.attemptTame(p, healthyMon, 'bait_sweet_gelatin');
-assert.equal(tameResHealthy.success, false, 'attemptTame fails on creature with >30% HP');
-assert.equal(tameResHealthy.reason, 'Creature must be weakened below 30% HP!', 'Gives exact required failure message');
+assert.equal(tameResHealthy.success, false, 'attemptTame fails on roll exceeding catch chance');
+assert.equal(tameResHealthy.reason, 'The creature broke free from the bait!', 'Gives breakout failure message');
 
 const qtyBeforeHealthy = A.itemQty('bait_sweet_gelatin');
 const usedHealthy = A.useItem('bait_sweet_gelatin');
-assert.equal(usedHealthy, false, 'useItem returns false for >30% HP creature');
-assert.equal(A.itemQty('bait_sweet_gelatin'), qtyBeforeHealthy - 1, 'Bait consumed on failed attempt');
+Math.random = origMathRandom;
+
+assert.equal(usedHealthy, false, 'useItem returns false when creature breaks free');
+assert.equal(A.itemQty('bait_sweet_gelatin'), qtyBeforeHealthy - 1, 'Bait consumed on failed breakout attempt');
 assert.ok(
-  document.getElementById('msg-log')?.children.some(c => c.textContent.includes('Creature must be weakened below 30% HP!')),
-  'Log message contains "Creature must be weakened below 30% HP!"'
+  document.getElementById('msg-log')?.children.some(c => c.textContent.includes('The creature broke free from the bait!')),
+  'Log message contains "The creature broke free from the bait!"'
 );
 
 // 5. Mismatched bait -> fails with "This creature rejects this bait!"
@@ -208,7 +213,6 @@ weakSlime.hp = 20; // 20% < 30%
 A.G.target = weakSlime;
 
 // Deterministic RNG hook for successful taming
-const origMathRandom = Math.random;
 Math.random = () => 0.01;
 
 const qtyBeforeSuccess = A.itemQty('bait_sweet_gelatin');

@@ -371,11 +371,6 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
       return { success: false, reason: 'Invalid target creature!' };
     }
 
-    const hpRatio = monster.hp / monster.maxHp;
-    if (hpRatio > 0.30) {
-      return { success: false, reason: 'Creature must be weakened below 30% HP!' };
-    }
-
     const petId = BAIT_TO_PET_MAP[baitId];
     if (!petId) {
       return { success: false, reason: 'This creature rejects this bait!' };
@@ -395,15 +390,21 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
       return { success: false, reason: 'This creature rejects this bait!' };
     }
 
-    const hpFactor = (1 - (hpRatio / 0.30)) * 0.20;
+    const hpRatio = clamp(monster.hp / monster.maxHp, 0.01, 1.0);
+    const missingHpFactor = 1.0 - hpRatio;
     const lukBonus = ((player?.stats?.luk || 0) * 0.005);
-    const chance = clamp(0.45 + lukBonus + hpFactor, 0.20, 0.90);
+    const hasStatus = !!(monster.status && Object.keys(monster.status).length > 0) ||
+      !!(monster.burnUntil || monster.slowUntil || monster.stunUntil || monster.poisonStacks || monster.sunderUntil);
+    const statusBonus = hasStatus ? 0.15 : 0;
+
+    // Pokemon-style catch rate: base 25% + up to 55% from missing HP + LUK + Status bonus
+    const chance = clamp(0.25 + (missingHpFactor * 0.55) + lukBonus + statusBonus, 0.10, 0.95);
 
     if (rnd() < chance) {
-      return { success: true, petId: petDef.id, petDef };
+      return { success: true, chance, petId: petDef.id, petDef };
     }
 
-    return { success: false, reason: 'The creature resisted taming!' };
+    return { success: false, chance, reason: 'The creature broke free from the bait!' };
   }
 
   /**

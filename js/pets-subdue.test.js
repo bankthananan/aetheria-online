@@ -19,7 +19,7 @@ assert.ok(A, 'game debug API loaded');
 const TS = 32;
 
 // Setup player & map
-const p = A.makePlayer('reborn_blade', 'TameSubdueTester');
+const p = A.makePlayer('reborn_blade', 'TameChanceTester');
 A.G.player = p;
 A.loadMap('whispering_woods');
 
@@ -29,54 +29,76 @@ slime.hp = slime.maxHp = 60;
 slime.alive = true;
 A.G.monsters = [slime];
 
-// Case 1: Player has NO bait in inventory. An overwhelming attack kills the slime normally.
-p.inventory = [];
+// Case 1: Normal combat is unhindered - attacks defeat monsters cleanly even when player carries bait
+A.addItem('bait_sweet_gelatin', 5);
+assert.equal(A.itemQty('bait_sweet_gelatin'), 5, 'Player has taming bait in inventory');
+
 A.damageMonster(slime, 200, false, false);
-assert.equal(slime.alive, false, 'Overwhelming attack kills slime when player has no taming bait');
+assert.equal(slime.alive, false, 'Attacks defeat monsters normally without artificial subdue/immortal HP clamps');
 
-// Case 2: Player has taming bait (Sweet Gelatin). Overwhelming attack subdues slime to 20% HP instead of killing it.
-const freshSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
-freshSlime.hp = freshSlime.maxHp = 60;
-freshSlime.alive = true;
-A.G.monsters = [freshSlime];
-A.addItem('bait_sweet_gelatin', 2);
+// Case 2: Pokémon-style catch chance at full HP (bait can be thrown at ANY HP)
+const fullHpSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
+fullHpSlime.hp = fullHpSlime.maxHp = 100;
+fullHpSlime.alive = true;
+A.G.monsters = [fullHpSlime];
+A.G.target = fullHpSlime;
 
-A.damageMonster(freshSlime, 200, false, false);
-assert.equal(freshSlime.alive, true, 'Slime must survive when player has matching taming bait');
-assert.ok(freshSlime.hp <= 18 && freshSlime.hp > 0, `Slime HP should be subdued below 30% HP (got ${freshSlime.hp}/${freshSlime.maxHp})`);
-assert.equal(freshSlime.hp / freshSlime.maxHp <= 0.30, true, 'Slime HP ratio is <= 0.30');
+// At 100% HP, player LUK 10, catch rate is:
+// base 0.25 + (1 - 1.0) * 0.55 + 10 * 0.005 = 0.30
+// When roll is high (0.95), creature breaks free
+const origMathRandom = Math.random;
+Math.random = () => 0.95;
 
-// Case 3: playerBasicAttack holds fire on subdued tameable creature
-A.G.target = freshSlime;
-A.G.targetSource = 'manual';
-p.attackCdUntil = 0;
-const hpBefore = freshSlime.hp;
-A.playerBasicAttack();
-assert.equal(freshSlime.hp, hpBefore, 'playerBasicAttack must hold fire and not kill a creature ready to be tamed');
+const qtyBeforeThrow = A.itemQty('bait_sweet_gelatin');
+const failedThrow = A.useItem('bait_sweet_gelatin');
+Math.random = origMathRandom;
 
-// Case 4: Now using bait succeeds in taming
-Math.random = () => 0.1;
+assert.equal(failedThrow, false, 'Capture fails on high roll (creature breaks free)');
+assert.equal(fullHpSlime.alive, true, 'Monster remains alive after breaking free');
+assert.equal(A.itemQty('bait_sweet_gelatin'), qtyBeforeThrow - 1, 'Bait is consumed like throwing a Pokéball');
+assert.ok(
+  document.getElementById('msg-log')?.children.some(c => c.textContent.includes('The creature broke free from the bait!')),
+  'Log message contains "The creature broke free from the bait!"'
+);
+
+// Case 3: Weakening monster increases catch rate significantly (Pokémon-style)
+const weakenedSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
+weakenedSlime.hp = 15; // 15% HP
+weakenedSlime.maxHp = 100;
+weakenedSlime.alive = true;
+A.G.monsters = [weakenedSlime];
+A.G.target = weakenedSlime;
+
+// With roll of 0.20 (below the ~76% catch chance at 15% HP), taming succeeds
+Math.random = () => 0.20;
+const qtyBeforeSuccess = A.itemQty('bait_sweet_gelatin');
 const tameSuccess = A.useItem('bait_sweet_gelatin');
-assert.equal(tameSuccess, true, 'useItem succeeds in taming the subdued creature');
-assert.ok(A.G.pets.owned.pet_slime, 'Gel Slime is now owned in G.pets.owned');
+Math.random = origMathRandom;
 
-// Case 5: Once companion is owned, player can attack and defeat slimes normally even with leftover bait
-const postTameSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
-postTameSlime.hp = postTameSlime.maxHp = 60;
-postTameSlime.alive = true;
-A.G.monsters = [postTameSlime];
-A.G.target = postTameSlime;
+assert.equal(tameSuccess, true, 'useItem succeeds with matching bait on weakened creature');
+assert.equal(A.itemQty('bait_sweet_gelatin'), qtyBeforeSuccess - 1, 'Bait consumed on successful capture');
+assert.ok(A.G.pets.owned.pet_slime, 'Gel Slime is now owned in G.pets.owned');
+assert.equal(weakenedSlime.alive, false, 'Captured creature is pacified / marked inactive');
+assert.ok(
+  document.getElementById('msg-log')?.children.some(c => c.textContent.includes('Gotcha! Successfully tamed Gel Slime!')),
+  'Log message contains "Gotcha! Successfully tamed Gel Slime!"'
+);
+
+// Case 4: Once companion is owned, combat remains fluid and attacks defeat monsters normally
+const anotherSlime = A.makeMonster(slimeDef, p.x + 32, p.y, 1);
+anotherSlime.hp = 15;
+anotherSlime.maxHp = 100;
+anotherSlime.alive = true;
+A.G.monsters = [anotherSlime];
+A.G.target = anotherSlime;
 A.G.targetSource = 'manual';
 p.attackCdUntil = 0;
-assert.equal(A.itemQty('bait_sweet_gelatin') > 0, true, 'Player still has leftover bait in inventory');
 
-postTameSlime.hp = 15; // exactly 25% HP (under 30% threshold)
-const hpBeforePost = postTameSlime.hp;
+const hpBeforeAttack = anotherSlime.hp;
 A.playerBasicAttack();
-assert.ok(postTameSlime.hp < hpBeforePost, `playerBasicAttack must strike slime below 30% HP once pet is owned (was ${hpBeforePost}, now ${postTameSlime.hp})`);
+assert.ok(anotherSlime.hp < hpBeforeAttack, 'playerBasicAttack strikes monsters normally');
 
-// And damageMonster must NOT subdue
-A.damageMonster(postTameSlime, 200, false, false);
-assert.equal(postTameSlime.alive, false, 'Slime must be defeated normally once companion is owned, even if player has leftover bait');
+A.damageMonster(anotherSlime, 200, false, false);
+assert.equal(anotherSlime.alive, false, 'Monster defeated cleanly by damage');
 
-console.log('Taming subdue and hold fire audit passed!');
+console.log('Pokémon-style taming chance and combat flow audit passed!');

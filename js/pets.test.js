@@ -96,7 +96,7 @@ test('createPetsSystem: getPetDef and getPetForMonster lookups', () => {
   assert.equal(sys.getPetForMonster('goblin'), null);
 });
 
-test('createPetsSystem: attemptTame validates HP threshold, bait compatibility, and LUK scaling', () => {
+test('createPetsSystem: attemptTame calculates Pokémon-style dynamic catch rates with HP, LUK, and status scaling', () => {
   const sysPass = createPetsSystem({ rnd: () => 0.05 });
   const p = { stats: { luk: 10 } };
   const mHealthy = { id: 'slime', hp: 80, maxHp: 100 };
@@ -107,19 +107,16 @@ test('createPetsSystem: attemptTame validates HP threshold, bait compatibility, 
   assert.equal(sysPass.attemptTame(p, null, 'bait_sweet_gelatin').success, false);
   assert.equal(sysPass.attemptTame(p, mDead, 'bait_sweet_gelatin').success, false);
 
-  // Rejects healthy monster (> 30% HP)
+  // Can tame healthy monster with low roll (e.g. lucky catch at 80% HP)
   const resHealthy = sysPass.attemptTame(p, mHealthy, 'bait_sweet_gelatin');
-  assert.equal(resHealthy.success, false);
-  assert.match(resHealthy.reason, /weakened/i);
+  assert.equal(resHealthy.success, true);
+  assert.ok(resHealthy.chance > 0.35 && resHealthy.chance < 0.45, `Expected ~41% catch chance at 80% HP (got ${resHealthy.chance})`);
 
-  // Exact 30% boundary check: 30 / 100 is <= 0.30
-  const mBoundary = { id: 'slime', hp: 30, maxHp: 100 };
-  const resBoundary = sysPass.attemptTame(p, mBoundary, 'bait_sweet_gelatin');
-  assert.equal(resBoundary.success, true);
-
-  // 30.1% boundary check: 30.1 / 100 > 0.30 -> rejected
-  const mAboveBoundary = { id: 'slime', hp: 30.1, maxHp: 100 };
-  assert.equal(sysPass.attemptTame(p, mAboveBoundary, 'bait_sweet_gelatin').success, false);
+  // Weaker monster has significantly higher catch chance (80% missing HP -> ~74% catch chance)
+  const resWeak = sysPass.attemptTame(p, mWeak, 'bait_sweet_gelatin');
+  assert.equal(resWeak.success, true);
+  assert.ok(resWeak.chance > resHealthy.chance, 'Catch chance increases as HP decreases');
+  assert.ok(resWeak.chance > 0.70, `Expected ~74% catch chance at 20% HP (got ${resWeak.chance})`);
 
   // Rejects wrong bait (bait for another monster or unknown bait)
   const resWrongBait = sysPass.attemptTame(p, mWeak, 'bait_magma_fruit');
@@ -135,28 +132,28 @@ test('createPetsSystem: attemptTame validates HP threshold, bait compatibility, 
   assert.equal(resWolf.success, true);
   assert.equal(resWolf.petId, 'pet_wolf');
 
-  // Successful tame
-  const resSuccess = sysPass.attemptTame(p, mWeak, 'bait_sweet_gelatin');
-  assert.equal(resSuccess.success, true);
-  assert.equal(resSuccess.petId, 'pet_slime');
-  assert.equal(resSuccess.petDef.name, 'Gel Slime');
-
-  // Failed roll test
+  // Failed roll gives breakout feedback
   const sysFail = createPetsSystem({ rnd: () => 0.95 });
   const resFail = sysFail.attemptTame(p, mWeak, 'bait_sweet_gelatin');
   assert.equal(resFail.success, false);
-  assert.match(resFail.reason, /resisted/i);
+  assert.match(resFail.reason, /broke free/i);
 
   // LUK scaling verification
-  // At hp = 30 / 100: hpFactor = (1 - 1.0) * 0.20 = 0.
-  // With luk = 0: chance = clamp(0.45 + 0 + 0, 0.20, 0.90) = 0.45.
-  // With luk = 40: lukBonus = 40 * 0.005 = 0.20 -> chance = 0.65.
-  // A roll of 0.55 should fail with luk = 0, but pass with luk = 40.
-  const sysLukTest = createPetsSystem({ rnd: () => 0.55 });
+  // At hp = 80 / 100: missingHp = 0.20 -> 0.25 + 0.11 = 0.36
+  // With luk = 0: chance = 0.36
+  // With luk = 40: lukBonus = 40 * 0.005 = 0.20 -> chance = 0.56
+  // A roll of 0.45 should fail with luk = 0, but pass with luk = 40
+  const sysLukTest = createPetsSystem({ rnd: () => 0.45 });
   const pLowLuk = { stats: { luk: 0 } };
   const pHighLuk = { stats: { luk: 40 } };
-  assert.equal(sysLukTest.attemptTame(pLowLuk, mBoundary, 'bait_sweet_gelatin').success, false);
-  assert.equal(sysLukTest.attemptTame(pHighLuk, mBoundary, 'bait_sweet_gelatin').success, true);
+  assert.equal(sysLukTest.attemptTame(pLowLuk, mHealthy, 'bait_sweet_gelatin').success, false);
+  assert.equal(sysLukTest.attemptTame(pHighLuk, mHealthy, 'bait_sweet_gelatin').success, true);
+
+  // Status condition bonus verification (+15% when monster is afflicted with status)
+  const mStatus = { id: 'slime', hp: 80, maxHp: 100, status: { slow: 2 } };
+  const sysStatusTest = createPetsSystem({ rnd: () => 0.50 });
+  assert.equal(sysStatusTest.attemptTame(pLowLuk, mHealthy, 'bait_sweet_gelatin').success, false);
+  assert.equal(sysStatusTest.attemptTame(pLowLuk, mStatus, 'bait_sweet_gelatin').success, true);
 });
 
 test('createPetsSystem: feedPet increases loyalty and advances bond levels', () => {

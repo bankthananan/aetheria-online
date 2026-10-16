@@ -2716,9 +2716,6 @@ function playerBasicAttack() {
     G.mounted = false;
     recompute(p);
   }
-  // If player carries taming bait for this creature and it is already weakened below 30% HP,
-  // hold fire so the player does not accidentally defeat it before taming!
-  if (playerHasBaitFor(t) && (t.hp / t.maxHp) <= 0.30) return;
   if (dist(p.x, p.y, t.x, t.y) > p.basicRange * TS + t.size / 2) return;
   if (now() < p.attackCdUntil) return;
   p.attackCdUntil = now() + (p.atkDelay || COMBAT.attackSpeedMs);   // AGI-scaled swing speed
@@ -2861,15 +2858,6 @@ function damageMonster(m, dmg, isCrit, silent) {
     }
     m.hp = G.raidState.hp;
   } else {
-    const baitId = playerHasBaitFor(m);
-    if (baitId && m.hp > 0 && dmg >= m.hp) {
-      const targetSubduedHp = m.hp > Math.round(m.maxHp * 0.20)
-        ? Math.max(1, Math.round(m.maxHp * 0.20))
-        : Math.max(1, m.hp - 1);
-      dmg = m.hp - targetSubduedHp;
-      floatText(m.x, m.y - 16, 'SUBDUED!', 'magic');
-      toast(T('Creature subdued below 30% HP! Use your bait now!', 'ui'), 'good');
-    }
     m.hp -= dmg;
   }
   m.lastCombatAt = now();          // keeps a boss "in combat" so it won't leash/regen mid-fight
@@ -9410,6 +9398,7 @@ function useItem(itemId) {
     const res = petsSystem.attemptTame(p, G.target, itemId);
     if (!res.success) {
       removeItem(itemId, 1);
+      floatText(G.target.x, G.target.y - 14, 'BROKE FREE!', 'bad');
       logMsg(T(res.reason, 'ui'), 'bad');
       toast(T(res.reason, 'ui'), 'bad');
       AUDIO.playSfx('miss');
@@ -9417,6 +9406,7 @@ function useItem(itemId) {
       return false;
     }
     removeItem(itemId, 1);
+    floatText(G.target.x, G.target.y - 14, 'TAMED!', 'magic');
     const petDef = res.petDef;
     const petId = res.petId;
     G.pets.owned[petId] = {
@@ -9438,8 +9428,8 @@ function useItem(itemId) {
     G.targetSource = null;
     G.path = null;
     AUDIO.playSfx('quest');
-    toast(`🐾 ${T('Successfully tamed', 'ui')} [${T(petDef.name, 'items')}]!`, 'good'); guideEvent('tame');
-    logMsg(`Successfully tamed ${petDef.name}!`, 'good');
+    toast(`🐾 ${T('Gotcha! Successfully tamed', 'ui')} [${T(petDef.name, 'items')}]!`, 'good'); guideEvent('tame');
+    logMsg(`Gotcha! Successfully tamed ${petDef.name}!`, 'good');
     if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'heart');
     saveGame();
     return true;

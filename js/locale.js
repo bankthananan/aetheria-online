@@ -280,7 +280,9 @@ export const L10N = {
       "Regalia": "Regalia",
       "Equipped Regalia": "Equipped Regalia",
       "Pause when unfocused": "Pause when unfocused",
-      "Resume Game": "Resume Game"
+      "Resume Game": "Resume Game",
+      "The creature broke free from the bait!": "The creature broke free from the bait!",
+      "Gotcha! Successfully tamed": "Gotcha! Successfully tamed"
     },
     biomes: {
       "Shadow Depths": "Shadow Depths",
@@ -1376,6 +1378,8 @@ export const L10N = {
       "Equipped Regalia": "เครื่องทรงที่สวมใส่",
       "Pause when unfocused": "หยุดเกมเมื่อสลับหน้าต่าง",
       "Resume Game": "เล่นต่อ",
+      "The creature broke free from the bait!": "สิ่งมีชีวิตดิ้นหลุดออกจากเหยื่อ!",
+      "Gotcha! Successfully tamed": "จับสำเร็จแล้ว!",
 
       // Admin Tools / God Mode
       "God mode:": "โหมดพระเจ้า:",
