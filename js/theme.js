@@ -688,5 +688,57 @@ body[data-viewport="portrait"] .panel__body,body[data-viewport="landscape"] .pan
 body[data-viewport="portrait"] .dialogue,body[data-viewport="landscape"] .dialogue{z-index:66;left:8px;right:8px;bottom:calc(8px + var(--safe-bottom));width:auto;max-height:70vh;overflow:auto;transform:none}
 .slot-picker{z-index:80;max-height:65vh;overflow:auto;touch-action:pan-y}.slot-picker .sp-row{min-height:44px}
 body[data-viewport="portrait"] .btn,body[data-viewport="landscape"] .btn{min-height:44px}
+
+/* ===== UX/UI Modernization Suite (Pillar 1–4) ===== */
+/* Pillar 1: HUD Buff, Debuff & Status Aura Bar */
+.hud-buff-strip{position:fixed;top:106px;left:66px;display:flex;flex-wrap:wrap;gap:4px;max-width:260px;z-index:12;pointer-events:auto}
+.hud-buff-chip{position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,var(--wood-mid),var(--wood-deep));border:2px solid var(--gold);border-radius:2px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),2px 2px 0 rgba(0,0,0,.65);cursor:help;user-select:none}
+.hud-buff-chip--debuff{border-color:var(--danger);background:linear-gradient(145deg,#4a181e,#220a0d)}
+.hud-buff-chip--mount,.hud-buff-chip--set{border-color:var(--gold-bright);box-shadow:0 0 5px rgba(242,216,138,.4),2px 2px 0 rgba(0,0,0,.65)}
+.hud-buff-chip__icon{font-size:14px;line-height:1}
+.hud-buff-chip__timer{position:absolute;right:1px;bottom:0;font:700 8px/1 var(--font-ui);color:var(--on-fill);text-shadow:1px 1px 0 #000,-1px 0 #000}
+
+/* Pillar 2: Action Hotbar 2.0 (Radial Cooldowns, MP/Range States & Combo Glow) */
+body #hud .hotbar-shell .skill-btn .cd{background:conic-gradient(rgba(5,8,13,.86) var(--cd-angle,360deg),rgba(5,8,13,.24) 0);font-size:11px;text-shadow:1px 1px 0 #000}
+body #hud .hotbar-shell .skill-btn.is-no-mp{filter:saturate(.45) brightness(.82);border-color:#416eaa}
+body #hud .hotbar-shell .skill-btn.is-out-range:after{content:"RNG";position:absolute;top:2px;right:2px;padding:0 2px;background:var(--oxblood);color:var(--on-fill);font:700 7px/1.2 var(--font-ui);border-radius:1px}
+body #hud .hotbar-shell .skill-btn.is-combo-primed{border-color:var(--gold-bright)!important;box-shadow:0 0 9px rgba(242,216,138,.85),inset 0 0 0 1px var(--gold-bright)!important}
+
+/* Pillar 3: Universal Command & Codex Search Palette */
+.cmd-palette-backdrop{position:fixed;inset:0;z-index:90;display:flex;align-items:flex-start;justify-content:center;padding-top:10vh;background:rgba(10,6,3,.68);backdrop-filter:blur(2px)}
+.cmd-palette-modal{width:min(580px,92vw);max-height:76vh;display:flex;flex-direction:column;border:4px solid var(--gold);outline:3px solid #1a0d06;border-radius:2px;box-shadow:inset 0 0 0 2px #7a522c,var(--panel-shadow);overflow:hidden}
+.cmd-palette-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--wood-grain),linear-gradient(90deg,#2a170b,#6a4524 48%,#2a170b);border-bottom:3px solid var(--gold);color:var(--gold-bright);font:700 15px var(--font-head)}
+.cmd-palette-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.cmd-palette-input{width:100%;min-height:34px!important;padding:6px 10px!important;font-size:13px!important}
+.cmd-palette-list{display:flex;flex-direction:column;gap:4px;max-height:46vh;overflow-y:auto;overscroll-behavior:contain}
+.cmd-palette-row{display:flex;align-items:center;gap:10px;padding:7px 9px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:2px;cursor:pointer}
+.cmd-palette-row:hover,.cmd-palette-row.is-active{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 22%,var(--card-bg))}
+.cmd-palette-row__icon{font-size:18px;flex-shrink:0;width:24px;text-align:center}
+.cmd-palette-row__main{flex:1;min-width:0;display:grid;gap:1px}
+.cmd-palette-row__title{display:flex;align-items:center;gap:6px;font-size:12px}
+.cmd-palette-row__cat{padding:1px 5px;background:rgba(120,86,40,.16);border:1px solid var(--card-border);border-radius:2px;font-size:9px;color:var(--text-muted)}
+.cmd-palette-row__sub{color:var(--text-muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd-palette-row__action{flex-shrink:0;font:700 10px var(--font-ui);color:var(--accent-alt)}
+.cmd-palette-empty{padding:16px;text-align:center;color:var(--text-muted);font-size:12px}
+.cmd-palette-foot{display:flex;justify-content:space-between;align-items:center;padding-top:4px;border-top:1px solid var(--card-border)}
+
+/* Pillar 4: Combat Log Tabs, Soft-Edge Mask & Rare Loot Fanfare */
+.msg-log{-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 20%,#000 100%);mask-image:linear-gradient(to bottom,transparent 0%,#000 20%,#000 100%)}
+.msg-log-tabs{position:fixed;left:12px;bottom:160px;display:flex;gap:3px;z-index:12;pointer-events:auto}
+.msg-log-tab{padding:2px 6px;background:rgba(24,13,7,.84);border:1px solid var(--gold-deep);border-radius:2px;color:var(--text-muted);font:700 9px var(--font-ui);cursor:pointer}
+.msg-log-tab:hover,.msg-log-tab.is-active{background:var(--gold-deep);color:var(--on-fill);border-color:var(--gold)}
+body[data-viewport="portrait"] .msg-log-tabs,body[data-viewport="landscape"] .msg-log-tabs,body[data-viewport="portrait"] .hud-buff-strip{display:none!important}
+#loot-fanfare-slot{position:fixed;top:48px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:35;pointer-events:none}
+.loot-fanfare{pointer-events:auto;display:flex;align-items:center;gap:10px;min-width:260px;max-width:min(440px,90vw);padding:8px 12px;
+  background:var(--wood-grain),linear-gradient(135deg,#3b2412,#180d07);border:2px solid var(--gold-bright);outline:2px solid #120804;border-radius:2px;
+  box-shadow:0 6px 18px rgba(0,0,0,.78),inset 0 0 0 1px rgba(255,235,170,.28);color:var(--on-fill);animation:fadeIn .2s steps(4,end)}
+.loot-fanfare__icon{font-size:22px;flex-shrink:0}
+.loot-fanfare__copy{flex:1;min-width:0;display:grid;gap:1px}
+.loot-fanfare__headline{font:700 9px var(--font-ui);color:var(--gold-bright);letter-spacing:1px;text-transform:uppercase}
+.loot-fanfare__title{font:700 14px var(--font-head);color:var(--on-fill);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loot-fanfare__close{background:transparent;border:1px solid var(--gold-deep);color:var(--text-muted);width:20px;height:20px;padding:0;cursor:pointer;font-size:11px;line-height:18px}
+.loot-fanfare__close:hover{background:var(--oxblood);color:#fff;border-color:var(--gold)}
 `,
 };

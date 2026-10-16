@@ -84,6 +84,25 @@ import {
   applyMythicEnchant,
   getEnchantBonus,
 } from './systems/enchanting.js';
+import {
+  collectActiveHudBuffs,
+  renderHudBuffBarHtml,
+} from './render/hud-buffs.js';
+import {
+  computeHotbarSlotState,
+  formatCooldownLabel,
+} from './render/hotbar-ux.js';
+import {
+  searchGameIndex,
+  renderCommandPaletteHtml,
+  executeCommandAction,
+} from './render/command-palette.js';
+import {
+  classifyLogChannel,
+  renderLogFilterTabsHtml,
+  shouldTriggerFanfare,
+  renderLootFanfareHtml,
+} from './render/combat-log-ui.js';
 
 const ZONE_PACKAGES = {
   whispering_woods: WhisperingWoods,
@@ -2966,8 +2985,18 @@ function killMonster(m) {
     cardsSystem.recordBestiaryDrop(G.bestiary, m.def.id, dropId);
     const got = addItem(dropId, 1, dropBias(m, p) + dropBiasBonus), it = itemById[dropId];
     if(p.features.loot.quiet&&got&&!matchesLoot(got,it,p.features.loot,p.classId))continue;
-    if (got?.uid && got.rarity !== 'common') { toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good'); logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good'); }
-    else logMsg(`Looted ${it.name}.`, 'good');
+    if (got?.uid && got.rarity !== 'common') {
+      toast(`✦ ${itemRarity(got).name} drop: ${it.name}!`, 'good');
+      logMsg(`Looted [${itemRarity(got).name}] ${it.name}!`, 'good');
+      if (got.rarity === 'epic' || got.rarity === 'legendary') {
+        triggerLootFanfare({ type: 'item', itemId: it.id, name: it.name, itemType: it.type, rarity: got.rarity });
+      }
+    } else {
+      logMsg(`Looted ${it.name}.`, 'good');
+      if (it?.type === 'material') {
+        triggerLootFanfare({ type: 'item', itemId: it.id, name: it.name, itemType: it.type });
+      }
+    }
     AUDIO.playSfx('pickup');
   }
   // Companion Auto-Loot dash & bond perks (strict ZERO camera shake)
@@ -3007,6 +3036,7 @@ function killMonster(m) {
     const cardName = cardDef ? T(cardDef.name, 'items') : rolledCard;
     toast(`🎴 ${T('Monster Card Drop', 'ui')}: [${cardName}]!`, 'good');
     logMsg(`Acquired rare monster card: [${cardName}]!`, 'good');
+    triggerLootFanfare({ type: 'item', itemId: rolledCard, name: cardDef?.name || cardName, itemType: 'card' });
     AUDIO.playSfx('quest');
   }
   if (eliteReward?.gemDrop) {
@@ -3049,7 +3079,11 @@ function killMonster(m) {
   if (m.def.id === 'ruin_golem') { toast('The ruins are cleared — a frozen path opens to the north.', 'good'); }
   if (m.def.id === 'flame_dragon') { toast('☠ The Flame Dragon falls — and behind its throne, the sky TEARS OPEN. The Astral Rift awaits.', 'good'); logMsg('A rift portal has opened at the far edge of the caldera.', 'sys'); }
   if (m.def.id === 'nullking') { toast(T('✦☠ The Nullking is unmade!', 'ui'), 'good'); triggerVictory(); }   // the TRUE finale
-  if (m.def.raid) { toast(`🏆 ${m.def.name} falls — the tide recoils!`, 'good'); logMsg(`${m.def.name} slain. A mythic drop awaits.`, 'good'); }
+  if (m.def.raid) {
+    toast(`🏆 ${m.def.name} falls — the tide recoils!`, 'good');
+    logMsg(`${m.def.name} slain. A mythic drop awaits.`, 'good');
+    triggerLootFanfare({ type: 'boss_kill', monsterId: m.def.id, name: m.def.name });
+  }
   // a slain roaming rare never respawns in place — the world timer re-announces it later
   if (m.def.rare) {
     m.deadUntil = Infinity;
@@ -3061,6 +3095,7 @@ function killMonster(m) {
   // conquest unlocks the guild's next hunting ground
   if (m.def.sizeTiles >= 2 && !m.def.rare && !G.guardiansSlain.has(m.def.id)) {
     G.guardiansSlain.add(m.def.id);
+    triggerLootFanfare({ type: 'boss_kill', monsterId: m.def.id, name: m.def.name });
     const zi = ZONE_ORDER.findIndex(mid => zoneGuardian(mid) === m.def.id);
     refreshGuildBoard();
     refreshPanel('world');
@@ -5676,9 +5711,161 @@ function logMsg(text, kind = '') {
   const log = $('#msg-log'); if (!log) return;
   const line = document.createElement('div');
   line.className = 'line' + (kind ? ` line--${kind}` : '');
+  const ch = classifyLogChannel(text, kind);
+  line.dataset.channel = ch;
+  if (G._logTab && G._logTab !== 'all' && ch !== G._logTab) line.hidden = true;
   line.textContent = text;
   log.appendChild(line);
   while (log.children.length > 8) log.firstChild.remove();
+}
+function triggerLootFanfare(event) {
+  const banner = shouldTriggerFanfare(event);
+  if (!banner) return false;
+  const html = renderLootFanfareHtml(banner, T);
+  if (!html) return false;
+  const slot = $('#loot-fanfare-slot');
+  if (slot) {
+    slot.innerHTML = html;
+    slot.querySelectorAll?.('[data-fanfare-close]')?.forEach(btn => {
+      btn.onclick = () => { slot.innerHTML = ''; };
+    });
+    setTimeout(() => {
+      if (slot.innerHTML === html) slot.innerHTML = '';
+    }, 3400);
+  }
+  return true;
+}
+let cmdPaletteEl = null;
+let cmdPaletteState = { query: '', selectedIdx: 0, results: [] };
+function closeCommandPalette() {
+  if (cmdPaletteEl) {
+    cmdPaletteEl.remove?.();
+    cmdPaletteEl = null;
+    return true;
+  }
+  const domEl = document.getElementById('cmd-palette-backdrop');
+  if (domEl) {
+    domEl.remove?.();
+    return true;
+  }
+  return false;
+}
+function runCommandPaletteSelection(entry) {
+  if (!entry) return false;
+  closeCommandPalette();
+  return executeCommandAction(entry, {
+    G,
+    togglePanel,
+    refreshPanel,
+    canFastTravel: (mapId) => canFastTravel(mapId, G.player, G.guardiansSlain, G.mapId).ok,
+    executeFastTravel: (mapId) => {
+      const res = executeFastTravel(mapId, G);
+      if (res.success) {
+        loadMap(mapId);
+        toast(T('Fast traveled to {name}!', 'ui').replace('{name}', T(MAPS[mapId]?.name || mapId, 'maps')), 'good');
+      }
+    },
+    activateWorldRoute,
+    activateTaskGuide,
+    toast,
+    T,
+  });
+}
+function bindCommandPaletteListEvents(container) {
+  if (!container) return;
+  container.querySelectorAll?.('[data-cmd-idx]')?.forEach(row => {
+    row.onclick = (e) => {
+      e.stopPropagation();
+      const idx = +row.dataset.cmdIdx;
+      const entry = cmdPaletteState.results[idx];
+      if (entry) runCommandPaletteSelection(entry);
+    };
+  });
+  container.querySelectorAll?.('[data-cmd-close]')?.forEach(btn => {
+    btn.onclick = () => closeCommandPalette();
+  });
+}
+function toggleCommandPalette(initialQuery = '') {
+  if (cmdPaletteEl || document.getElementById('cmd-palette-backdrop')) {
+    closeCommandPalette();
+    return false;
+  }
+  const q = typeof initialQuery === 'string' ? initialQuery : '';
+  const results = searchGameIndex(q, { MAPS, CONTENT, T });
+  cmdPaletteState = { query: q, selectedIdx: 0, results };
+  const wrap = document.createElement('div');
+  wrap.id = 'cmd-palette-mount';
+  wrap.innerHTML = renderCommandPaletteHtml({ query: q, results, selectedIdx: 0, T });
+  cmdPaletteEl = wrap;
+  document.body.appendChild(wrap);
+  bindCommandPaletteListEvents(wrap);
+  const backdrop = wrap.querySelector?.('#cmd-palette-backdrop');
+  if (backdrop) {
+    backdrop.onclick = (e) => {
+      if (e.target === backdrop) closeCommandPalette();
+    };
+  }
+  const input = wrap.querySelector?.('#cmd-palette-input');
+  if (input) {
+    input.focus?.();
+    input.oninput = () => {
+      const nextQ = input.value || '';
+      const nextResults = searchGameIndex(nextQ, { MAPS, CONTENT, T });
+      cmdPaletteState = { query: nextQ, selectedIdx: 0, results: nextResults };
+      const listEl = wrap.querySelector?.('#cmd-palette-list');
+      if (listEl) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderCommandPaletteHtml({ query: nextQ, results: nextResults, selectedIdx: 0, T });
+        const freshList = tmp.querySelector?.('#cmd-palette-list');
+        if (freshList) listEl.innerHTML = freshList.innerHTML;
+        bindCommandPaletteListEvents(listEl);
+      }
+    };
+    input.onkeydown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCommandPalette();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const len = cmdPaletteState.results.length;
+        if (!len) return;
+        const delta = e.key === 'ArrowDown' ? 1 : -1;
+        cmdPaletteState.selectedIdx = (cmdPaletteState.selectedIdx + delta + len) % len;
+        wrap.querySelectorAll?.('[data-cmd-idx]')?.forEach(row => {
+          const active = +row.dataset.cmdIdx === cmdPaletteState.selectedIdx;
+          row.classList.toggle('is-selected', active);
+          row.setAttribute('aria-selected', String(active));
+        });
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const chosen = cmdPaletteState.results[cmdPaletteState.selectedIdx];
+        if (chosen) runCommandPaletteSelection(chosen);
+      }
+    };
+  }
+  return true;
+}
+function bindLogFilterTabs() {
+  const slot = $('#msg-log-tabs-slot');
+  if (!slot) return;
+  slot.innerHTML = renderLogFilterTabsHtml(G._logTab || 'all', T);
+  slot.querySelectorAll?.('[data-log-tab]')?.forEach(btn => {
+    btn.onclick = () => {
+      G._logTab = btn.dataset.logTab || 'all';
+      bindLogFilterTabs();
+      const log = $('#msg-log');
+      if (log?.children) {
+        for (const c of log.children) {
+          c.hidden = G._logTab !== 'all' && c.dataset?.channel !== G._logTab;
+        }
+      }
+    };
+  });
 }
 function toast(text, kind = '') {
   const TOAST_MAX = 4;
@@ -5740,6 +5927,7 @@ function resumeGameFromPause(reason) {
 function closeTopmost() {
   hideSkillTip();
   cancelHotkeyRebind(false);
+  if (closeCommandPalette()) return true;
   for (const [id, sel] of [['homestead-modal-container', '[data-homestead-close]'], ['spire-elevator-modal-container', '[data-spire-close]']]) {
     const mc = document.getElementById(id);
     if (mc?.childElementCount) { mc.querySelector(sel)?.click(); return true; }
@@ -5813,6 +6001,7 @@ function buildHud() {
       <div id="raid-hud-slot"></div>
       <div id="spire-hud-slot"></div>
       <div id="stronghold-hud-slot"></div>
+      <div id="loot-fanfare-slot"></div>
       <div id="danger-vignette" class="danger-vignette"></div>
       <div class="level-badge"><span class="hud-crest">${CLASS_CREST[p.combatClass] || 'A'}</span><small>${T('LV', 'ui')}</small><b id="hud-level">1</b></div>
       <div class="stat-stack">
@@ -5821,6 +6010,7 @@ function buildHud() {
         <div class="bar stamina-bar" role="progressbar" aria-label="${T('Stamina', 'ui')}" title="${T('Stamina — Space to dodge roll, V to parry', 'ui')}"><div class="fill" id="stamina-fill"></div></div>
         <div class="hud-identity"><span id="hud-name"></span><span class="hud-sep">◆</span><span id="hud-job"></span><span class="hud-sep">◆</span><span class="hud-coin">G</span><span id="hud-zeny"></span></div>
       </div>
+      <div id="hud-buff-strip" class="hud-buff-strip"></div>
       <div id="boss-frame" class="boss-frame" style="display:none">
         <div class="boss-portrait"><span id="boss-icon">☠</span></div>
         <div class="boss-details">
@@ -5840,6 +6030,7 @@ function buildHud() {
       <button class="auto-status" id="auto-status" data-panel="automation" type="button" hidden aria-live="polite">
         <span class="auto-status__icon" aria-hidden="true">◎</span><span class="auto-status__copy"><b></b><small></small></span><span class="auto-status__gear" aria-hidden="true">⚙</span>
       </button>
+      <div id="msg-log-tabs-slot"></div>
       <div class="msg-log" id="msg-log"></div>
       <div class="hotbar-shell">
         <div id="momentum-pips" class="momentum-pips" title="${T('Damage skills build Momentum. Finishers consume it.', 'ui')}">
@@ -5860,6 +6051,7 @@ function buildHud() {
         <button class="btn btn--ghost" data-panel="automation" title="${T('Auto', 'ui')} (T)">🤖 ${T('Auto', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="book">📖 ${T('Book (B)', 'ui')}</button>
         <button class="btn btn--ghost" data-panel="adventure" title="${T('Adventures', 'ui')} (J)">✦ ${T('Adventures', 'ui')}</button>
+        <button class="btn btn--ghost" id="cmd-search-btn" type="button" title="${T('Quick Search (Ctrl+K)', 'ui')}" aria-label="${T('Quick Search (Ctrl+K)', 'ui')}">🔍</button>
         <button class="btn btn--ghost hud-more" data-panel="guide">${T('Field guide', 'ui')} (G)</button>
         <button class="btn btn--ghost hud-more" data-panel="pets">🐾 ${T('Pets', 'ui')} (P)</button>
         <button class="btn btn--ghost hud-more" data-panel="loadouts">${T('Loadouts', 'ui')} (L)</button>
@@ -5874,6 +6066,13 @@ function buildHud() {
   initTouchControls();
   updateQuestTracker();   // the rebuilt tracker starts empty (e.g. after a language switch)
   setupMinimapInteractions();
+  bindLogFilterTabs();
+  const cmdSearchBtn = $('#cmd-search-btn');
+  if (cmdSearchBtn) cmdSearchBtn.onclick = () => {
+    toggleCommandPalette();
+    $('#hud .hud-menu')?.classList.remove('open', 'more-open');
+    $('#mobile-menu-btn')?.classList.remove('active');
+  };
   $('#hud').querySelectorAll('[data-panel]').forEach(b => b.onclick = () => {
     togglePanel(b.dataset.panel);
     $('#hud .hud-menu')?.classList.remove('open', 'more-open');
@@ -6089,6 +6288,11 @@ function updateHud() {
   if ($('#shield-fill')) $('#shield-fill').style.width = (shield > 0 ? Math.min(100, 100 * shield / p.maxHp) : 0) + '%';
   $('#hp-label').textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}${shield > 0 ? ` (+${shield})` : ''}`;
   $('#mp-label').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
+  const buffStrip = $('#hud-buff-strip');
+  if (buffStrip) {
+    const activeBuffs = collectActiveHudBuffs(G, now());
+    buffStrip.innerHTML = renderHudBuffBarHtml(activeBuffs, T);
+  }
   // Boss frame update: only show when engaged in combat or nearby
   const boss = (G.monsters || []).find(m => {
     if (!m.alive) return false;
@@ -6131,17 +6335,42 @@ function updateHud() {
       const s = COMBAT.skills.find(x => x.id === slot.id);
       const cd = b.querySelector('.cd'); const left = (p.skillCd[slot.id] || 0) - now();
       const resourceBlocked = s.finisher ? p.momentum < TUNING.momentum.finisherMin : p.mp < s.mpCost;
+      const uxState = computeHotbarSlotState(slot, +b.dataset.slot, G, {
+        nowMs: now(),
+        skills: COMBAT.skills,
+        finisherMin: TUNING.momentum.finisherMin,
+        tileSize: TS,
+      });
       b.classList.toggle('resource-blocked', resourceBlocked);
+      b.classList.toggle('is-no-mp', uxState.insufficientMp);
+      b.classList.toggle('is-out-range', uxState.outOfRange);
+      b.classList.toggle('is-combo-primed', uxState.comboPrimed);
       b.classList.toggle('cast-ready', lv > 0 && left <= 0 && !resourceBlocked);
       b.classList.toggle('finisher-ready', !!s.finisher && lv > 0 && left <= 0 && !resourceBlocked);
-      if (cd) { if (left > 0) { cd.style.display = 'flex'; cd.style.setProperty('--cd-angle', `${Math.max(0, Math.min(360, left / s.cooldownMs * 360))}deg`); cd.textContent = Math.ceil(left / 1000); } else cd.style.display = 'none'; }
+      if (cd) {
+        if (left > 0) {
+          cd.style.display = 'flex';
+          cd.style.setProperty('--cd-angle', `${uxState.cooldownAngleDeg}deg`);
+          cd.textContent = formatCooldownLabel(left);
+        } else {
+          cd.style.display = 'none';
+        }
+      }
     } else if (slot.type === 'item') {
       const q = itemQty(slot.itemId);
       const qty = b.querySelector('.qty'); if (qty) qty.textContent = q;
       b.classList.toggle('locked', q === 0);
       const it = itemById[slot.itemId];
       const cd = b.querySelector('.cd'); const left = (it.hpRestore || it.mpRestore) ? (p.potionCdUntil || 0) - now() : 0;
-      if (cd) { if (left > 0) { cd.style.display = 'flex'; cd.textContent = Math.ceil(left / 1000); } else cd.style.display = 'none'; }
+      if (cd) {
+        if (left > 0) {
+          cd.style.display = 'flex';
+          cd.style.setProperty('--cd-angle', `${Math.max(0, Math.min(360, (left / 8000) * 360))}deg`);
+          cd.textContent = formatCooldownLabel(left);
+        } else {
+          cd.style.display = 'none';
+        }
+      }
     }
   });
   // pending-point nudges on the menu buttons
@@ -10561,8 +10790,13 @@ function handleClick(wx, wy) {
 
 // input
 window.addEventListener('keydown', e => {
+  const key = String(e.key || '').toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && key === 'k') {
+    e.preventDefault();
+    if (G.running && !e.repeat) toggleCommandPalette();
+    return;
+  }
   if (e.key !== 'Escape' && e.target?.closest?.('input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]),textarea,select,[contenteditable]')) return;   // typing in a field never fires game keys; sliders/checkboxes don't count
-  const key = e.key.toLowerCase();
   const code = eventHotkeyCode(e);
   if (G.running && dlg && (key === ' ' || code === 'Space')) {
     e.preventDefault();
@@ -10588,12 +10822,16 @@ window.addEventListener('keydown', e => {
   if (G.running && captureHotkeyBinding(e)) return;
   syncModalPause();
   const win = windowForKey(e, code);
-  if(gameClock.isPaused() && !win && !['escape','`','~','f2'].includes(key) && code !== 'Backquote')return;
+  if(gameClock.isPaused() && !win && !['escape','`','~','f2','/'].includes(key) && code !== 'Backquote')return;
   if (!(e.altKey && win)) G.keys[key] = true;   // Alt+A / Alt+S open windows, they never walk
   if (!G.running) return;
   const slot = !e.ctrlKey && !e.metaKey && !e.altKey ? G.player.hotkeys.indexOf(code) : -1;
   if (slot >= 0) { e.preventDefault(); if (!e.repeat) useHotbarSlot(slot); }
   else if (e.repeat) return;
+  else if (key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    toggleCommandPalette();
+  }
   else if ((key === '`' || key === '~' || code === 'Backquote' || key === 'f2') && (G.admin || shouldEnableAdminByDefault(G.player?.name))) {
     e.preventDefault();
     if (!G.admin) {
@@ -10647,7 +10885,8 @@ if (typeof window !== 'undefined')
     monsterElement, skillElement, attackElement, imbueElement, infuseMythicItem, elementMult, applyCrossCombo, applyStatus,
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
     performDodge, performParry, playerAvoidsHit, evaluateMacroRules, evolveActivePet, normaliseAutoConfig,
-    floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor, toggleMount };
+    floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor, toggleMount,
+    collectActiveHudBuffs, computeHotbarSlotState, executeCommandAction, searchGameIndex, shouldTriggerFanfare, toggleCommandPalette, triggerLootFanfare };
 
 const {pendingAdventureClaims,refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});
 Object.assign(window.__AWO,{refreshDailies,claimDaily,claimMastery,setZoneDifficulty,enterSubdungeon,exitSubdungeon,spawnZoneRare});
