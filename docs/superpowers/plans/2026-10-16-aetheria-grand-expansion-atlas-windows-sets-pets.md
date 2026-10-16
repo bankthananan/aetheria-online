@@ -62,18 +62,18 @@ graph TD
 - Consumes: `ZONE_ORDER`, `ZONE_PREREQUISITES`, `MAPS`, `G.guardiansSlain`, `G.mapId`.
 - Produces: `renderWorldAtlasCanvas()`, `worldAtlasClick(x, y)`, `toggleWorldAtlas()`, `toggleMinimapExpand()`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
   - Create `js/world-atlas.test.js` asserting:
     - All 10 zones in `ZONE_ORDER` have defined graphical coordinates `(x, y)` in the 10-zone atlas node graph.
     - Zone connections follow `ZONE_PREREQUISITES`.
     - Waystone fast travel validation respects unlocked status (`prereqs` satisfied or guardian slain).
     - Minimap toggle functions (`toggleMinimapExpand`) switch between compact and tactical radar zoom.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   - Run: `node script/run-tests.mjs js/world-atlas.test.js`
   - Expected: FAIL (`Cannot find module './render/world-atlas.js'`).
 
-- [ ] **Step 3: Implement World Atlas & Radar Overlay**
+- [x] **Step 3: Implement World Atlas & Radar Overlay**
   - In `js/render/world-atlas.js`:
     - Define `ZONE_ATLAS_NODES` with normalized coordinates for all 10 zones and landmarks.
     - Implement `drawWorldAtlas(ctx, state, options)` rendering stylized parchment backgrounds, connecting highways, regional badges, boss skulls for active bosses, and pulsing player location marker.
@@ -84,11 +84,11 @@ graph TD
   - In `js/locale.js`:
     - Add English and Thai translations for World Atlas waystones, fast travel confirmations, and radar tooltips.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   - Run: `node script/run-tests.mjs js/world-atlas.test.js js/map-topology.test.js`
   - Expected: PASS.
 
-- [ ] **Step 5: Full verification and commit**
+- [x] **Step 5: Full verification and commit**
   - Run: `npm test`
   - Commit: `feat(atlas): add interactive 10-zone world atlas and radar minimap 2.0`
 
@@ -108,17 +108,17 @@ graph TD
 - Consumes: `openPanels()`, `setPanelPos()`, `panelEl()`, `G.player.equipment`, `G.player.inventory`.
 - Produces: Direct socketing click interaction between Satchel and Status, equipment comparison tooltip on hover, persistent multi-window layout.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
   - Create `js/multi-window.test.js`:
     - Test concurrent opening of `char` (Status) and `inv` (Satchel) without replacing each other.
     - Test direct card/gem socketing action: selecting a card in inventory and clicking an equipped gear item invokes `socketCandidate` without needing modal close/reopen.
     - Test equipment compare tooltip generation when hovering inventory gear while Status window is open.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   - Run: `node script/run-tests.mjs js/multi-window.test.js`
   - Expected: FAIL.
 
-- [ ] **Step 3: Implement multi-window direct interaction**
+- [x] **Step 3: Implement multi-window direct interaction**
   - In `js/game.js`:
     - Enhance `togglePanel` and `wirePanel`:
       - Allow clicking a card/gem in Satchel to enter "socketing pick" state, visually highlighting valid equipped slots in the open Status window.
@@ -128,11 +128,11 @@ graph TD
   - In `js/render/cards-ui.js`:
     - Wire unsocket support if gem/card needs removal with extraction chisel.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   - Run: `node script/run-tests.mjs js/multi-window.test.js js/ui-windows.test.js`
   - Expected: PASS.
 
-- [ ] **Step 5: Full verification and commit**
+- [x] **Step 5: Full verification and commit**
   - Run: `npm test`
   - Commit: `feat(ui): add multi-window concurrent interaction, direct card socketing, and gear comparison`
 
@@ -154,7 +154,7 @@ graph TD
 - Consumes: `G.player.equipment`, `CONTENT.items`, `statBlock(p)`, `recompute(p)`.
 - Produces: `EQUIPMENT_SET_CATALOG`, `getActiveSetBonuses(equipment)`, `MYTHIC_ENCHANT_CATALOG`, `enchantItem(itemInstance, materialId)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
   - Create `js/equipment-sets.test.js`:
     - Assert set definitions for Band 2–5 regional armor sets (Duneslayer, Sunwalker, Sporeweaver, Mire Stalker, Thunderlord, Gale Dancer, Umbral Assassin, Darksteel Bulwark).
     - Assert 2-piece and 4-piece bonuses apply correct stat bonuses and passive procs.
@@ -162,11 +162,11 @@ graph TD
     - Assert `enchantItem` rolls valid Mythic Affixes spending raid materials (`kernel_core`, `colossus_plating`, `voidstone_ore`).
     - Assert enchanted item stat modifiers apply correctly in `statBlock` and `recompute`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
   - Run: `node script/run-tests.mjs js/equipment-sets.test.js js/enchanting.test.js`
   - Expected: FAIL.
 
-- [ ] **Step 3: Implement Equipment Sets & Mythic Enchanting**
+- [x] **Step 3: Implement Equipment Sets & Mythic Enchanting**
   - In `js/systems/equipment-sets.js`:
     - Define `EQUIPMENT_SET_CATALOG` with 2pc and 4pc bonuses.
     - Implement `computeActiveSetBonuses(playerEquipment)` returning cumulative stat mods and special set passives.
@@ -180,11 +180,11 @@ graph TD
   - In `js/locale.js`:
     - Add complete bilingual translations for all set names, set bonus descriptions, and mythic affixes.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
   - Run: `node script/run-tests.mjs js/equipment-sets.test.js js/enchanting.test.js js/equipment.test.js js/balance.test.js`
   - Expected: PASS.
 
-- [ ] **Step 5: Full verification and commit**
+- [x] **Step 5: Full verification and commit**
   - Run: `npm test`
   - Commit: `feat(gear): add regional equipment set bonuses and mythic enchanting altar`
 
@@ -206,7 +206,7 @@ graph TD
 - Consumes: `PET_CATALOG`, `G.petState`, `G.player`, `TUNING.playerSpeed`.
 - Produces: `toggleMount()`, `PET_COMBAT_SKILLS`, `evolvePet(petId, catalystId)`, `PET_EVOLUTION_CATALOG`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
   - Create `js/mounts.test.js`:
     - Test mount activation with hotkey `Z` and pet UI button.
     - Test speed boost (+40%) when mounted, and automatic dismount upon taking heavy damage or entering subdungeons.
@@ -214,11 +214,11 @@ graph TD
     - Test pet combat skill execution on interval during combat (`slime_puddle`, `pack_rend`, `fae_blessing`, `taunting_roar`, `pyro_breath`).
     - Test pet evolution in Homestead Pasture consuming rare catalysts, elevating companion to Tier II / III with enhanced auras.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
   - Run: `node script/run-tests.mjs js/mounts.test.js js/pets-evolution.test.js`
   - Expected: FAIL.
 
-- [ ] **Step 3: Implement Mounts & Pets 2.0**
+- [x] **Step 3: Implement Mounts & Pets 2.0**
   - In `js/systems/pets.js`:
     - Add `canMount` flags, `PET_COMBAT_SKILLS`, and `PET_EVOLUTION_CATALOG`.
     - Implement `updatePetCombat(petState, targetMonster, dt)` and `evolvePet(petState, catalyst)`.
@@ -232,11 +232,11 @@ graph TD
   - In `js/locale.js`:
     - Add English and Thai translations for mounts, pet skills, and evolution tiers.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
   - Run: `node script/run-tests.mjs js/mounts.test.js js/pets-evolution.test.js js/pets.test.js js/pets-integration.test.js`
   - Expected: PASS.
 
-- [ ] **Step 5: Full verification, browser playtest, and commit**
+- [x] **Step 5: Full verification, browser playtest, and commit**
   - Run: `npm test` across all suites (expecting ~110/110 passing).
   - Commit: `feat(pets): add mounts, familiar combat skills, and homestead evolution`
 
@@ -248,17 +248,17 @@ graph TD
 - Create: `js/grand-expansion.test.js`
 - Test: All suites (`npm test`)
 
-- [ ] **Step 1: Write end-to-end integration test**
+- [x] **Step 1: Write end-to-end integration test**
   - Verify seamless interaction across all 4 pillars in `js/grand-expansion.test.js`:
     - World Atlas navigation -> Waystone travel -> Mounted movement -> Combat with pet skill procs -> Regional set bonus activation -> Mythic enchanting.
 
-- [ ] **Step 2: Run full test suite**
+- [x] **Step 2: Run full test suite**
   - Run: `npm test`
   - Ensure 100% passing suites with zero regressions.
 
-- [ ] **Step 3: In-Browser Playtest & Visual Verification**
+- [x] **Step 3: In-Browser Playtest & Visual Verification**
   - Launch headless browser or live dev server.
   - Verify World Atlas rendering, Multi-Window drag/socketing, Set bonus tooltip, and Mount toggle.
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
   - Commit: `test(e2e): add grand expansion integration suite and verify zero regression`
