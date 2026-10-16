@@ -2,7 +2,7 @@
 // Companion Chronicle Tab & Modal UI Renderer with Strict Boxing Containment.
 // Renders active companion showcase, feast quick-feed tray, and full roster grid.
 
-import { PET_CATALOG, FEAST_VALUES } from '../systems/pets.js';
+import { PET_CATALOG, PET_EVOLUTION_CATALOG, FEAST_VALUES, canMount, canEvolvePet, PET_EVOLUTIONS } from '../systems/pets.js';
 
 export const PET_DETAILS = {
   pet_slime: {
@@ -39,6 +39,41 @@ export const PET_DETAILS = {
     baitName: 'Magma Berry Cluster',
     icon: '🐉',
     color: '#e53935',
+  },
+  pet_king_slime: {
+    habitat: 'Homestead Evolution',
+    monsterName: 'King Slime',
+    baitName: '—',
+    icon: '👑',
+    color: '#81c784',
+  },
+  pet_alpha_direwolf: {
+    habitat: 'Homestead Evolution',
+    monsterName: 'Alpha Direwolf',
+    baitName: '—',
+    icon: '🐺',
+    color: '#90a4ae',
+  },
+  pet_fae_queen: {
+    habitat: 'Homestead Evolution',
+    monsterName: 'Fae Sovereign',
+    baitName: '—',
+    icon: '👸',
+    color: '#ba68c8',
+  },
+  pet_armored_ursa: {
+    habitat: 'Homestead Evolution',
+    monsterName: 'Armored Ursa',
+    baitName: '—',
+    icon: '🛡️',
+    color: '#eceff1',
+  },
+  pet_infernal_wyrm: {
+    habitat: 'Homestead Evolution',
+    monsterName: 'Infernal Wyrm',
+    baitName: '—',
+    icon: '🐲',
+    color: '#ff5252',
   },
 };
 
@@ -174,7 +209,7 @@ export function createPetsUIRenderer({
    * @param {Array} inventory
    * @returns {string} HTML string
    */
-  function renderCompanionsTab(petsState = { activePetId: null, owned: {} }, inventory = []) {
+  function renderCompanionsTab(petsState = { activePetId: null, owned: {} }, inventory = [], playerZeny = 0, isMounted = false) {
     if (!petsState || typeof petsState !== 'object') {
       petsState = { activePetId: null, owned: {} };
     }
@@ -189,11 +224,14 @@ export function createPetsUIRenderer({
       : null;
 
     if (activePet) {
-      const activeDef = catalog[activePet.id] || { id: activePet.id, name: activePet.name || 'Companion', auras: {} };
+      const activeDef = catalog[activePet.id] || PET_EVOLUTION_CATALOG[activePet.id] || { id: activePet.id, name: activePet.name || 'Companion', auras: {} };
       const petDetails = PET_DETAILS[activePet.id] || { habitat: 'Unknown Habitat', monsterName: 'Wild Creature', baitName: 'Taming Bait', icon: '🐾', color: 'var(--gold)' };
       const loyalty = activePet.loyalty || 0;
       const bondLevel = activePet.bondLevel || 1;
       const isDevoted = loyalty >= 80;
+      const canMountPet = canMount(activePet);
+      const evoCheck = canEvolvePet(activePet, playerZeny);
+      const hasEvo = !!PET_EVOLUTIONS[activePet.id];
 
       // Filter inventory for feast items
       const availableFeasts = [];
@@ -237,16 +275,28 @@ export function createPetsUIRenderer({
               <div style="min-width: 0; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; box-sizing: border-box;">
                   <h3 style="margin: 0; font-size: 14px; color: var(--text); font-weight: bold;">${T(activeDef.name, 'ui')}</h3>
+                  ${activePet.evolved ? `<span class="badge-evolved" style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #1e140a; min-width: 0; box-sizing: border-box;">✨ ${T('Evolved Form', 'ui')}</span>` : ''}
                   ${isDevoted ? `<span class="badge-devoted" style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: var(--wood-deep); min-width: 0; box-sizing: border-box;">★ Devoted</span>` : ''}
                   <span style="font-size: 10px; background: color-mix(in srgb, var(--success) 20%, transparent); border: 1px solid var(--success); color: var(--success-text); padding: 2px 6px; border-radius: 4px; font-weight: bold; min-width: 0; box-sizing: border-box;">✓ ${T('Active Companion', 'ui')}</span>
                 </div>
+                ${activeDef.skill ? `<div style="font-size: 11px; color: #f59e0b; margin-top: 4px;">⚔️ <b>${T('Combat Skill', 'ui')}:</b> ${T(activeDef.skill.name, 'ui')} (${activeDef.skill.cooldown}s CD)</div>` : ''}
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                   ${T('Bond Lv.', 'ui')} <b style="color: var(--gold-bright);">${bondLevel}</b> · ${T('Loyalty', 'ui')}: <b style="color: var(--success-text);">${loyalty}/100</b>
                 </div>
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; min-width: 0; box-sizing: border-box; flex-shrink: 0;">
-              <button class="btn btn--ghost pet-dismiss-btn" data-dismiss-pet="1" style="font-size: 12px; padding: 6px 12px; border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: var(--danger-text); cursor: pointer; min-width: 0; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0; box-sizing: border-box; flex-shrink: 0; flex-wrap: wrap;">
+              ${canMountPet ? `
+                <button class="btn pet-mount-btn" data-toggle-mount="1" style="font-size: 11px; padding: 5px 10px; cursor: pointer; min-width: 0; box-sizing: border-box;">
+                  🐎 ${isMounted ? T('Dismount', 'ui') : T('Mount', 'ui')}
+                </button>
+              ` : ''}
+              ${hasEvo ? `
+                <button class="btn btn--secondary pet-evolve-btn" data-evolve-pet-id="${activePet.id}" ${evoCheck.ok ? '' : 'disabled'} title="${evoCheck.ok ? T('Evolve into exalted form', 'ui') : evoCheck.reason}" style="font-size: 11px; padding: 5px 10px; cursor: pointer; min-width: 0; box-sizing: border-box;">
+                  ✨ ${T('Evolve', 'ui')} <small>(5,000z)</small>
+                </button>
+              ` : ''}
+              <button class="btn btn--ghost pet-dismiss-btn" data-dismiss-pet="1" style="font-size: 11px; padding: 5px 10px; border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: var(--danger-text); cursor: pointer; min-width: 0; box-sizing: border-box;">
                 ${T('Dismiss', 'ui')}
               </button>
             </div>

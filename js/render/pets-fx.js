@@ -9,6 +9,11 @@ export const PET_ARCHETYPE_COLORS = {
   pet_sprite: '#ab47bc',
   pet_bear: '#cfd8dc',
   pet_dragon: '#e53935',
+  pet_king_slime: '#81c784',
+  pet_alpha_direwolf: '#90a4ae',
+  pet_fae_queen: '#ba68c8',
+  pet_armored_ursa: '#eceff1',
+  pet_infernal_wyrm: '#ff5252',
 };
 
 /**
@@ -210,10 +215,22 @@ export function triggerEmote(petEntity, emoteType = 'heart') {
 function drawArchetypeSprite(ctx, petEntity, sx, sy) {
   const dir = petEntity.facing === 'left' ? -1 : 1;
   const id = petEntity.id;
+  const baseId = id === 'pet_king_slime' ? 'pet_slime' :
+                 id === 'pet_alpha_direwolf' ? 'pet_wolf' :
+                 id === 'pet_fae_queen' ? 'pet_sprite' :
+                 id === 'pet_armored_ursa' ? 'pet_bear' :
+                 id === 'pet_infernal_wyrm' ? 'pet_dragon' : id;
 
   ctx.save();
 
-  switch (id) {
+  if (id !== baseId) {
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(sx, sy - 10, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  switch (baseId) {
     case 'pet_slime': {
       // Bouncy green droplet with shiny eye highlight and tiny blush
       ctx.fillStyle = '#66bb6a';

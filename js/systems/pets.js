@@ -25,6 +25,7 @@ export const PET_CATALOG = {
     requiredBait: 'bait_sweet_gelatin',
     baseLootRadius: 2.0,
     maxLootRadius: 3.5,
+    canMount: false,
     auras: {
       base: { hpRegen: 5, moveMult: 0.03 },
       max: { hpRegen: 25, moveMult: 0.07 },
@@ -38,6 +39,7 @@ export const PET_CATALOG = {
     requiredBait: 'bait_tender_jerky',
     baseLootRadius: 2.5,
     maxLootRadius: 4.0,
+    canMount: true,
     auras: {
       base: { physAtkPct: 0.06, critChance: 4 },
       max: { physAtkPct: 0.18, critChance: 10 },
@@ -51,6 +53,7 @@ export const PET_CATALOG = {
     requiredBait: 'bait_luminous_nectar',
     baseLootRadius: 3.0,
     maxLootRadius: 4.5,
+    canMount: false,
     auras: {
       base: { magicAtkPct: 0.08, mpRegen: 6, castSpeedPct: 0.05 },
       max: { magicAtkPct: 0.20, mpRegen: 20, castSpeedPct: 0.12 },
@@ -64,6 +67,7 @@ export const PET_CATALOG = {
     requiredBait: 'bait_glacial_salmon',
     baseLootRadius: 2.5,
     maxLootRadius: 4.0,
+    canMount: true,
     auras: {
       base: { physDefPct: 0.10, magicDefPct: 0.10, res_ice: 12, maxHp: 80 },
       max: { physDefPct: 0.25, magicDefPct: 0.25, res_ice: 25, maxHp: 300 },
@@ -77,11 +81,83 @@ export const PET_CATALOG = {
     requiredBait: 'bait_magma_fruit',
     baseLootRadius: 3.5,
     maxLootRadius: 5.0,
+    canMount: true,
     auras: {
       base: { dmg_fire: 10, dmg_void: 10, critDmgPct: 0.15, zenyMult: 1.10 },
       max: { dmg_fire: 25, dmg_void: 25, critDmgPct: 0.35, zenyMult: 1.25 },
     },
     desc: 'A fiery wyrmling breathing embers of destruction and hoarding sparkling zeny.',
+  },
+};
+
+/**
+ * Catalog of evolved companion archetypes.
+ */
+export const PET_EVOLUTION_CATALOG = {
+  pet_king_slime: {
+    id: 'pet_king_slime',
+    name: 'King Slime',
+    baseLootRadius: 4.0,
+    maxLootRadius: 6.0,
+    canMount: false,
+    skill: { id: 'gelatinous_shield', name: 'Gelatinous Shield', cooldown: 15 },
+    auras: {
+      base: { hpRegen: 40, moveMult: 0.08, maxHp: 100 },
+      max: { hpRegen: 60, moveMult: 0.12, maxHp: 150 },
+    },
+    desc: 'An exalted slime monarch crowned with gelatinous majesty and impenetrable resilience.',
+  },
+  pet_alpha_direwolf: {
+    id: 'pet_alpha_direwolf',
+    name: 'Alpha Direwolf',
+    baseLootRadius: 4.5,
+    maxLootRadius: 6.5,
+    canMount: true,
+    skill: { id: 'howl_of_fury', name: 'Howl of Fury', cooldown: 12 },
+    auras: {
+      base: { physAtkPct: 0.20, critChance: 12 },
+      max: { physAtkPct: 0.25, critChance: 15 },
+    },
+    desc: 'A ferocious alpha pack leader whose battle howl stirs primal fury in the hunter.',
+  },
+  pet_fae_queen: {
+    id: 'pet_fae_queen',
+    name: 'Fae Sovereign',
+    baseLootRadius: 5.0,
+    maxLootRadius: 7.0,
+    canMount: false,
+    skill: { id: 'sylvan_rejuvenation', name: 'Sylvan Rejuvenation', cooldown: 10 },
+    auras: {
+      base: { magicAtkPct: 0.22, mpRegen: 25, castSpeedPct: 0.14 },
+      max: { magicAtkPct: 0.28, mpRegen: 30, castSpeedPct: 0.16 },
+    },
+    desc: 'An ethereal fae queen radiant with ancient forest magic and restorative grace.',
+  },
+  pet_armored_ursa: {
+    id: 'pet_armored_ursa',
+    name: 'Armored Ursa',
+    baseLootRadius: 4.5,
+    maxLootRadius: 6.5,
+    canMount: true,
+    skill: { id: 'iron_roar', name: 'Iron Roar', cooldown: 14 },
+    auras: {
+      base: { physDefPct: 0.30, magicDefPct: 0.30, res_ice: 35, maxHp: 500 },
+      max: { physDefPct: 0.35, magicDefPct: 0.35, res_ice: 40, maxHp: 600 },
+    },
+    desc: 'A towering juggernaut clad in glacial iron plates, shrugging off mortal strikes.',
+  },
+  pet_infernal_wyrm: {
+    id: 'pet_infernal_wyrm',
+    name: 'Infernal Wyrm',
+    baseLootRadius: 5.5,
+    maxLootRadius: 8.0,
+    canMount: true,
+    skill: { id: 'dragonfire_burst', name: 'Dragonfire Burst', cooldown: 8 },
+    auras: {
+      base: { dmg_fire: 30, dmg_void: 30, critDmgPct: 0.40, zenyMult: 1.30 },
+      max: { dmg_fire: 35, dmg_void: 35, critDmgPct: 0.50, zenyMult: 1.35 },
+    },
+    desc: 'A colossal apex dragon cloaked in magma flames, obliterating foes in scorched ash.',
   },
 };
 
@@ -111,6 +187,142 @@ export const FEAST_VALUES = {
 export const BOND_EXP_THRESHOLDS = [0, 100, 250, 500, 1000];
 
 /**
+ * Evolution paths, requirements, and combat skills for pets.
+ */
+export const PET_EVOLUTIONS = {
+  pet_slime: {
+    targetId: 'pet_king_slime',
+    name: 'King Slime',
+    reqBond: 5,
+    reqLoyalty: 80,
+    costZeny: 5000,
+    skill: {
+      id: 'gelatinous_shield',
+      name: 'Gelatinous Shield',
+      desc: 'Absorbs up to 15% Max HP as a protective shield periodically.',
+      cooldown: 15,
+    },
+    canMount: false,
+  },
+  pet_wolf: {
+    targetId: 'pet_alpha_direwolf',
+    name: 'Alpha Direwolf',
+    reqBond: 5,
+    reqLoyalty: 80,
+    costZeny: 5000,
+    skill: {
+      id: 'howl_of_fury',
+      name: 'Howl of Fury',
+      desc: 'Unleashes a fierce roar boosting player ATK by +20% and Crit by +8% for 6s.',
+      cooldown: 12,
+    },
+    canMount: true,
+  },
+  pet_sprite: {
+    targetId: 'pet_fae_queen',
+    name: 'Fae Sovereign',
+    reqBond: 5,
+    reqLoyalty: 80,
+    costZeny: 5000,
+    skill: {
+      id: 'sylvan_rejuvenation',
+      name: 'Sylvan Rejuvenation',
+      desc: 'Restores 8% Max MP and 5% Max HP periodically in battle.',
+      cooldown: 10,
+    },
+    canMount: false,
+  },
+  pet_bear: {
+    targetId: 'pet_armored_ursa',
+    name: 'Armored Ursa',
+    reqBond: 5,
+    reqLoyalty: 80,
+    costZeny: 5000,
+    skill: {
+      id: 'iron_roar',
+      name: 'Iron Roar',
+      desc: 'Weakens enemy ATK by 25% and grants player +30% DEF for 6s.',
+      cooldown: 14,
+    },
+    canMount: true,
+  },
+  pet_dragon: {
+    targetId: 'pet_infernal_wyrm',
+    name: 'Infernal Wyrm',
+    reqBond: 5,
+    reqLoyalty: 80,
+    costZeny: 5000,
+    skill: {
+      id: 'dragonfire_burst',
+      name: 'Dragonfire Burst',
+      desc: 'Breathes searing dragonfire on enemies dealing 150% Fire damage.',
+      cooldown: 8,
+    },
+    canMount: true,
+  },
+};
+
+/**
+ * Retrieves definition for companion ID across base and evolved archetypes.
+ * @param {string} petId
+ * @returns {object|null}
+ */
+export function getPetDef(petId) {
+  if (!petId) return null;
+  return PET_CATALOG[petId] || PET_EVOLUTION_CATALOG[petId] || null;
+}
+
+/**
+ * Checks if a companion can be mounted.
+ * @param {object} petState
+ * @returns {boolean}
+ */
+export function canMount(petState) {
+  if (!petState || !petState.id) return false;
+  const def = getPetDef(petState.id);
+  if (!def || !def.canMount) return false;
+  if (['pet_wolf', 'pet_bear', 'pet_dragon'].includes(petState.id)) {
+    return (petState.bondLevel || 1) >= 2;
+  }
+  return true;
+}
+
+/**
+ * Validates whether a pet meets the evolution prerequisites.
+ * @param {object} petState
+ * @param {number} [zeny=0]
+ * @returns {{ ok: boolean, reason?: string, evolution?: object }}
+ */
+export function canEvolvePet(petState, zeny = 0) {
+  if (!petState || !petState.id) return { ok: false, reason: 'Invalid companion' };
+  const evo = PET_EVOLUTIONS[petState.id];
+  if (!evo) return { ok: false, reason: 'This companion has reached maximum evolution' };
+  if ((petState.bondLevel || 1) < evo.reqBond) return { ok: false, reason: `Requires Bond Level ${evo.reqBond}` };
+  if ((petState.loyalty || 0) < evo.reqLoyalty) return { ok: false, reason: `Requires ${evo.reqLoyalty}% Loyalty` };
+  if (zeny < evo.costZeny) return { ok: false, reason: `Requires ${evo.costZeny} Zeny` };
+  return { ok: true, evolution: evo };
+}
+
+/**
+ * Performs companion evolution mutation.
+ * @param {object} petState
+ * @param {number} [zeny=0]
+ * @param {Function} [deductZeny=()=>{}]
+ * @returns {{ success: boolean, reason?: string, newPetId?: string, evo?: object }}
+ */
+export function evolvePet(petState, zeny = 0, deductZeny = () => {}) {
+  const check = canEvolvePet(petState, zeny);
+  if (!check.ok) return { success: false, reason: check.reason };
+  const evo = check.evolution;
+  deductZeny(evo.costZeny);
+  petState.id = evo.targetId;
+  petState.name = evo.name;
+  petState.evolved = true;
+  petState.skill = { ...evo.skill, lastCast: 0 };
+  return { success: true, newPetId: evo.targetId, evo };
+}
+
+/**
  * Creates an instance of the pet companion subsystem.
  * @param {object} options
  * @param {Function} [options.now]
@@ -124,7 +336,7 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
    */
   function getPetDef(petId) {
     if (!petId) return null;
-    return PET_CATALOG[petId] || null;
+    return PET_CATALOG[petId] || PET_EVOLUTION_CATALOG[petId] || null;
   }
 
   /**
@@ -305,11 +517,16 @@ export function createPetsSystem({ now = Date.now, rnd = Math.random } = {}) {
 
   return {
     PET_CATALOG,
+    PET_EVOLUTION_CATALOG,
+    PET_EVOLUTIONS,
     BAIT_TO_PET_MAP,
     getPetDef,
     getPetForMonster,
     attemptTame,
     feedPet,
+    canMount,
+    canEvolvePet,
+    evolvePet,
     computeAuraStats,
     getAutoLootRadius,
     getBondLootBonus,

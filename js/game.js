@@ -716,6 +716,7 @@ const G = {
   petsFx,
   petsUI,
   petFollower: null,
+  mounted: false,
   raids: raidsSystem.serialize(),
   raidsSystem,
   raidsFx,
@@ -770,8 +771,107 @@ function syncPetFollower() {
     }
   } else {
     G.petFollower = null;
+    G.mounted = false;
   }
 }
+
+function toggleMount() {
+  const p = G.player;
+  if (!p) return false;
+  if (G.mounted) {
+    G.mounted = false;
+    recompute(p);
+    AUDIO.playSfx('menu');
+    toast(`🐾 ${T('Dismounted.', 'ui')}`, 'sys');
+    logMsg(T('Dismounted.', 'ui'), 'sys');
+    return true;
+  }
+  if (!G.pets?.activePetId || !G.pets?.owned?.[G.pets.activePetId]) {
+    toast(T('No active companion to mount.', 'ui'), 'bad');
+    return false;
+  }
+  const activePet = G.pets.owned[G.pets.activePetId];
+  if (!petsSystem.canMount(activePet)) {
+    toast(T('This companion cannot be mounted.', 'ui'), 'bad');
+    return false;
+  }
+  G.mounted = true;
+  recompute(p);
+  AUDIO.playSfx('levelup');
+  toast(`🐎 ${T('Mounted!', 'ui')} (+40% ${T('Move Speed', 'ui')})`, 'good');
+  logMsg(`${T('Mounted', 'ui')} ${petsSystem.getPetDef(activePet.id)?.name || 'Companion'}.`, 'good');
+  return true;
+}
+
+function evolveActivePet(petId) {
+  const p = G.player;
+  if (!p) return false;
+  if (!petId) petId = G.pets?.activePetId;
+  const pet = G.pets?.owned?.[petId];
+  if (!pet) return false;
+  const check = petsSystem.canEvolvePet(pet, p.zeny || 0);
+  if (!check.ok) {
+    toast(check.reason || 'Cannot evolve companion.', 'bad');
+    return false;
+  }
+  const oldId = pet.id;
+  const res = petsSystem.evolvePet(pet, p.zeny, amt => { p.zeny -= amt; });
+  if (!res.success) {
+    toast(res.reason || 'Evolution failed.', 'bad');
+    return false;
+  }
+  if (oldId !== res.newPetId) {
+    delete G.pets.owned[oldId];
+    G.pets.owned[res.newPetId] = pet;
+    if (G.pets.activePetId === oldId) {
+      G.pets.activePetId = res.newPetId;
+    }
+  }
+  syncPetFollower();
+  AUDIO.playSfx('levelup');
+  recompute(p);
+  saveGame();
+  toast(`✨ ${T('Companion Evolved!', 'ui')} -> ${petsSystem.getPetDef(pet.id)?.name}`, 'good');
+  logMsg(`${pet.name || 'Companion'} evolved into ${petsSystem.getPetDef(pet.id)?.name}!`, 'good');
+  return true;
+}
+
+function castPetSkill(activePet, skill) {
+  const p = G.player;
+  if (!p) return;
+  if (skill.id === 'howl_of_fury') {
+    p.petAtkBuffUntil = now() + 6000;
+    recompute(p);
+    floatText(p.x, p.y - 20, '🐺 Howl! +20% ATK', '#f59e0b');
+    AUDIO.playSfx('levelup');
+  } else if (skill.id === 'gelatinous_shield') {
+    p.petShield = Math.round(p.maxHp * 0.15);
+    floatText(p.x, p.y - 20, '🟢 Shield!', '#4ade80');
+    AUDIO.playSfx('levelup');
+  } else if (skill.id === 'sylvan_rejuvenation') {
+    const healHp = Math.round(p.maxHp * 0.05);
+    const healMp = Math.round(p.maxMp * 0.08);
+    p.hp = Math.min(p.maxHp, p.hp + healHp);
+    p.mp = Math.min(p.maxMp, p.mp + healMp);
+    updateHud();
+    floatText(p.x, p.y - 20, `🧚 +${healHp} HP`, '#a855f7');
+    AUDIO.playSfx('heal');
+  } else if (skill.id === 'iron_roar') {
+    p.petDefBuffUntil = now() + 6000;
+    recompute(p);
+    floatText(p.x, p.y - 20, '🐻 Roar! +30% DEF', '#60a5fa');
+    AUDIO.playSfx('levelup');
+  } else if (skill.id === 'dragonfire_burst') {
+    if (G.target && G.target.alive) {
+      const dmg = Math.max(1, Math.round((p.magicAtk || p.physAtk || 50) * 1.5));
+      damageMonster(G.target, dmg, true, 'fire');
+      floatText(G.target.x, G.target.y - 20, `🔥 ${dmg}`, '#ef4444');
+      AUDIO.playSfx('playerHit');
+    }
+  }
+  if (G.petFollower) petsFx.triggerEmote(G.petFollower, 'exclamation');
+}
+
 const GUILD_MAX_ACTIVE = 3;
 // legacy alias: old saves & tests use the singular — maps to the first active bounty
 Object.defineProperty(G, 'activeGuild', {
@@ -1577,6 +1677,18 @@ function recompute(p, fill) {
   p.trophyAuras = trophyAuras;
   if (homesteadSystem && homesteadSystem.isHearthBuffActive()) {
     p.expMult = (p.expMult || 1) * 1.10;
+  }
+  if (G?.mounted) {
+    p.moveMult = (p.moveMult || 1) * 1.40;
+  }
+  if (p.petAtkBuffUntil && now() < p.petAtkBuffUntil) {
+    p.physAtk = Math.round(p.physAtk * 1.20);
+    p.rangedAtk = Math.round((p.rangedAtk || p.physAtk) * 1.20);
+    p.critChance = Math.min(100, p.critChance + 8);
+    if (!MAGIC.has(p.combatClass)) p.atkStat = p.combatClass === 'ranger' ? p.rangedAtk : p.physAtk;
+  }
+  if (p.petDefBuffUntil && now() < p.petDefBuffUntil) {
+    p.physDef = Math.round(p.physDef * 1.30);
   }
   p.hpMax = p.maxHp;
   p.atk = Math.round(p.atkStat * buffMult(p, 'atk'));
@@ -2551,6 +2663,10 @@ function playerHasBaitFor(m) {
 function playerBasicAttack() {
   const t = G.target, p = G.player;
   if (!t || !t.alive) return;
+  if (G.mounted) {
+    G.mounted = false;
+    recompute(p);
+  }
   // If player carries taming bait for this creature and it is already weakened below 30% HP,
   // hold fire so the player does not accidentally defeat it before taming!
   if (playerHasBaitFor(t) && (t.hp / t.maxHp) <= 0.30) return;
@@ -3181,6 +3297,10 @@ function castSkillById(id) {
   const p = G.player;
   const sk = COMBAT.skills.find(s => s.id === id);
   if (!sk) return;
+  if (G.mounted) {
+    G.mounted = false;
+    recompute(p);
+  }
   if (!branchAllowsSkill(p, id)) { logMsg(`${sk.name} belongs to another second-job path.`, 'bad'); return; }
   if (!skillLevel(p, sk.id)) { logMsg(`${sk.name} not learned — open Skills (K).`, 'sys'); return; }
   if (now() < (p.skillCd[sk.id] || 0)) { logMsg(`${sk.name} on cooldown.`, 'sys'); return; }
@@ -3446,8 +3566,19 @@ function updateMonsters(dt) {
             isMelee,
             floatText: (x, y, t, col) => floatText(x, y, t, col || 'status'),
           });
-          const actualDmg = Math.max(0, dmg - (relicDef.absorbed || 0));
+          let actualDmg = Math.max(0, dmg - (relicDef.absorbed || 0));
+          if (p.petShield && p.petShield > 0) {
+            const absorbed = Math.min(p.petShield, actualDmg);
+            p.petShield -= absorbed;
+            actualDmg -= absorbed;
+            floatText(p.x, p.y - 12, `🛡️ -${absorbed}`, '#4ade80');
+          }
           if (!p.godMode) p.hp -= actualDmg;                                  // admin god mode
+          if (actualDmg > 0 && G.mounted) {
+            G.mounted = false;
+            recompute(p);
+            toast(T('Dismounted!', 'ui'), 'sys');
+          }
           p.hurtUntil = now() + ANIM.hurtMs;
           AUDIO.playSfx('playerHurt');
           floatText(p.x, p.y, p.godMode ? '0' : actualDmg, p.godMode ? 'heal' : 'enemy');
@@ -5013,7 +5144,24 @@ function step(dt) {
   weatherSystem.update(dt, G?.mapId);
   G.weather = weatherSystem.getWeather(G?.mapId);
   if (G.petFollower) {
-    petsFx.updateFollower(G.petFollower, p, dt);
+    if (G.mounted) {
+      G.petFollower.x = p.x;
+      G.petFollower.y = p.y + 4;
+      G.petFollower.facing = p.dir || 'down';
+    } else {
+      petsFx.updateFollower(G.petFollower, p, dt);
+    }
+  }
+  if (G.pets?.activePetId && G.pets?.owned?.[G.pets.activePetId] && G.target && G.target.alive) {
+    const activePet = G.pets.owned[G.pets.activePetId];
+    const petDef = petsSystem.getPetDef(activePet.id);
+    if (petDef?.skill) {
+      const cdMs = (petDef.skill.cooldown || 10) * 1000;
+      if (!activePet.lastSkillCast || now() - activePet.lastSkillCast >= cdMs) {
+        activePet.lastSkillCast = now();
+        castPetSkill(activePet, petDef.skill);
+      }
+    }
   }
 
   // Incursion subsystem update
@@ -7683,7 +7831,7 @@ function panelBody(id) {
     </div>`;
   }
   if (id === 'hotkeys') return hotkeysPanelHtml(p);
-  if (id === 'pets') return `<div class="companions-body">${petsUI.renderCompanionsTab(G.pets, p.inventory || [])}</div>`;
+  if (id === 'pets') return `<div class="companions-body">${petsUI.renderCompanionsTab(G.pets, p.inventory || [], p.zeny || 0, G.mounted || false)}</div>`;
   if (id === 'world') return worldChronicleHtml();
   if (id === 'automation') return automationPanelHtml(p);
   if (id === 'char') {
@@ -8188,6 +8336,14 @@ function wirePanel(id, el) {
       saveGame();
       refreshPanel('pets');
     }
+  });
+  el.querySelectorAll('[data-toggle-mount]').forEach(b => b.onclick = () => {
+    toggleMount();
+    refreshPanel('pets');
+  });
+  el.querySelectorAll('[data-evolve-pet-id]').forEach(b => b.onclick = () => {
+    evolveActivePet(b.dataset.evolvePetId);
+    refreshPanel('pets');
   });
   if (id === 'world') {
     el.querySelectorAll('[data-chronicle-tab]').forEach(b => b.onclick = () => {
@@ -10461,6 +10617,7 @@ window.addEventListener('keydown', e => {
   }
   else if (key === 'f') toggleFarm();
   else if (key === 'e') interact();
+  else if (key === 'z') toggleMount();
   else if (key === ' ') performDodge();          // dialogue-advance space returns earlier
   else if (key === 'v') performParry();
   else if (key === 'escape') closeTopmost();
@@ -10489,8 +10646,8 @@ if (typeof window !== 'undefined')
     canUseItem, itemClassRequirementText, classWeaponFor, getBgBuffer: () => bgBufferCanvas, initTouchControls, isTouchDevice,
     monsterElement, skillElement, attackElement, imbueElement, infuseMythicItem, elementMult, applyCrossCombo, applyStatus,
     elementMeta, weakToElement, collectionBookHtml, milestoneStat, milestoneTarget, claimMilestone,
-    performDodge, performParry, playerAvoidsHit, evaluateMacroRules, normaliseAutoConfig,
-    floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor };
+    performDodge, performParry, playerAvoidsHit, evaluateMacroRules, evolveActivePet, normaliseAutoConfig,
+    floatText, drawFloaties, FLOAT_CAP, FLOAT_LIFE_MS, applyHighContrast, floatColor, toggleMount };
 
 const {pendingAdventureClaims,refreshDailies,claimDaily,claimMastery,setZoneDifficulty,masteryTravel,enterSubdungeon,exitSubdungeon,spawnZoneRare,adventurePanelHtml}=createExpansion({G,DESIGN,CONTENT,MAPS,zone:WhisperingWoods,gainXp,saveGame,loadMap,makeMonster,recompute,esc});
 Object.assign(window.__AWO,{refreshDailies,claimDaily,claimMastery,setZoneDifficulty,enterSubdungeon,exitSubdungeon,spawnZoneRare});
